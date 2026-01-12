@@ -8,6 +8,13 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Companies from "./pages/Companies";
+import Contacts from "./pages/Contacts";
+import Pipeline from "./pages/Pipeline";
+import Tasks from "./pages/Tasks";
+import Emails from "./pages/Emails";
+import Reports from "./pages/Reports";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,13 +32,13 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/companies" element={<Dashboard />} />
-                <Route path="/contacts" element={<Dashboard />} />
-                <Route path="/pipeline" element={<Dashboard />} />
-                <Route path="/tasks" element={<Dashboard />} />
-                <Route path="/emails" element={<Dashboard />} />
-                <Route path="/reports" element={<Dashboard />} />
-                <Route path="/settings" element={<Dashboard />} />
+                <Route path="/companies" element={<Companies />} />
+                <Route path="/contacts" element={<Contacts />} />
+                <Route path="/pipeline" element={<Pipeline />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/emails" element={<Emails />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/settings" element={<Settings />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
