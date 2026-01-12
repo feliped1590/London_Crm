@@ -200,6 +200,29 @@ export function useAddInstance() {
   });
 }
 
+// Delete instance mutation
+export function useDeleteInstance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (instanceId: string) => {
+      const { error } = await supabase
+        .from('whatsapp_instances')
+        .delete()
+        .eq('id', instanceId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
+      toast.success('Instância excluída com sucesso!');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir instância: ${error.message}`);
+    }
+  });
+}
+
 // Send message mutation
 export function useSendMessage() {
   const queryClient = useQueryClient();

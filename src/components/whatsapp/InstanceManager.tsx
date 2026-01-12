@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { useWhatsAppInstances, useAddInstance, useCheckInstanceStatus, WhatsAppInstance } from '@/hooks/useWhatsApp';
+import { useWhatsAppInstances, useAddInstance, useCheckInstanceStatus, useDeleteInstance, WhatsAppInstance } from '@/hooks/useWhatsApp';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, RefreshCw, Smartphone, Wifi, WifiOff, ExternalLink, Copy } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, RefreshCw, Smartphone, Wifi, WifiOff, ExternalLink, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -16,6 +17,7 @@ export function InstanceManager() {
   const { data: instances, isLoading } = useWhatsAppInstances();
   const addInstance = useAddInstance();
   const checkStatus = useCheckInstanceStatus();
+  const deleteInstance = useDeleteInstance();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -35,6 +37,10 @@ export function InstanceManager() {
 
   const handleCheckStatus = (instance: WhatsAppInstance) => {
     checkStatus.mutate(instance.id);
+  };
+
+  const handleDeleteInstance = (instanceId: string) => {
+    deleteInstance.mutate(instanceId);
   };
 
   const copyWebhookUrl = () => {
@@ -165,7 +171,9 @@ export function InstanceManager() {
               key={instance.id} 
               instance={instance} 
               onCheckStatus={handleCheckStatus}
+              onDelete={handleDeleteInstance}
               isCheckingStatus={checkStatus.isPending}
+              isDeleting={deleteInstance.isPending}
             />
           ))}
         </div>
@@ -200,10 +208,12 @@ export function InstanceManager() {
 interface InstanceCardProps {
   instance: WhatsAppInstance;
   onCheckStatus: (instance: WhatsAppInstance) => void;
+  onDelete: (instanceId: string) => void;
   isCheckingStatus: boolean;
+  isDeleting: boolean;
 }
 
-function InstanceCard({ instance, onCheckStatus, isCheckingStatus }: InstanceCardProps) {
+function InstanceCard({ instance, onCheckStatus, onDelete, isCheckingStatus, isDeleting }: InstanceCardProps) {
   const isConnected = instance.status === 'connected';
 
   return (
@@ -247,16 +257,48 @@ function InstanceCard({ instance, onCheckStatus, isCheckingStatus }: InstanceCar
             </p>
           )}
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="w-full"
-          onClick={() => onCheckStatus(instance)}
-          disabled={isCheckingStatus}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingStatus ? 'animate-spin' : ''}`} />
-          Verificar Status
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1"
+            onClick={() => onCheckStatus(instance)}
+            disabled={isCheckingStatus}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingStatus ? 'animate-spin' : ''}`} />
+            Verificar Status
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir instância</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir a instância "{instance.name}"? 
+                  Esta ação não pode ser desfeita e todas as mensagens associadas serão mantidas.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => onDelete(instance.id)}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </CardContent>
     </Card>
   );
