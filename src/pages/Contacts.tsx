@@ -1,0 +1,395 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+
+type Contact = Tables<'contacts'>;
+type Company = Tables<'companies'>;
+
+export default function Contacts() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [formData, setFormData] = useState<Partial<TablesInsert<'contacts'>>>({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    mobile: '',
+    job_title: '',
+    department: '',
+    linkedin_url: '',
+    company_id: null,
+    notes: '',
+  });
+
+  const { data: contacts, isLoading } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*, companies(name)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: companies } = useQuery({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      if (error) throw error;
+      return data as Pick<Company, 'id' | 'name'>[];
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: TablesInsert<'contacts'>) => {
+      const { error } = await supabase.from('contacts').insert(data);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Contato criado com sucesso!');
+      resetForm();
+    },
+    onError: () => toast.error('Erro ao criar contato'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<Contact> & { id: string }) => {
+      const { error } = await supabase.from('contacts').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Contato atualizado com sucesso!');
+      resetForm();
+    },
+    onError: () => toast.error('Erro ao atualizar contato'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('contacts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Contato excluído com sucesso!');
+    },
+    onError: () => toast.error('Erro ao excluir contato'),
+  });
+
+  const resetForm = () => {
+    setFormData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      mobile: '',
+      job_title: '',
+      department: '',
+      linkedin_url: '',
+      company_id: null,
+      notes: '',
+    });
+    setEditingContact(null);
+    setIsDialogOpen(false);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingContact) {
+      updateMutation.mutate({ id: editingContact.id, ...formData });
+    } else {
+      createMutation.mutate({
+        ...formData,
+        first_name: formData.first_name || '',
+        created_by: user?.id,
+        owner_id: user?.id,
+      });
+    }
+  };
+
+  const handleEdit = (contact: Contact) => {
+    setEditingContact(contact);
+    setFormData({
+      first_name: contact.first_name,
+      last_name: contact.last_name || '',
+      email: contact.email || '',
+      phone: contact.phone || '',
+      mobile: contact.mobile || '',
+      job_title: contact.job_title || '',
+      department: contact.department || '',
+      linkedin_url: contact.linkedin_url || '',
+      company_id: contact.company_id,
+      notes: contact.notes || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const filteredContacts = contacts?.filter(contact =>
+    contact.first_name.toLowerCase().includes(search.toLowerCase()) ||
+    contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
+    contact.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const getInitials = (firstName: string, lastName?: string | null) => {
+    return `${firstName[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Contatos</h1>
+          <p className="text-muted-foreground">Gerencie seus contatos e leads</p>
+        </div>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Contato
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingContact ? 'Editar Contato' : 'Novo Contato'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="first_name">Nome *</Label>
+                  <Input
+                    id="first_name"
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="last_name">Sobrenome</Label>
+                  <Input
+                    id="last_name"
+                    value={formData.last_name || ''}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ''}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone || ''}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="mobile">Celular</Label>
+                  <Input
+                    id="mobile"
+                    value={formData.mobile || ''}
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="company_id">Empresa</Label>
+                  <Select 
+                    value={formData.company_id || 'none'} 
+                    onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma</SelectItem>
+                      {companies?.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="job_title">Cargo</Label>
+                  <Input
+                    id="job_title"
+                    value={formData.job_title || ''}
+                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="department">Departamento</Label>
+                  <Input
+                    id="department"
+                    value={formData.department || ''}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="linkedin_url">LinkedIn</Label>
+                  <Input
+                    id="linkedin_url"
+                    value={formData.linkedin_url || ''}
+                    onChange={(e) => setFormData({ ...formData, linkedin_url: e.target.value })}
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label htmlFor="notes">Observações</Label>
+                  <Textarea
+                    id="notes"
+                    value={formData.notes || ''}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={resetForm}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {editingContact ? 'Atualizar' : 'Criar'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Buscar contatos..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : filteredContacts?.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <Users className="h-12 w-12 text-muted-foreground/50" />
+              <h3 className="mt-4 text-lg font-semibold">Nenhum contato encontrado</h3>
+              <p className="text-muted-foreground">Comece adicionando seu primeiro contato.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Contato</TableHead>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Contato</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredContacts?.map((contact) => (
+                  <TableRow key={contact.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {getInitials(contact.first_name, contact.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{contact.first_name} {contact.last_name}</p>
+                          {contact.linkedin_url && (
+                            <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                              <Linkedin className="h-3 w-3" />
+                              LinkedIn
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {(contact as any).companies?.name ? (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Building2 className="h-3 w-3 text-muted-foreground" />
+                          {(contact as any).companies.name}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        {contact.job_title && <p className="text-sm">{contact.job_title}</p>}
+                        {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        {contact.email && (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                            {contact.email}
+                          </div>
+                        )}
+                        {contact.phone && (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            {contact.phone}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(contact)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => deleteMutation.mutate(contact.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
