@@ -1,1 +1,10 @@
 project_id = "lusyhkizwoihixcvcgap"
+
+[functions.zapi-webhook]
+verify_jwt = false
+
+[functions.zapi-send-message]
+verify_jwt = false
+
+[functions.zapi-instance-status]
+verify_jwt = false
