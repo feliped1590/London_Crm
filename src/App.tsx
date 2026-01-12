@@ -15,6 +15,7 @@ import Tasks from "./pages/Tasks";
 import Emails from "./pages/Emails";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import WhatsApp from "./pages/WhatsApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/pipeline" element={<Pipeline />} />
                 <Route path="/tasks" element={<Tasks />} />
+                <Route path="/whatsapp" element={<WhatsApp />} />
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />

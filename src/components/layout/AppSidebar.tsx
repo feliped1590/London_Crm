@@ -10,12 +10,15 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { useUnreadCount } from '@/hooks/useWhatsApp';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -23,6 +26,7 @@ const navItems = [
   { to: '/contacts', icon: Users, label: 'Contatos' },
   { to: '/pipeline', icon: Target, label: 'Pipeline' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas' },
+  { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp' },
   { to: '/emails', icon: Mail, label: 'Emails' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
   { to: '/settings', icon: Settings, label: 'Configurações' },
@@ -32,6 +36,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: unreadCount } = useUnreadCount();
 
   return (
     <aside 
@@ -73,7 +78,14 @@ export function AppSidebar() {
               )}
             >
               <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && (
+                <span className="flex-1">{item.label}</span>
+              )}
+              {!collapsed && item.to === '/whatsapp' && unreadCount && unreadCount > 0 && (
+                <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center px-1.5 text-xs">
+                  {unreadCount}
+                </Badge>
+              )}
             </NavLink>
           );
         })}
