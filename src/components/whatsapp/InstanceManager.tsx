@@ -290,10 +290,14 @@ function InstanceCard({ instance, onCheckStatus, onDelete, isCheckingStatus, isD
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => onDelete(instance.id)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onDelete(instance.id);
+                  }}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={isDeleting}
                 >
-                  Excluir
+                  {isDeleting ? 'Excluindo...' : 'Excluir'}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
