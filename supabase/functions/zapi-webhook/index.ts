@@ -12,9 +12,22 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate Client-Token
-    const clientToken = req.headers.get('client-token')
+    // Log all headers for debugging
+    console.log('Webhook called - All headers:', JSON.stringify(Object.fromEntries(req.headers.entries())))
+    
+    // Try to get token from multiple sources (Z-API may send it differently)
+    const url = new URL(req.url)
+    const clientToken = req.headers.get('client-token') 
+      || req.headers.get('Client-Token')
+      || req.headers.get('x-client-token')
+      || req.headers.get('X-Client-Token')
+      || url.searchParams.get('token')
+      || url.searchParams.get('client-token')
+    
     const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN')
+    
+    console.log('Token received:', clientToken ? `${clientToken.substring(0, 5)}...` : 'null')
+    console.log('Token expected:', expectedToken ? `${expectedToken.substring(0, 5)}...` : 'null')
 
     if (!expectedToken) {
       console.error('ZAPI_CLIENT_TOKEN not configured')
@@ -24,13 +37,16 @@ Deno.serve(async (req) => {
       )
     }
 
-    if (clientToken !== expectedToken) {
-      console.error('Invalid client token')
+    // Case-insensitive comparison for token validation
+    if (!clientToken || clientToken.toLowerCase() !== expectedToken.toLowerCase()) {
+      console.error('Invalid client token - received:', clientToken, 'expected:', expectedToken)
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    console.log('Token validated successfully')
 
     const body = await req.json()
     console.log('Received webhook:', JSON.stringify(body))
