@@ -68,6 +68,7 @@ Deno.serve(async (req) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Client-Token': Deno.env.get('ZAPI_CLIENT_TOKEN')!
       }
     })
 
