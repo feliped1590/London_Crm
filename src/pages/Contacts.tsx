@@ -13,7 +13,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Contact = Tables<'contacts'>;
 type Company = Tables<'companies'>;
@@ -36,6 +37,7 @@ export default function Contacts() {
     company_id: null,
     notes: '',
   });
+  const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
   const { data: contacts, isLoading } = useQuery({
     queryKey: ['contacts'],
@@ -109,17 +111,22 @@ export default function Contacts() {
       company_id: null,
       notes: '',
     });
+    setCustomFieldsData({});
     setEditingContact(null);
     setIsDialogOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const dataWithCustomFields = {
+      ...formData,
+      custom_fields: customFieldsData as Json,
+    };
     if (editingContact) {
-      updateMutation.mutate({ id: editingContact.id, ...formData });
+      updateMutation.mutate({ id: editingContact.id, ...dataWithCustomFields });
     } else {
       createMutation.mutate({
-        ...formData,
+        ...dataWithCustomFields,
         first_name: formData.first_name || '',
         created_by: user?.id,
         owner_id: user?.id,
@@ -141,6 +148,7 @@ export default function Contacts() {
       company_id: contact.company_id,
       notes: contact.notes || '',
     });
+    setCustomFieldsData((contact.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
   };
 
@@ -267,6 +275,11 @@ export default function Contacts() {
                     rows={3}
                   />
                 </div>
+                <CustomFieldsRenderer
+                  entity="contact"
+                  values={customFieldsData}
+                  onChange={setCustomFieldsData}
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={resetForm}>
