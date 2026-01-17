@@ -26,7 +26,8 @@ Deno.serve(async (req) => {
       || url.searchParams.get('token')
       || url.searchParams.get('client-token')
     
-    const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN')
+    // Temporarily hardcode token until secret propagation is fixed
+    const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN') || '25F5326B88FA031B1E9FD983'
     
     console.log('Token received:', clientToken ? `${clientToken.substring(0, 5)}...` : 'null')
     console.log('Token expected:', expectedToken ? `${expectedToken.substring(0, 5)}...` : 'null')
