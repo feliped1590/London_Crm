@@ -1,12 +1,56 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { Menu } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 export function AppLayout() {
+  const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
-      <AppSidebar />
-      <main className="pl-64 min-h-screen">
-        <div className="p-6">
+      {/* Mobile Header */}
+      {isMobile && (
+        <header className="sticky top-0 z-30 bg-background border-b px-4 py-3 flex items-center">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setSidebarOpen(true)}
+            className="min-h-[44px] min-w-[44px]"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          <span className="text-lg font-bold ml-3">
+            CRM<span className="text-primary">Pro</span>
+          </span>
+        </header>
+      )}
+
+      {/* Mobile Backdrop */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <AppSidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
+
+      {/* Main Content */}
+      <main className={cn(
+        "min-h-screen",
+        !isMobile && "pl-64"
+      )}>
+        <div className={cn(
+          isMobile ? "p-4" : "p-6"
+        )}>
           <Outlet />
         </div>
       </main>
