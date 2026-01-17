@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,8 @@ import { Plus, DollarSign, Calendar, Building2, User, GripVertical } from 'lucid
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
@@ -45,6 +46,7 @@ export default function Pipeline() {
     contact_id: null,
     notes: '',
   });
+  const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals'],
@@ -117,6 +119,7 @@ export default function Pipeline() {
       contact_id: null,
       notes: '',
     });
+    setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
   };
@@ -124,13 +127,18 @@ export default function Pipeline() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingDeal) {
-      updateMutation.mutate({ id: editingDeal.id, ...formData });
+      updateMutation.mutate({ 
+        id: editingDeal.id, 
+        ...formData,
+        custom_fields: customFieldsData as Json,
+      });
     } else {
       createMutation.mutate({
         ...formData,
         name: formData.name || '',
         created_by: user?.id,
         owner_id: user?.id,
+        custom_fields: customFieldsData as Json,
       });
     }
   };
@@ -147,6 +155,11 @@ export default function Pipeline() {
       contact_id: deal.contact_id,
       notes: deal.notes || '',
     });
+    setCustomFieldsData(
+      typeof deal.custom_fields === 'object' && deal.custom_fields !== null
+        ? (deal.custom_fields as Record<string, unknown>)
+        : {}
+    );
     setIsDialogOpen(true);
   };
 
@@ -282,6 +295,13 @@ export default function Pipeline() {
                     value={formData.notes || ''}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <CustomFieldsRenderer
+                    entity="deal"
+                    values={customFieldsData}
+                    onChange={setCustomFieldsData}
                   />
                 </div>
               </div>
