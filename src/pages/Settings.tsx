@@ -55,6 +55,16 @@ export default function Settings() {
   });
   const [optionsInput, setOptionsInput] = useState('');
 
+  // Pipeline stage editing states
+  const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
+  const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
+  const [stageFormData, setStageFormData] = useState({
+    name: '',
+    color: '#6366f1',
+    probability: 10,
+    sort_order: 1,
+  });
+
   const { data: customFields, isLoading: fieldsLoading } = useQuery({
     queryKey: ['custom_fields'],
     queryFn: async () => {
@@ -130,6 +140,19 @@ export default function Settings() {
     onError: () => toast.error('Erro ao excluir campo'),
   });
 
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }) => {
+      const { error } = await supabase.from('pipeline_stages').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
+      toast.success('Etapa atualizada!');
+      resetStageForm();
+    },
+    onError: () => toast.error('Erro ao atualizar etapa'),
+  });
+
   const resetFieldForm = () => {
     setFieldFormData({
       name: '',
@@ -184,6 +207,30 @@ export default function Settings() {
       }
     }
     setIsFieldDialogOpen(true);
+  };
+
+  const resetStageForm = () => {
+    setStageFormData({ name: '', color: '#6366f1', probability: 10, sort_order: 1 });
+    setEditingStage(null);
+    setIsStageDialogOpen(false);
+  };
+
+  const handleEditStage = (stage: PipelineStage) => {
+    setEditingStage(stage);
+    setStageFormData({
+      name: stage.name,
+      color: stage.color || '#6366f1',
+      probability: stage.probability || 10,
+      sort_order: stage.sort_order,
+    });
+    setIsStageDialogOpen(true);
+  };
+
+  const handleStageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStage) {
+      updateStageMutation.mutate({ id: editingStage.id, ...stageFormData });
+    }
   };
 
   const groupedFields = customFields?.reduce((acc, field) => {
@@ -396,9 +443,9 @@ export default function Settings() {
                       className="flex items-center justify-between p-3 rounded-lg border"
                     >
                       <div className="flex items-center gap-3">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                         <div
-                          className="h-4 w-4 rounded-full"
+                          className="h-4 w-4 rounded-full border"
                           style={{ backgroundColor: stage.color || '#6366f1' }}
                         />
                         <div>
@@ -406,13 +453,90 @@ export default function Settings() {
                           <p className="text-xs text-muted-foreground">Probabilidade: {stage.probability}%</p>
                         </div>
                       </div>
-                      <Badge variant="outline">{stage.stage}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{stage.stage}</Badge>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8"
+                          onClick={() => handleEditStage(stage)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Dialog de edição de etapa */}
+          <Dialog open={isStageDialogOpen} onOpenChange={(open) => { setIsStageDialogOpen(open); if (!open) resetStageForm(); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Editar Etapa</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleStageSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="stage-name">Nome da Etapa *</Label>
+                  <Input
+                    id="stage-name"
+                    value={stageFormData.name}
+                    onChange={(e) => setStageFormData({ ...stageFormData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="stage-color">Cor</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="stage-color"
+                      value={stageFormData.color}
+                      onChange={(e) => setStageFormData({ ...stageFormData, color: e.target.value })}
+                      className="h-10 w-14 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={stageFormData.color}
+                      onChange={(e) => setStageFormData({ ...stageFormData, color: e.target.value })}
+                      placeholder="#6366f1"
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="stage-probability">Probabilidade (%)</Label>
+                  <Input
+                    type="number"
+                    id="stage-probability"
+                    min={0}
+                    max={100}
+                    value={stageFormData.probability}
+                    onChange={(e) => setStageFormData({ ...stageFormData, probability: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="stage-order">Posição</Label>
+                  <Input
+                    type="number"
+                    id="stage-order"
+                    min={1}
+                    value={stageFormData.sort_order}
+                    onChange={(e) => setStageFormData({ ...stageFormData, sort_order: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={resetStageForm}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={updateStageMutation.isPending}>
+                    Atualizar
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="users" className="mt-6 space-y-6">
