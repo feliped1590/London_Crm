@@ -234,7 +234,9 @@ export default function Emails() {
         body: composeData.body,
         contact_id: selectedContact?.id,
         template_id: selectedTemplateId,
-        scheduled_for: isScheduled ? composeData.scheduledFor : null,
+        scheduled_for: isScheduled && composeData.scheduledFor 
+          ? new Date(composeData.scheduledFor).toISOString() 
+          : null,
       });
     } else {
       if (selectedContacts.length === 0) {
@@ -251,7 +253,9 @@ export default function Emails() {
         subject: composeData.subject,
         body: composeData.body,
         template_id: selectedTemplateId,
-        scheduled_for: isScheduled ? composeData.scheduledFor : null,
+        scheduled_for: isScheduled && composeData.scheduledFor 
+          ? new Date(composeData.scheduledFor).toISOString() 
+          : null,
       });
     }
   };
