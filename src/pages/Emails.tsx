@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -156,6 +157,22 @@ export default function Emails() {
     onError: (error: any) => {
       toast.error(`Erro ao enviar: ${error.message}`);
     },
+  });
+
+  const deleteScheduledEmailMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('email_logs')
+        .delete()
+        .eq('id', id)
+        .eq('status', 'scheduled');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email_logs'] });
+      toast.success('Email agendado excluído!');
+    },
+    onError: () => toast.error('Erro ao excluir email agendado'),
   });
 
   const resetTemplateForm = () => {
@@ -767,6 +784,7 @@ export default function Emails() {
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Aberto em</TableHead>
+                      <TableHead className="w-[60px]">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -804,6 +822,38 @@ export default function Emails() {
                               {formatDateTime(log.opened_at)}
                             </div>
                           ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {log.status === 'scheduled' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Excluir email agendado?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta ação não pode ser desfeita. O email para {log.to_email} não será enviado.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteScheduledEmailMutation.mutate(log.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Excluir
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
