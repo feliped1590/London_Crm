@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -19,6 +20,7 @@ type CustomField = Tables<'custom_fields'>;
 type PipelineStage = Tables<'pipeline_stages'>;
 type CustomFieldEntity = 'company' | 'contact' | 'deal';
 type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'email' | 'phone' | 'currency';
+type AppRole = 'admin' | 'vendedor';
 
 const fieldTypeLabels: Record<CustomFieldType, string> = {
   text: 'Texto',
@@ -37,6 +39,11 @@ const entityLabels: Record<CustomFieldEntity, string> = {
   company: 'Empresas',
   contact: 'Contatos',
   deal: 'Negócios',
+};
+
+const roleLabels: Record<AppRole, string> = {
+  admin: 'Administrador',
+  vendedor: 'Vendedor',
 };
 
 export default function Settings() {
@@ -65,6 +72,32 @@ export default function Settings() {
     sort_order: 1,
   });
 
+  // User management states
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+  const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<{ userId: string; currentRole: AppRole; fullName: string } | null>(null);
+  const [userFormData, setUserFormData] = useState({
+    email: '',
+    password: '',
+    full_name: '',
+    role: 'vendedor' as AppRole,
+  });
+
+  // Check if current user is admin
+  const { data: isAdmin } = useQuery({
+    queryKey: ['is_admin', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    enabled: !!user?.id,
+  });
+
   const { data: customFields, isLoading: fieldsLoading } = useQuery({
     queryKey: ['custom_fields'],
     queryFn: async () => {
@@ -90,15 +123,30 @@ export default function Settings() {
     },
   });
 
-  const { data: userRoles } = useQuery({
-    queryKey: ['user_roles'],
+  const { data: userRoles, isLoading: usersLoading } = useQuery({
+    queryKey: ['user_roles_with_profiles'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First fetch user roles
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('*, profiles(full_name)')
+        .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      if (rolesError) throw rolesError;
+      
+      // Then fetch profiles for all users
+      const userIds = roles?.map(r => r.user_id) || [];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+      if (profilesError) throw profilesError;
+      
+      // Combine the data
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      return roles?.map(role => ({
+        ...role,
+        profile: profileMap.get(role.user_id) || null
+      })) || [];
     },
   });
 
@@ -151,6 +199,56 @@ export default function Settings() {
       resetStageForm();
     },
     onError: () => toast.error('Erro ao atualizar etapa'),
+  });
+
+  // User management mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (data: typeof userFormData) => {
+      const { data: response, error } = await supabase.functions.invoke('create-user', {
+        body: data,
+      });
+      if (error) throw error;
+      if (response?.error) throw new Error(response.error);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_roles'] });
+      toast.success('Usuário criado com sucesso!');
+      resetUserForm();
+    },
+    onError: (error: Error) => toast.error(error.message || 'Erro ao criar usuário'),
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ role })
+        .eq('user_id', userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_roles'] });
+      toast.success('Nível de acesso atualizado!');
+      resetEditRoleDialog();
+    },
+    onError: () => toast.error('Erro ao atualizar nível de acesso'),
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: response, error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if (response?.error) throw new Error(response.error);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_roles'] });
+      toast.success('Usuário excluído com sucesso!');
+    },
+    onError: (error: Error) => toast.error(error.message || 'Erro ao excluir usuário'),
   });
 
   const resetFieldForm = () => {
@@ -230,6 +328,35 @@ export default function Settings() {
     e.preventDefault();
     if (editingStage) {
       updateStageMutation.mutate({ id: editingStage.id, ...stageFormData });
+    }
+  };
+
+  const resetUserForm = () => {
+    setUserFormData({ email: '', password: '', full_name: '', role: 'vendedor' });
+    setIsUserDialogOpen(false);
+  };
+
+  const resetEditRoleDialog = () => {
+    setEditingUser(null);
+    setIsEditRoleDialogOpen(false);
+  };
+
+  const handleEditRole = (userId: string, currentRole: AppRole, fullName: string) => {
+    setEditingUser({ userId, currentRole, fullName });
+    setIsEditRoleDialogOpen(true);
+  };
+
+  const handleUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createUserMutation.mutate(userFormData);
+  };
+
+  const handleRoleUpdate = () => {
+    if (editingUser) {
+      updateRoleMutation.mutate({ 
+        userId: editingUser.userId, 
+        role: editingUser.currentRole 
+      });
     }
   };
 
@@ -540,40 +667,234 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="users" className="mt-6 space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold">Usuários e Permissões</h2>
-            <p className="text-sm text-muted-foreground">Gerencie os membros da equipe</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Usuários e Permissões</h2>
+              <p className="text-sm text-muted-foreground">Gerencie os membros da equipe</p>
+            </div>
+            {isAdmin && (
+              <Dialog open={isUserDialogOpen} onOpenChange={(open) => { setIsUserDialogOpen(open); if (!open) resetUserForm(); }}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Novo Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Usuário</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleUserSubmit} className="space-y-4">
+                    <div>
+                      <Label htmlFor="full_name">Nome Completo *</Label>
+                      <Input
+                        id="full_name"
+                        value={userFormData.full_name}
+                        onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
+                        placeholder="Ex: João Silva"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="email">Email *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={userFormData.email}
+                        onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                        placeholder="joao@empresa.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password">Senha *</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={userFormData.password}
+                        onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
+                        minLength={6}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="role">Nível de Acesso *</Label>
+                      <Select 
+                        value={userFormData.role} 
+                        onValueChange={(v) => setUserFormData({ ...userFormData, role: v as AppRole })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vendedor">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4" />
+                              Vendedor
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="admin">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4" />
+                              Administrador
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Administradores podem gerenciar usuários e configurações.
+                      </p>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={resetUserForm}>
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={createUserMutation.isPending}>
+                        {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <Card>
             <CardContent className="pt-6">
-              {userRoles?.length ? (
+              {usersLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                </div>
+              ) : userRoles?.length ? (
                 <div className="space-y-2">
-                  {userRoles.map((ur) => (
-                    <div
-                      key={ur.id}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                          {((ur as any).profiles?.full_name?.[0] || 'U').toUpperCase()}
+                  {userRoles.map((ur) => {
+                    const fullName = ur.profile?.full_name || 'Usuário';
+                    const isCurrentUser = ur.user_id === user?.id;
+                    
+                    return (
+                      <div
+                        key={ur.id}
+                        className="flex items-center justify-between p-3 rounded-lg border"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                            {fullName[0]?.toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{fullName}</p>
+                              {isCurrentUser && (
+                                <Badge variant="outline" className="text-xs">Você</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{ur.user_id}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{(ur as any).profiles?.full_name || 'Usuário'}</p>
-                          <p className="text-xs text-muted-foreground">{ur.user_id}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
+                            {roleLabels[ur.role as AppRole] || ur.role}
+                          </Badge>
+                          {isAdmin && !isCurrentUser && (
+                            <>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8"
+                                onClick={() => handleEditRole(ur.user_id, ur.role as AppRole, fullName)}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon"
+                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir o usuário <strong>{fullName}</strong>? 
+                                      Esta ação não pode ser desfeita e todos os dados associados serão removidos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteUserMutation.mutate(ur.user_id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir'}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
                         </div>
                       </div>
-                      <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
-                        {ur.role === 'admin' ? 'Administrador' : 'Vendedor'}
-                      </Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhum usuário encontrado</p>
               )}
             </CardContent>
           </Card>
+
+          {/* Dialog de edição de role */}
+          <Dialog open={isEditRoleDialogOpen} onOpenChange={(open) => { setIsEditRoleDialogOpen(open); if (!open) resetEditRoleDialog(); }}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Alterar Nível de Acesso</DialogTitle>
+              </DialogHeader>
+              {editingUser && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Alterando permissões de <strong>{editingUser.fullName}</strong>
+                  </p>
+                  <div>
+                    <Label htmlFor="user-role">Nível de Acesso</Label>
+                    <Select 
+                      value={editingUser.currentRole} 
+                      onValueChange={(v) => setEditingUser({ ...editingUser, currentRole: v as AppRole })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vendedor">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Vendedor
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="admin">
+                          <div className="flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            Administrador
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={resetEditRoleDialog}>
+                      Cancelar
+                    </Button>
+                    <Button onClick={handleRoleUpdate} disabled={updateRoleMutation.isPending}>
+                      {updateRoleMutation.isPending ? 'Salvando...' : 'Salvar'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>
