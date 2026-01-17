@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -48,12 +48,21 @@ export default function Pipeline() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
+  // Email dialog states
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [emailTargetDeal, setEmailTargetDeal] = useState<Deal | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [emailData, setEmailData] = useState({
+    subject: '',
+    body: '',
+  });
+
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
-        .select('*, companies(name), contacts(first_name, last_name)')
+        .select('*, companies(name), contacts(first_name, last_name, email)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -72,7 +81,16 @@ export default function Pipeline() {
   const { data: contacts } = useQuery({
     queryKey: ['contacts'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name').order('first_name');
+      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email').order('first_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: templates } = useQuery({
+    queryKey: ['email_templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('email_templates').select('*').order('name');
       if (error) throw error;
       return data;
     },
@@ -108,6 +126,25 @@ export default function Pipeline() {
     onError: () => toast.error('Erro ao atualizar negócio'),
   });
 
+  const sendEmailMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const { data: response, error } = await supabase.functions.invoke('send-email', {
+        body: data,
+      });
+      if (error) throw error;
+      if (response.error) throw new Error(response.error);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email_logs'] });
+      toast.success('Email enviado com sucesso!');
+      resetEmailForm();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao enviar email: ${error.message}`);
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -122,6 +159,13 @@ export default function Pipeline() {
     setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
+  };
+
+  const resetEmailForm = () => {
+    setEmailData({ subject: '', body: '' });
+    setSelectedTemplateId(null);
+    setEmailTargetDeal(null);
+    setIsEmailDialogOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -161,6 +205,48 @@ export default function Pipeline() {
         : {}
     );
     setIsDialogOpen(true);
+  };
+
+  const handleOpenEmailDialog = (deal: Deal) => {
+    setEmailTargetDeal(deal);
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    if (templateId === 'none') {
+      setSelectedTemplateId(null);
+      return;
+    }
+    setSelectedTemplateId(templateId);
+    const template = templates?.find(t => t.id === templateId);
+    if (template) {
+      setEmailData({
+        subject: template.subject,
+        body: template.body,
+      });
+    }
+  };
+
+  const handleSendEmail = () => {
+    if (!emailTargetDeal || !emailData.subject || !emailData.body) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+
+    const contact = (emailTargetDeal as any).contacts;
+    if (!contact?.email) {
+      toast.error('Contato não possui email');
+      return;
+    }
+
+    sendEmailMutation.mutate({
+      to_email: contact.email,
+      subject: emailData.subject,
+      body: emailData.body,
+      contact_id: emailTargetDeal.contact_id,
+      deal_id: emailTargetDeal.id,
+      template_id: selectedTemplateId,
+    });
   };
 
   const handleDragStart = (e: React.DragEvent, dealId: string) => {
@@ -305,18 +391,111 @@ export default function Pipeline() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={resetForm}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingDeal ? 'Atualizar' : 'Criar'}
-                </Button>
+              <div className="flex justify-between gap-2">
+                <div>
+                  {editingDeal && (editingDeal as any).contacts?.email && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => handleOpenEmailDialog(editingDeal)}
+                      className="gap-2"
+                    >
+                      <Mail className="h-4 w-4" />
+                      Enviar Email
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={resetForm}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {editingDeal ? 'Atualizar' : 'Criar'}
+                  </Button>
+                </div>
               </div>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Email Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={(open) => { setIsEmailDialogOpen(open); if (!open) resetEmailForm(); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Enviar Email
+            </DialogTitle>
+          </DialogHeader>
+          {emailTargetDeal && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Destinatário:</p>
+                <p className="font-medium">
+                  {(emailTargetDeal as any).contacts?.first_name} {(emailTargetDeal as any).contacts?.last_name}
+                </p>
+                <p className="text-sm text-muted-foreground">{(emailTargetDeal as any).contacts?.email}</p>
+              </div>
+
+              <div>
+                <Label>Template (opcional)</Label>
+                <Select value={selectedTemplateId || 'none'} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum template</SelectItem>
+                    {templates?.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Assunto *</Label>
+                <Input
+                  value={emailData.subject}
+                  onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                  placeholder="Assunto do email"
+                />
+              </div>
+
+              <div>
+                <Label>Corpo do Email *</Label>
+                <Textarea
+                  value={emailData.body}
+                  onChange={(e) => setEmailData({ ...emailData, body: e.target.value })}
+                  rows={8}
+                  placeholder="Use {{nome}}, {{empresa}}, {{cargo}} para variáveis"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Variáveis: {"{{nome}}"}, {"{{sobrenome}}"}, {"{{empresa}}"}, {"{{cargo}}"}
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={resetEmailForm}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSendEmail}
+                  disabled={sendEmailMutation.isPending}
+                  className="gap-2"
+                >
+                  {sendEmailMutation.isPending ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -380,10 +559,23 @@ export default function Pipeline() {
                                 </div>
                               )}
                             </div>
-                            <div className="mt-2">
+                            <div className="mt-2 flex items-center gap-1">
                               <Badge variant="secondary" className="text-xs">
                                 {deal.probability}% prob.
                               </Badge>
+                              {(deal as any).contacts?.email && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEmailDialog(deal);
+                                  }}
+                                >
+                                  <Mail className="h-3 w-3" />
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>

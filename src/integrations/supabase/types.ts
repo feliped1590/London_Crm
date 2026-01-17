@@ -329,6 +329,7 @@ export type Database = {
           id: string
           metadata: Json | null
           opened_at: string | null
+          scheduled_for: string | null
           sent_at: string | null
           sent_by: string | null
           status: string | null
@@ -344,6 +345,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           opened_at?: string | null
+          scheduled_for?: string | null
           sent_at?: string | null
           sent_by?: string | null
           status?: string | null
@@ -359,6 +361,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           opened_at?: string | null
+          scheduled_for?: string | null
           sent_at?: string | null
           sent_by?: string | null
           status?: string | null
