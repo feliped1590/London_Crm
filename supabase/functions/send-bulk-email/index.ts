@@ -106,7 +106,10 @@ serve(async (req: Request): Promise<Response> => {
     const isScheduled = !!scheduled_for;
     if (isScheduled) {
       const scheduledDate = new Date(scheduled_for!);
-      if (scheduledDate <= new Date()) {
+      const now = new Date();
+      // Allow 1 minute buffer for processing time and timezone differences
+      const bufferMs = 60 * 1000;
+      if (scheduledDate.getTime() <= now.getTime() - bufferMs) {
         throw new Error("Scheduled time must be in the future");
       }
     }
