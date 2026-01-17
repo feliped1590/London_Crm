@@ -15,9 +15,11 @@ Deno.serve(async (req) => {
     // Log all headers for debugging
     console.log('Webhook called - All headers:', JSON.stringify(Object.fromEntries(req.headers.entries())))
     
-    // Try to get token from multiple sources (Z-API may send it differently)
+    // Try to get token from multiple sources (Z-API sends it in z-api-token header)
     const url = new URL(req.url)
-    const clientToken = req.headers.get('client-token') 
+    const clientToken = req.headers.get('z-api-token')
+      || req.headers.get('Z-Api-Token')
+      || req.headers.get('client-token') 
       || req.headers.get('Client-Token')
       || req.headers.get('x-client-token')
       || req.headers.get('X-Client-Token')
