@@ -13,7 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Company = Tables<'companies'>;
 
@@ -46,6 +47,7 @@ export default function Companies() {
     country: 'Brasil',
     notes: '',
   });
+  const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
   const { data: companies, isLoading } = useQuery({
     queryKey: ['companies'],
@@ -112,17 +114,22 @@ export default function Companies() {
       country: 'Brasil',
       notes: '',
     });
+    setCustomFieldsData({});
     setEditingCompany(null);
     setIsDialogOpen(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const dataWithCustomFields = {
+      ...formData,
+      custom_fields: customFieldsData as Json,
+    };
     if (editingCompany) {
-      updateMutation.mutate({ id: editingCompany.id, ...formData });
+      updateMutation.mutate({ id: editingCompany.id, ...dataWithCustomFields });
     } else {
       createMutation.mutate({
-        ...formData,
+        ...dataWithCustomFields,
         name: formData.name || '',
         created_by: user?.id,
         owner_id: user?.id,
@@ -146,6 +153,7 @@ export default function Companies() {
       country: company.country || 'Brasil',
       notes: company.notes || '',
     });
+    setCustomFieldsData((company.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
   };
 
@@ -276,6 +284,11 @@ export default function Companies() {
                     rows={3}
                   />
                 </div>
+                <CustomFieldsRenderer
+                  entity="company"
+                  values={customFieldsData}
+                  onChange={setCustomFieldsData}
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={resetForm}>
