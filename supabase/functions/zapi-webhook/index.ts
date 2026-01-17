@@ -51,7 +51,8 @@ Deno.serve(async (req) => {
     console.log('Token validated successfully')
 
     const body = await req.json()
-    console.log('Received webhook:', JSON.stringify(body))
+    console.log('Received webhook payload:', JSON.stringify(body))
+    console.log('Payload keys:', Object.keys(body).join(', '))
 
     // Initialize Supabase client with service role for webhook processing
     const supabase = createClient(
@@ -59,11 +60,22 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Determine the event type and process accordingly
-    const { instanceId, phone, isFromMe, messageId, text, image, document, audio, video, sticker } = body
+    // Z-API can send different payload structures depending on the event type
+    // Common fields: instanceId, phone, isFromMe, messageId, text, image, etc.
+    // Also check for alternative field names used by Z-API
+    const instanceId = body.instanceId || body.instance_id || body.zapiInstanceId
+    const phone = body.phone || body.from || body.chatId || body.sender
+    const isFromMe = body.isFromMe ?? body.fromMe ?? false
+    const messageId = body.messageId || body.id || body.msgId
+    
+    console.log('Extracted fields - instanceId:', instanceId, 'phone:', phone, 'isFromMe:', isFromMe, 'messageId:', messageId)
+
+    // Destructure message content fields
+    const { text, image, document, audio, video, sticker } = body
 
     if (!instanceId || !phone) {
-      console.log('Missing required fields, skipping')
+      console.log('Missing required fields after extraction - instanceId:', instanceId, 'phone:', phone)
+      console.log('Available top-level keys:', Object.keys(body).join(', '))
       return new Response(
         JSON.stringify({ success: true, message: 'Skipped - missing required fields' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
