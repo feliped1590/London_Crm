@@ -453,6 +453,119 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          length: number | null
+          order_id: string
+          product_id: string | null
+          quantity: number
+          sort_order: number | null
+          subtotal: number
+          thickness: number | null
+          unit_price: number
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          length?: number | null
+          order_id: string
+          product_id?: string | null
+          quantity?: number
+          sort_order?: number | null
+          subtotal?: number
+          thickness?: number | null
+          unit_price?: number
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          length?: number | null
+          order_id?: string
+          product_id?: string | null
+          quantity?: number
+          sort_order?: number | null
+          subtotal?: number
+          thickness?: number | null
+          unit_price?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          delivery_date: string | null
+          id: string
+          number: string
+          observations: string | null
+          proposal_id: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          id?: string
+          number: string
+          observations?: string | null
+          proposal_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          delivery_date?: string | null
+          id?: string
+          number?: string
+          observations?: string | null
+          proposal_id?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stages: {
         Row: {
           color: string | null
@@ -483,6 +596,63 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          length: number | null
+          material: string | null
+          name: string
+          sku: string
+          thickness: number | null
+          unit_measure: string | null
+          unit_price: number | null
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          length?: number | null
+          material?: string | null
+          name: string
+          sku: string
+          thickness?: number | null
+          unit_measure?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          length?: number | null
+          material?: string | null
+          name?: string
+          sku?: string
+          thickness?: number | null
+          unit_measure?: string | null
+          unit_price?: number | null
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -510,6 +680,120 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      proposal_items: {
+        Row: {
+          created_at: string
+          description: string
+          discount_percent: number | null
+          id: string
+          length: number | null
+          product_id: string | null
+          proposal_id: string
+          quantity: number
+          sort_order: number | null
+          subtotal: number
+          thickness: number | null
+          unit_price: number
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount_percent?: number | null
+          id?: string
+          length?: number | null
+          product_id?: string | null
+          proposal_id: string
+          quantity?: number
+          sort_order?: number | null
+          subtotal?: number
+          thickness?: number | null
+          unit_price?: number
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount_percent?: number | null
+          id?: string
+          length?: number | null
+          product_id?: string | null
+          proposal_id?: string
+          quantity?: number
+          sort_order?: number | null
+          subtotal?: number
+          thickness?: number | null
+          unit_price?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string
+          delivery_terms: string | null
+          id: string
+          number: string
+          observations: string | null
+          payment_terms: string | null
+          status: Database["public"]["Enums"]["proposal_status"]
+          total_value: number | null
+          updated_at: string
+          validity_date: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id: string
+          delivery_terms?: string | null
+          id?: string
+          number: string
+          observations?: string | null
+          payment_terms?: string | null
+          status?: Database["public"]["Enums"]["proposal_status"]
+          total_value?: number | null
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string
+          delivery_terms?: string | null
+          id?: string
+          number?: string
+          observations?: string | null
+          payment_terms?: string | null
+          status?: Database["public"]["Enums"]["proposal_status"]
+          total_value?: number | null
+          updated_at?: string
+          validity_date?: string | null
         }
         Relationships: []
       }
@@ -792,6 +1076,20 @@ export type Database = {
         | "negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+      order_status:
+        | "pendente"
+        | "em_producao"
+        | "produzido"
+        | "faturado"
+        | "entregue"
+        | "cancelado"
+      proposal_status:
+        | "rascunho"
+        | "enviada"
+        | "em_analise"
+        | "aprovada"
+        | "recusada"
+        | "expirada"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_pessoa: "PF" | "PJ"
@@ -943,6 +1241,22 @@ export const Constants = {
         "negociacao",
         "fechado_ganho",
         "fechado_perdido",
+      ],
+      order_status: [
+        "pendente",
+        "em_producao",
+        "produzido",
+        "faturado",
+        "entregue",
+        "cancelado",
+      ],
+      proposal_status: [
+        "rascunho",
+        "enviada",
+        "em_analise",
+        "aprovada",
+        "recusada",
+        "expirada",
       ],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
