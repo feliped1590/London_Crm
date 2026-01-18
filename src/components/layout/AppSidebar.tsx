@@ -15,29 +15,38 @@ import {
   X,
   RefreshCw,
   Package,
-  ShoppingCart
+  ShoppingCart,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { useUnreadCount } from '@/hooks/useWhatsApp';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/companies', icon: Building2, label: 'Empresas' },
-  { to: '/contacts', icon: Users, label: 'Contatos' },
-  { to: '/pipeline', icon: Target, label: 'Pipeline' },
-  { to: '/products', icon: Package, label: 'Produtos' },
-  { to: '/orders', icon: ShoppingCart, label: 'Pedidos' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tarefas' },
-  { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp' },
-  { to: '/emails', icon: Mail, label: 'Emails' },
-  { to: '/reports', icon: BarChart3, label: 'Relatórios' },
-  { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex' },
-  { to: '/settings', icon: Settings, label: 'Configurações' },
+interface NavItem {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  moduleKey: string;
+}
+
+const allNavItems: NavItem[] = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', moduleKey: 'dashboard' },
+  { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
+  { to: '/contacts', icon: Users, label: 'Contatos', moduleKey: 'contacts' },
+  { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
+  { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
+  { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
+  { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
+  { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
+  { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
+  { to: '/reports', icon: BarChart3, label: 'Relatórios', moduleKey: 'reports' },
+  { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' },
+  { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
 ];
 
 interface AppSidebarProps {
@@ -51,6 +60,13 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { data: unreadCount } = useUnreadCount();
   const isMobile = useIsMobile();
+  const { canAccess, isAdmin, isLoading: permissionsLoading } = useModulePermissions();
+
+  // Filter nav items based on user permissions
+  const navItems = useMemo(() => {
+    if (permissionsLoading) return [];
+    return allNavItems.filter(item => canAccess(item.moduleKey));
+  }, [canAccess, permissionsLoading]);
 
   const handleNavClick = () => {
     if (isMobile && onClose) {
