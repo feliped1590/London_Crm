@@ -113,7 +113,7 @@ export default function Bots() {
           name: `${bot.name} (Cópia)`,
           description: bot.description,
           trigger_type: bot.trigger_type,
-          trigger_config: bot.trigger_config as unknown as Record<string, unknown>,
+          trigger_config: bot.trigger_config as unknown as null,
           created_by: user?.id,
         }])
         .select()
