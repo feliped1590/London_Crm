@@ -133,8 +133,7 @@ export function LicenseCard() {
           variant="outline" 
           className="w-full gap-2"
           onClick={() => {
-            // TODO: Implement upgrade flow or contact
-            window.open('mailto:suporte@exemplo.com?subject=Solicitação de aumento de licença', '_blank');
+            window.open('mailto:fdkdigital2@gmail.com?subject=Solicitação de aumento de licença&body=Olá,%0A%0AGostaria de solicitar um aumento no limite de usuários da minha licença.%0A%0AAtenciosamente', '_blank');
           }}
         >
           <ExternalLink className="h-4 w-4" />
