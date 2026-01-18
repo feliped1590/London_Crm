@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -21,6 +21,7 @@ import {
   ProposalStatus,
   proposalStatusConfig,
 } from '@/types/products';
+import { ApprovalLinkModal } from './ApprovalLinkModal';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -55,6 +56,12 @@ export function ProposalDialog({
 
   const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  
+  // Approval link states
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalLink, setApprovalLink] = useState('');
+  const [approvalExpires, setApprovalExpires] = useState<string | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   // Load proposal data when editing
   useEffect(() => {
@@ -378,6 +385,51 @@ export function ProposalDialog({
     }
   };
 
+  const handleGenerateApprovalLink = async () => {
+    if (!proposal) return;
+    
+    try {
+      setGeneratingLink(true);
+      
+      // Generate UUID token
+      const token = crypto.randomUUID();
+      
+      // Set expiration to validity date or 30 days from now
+      const expiresAt = proposal.validity_date 
+        ? new Date(proposal.validity_date).toISOString()
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      
+      // Update proposal with token
+      const { error } = await supabase
+        .from('proposals')
+        .update({
+          approval_token: token,
+          approval_token_expires_at: expiresAt,
+        })
+        .eq('id', proposal.id);
+
+      if (error) throw error;
+
+      // Build the approval link
+      const baseUrl = window.location.origin;
+      const link = `${baseUrl}/proposta/${token}`;
+      
+      setApprovalLink(link);
+      setApprovalExpires(expiresAt);
+      setShowApprovalModal(true);
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      
+      toast.success('Link de aprovação gerado!');
+    } catch (error) {
+      console.error('Error generating approval link:', error);
+      toast.error('Erro ao gerar link de aprovação');
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
@@ -599,12 +651,29 @@ export function ProposalDialog({
 
           {/* Actions */}
           <div className="flex justify-between gap-2 pt-4 border-t mt-4">
-            <div>
+            <div className="flex gap-2">
               {isEditing && (
-                <Button type="button" variant="outline" onClick={handleGeneratePDF}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Gerar PDF
-                </Button>
+                <>
+                  <Button type="button" variant="outline" onClick={handleGeneratePDF}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Gerar PDF
+                  </Button>
+                  {(proposal?.status === 'rascunho' || proposal?.status === 'enviada' || proposal?.status === 'em_analise') && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleGenerateApprovalLink}
+                      disabled={generatingLink}
+                    >
+                      {generatingLink ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Link2 className="h-4 w-4 mr-2" />
+                      )}
+                      Link de Aprovação
+                    </Button>
+                  )}
+                </>
               )}
             </div>
             <div className="flex gap-2">
@@ -621,6 +690,15 @@ export function ProposalDialog({
           </div>
         </form>
       </DialogContent>
+
+      {/* Approval Link Modal */}
+      <ApprovalLinkModal
+        open={showApprovalModal}
+        onOpenChange={setShowApprovalModal}
+        approvalLink={approvalLink}
+        expiresAt={approvalExpires}
+        proposalNumber={proposal?.number || ''}
+      />
     </Dialog>
   );
 }

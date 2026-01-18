@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.process-task-reminders]
 verify_jwt = false
+
+[functions.proposal-public-view]
+verify_jwt = false
+
+[functions.proposal-approve]
+verify_jwt = false

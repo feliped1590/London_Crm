@@ -1072,6 +1072,11 @@ export type Database = {
       }
       proposals: {
         Row: {
+          approval_token: string | null
+          approval_token_expires_at: string | null
+          approved_at: string | null
+          approved_by_ip: string | null
+          approved_by_name: string | null
           company_id: string | null
           contact_id: string | null
           created_at: string
@@ -1082,12 +1087,18 @@ export type Database = {
           number: string
           observations: string | null
           payment_terms: string | null
+          rejection_reason: string | null
           status: Database["public"]["Enums"]["proposal_status"]
           total_value: number | null
           updated_at: string
           validity_date: string | null
         }
         Insert: {
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          approved_at?: string | null
+          approved_by_ip?: string | null
+          approved_by_name?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1098,12 +1109,18 @@ export type Database = {
           number: string
           observations?: string | null
           payment_terms?: string | null
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           total_value?: number | null
           updated_at?: string
           validity_date?: string | null
         }
         Update: {
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
+          approved_at?: string | null
+          approved_by_ip?: string | null
+          approved_by_name?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1114,6 +1131,7 @@ export type Database = {
           number?: string
           observations?: string | null
           payment_terms?: string | null
+          rejection_reason?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           total_value?: number | null
           updated_at?: string

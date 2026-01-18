@@ -21,6 +21,7 @@ import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Bots from "./pages/Bots";
 import BotBuilder from "./pages/BotBuilder";
+import ProposalPublic from "./pages/ProposalPublic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -41,6 +42,7 @@ const App = () => (
           <Sonner />
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/proposta/:token" element={<ProposalPublic />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
