@@ -109,10 +109,15 @@ serve(async (req) => {
             border-bottom: 3px solid #3b82f6;
             padding-bottom: 20px;
           }
-          .logo {
-            font-size: 28px;
-            font-weight: bold;
-            color: #3b82f6;
+          .logo img {
+            max-height: 70px;
+            width: auto;
+          }
+          .logo-text {
+            margin-top: 5px;
+            font-size: 10px;
+            color: #1e3a5f;
+            letter-spacing: 1px;
           }
           .proposal-info {
             text-align: right;
@@ -206,8 +211,10 @@ serve(async (req) => {
       <body>
         <div class="header">
           <div>
-            <div class="logo">QUALYVAC</div>
-            <p style="color: #6b7280; margin: 5px 0;">Embalagens de Qualidade</p>
+            <div class="logo">
+              <img src="https://id-preview--9eb27420-1c7a-461a-901c-19db50d159be.lovable.app/images/logo-fdk.jpg" alt="FDK Personalizados" />
+            </div>
+            <p class="logo-text">TORNE SEUS MOMENTOS MEMORÁVEIS</p>
           </div>
           <div class="proposal-info">
             <div class="proposal-number">${proposal.number}</div>
@@ -276,7 +283,7 @@ serve(async (req) => {
         ` : ''}
 
         <div class="footer">
-          <p>Esta proposta foi gerada automaticamente pelo sistema CRM Qualyvac.</p>
+          <p><strong>FDK Personalizados</strong> - Torne seus momentos memoráveis</p>
           <p>Para dúvidas, entre em contato conosco.</p>
         </div>
       </body>
