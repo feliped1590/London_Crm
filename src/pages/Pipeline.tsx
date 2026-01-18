@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
+import { StageHistoryTab } from '@/components/pipeline/StageHistoryTab';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -113,15 +114,64 @@ export default function Pipeline() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Deal> & { id: string }) => {
+      // Get current deal to check if stage changed
+      const currentDeal = deals?.find(d => d.id === id);
+      const stageChanged = currentDeal && data.stage && currentDeal.stage !== data.stage;
+      
       const updateData: any = { ...data };
       if (data.stage === 'fechado_ganho' || data.stage === 'fechado_perdido') {
         updateData.closed_at = new Date().toISOString();
       }
       const { error } = await supabase.from('deals').update(updateData).eq('id', id);
       if (error) throw error;
+
+      // If stage changed, record history and execute automations
+      if (stageChanged && currentDeal && data.stage) {
+        // Calculate duration in previous stage
+        const { data: lastHistory } = await supabase
+          .from('deal_stage_history')
+          .select('changed_at')
+          .eq('deal_id', id)
+          .order('changed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        const duration = lastHistory 
+          ? Math.floor((Date.now() - new Date(lastHistory.changed_at).getTime()) / 1000)
+          : null;
+
+        // Record stage history
+        await supabase.from('deal_stage_history').insert({
+          deal_id: id,
+          from_stage: currentDeal.stage,
+          to_stage: data.stage,
+          changed_by: user?.id,
+          duration_seconds: duration,
+        });
+
+        // Execute automations for stage exit (fire and forget)
+        supabase.functions.invoke('execute-automation', {
+          body: { 
+            deal_id: id, 
+            trigger_type: 'stage_exit', 
+            trigger_stage: currentDeal.stage 
+          }
+        }).catch(console.error);
+
+        // Execute automations for stage enter (fire and forget)
+        supabase.functions.invoke('execute-automation', {
+          body: { 
+            deal_id: id, 
+            trigger_type: 'stage_enter', 
+            trigger_stage: data.stage 
+          }
+        }).catch(console.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['deal_stage_history'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Negócio atualizado!');
       resetForm();
     },
@@ -291,11 +341,15 @@ export default function Pipeline() {
             
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
                   <TabsTrigger value="propostas" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Propostas
+                  </TabsTrigger>
+                  <TabsTrigger value="historico" className="flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Histórico
                   </TabsTrigger>
                 </TabsList>
                 
@@ -437,6 +491,10 @@ export default function Pipeline() {
                     companyId={editingDeal.company_id}
                     contactId={editingDeal.contact_id}
                   />
+                </TabsContent>
+                
+                <TabsContent value="historico" className="flex-1 overflow-auto mt-4">
+                  <StageHistoryTab dealId={editingDeal.id} />
                 </TabsContent>
               </Tabs>
             ) : (

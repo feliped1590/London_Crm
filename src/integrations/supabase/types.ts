@@ -275,6 +275,47 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_stage_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          created_at: string
+          deal_id: string
+          duration_seconds: number | null
+          from_stage: Database["public"]["Enums"]["deal_stage"] | null
+          id: string
+          to_stage: Database["public"]["Enums"]["deal_stage"]
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          deal_id: string
+          duration_seconds?: number | null
+          from_stage?: Database["public"]["Enums"]["deal_stage"] | null
+          id?: string
+          to_stage: Database["public"]["Enums"]["deal_stage"]
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          created_at?: string
+          deal_id?: string
+          duration_seconds?: number | null
+          from_stage?: Database["public"]["Enums"]["deal_stage"] | null
+          id?: string
+          to_stage?: Database["public"]["Enums"]["deal_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_stage_history_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           closed_at: string | null
@@ -579,6 +620,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pipeline_automations: {
+        Row: {
+          action_config: Json
+          action_type: Database["public"]["Enums"]["automation_action"]
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          trigger_stage: Database["public"]["Enums"]["deal_stage"]
+          trigger_type: Database["public"]["Enums"]["automation_trigger"]
+          updated_at: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type: Database["public"]["Enums"]["automation_action"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          trigger_stage: Database["public"]["Enums"]["deal_stage"]
+          trigger_type: Database["public"]["Enums"]["automation_trigger"]
+          updated_at?: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: Database["public"]["Enums"]["automation_action"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          trigger_stage?: Database["public"]["Enums"]["deal_stage"]
+          trigger_type?: Database["public"]["Enums"]["automation_trigger"]
+          updated_at?: string
+        }
+        Relationships: []
       }
       pipeline_stages: {
         Row: {
@@ -1093,6 +1173,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "vendedor"
+      automation_action:
+        | "send_whatsapp"
+        | "create_task"
+        | "add_tag"
+        | "send_email"
+      automation_trigger: "stage_enter" | "stage_exit"
       custom_field_entity: "company" | "contact" | "deal"
       custom_field_type:
         | "text"
@@ -1257,6 +1343,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "vendedor"],
+      automation_action: [
+        "send_whatsapp",
+        "create_task",
+        "add_tag",
+        "send_email",
+      ],
+      automation_trigger: ["stage_enter", "stage_exit"],
       custom_field_entity: ["company", "contact", "deal"],
       custom_field_type: [
         "text",
