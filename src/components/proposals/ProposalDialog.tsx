@@ -348,18 +348,26 @@ export function ProposalDialog({
     if (!proposal) return;
     
     try {
+      toast.info('Gerando proposta...');
       const { data, error } = await supabase.functions.invoke('generate-proposal-pdf', {
         body: { proposal_id: proposal.id },
       });
 
       if (error) throw error;
 
-      if (data?.pdf_url) {
-        window.open(data.pdf_url, '_blank');
+      if (data?.html) {
+        // Open HTML in new tab for printing
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          toast.success('Proposta gerada! Use Ctrl+P para salvar como PDF.');
+        }
       } else {
-        toast.error('PDF não disponível');
+        toast.error('Erro ao gerar proposta');
       }
     } catch (error) {
+      console.error('Error generating PDF:', error);
       toast.error('Erro ao gerar PDF');
     }
   };

@@ -13,7 +13,9 @@ import {
   ChevronRight,
   MessageCircle,
   X,
-  RefreshCw
+  RefreshCw,
+  Package,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,6 +30,8 @@ const navItems = [
   { to: '/companies', icon: Building2, label: 'Empresas' },
   { to: '/contacts', icon: Users, label: 'Contatos' },
   { to: '/pipeline', icon: Target, label: 'Pipeline' },
+  { to: '/products', icon: Package, label: 'Produtos' },
+  { to: '/orders', icon: ShoppingCart, label: 'Pedidos' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas' },
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp' },
   { to: '/emails', icon: Mail, label: 'Emails' },

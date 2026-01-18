@@ -10,11 +10,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import { ProposalsList } from '@/components/proposals/ProposalsList';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -282,139 +284,277 @@ export default function Pipeline() {
               Novo Negócio
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>{editingDeal ? 'Editar Negócio' : 'Novo Negócio'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="name">Nome do Negócio *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
+            
+            {editingDeal ? (
+              <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="dados">Dados</TabsTrigger>
+                  <TabsTrigger value="propostas" className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Propostas
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="dados" className="flex-1 overflow-auto mt-4">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <Label htmlFor="name">Nome do Negócio *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="value">Valor (R$)</Label>
+                        <Input
+                          id="value"
+                          type="number"
+                          step="0.01"
+                          value={formData.value || 0}
+                          onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="stage">Etapa</Label>
+                        <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as DealStage })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {stages.map((s) => (
+                              <SelectItem key={s} value={s}>{stageConfig[s].label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="probability">Probabilidade (%)</Label>
+                        <Input
+                          id="probability"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={formData.probability || 0}
+                          onChange={(e) => setFormData({ ...formData, probability: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="expected_close_date">Previsão de Fechamento</Label>
+                        <Input
+                          id="expected_close_date"
+                          type="date"
+                          value={formData.expected_close_date || ''}
+                          onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="company_id">Empresa</Label>
+                        <Select 
+                          value={formData.company_id || 'none'} 
+                          onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhuma</SelectItem>
+                            {companies?.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="contact_id">Contato</Label>
+                        <Select 
+                          value={formData.contact_id || 'none'} 
+                          onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhum</SelectItem>
+                            {contacts?.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label htmlFor="notes">Observações</Label>
+                        <Textarea
+                          id="notes"
+                          value={formData.notes || ''}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <CustomFieldsRenderer
+                          entity="deal"
+                          values={customFieldsData}
+                          onChange={setCustomFieldsData}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <div>
+                        {(editingDeal as any).contacts?.email && (
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => handleOpenEmailDialog(editingDeal)}
+                            className="gap-2"
+                          >
+                            <Mail className="h-4 w-4" />
+                            Enviar Email
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={resetForm}>
+                          Cancelar
+                        </Button>
+                        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                          Atualizar
+                        </Button>
+                      </div>
+                    </div>
+                  </form>
+                </TabsContent>
+                
+                <TabsContent value="propostas" className="flex-1 overflow-auto mt-4">
+                  <ProposalsList
+                    dealId={editingDeal.id}
+                    companyId={editingDeal.company_id}
+                    contactId={editingDeal.contact_id}
                   />
-                </div>
-                <div>
-                  <Label htmlFor="value">Valor (R$)</Label>
-                  <Input
-                    id="value"
-                    type="number"
-                    step="0.01"
-                    value={formData.value || 0}
-                    onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stage">Etapa</Label>
-                  <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as DealStage })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stages.map((s) => (
-                        <SelectItem key={s} value={s}>{stageConfig[s].label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="probability">Probabilidade (%)</Label>
-                  <Input
-                    id="probability"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.probability || 0}
-                    onChange={(e) => setFormData({ ...formData, probability: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="expected_close_date">Previsão de Fechamento</Label>
-                  <Input
-                    id="expected_close_date"
-                    type="date"
-                    value={formData.expected_close_date || ''}
-                    onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="company_id">Empresa</Label>
-                  <Select 
-                    value={formData.company_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      {companies?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="contact_id">Contato</Label>
-                  <Select 
-                    value={formData.contact_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {contacts?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes || ''}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                  />
-                </div>
-                <div className="col-span-2">
-                  <CustomFieldsRenderer
-                    entity="deal"
-                    values={customFieldsData}
-                    onChange={setCustomFieldsData}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-between gap-2">
-                <div>
-                  {editingDeal && (editingDeal as any).contacts?.email && (
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => handleOpenEmailDialog(editingDeal)}
-                      className="gap-2"
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="name">Nome do Negócio *</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="value">Valor (R$)</Label>
+                    <Input
+                      id="value"
+                      type="number"
+                      step="0.01"
+                      value={formData.value || 0}
+                      onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stage">Etapa</Label>
+                    <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as DealStage })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {stages.map((s) => (
+                          <SelectItem key={s} value={s}>{stageConfig[s].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="probability">Probabilidade (%)</Label>
+                    <Input
+                      id="probability"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.probability || 0}
+                      onChange={(e) => setFormData({ ...formData, probability: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="expected_close_date">Previsão de Fechamento</Label>
+                    <Input
+                      id="expected_close_date"
+                      type="date"
+                      value={formData.expected_close_date || ''}
+                      onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="company_id">Empresa</Label>
+                    <Select 
+                      value={formData.company_id || 'none'} 
+                      onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
                     >
-                      <Mail className="h-4 w-4" />
-                      Enviar Email
-                    </Button>
-                  )}
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhuma</SelectItem>
+                        {companies?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_id">Contato</Label>
+                    <Select 
+                      value={formData.contact_id || 'none'} 
+                      onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {contacts?.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="notes">Observações</Label>
+                    <Textarea
+                      id="notes"
+                      value={formData.notes || ''}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <CustomFieldsRenderer
+                      entity="deal"
+                      values={customFieldsData}
+                      onChange={setCustomFieldsData}
+                    />
+                  </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={resetForm}>
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {editingDeal ? 'Atualizar' : 'Criar'}
+                    Criar
                   </Button>
                 </div>
-              </div>
-            </form>
+              </form>
+            )}
           </DialogContent>
         </Dialog>
       </div>
