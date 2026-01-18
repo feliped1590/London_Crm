@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -36,6 +38,7 @@ const stages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociac
 
 export default function Pipeline() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
@@ -321,11 +324,11 @@ export default function Pipeline() {
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
 
   return (
-    <div className="space-y-6 h-full">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6 h-full px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
-          <p className="text-muted-foreground">Gerencie suas oportunidades de negócio</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
+          <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
@@ -700,11 +703,19 @@ export default function Pipeline() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       ) : (
-        <div className="grid grid-cols-6 gap-4 h-[calc(100vh-220px)]">
+        <div className={cn(
+          "h-[calc(100vh-200px)] sm:h-[calc(100vh-220px)]",
+          isMobile 
+            ? "flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2" 
+            : "grid grid-cols-6 gap-4"
+        )}>
           {stages.map((stage) => (
             <div
               key={stage}
-              className="flex flex-col bg-muted/30 rounded-lg"
+              className={cn(
+                "flex flex-col bg-muted/30 rounded-lg",
+                isMobile && "min-w-[280px] shrink-0 snap-center"
+              )}
               onDrop={(e) => handleDrop(e, stage)}
               onDragOver={handleDragOver}
             >
