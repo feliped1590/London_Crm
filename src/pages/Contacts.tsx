@@ -10,10 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Contact = Tables<'contacts'>;
@@ -25,7 +28,7 @@ export default function Contacts() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [formData, setFormData] = useState<Partial<TablesInsert<'contacts'>>>({
+  const [formData, setFormData] = useState<Partial<TablesInsert<'contacts'>> & { cpf?: string; tipo_pessoa?: 'PF' | 'PJ' }>({
     first_name: '',
     last_name: '',
     email: '',
@@ -36,6 +39,8 @@ export default function Contacts() {
     linkedin_url: '',
     company_id: null,
     notes: '',
+    cpf: '',
+    tipo_pessoa: 'PF',
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -98,6 +103,22 @@ export default function Contacts() {
     onError: () => toast.error('Erro ao excluir contato'),
   });
 
+  const syncInflexMutation = useMutation({
+    mutationFn: async (contactId: string) => {
+      const { data, error } = await supabase.functions.invoke('iniflex-sync-contact', {
+        body: { contact_id: contactId },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Erro ao sincronizar');
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success(`Sincronizado com Iniflex! ID: ${data.iniflex_id}`);
+    },
+    onError: (error: any) => toast.error(`Erro ao sincronizar: ${error.message}`),
+  });
+
   const resetForm = () => {
     setFormData({
       first_name: '',
@@ -110,6 +131,8 @@ export default function Contacts() {
       linkedin_url: '',
       company_id: null,
       notes: '',
+      cpf: '',
+      tipo_pessoa: 'PF',
     });
     setCustomFieldsData({});
     setEditingContact(null);
@@ -118,19 +141,21 @@ export default function Contacts() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cpfLimpo = formData.cpf ? cleanDocument(formData.cpf) : null;
     const dataWithCustomFields = {
       ...formData,
+      cpf: cpfLimpo,
       custom_fields: customFieldsData as Json,
     };
     if (editingContact) {
-      updateMutation.mutate({ id: editingContact.id, ...dataWithCustomFields });
+      updateMutation.mutate({ id: editingContact.id, ...dataWithCustomFields } as any);
     } else {
       createMutation.mutate({
         ...dataWithCustomFields,
         first_name: formData.first_name || '',
         created_by: user?.id,
         owner_id: user?.id,
-      });
+      } as any);
     }
   };
 
@@ -147,19 +172,37 @@ export default function Contacts() {
       linkedin_url: contact.linkedin_url || '',
       company_id: contact.company_id,
       notes: contact.notes || '',
+      cpf: (contact as any).cpf ? formatCPF((contact as any).cpf) : '',
+      tipo_pessoa: (contact as any).tipo_pessoa || 'PF',
     });
     setCustomFieldsData((contact.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
   };
 
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    setFormData({ ...formData, cpf: formatted });
+  };
+
   const filteredContacts = contacts?.filter(contact =>
     contact.first_name.toLowerCase().includes(search.toLowerCase()) ||
     contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-    contact.email?.toLowerCase().includes(search.toLowerCase())
+    contact.email?.toLowerCase().includes(search.toLowerCase()) ||
+    (contact as any).cpf?.includes(search)
   );
 
   const getInitials = (firstName: string, lastName?: string | null) => {
     return `${firstName[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+  };
+
+  const getSyncStatus = (contact: any) => {
+    if (contact.iniflex_id) {
+      return {
+        synced: true,
+        date: contact.iniflex_synced_at ? new Date(contact.iniflex_synced_at).toLocaleDateString('pt-BR') : null,
+      };
+    }
+    return { synced: false, date: null };
   };
 
   return (
@@ -198,6 +241,31 @@ export default function Contacts() {
                     value={formData.last_name || ''}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="cpf">CPF</Label>
+                  <Input
+                    id="cpf"
+                    value={formData.cpf || ''}
+                    onChange={handleCpfChange}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="tipo_pessoa">Tipo de Pessoa</Label>
+                  <Select 
+                    value={formData.tipo_pessoa || 'PF'} 
+                    onValueChange={(v) => setFormData({ ...formData, tipo_pessoa: v as 'PF' | 'PJ' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PF">Pessoa Física</SelectItem>
+                      <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
@@ -324,80 +392,129 @@ export default function Contacts() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Contato</TableHead>
+                  <TableHead>CPF</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Contato</TableHead>
+                  <TableHead>Iniflex</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredContacts?.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarFallback className="bg-primary/10 text-primary">
-                            {getInitials(contact.first_name, contact.last_name)}
-                          </AvatarFallback>
-                        </Avatar>
+                {filteredContacts?.map((contact) => {
+                  const syncStatus = getSyncStatus(contact);
+                  return (
+                    <TableRow key={contact.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {getInitials(contact.first_name, contact.last_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{contact.first_name} {contact.last_name}</p>
+                            {contact.linkedin_url && (
+                              <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                                <Linkedin className="h-3 w-3" />
+                                LinkedIn
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {(contact as any).cpf ? (
+                          <span className="text-sm font-mono">{formatCPF((contact as any).cpf)}</span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {(contact as any).companies?.name ? (
+                          <div className="flex items-center gap-1 text-sm">
+                            <Building2 className="h-3 w-3 text-muted-foreground" />
+                            {(contact as any).companies.name}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
                         <div>
-                          <p className="font-medium">{contact.first_name} {contact.last_name}</p>
-                          {contact.linkedin_url && (
-                            <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-                              <Linkedin className="h-3 w-3" />
-                              LinkedIn
-                            </a>
+                          {contact.job_title && <p className="text-sm">{contact.job_title}</p>}
+                          {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {contact.email && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              {contact.email}
+                            </div>
+                          )}
+                          {contact.phone && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
+                              {contact.phone}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {(contact as any).companies?.name ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Building2 className="h-3 w-3 text-muted-foreground" />
-                          {(contact as any).companies.name}
+                      </TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {syncStatus.synced ? (
+                                <Badge variant="secondary" className="gap-1">
+                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                  Sincronizado
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  Pendente
+                                </Badge>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {syncStatus.synced 
+                                ? `Sincronizado em ${syncStatus.date}` 
+                                : 'Não sincronizado com Iniflex'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => syncInflexMutation.mutate(contact.id)}
+                                  disabled={syncInflexMutation.isPending}
+                                >
+                                  <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Sincronizar com Iniflex</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(contact)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => deleteMutation.mutate(contact.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        {contact.job_title && <p className="text-sm">{contact.job_title}</p>}
-                        {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {contact.email && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            {contact.email}
-                          </div>
-                        )}
-                        {contact.phone && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            {contact.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(contact)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => deleteMutation.mutate(contact.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

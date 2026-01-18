@@ -23,3 +23,15 @@ verify_jwt = false
 
 [functions.process-scheduled-emails]
 verify_jwt = false
+
+[functions.iniflex-sync-contact]
+verify_jwt = false
+
+[functions.iniflex-sync-company]
+verify_jwt = false
+
+[functions.iniflex-list-correntistas]
+verify_jwt = false
+
+[functions.iniflex-import-correntista]
+verify_jwt = false
