@@ -17,6 +17,8 @@ import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import WhatsApp from "./pages/WhatsApp";
 import InflexIntegration from "./pages/InflexIntegration";
+import Products from "./pages/Products";
+import Orders from "./pages/Orders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,8 @@ const App = () => (
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/pipeline" element={<Pipeline />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/orders" element={<Orders />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/whatsapp" element={<WhatsApp />} />
                 <Route path="/emails" element={<Emails />} />

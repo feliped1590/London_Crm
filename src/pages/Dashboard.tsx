@@ -12,7 +12,9 @@ import {
   AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
-  Clock
+  Clock,
+  FileText,
+  ShoppingCart
 } from 'lucide-react';
 import { DashboardStats, Task, Deal } from '@/types/crm';
 import { formatCurrency } from '@/lib/formatters';
@@ -20,9 +22,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 
+interface ExtendedDashboardStats extends DashboardStats {
+  pendingProposals: number;
+  pendingProposalsValue: number;
+  pendingOrders: number;
+  pendingOrdersValue: number;
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +50,9 @@ export default function Dashboard() {
         { count: totalContacts },
         { count: totalCompanies },
         { data: deals },
-        { data: tasks }
+        { data: tasks },
+        { data: pendingProposals },
+        { data: pendingOrders }
       ] = await Promise.all([
         supabase.from('deals').select('*', { count: 'exact', head: true }),
         supabase.from('contacts').select('*', { count: 'exact', head: true }),
@@ -51,7 +62,13 @@ export default function Dashboard() {
           .select('*, company:companies(*), contact:contacts(*), deal:deals(*)')
           .in('status', ['pendente', 'em_andamento'])
           .order('due_date', { ascending: true })
-          .limit(5)
+          .limit(5),
+        supabase.from('proposals')
+          .select('total_value')
+          .in('status', ['rascunho', 'enviada', 'em_analise']),
+        supabase.from('orders')
+          .select('total_value')
+          .in('status', ['pendente', 'em_producao'])
       ]);
 
       // Calculate stats from deals
@@ -65,8 +82,12 @@ export default function Dashboard() {
 
       // Get pending and overdue tasks count
       const now = new Date().toISOString();
-      const pendingTasks = (tasks || []).filter(t => t.status === 'pendente').length;
+      const pendingTasksCount = (tasks || []).filter(t => t.status === 'pendente').length;
       const overdueTasks = (tasks || []).filter(t => t.due_date && t.due_date < now && t.status !== 'concluida').length;
+
+      // Calculate proposals and orders stats
+      const pendingProposalsList = pendingProposals || [];
+      const pendingOrdersList = pendingOrders || [];
 
       setStats({
         totalDeals: totalDeals || 0,
@@ -79,8 +100,12 @@ export default function Dashboard() {
         avgDealValue: totalDeals ? totalValue / (totalDeals || 1) : 0,
         totalContacts: totalContacts || 0,
         totalCompanies: totalCompanies || 0,
-        pendingTasks,
-        overdueTasks
+        pendingTasks: pendingTasksCount,
+        overdueTasks,
+        pendingProposals: pendingProposalsList.length,
+        pendingProposalsValue: pendingProposalsList.reduce((sum, p) => sum + Number(p.total_value || 0), 0),
+        pendingOrders: pendingOrdersList.length,
+        pendingOrdersValue: pendingOrdersList.reduce((sum, o) => sum + Number(o.total_value || 0), 0),
       });
 
       setRecentDeals(allDeals as Deal[]);
@@ -243,6 +268,24 @@ export default function Dashboard() {
           icon={Target}
           description={formatCurrency(stats?.openValue || 0)}
         />
+        <StatCard 
+          title="Propostas Pendentes" 
+          value={stats?.pendingProposals || 0} 
+          icon={FileText}
+          description={formatCurrency(stats?.pendingProposalsValue || 0)}
+          href="/pipeline"
+        />
+        <StatCard 
+          title="Pedidos em Produção" 
+          value={stats?.pendingOrders || 0} 
+          icon={ShoppingCart}
+          description={formatCurrency(stats?.pendingOrdersValue || 0)}
+          href="/orders"
+        />
+      </div>
+
+      {/* Tasks Stats */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Tarefas Pendentes" 
           value={stats?.pendingTasks || 0} 
