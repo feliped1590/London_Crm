@@ -80,6 +80,7 @@ export type Database = {
           address: string | null
           annual_revenue: string | null
           city: string | null
+          cnpj: string | null
           country: string | null
           created_at: string
           created_by: string | null
@@ -87,8 +88,12 @@ export type Database = {
           domain: string | null
           email: string | null
           employee_count: string | null
+          fantasia: string | null
           id: string
           industry: string | null
+          iniflex_id: string | null
+          iniflex_synced_at: string | null
+          inscricao_estadual: string | null
           name: string
           notes: string | null
           owner_id: string | null
@@ -101,6 +106,7 @@ export type Database = {
           address?: string | null
           annual_revenue?: string | null
           city?: string | null
+          cnpj?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -108,8 +114,12 @@ export type Database = {
           domain?: string | null
           email?: string | null
           employee_count?: string | null
+          fantasia?: string | null
           id?: string
           industry?: string | null
+          iniflex_id?: string | null
+          iniflex_synced_at?: string | null
+          inscricao_estadual?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
@@ -122,6 +132,7 @@ export type Database = {
           address?: string | null
           annual_revenue?: string | null
           city?: string | null
+          cnpj?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -129,8 +140,12 @@ export type Database = {
           domain?: string | null
           email?: string | null
           employee_count?: string | null
+          fantasia?: string | null
           id?: string
           industry?: string | null
+          iniflex_id?: string | null
+          iniflex_synced_at?: string | null
+          inscricao_estadual?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
@@ -144,6 +159,7 @@ export type Database = {
       contacts: {
         Row: {
           company_id: string | null
+          cpf: string | null
           created_at: string
           created_by: string | null
           custom_fields: Json | null
@@ -151,6 +167,8 @@ export type Database = {
           email: string | null
           first_name: string
           id: string
+          iniflex_id: string | null
+          iniflex_synced_at: string | null
           job_title: string | null
           last_name: string | null
           linkedin_url: string | null
@@ -158,10 +176,12 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          tipo_pessoa: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at: string
         }
         Insert: {
           company_id?: string | null
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
@@ -169,6 +189,8 @@ export type Database = {
           email?: string | null
           first_name: string
           id?: string
+          iniflex_id?: string | null
+          iniflex_synced_at?: string | null
           job_title?: string | null
           last_name?: string | null
           linkedin_url?: string | null
@@ -176,10 +198,12 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at?: string
         }
         Update: {
           company_id?: string | null
+          cpf?: string | null
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
@@ -187,6 +211,8 @@ export type Database = {
           email?: string | null
           first_name?: string
           id?: string
+          iniflex_id?: string | null
+          iniflex_synced_at?: string | null
           job_title?: string | null
           last_name?: string | null
           linkedin_url?: string | null
@@ -194,6 +220,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at?: string
         }
         Relationships: [
@@ -767,6 +794,7 @@ export type Database = {
         | "fechado_perdido"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
+      tipo_pessoa: "PF" | "PJ"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -918,6 +946,7 @@ export const Constants = {
       ],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
+      tipo_pessoa: ["PF", "PJ"],
     },
   },
 } as const

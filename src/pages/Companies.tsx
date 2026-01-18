@@ -10,10 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
+import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Company = Tables<'companies'>;
@@ -33,7 +35,7 @@ export default function Companies() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-  const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>>>({
+  const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>> & { cnpj?: string; inscricao_estadual?: string; fantasia?: string }>({
     name: '',
     domain: '',
     industry: '',
@@ -46,6 +48,9 @@ export default function Companies() {
     state: '',
     country: 'Brasil',
     notes: '',
+    cnpj: '',
+    inscricao_estadual: '',
+    fantasia: '',
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -99,6 +104,22 @@ export default function Companies() {
     onError: () => toast.error('Erro ao excluir empresa'),
   });
 
+  const syncInflexMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { data, error } = await supabase.functions.invoke('iniflex-sync-company', {
+        body: { company_id: companyId },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Erro ao sincronizar');
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      toast.success(`Sincronizado com Iniflex! ID: ${data.iniflex_id}`);
+    },
+    onError: (error: any) => toast.error(`Erro ao sincronizar: ${error.message}`),
+  });
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -113,6 +134,9 @@ export default function Companies() {
       state: '',
       country: 'Brasil',
       notes: '',
+      cnpj: '',
+      inscricao_estadual: '',
+      fantasia: '',
     });
     setCustomFieldsData({});
     setEditingCompany(null);
@@ -121,19 +145,21 @@ export default function Companies() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const cnpjLimpo = formData.cnpj ? cleanDocument(formData.cnpj) : null;
     const dataWithCustomFields = {
       ...formData,
+      cnpj: cnpjLimpo,
       custom_fields: customFieldsData as Json,
     };
     if (editingCompany) {
-      updateMutation.mutate({ id: editingCompany.id, ...dataWithCustomFields });
+      updateMutation.mutate({ id: editingCompany.id, ...dataWithCustomFields } as any);
     } else {
       createMutation.mutate({
         ...dataWithCustomFields,
         name: formData.name || '',
         created_by: user?.id,
         owner_id: user?.id,
-      });
+      } as any);
     }
   };
 
@@ -152,16 +178,35 @@ export default function Companies() {
       state: company.state || '',
       country: company.country || 'Brasil',
       notes: company.notes || '',
+      cnpj: (company as any).cnpj ? formatCNPJ((company as any).cnpj) : '',
+      inscricao_estadual: (company as any).inscricao_estadual || '',
+      fantasia: (company as any).fantasia || '',
     });
     setCustomFieldsData((company.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
   };
 
+  const handleCnpjChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCNPJ(e.target.value);
+    setFormData({ ...formData, cnpj: formatted });
+  };
+
   const filteredCompanies = companies?.filter(company =>
     company.name.toLowerCase().includes(search.toLowerCase()) ||
     company.industry?.toLowerCase().includes(search.toLowerCase()) ||
-    company.email?.toLowerCase().includes(search.toLowerCase())
+    company.email?.toLowerCase().includes(search.toLowerCase()) ||
+    (company as any).cnpj?.includes(search)
   );
+
+  const getSyncStatus = (company: any) => {
+    if (company.iniflex_id) {
+      return {
+        synced: true,
+        date: company.iniflex_synced_at ? new Date(company.iniflex_synced_at).toLocaleDateString('pt-BR') : null,
+      };
+    }
+    return { synced: false, date: null };
+  };
 
   return (
     <div className="space-y-6">
@@ -184,12 +229,38 @@ export default function Companies() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <Label htmlFor="name">Nome da Empresa *</Label>
+                  <Label htmlFor="name">Razão Social *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fantasia">Nome Fantasia</Label>
+                  <Input
+                    id="fantasia"
+                    value={formData.fantasia || ''}
+                    onChange={(e) => setFormData({ ...formData, fantasia: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Input
+                    id="cnpj"
+                    value={formData.cnpj || ''}
+                    onChange={handleCnpjChange}
+                    placeholder="00.000.000/0000-00"
+                    maxLength={18}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
+                  <Input
+                    id="inscricao_estadual"
+                    value={formData.inscricao_estadual || ''}
+                    onChange={(e) => setFormData({ ...formData, inscricao_estadual: e.target.value })}
                   />
                 </div>
                 <div>
@@ -333,70 +404,122 @@ export default function Companies() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
+                  <TableHead>CNPJ</TableHead>
                   <TableHead>Setor</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Localização</TableHead>
+                  <TableHead>Iniflex</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCompanies?.map((company) => (
-                  <TableRow key={company.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Building2 className="h-5 w-5" />
+                {filteredCompanies?.map((company) => {
+                  const syncStatus = getSyncStatus(company);
+                  return (
+                    <TableRow key={company.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Building2 className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{company.name}</p>
+                            {(company as any).fantasia && (
+                              <p className="text-xs text-muted-foreground">{(company as any).fantasia}</p>
+                            )}
+                            {company.website && (
+                              <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
+                                <Globe className="h-3 w-3" />
+                                {company.website.replace(/^https?:\/\//, '')}
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{company.name}</p>
-                          {company.website && (
-                            <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
-                              <Globe className="h-3 w-3" />
-                              {company.website.replace(/^https?:\/\//, '')}
-                            </a>
+                      </TableCell>
+                      <TableCell>
+                        {(company as any).cnpj ? (
+                          <span className="text-sm font-mono">{formatCNPJ((company as any).cnpj)}</span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {company.industry && <Badge variant="secondary">{company.industry}</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {company.email && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Mail className="h-3 w-3 text-muted-foreground" />
+                              {company.email}
+                            </div>
+                          )}
+                          {company.phone && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <Phone className="h-3 w-3 text-muted-foreground" />
+                              {company.phone}
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {company.industry && <Badge variant="secondary">{company.industry}</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        {company.email && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            {company.email}
-                          </div>
-                        )}
-                        {company.phone && (
-                          <div className="flex items-center gap-1 text-sm">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            {company.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {company.city && company.state ? `${company.city}, ${company.state}` : company.city || company.state || '-'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(company)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => deleteMutation.mutate(company.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        {company.city && company.state ? `${company.city}, ${company.state}` : company.city || company.state || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              {syncStatus.synced ? (
+                                <Badge variant="secondary" className="gap-1">
+                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                  Sincronizado
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  Pendente
+                                </Badge>
+                              )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {syncStatus.synced 
+                                ? `Sincronizado em ${syncStatus.date}` 
+                                : 'Não sincronizado com Iniflex'}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => syncInflexMutation.mutate(company.id)}
+                                  disabled={syncInflexMutation.isPending}
+                                >
+                                  <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Sincronizar com Iniflex</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(company)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => deleteMutation.mutate(company.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
