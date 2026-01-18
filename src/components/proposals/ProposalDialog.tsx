@@ -161,10 +161,16 @@ export function ProposalDialog({
         if (itemsError) throw itemsError;
       }
 
+      // If created as approved, also create order
+      if (formData.status === 'aprovada') {
+        await createOrderFromProposal(newProposal.id);
+      }
+
       return newProposal;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Proposta criada com sucesso!');
       onOpenChange(false);
       onSuccess?.();

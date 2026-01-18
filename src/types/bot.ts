@@ -21,6 +21,7 @@ export interface BotFlow {
 export interface TriggerConfig {
   keywords?: string[];
   channel?: string;
+  [key: string]: unknown;
 }
 
 export interface BotFlowNode {
