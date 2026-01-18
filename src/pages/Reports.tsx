@@ -1,315 +1,330 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { DollarSign, Target, Users, Building2, TrendingUp, CheckCircle } from 'lucide-react';
-import { formatCurrency } from '@/lib/formatters';
-import { useState } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { 
+  Plus, 
+  Pencil, 
+  Save, 
+  X, 
+  Printer, 
+  FileText, 
+  List, 
+  MoreVertical,
+  RotateCcw,
+  Download,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { DashboardWidget } from '@/components/reports/DashboardWidget';
+import { AddWidgetDialog } from '@/components/reports/AddWidgetDialog';
+import {
+  DashboardWidget as WidgetType,
+  DashboardConfig,
+  ChartType,
+  METRIC_DEFINITIONS,
+} from '@/types/dashboard';
+import { Json } from '@/integrations/supabase/types';
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-
-const stageLabels: Record<string, string> = {
-  prospeccao: 'Prospecção',
-  qualificacao: 'Qualificação',
-  proposta: 'Proposta',
-  negociacao: 'Negociação',
-  fechado_ganho: 'Fechado (Ganho)',
-  fechado_perdido: 'Fechado (Perdido)',
-};
+const DEFAULT_WIDGETS: WidgetType[] = [
+  { id: 'default-1', type: 'pipeline_total', chartType: 'number', title: 'Pipeline Total', size: 'sm', position: 0 },
+  { id: 'default-2', type: 'deals_won', chartType: 'number', title: 'Vendas Ganhas', size: 'sm', position: 1 },
+  { id: 'default-3', type: 'win_rate', chartType: 'number', title: 'Taxa de Conversão', size: 'sm', position: 2 },
+  { id: 'default-4', type: 'tasks_completion', chartType: 'number', title: 'Tarefas Concluídas', size: 'sm', position: 3 },
+  { id: 'default-5', type: 'companies_count', chartType: 'number', title: 'Total de Empresas', size: 'sm', position: 4 },
+  { id: 'default-6', type: 'contacts_count', chartType: 'number', title: 'Total de Contatos', size: 'sm', position: 5 },
+  { id: 'default-7', type: 'deals_by_stage', chartType: 'bar', title: 'Pipeline por Etapa', size: 'md', position: 6 },
+  { id: 'default-8', type: 'deals_by_stage', chartType: 'pie', title: 'Distribuição por Etapa', size: 'md', position: 7 },
+  { id: 'default-9', type: 'deals_by_month', chartType: 'line', title: 'Evolução de Negócios', size: 'xl', position: 8 },
+];
 
 export default function Reports() {
-  const [period, setPeriod] = useState('30');
-
-  const { data: deals } = useQuery({
-    queryKey: ['deals-report'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('deals')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: companies } = useQuery({
-    queryKey: ['companies-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('companies')
-        .select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-
-  const { data: contacts } = useQuery({
-    queryKey: ['contacts-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-  });
-
-  const { data: tasks } = useQuery({
-    queryKey: ['tasks-report'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Calculate metrics
-  const totalDealsValue = deals?.reduce((sum, d) => sum + (d.value || 0), 0) || 0;
-  const wonDeals = deals?.filter(d => d.stage === 'fechado_ganho') || [];
-  const wonDealsValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const lostDeals = deals?.filter(d => d.stage === 'fechado_perdido') || [];
-  const activeDeals = deals?.filter(d => !['fechado_ganho', 'fechado_perdido'].includes(d.stage)) || [];
-  const activeDealsValue = activeDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { getMetricData } = useDashboardData();
   
-  const winRate = wonDeals.length + lostDeals.length > 0 
-    ? Math.round((wonDeals.length / (wonDeals.length + lostDeals.length)) * 100) 
-    : 0;
+  const [widgets, setWidgets] = useState<WidgetType[]>(DEFAULT_WIDGETS);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [dashboardName, setDashboardName] = useState('Meu Dashboard');
+  const [isPrinting, setIsPrinting] = useState(false);
 
-  const completedTasks = tasks?.filter(t => t.status === 'concluida').length || 0;
-  const totalTasks = tasks?.length || 0;
-  const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
-  // Pipeline by stage
-  const pipelineByStage = Object.entries(stageLabels).map(([stage, label]) => {
-    const stageDeals = deals?.filter(d => d.stage === stage) || [];
-    return {
-      name: label,
-      count: stageDeals.length,
-      value: stageDeals.reduce((sum, d) => sum + (d.value || 0), 0),
-    };
+  // Load saved config
+  const { data: savedConfig, isLoading: isLoadingConfig } = useQuery({
+    queryKey: ['dashboard-config', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('user_dashboard_configs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_default', true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        ...data,
+        widgets: data.widgets as unknown as WidgetType[],
+      } as DashboardConfig;
+    },
+    enabled: !!user?.id,
   });
 
-  // Deals by month (last 6 months)
-  const dealsByMonth = () => {
-    const months: Record<string, { name: string; created: number; won: number; value: number }> = {};
-    const now = new Date();
-    
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      months[key] = {
-        name: date.toLocaleDateString('pt-BR', { month: 'short' }),
-        created: 0,
-        won: 0,
-        value: 0,
-      };
+  useEffect(() => {
+    if (savedConfig) {
+      const parsedWidgets = savedConfig.widgets as unknown as WidgetType[];
+      if (Array.isArray(parsedWidgets) && parsedWidgets.length > 0) {
+        setWidgets(parsedWidgets);
+      }
+      setDashboardName(savedConfig.name);
     }
+  }, [savedConfig]);
 
-    deals?.forEach(deal => {
-      const date = new Date(deal.created_at);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      if (months[key]) {
-        months[key].created++;
-        if (deal.stage === 'fechado_ganho') {
-          months[key].won++;
-          months[key].value += deal.value || 0;
+  // Save config mutation
+  const saveConfigMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const configData = {
+        user_id: user.id,
+        name: dashboardName,
+        widgets: widgets as unknown as Json,
+        is_default: true,
+      };
+
+      if (savedConfig?.id) {
+        const { error } = await supabase
+          .from('user_dashboard_configs')
+          .update(configData)
+          .eq('id', savedConfig.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('user_dashboard_configs')
+          .insert(configData);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-config'] });
+      toast.success('Dashboard salvo!');
+      setIsEditing(false);
+    },
+    onError: () => toast.error('Erro ao salvar dashboard'),
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setWidgets((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleRemoveWidget = (id: string) => {
+    setWidgets((prev) => prev.filter((w) => w.id !== id));
+  };
+
+  const handleChangeChart = (id: string, chartType: ChartType) => {
+    setWidgets((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, chartType } : w))
+    );
+  };
+
+  const handleChangeSize = (id: string, size: 'sm' | 'md' | 'lg' | 'xl') => {
+    setWidgets((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, size } : w))
+    );
+  };
+
+  const handleAddWidgets = (newWidgets: WidgetType[]) => {
+    setWidgets((prev) => [...prev, ...newWidgets]);
+  };
+
+  const handleResetToDefault = () => {
+    setWidgets(DEFAULT_WIDGETS);
+    setDashboardName('Meu Dashboard');
+  };
+
+  const handlePrint = async (format: 'graph' | 'list') => {
+    setIsPrinting(true);
+    try {
+      const widgetData: Record<string, any> = {};
+      widgets.forEach((w) => {
+        widgetData[w.id] = getMetricData(w.type);
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-report-pdf', {
+        body: {
+          widgets,
+          data: widgetData,
+          title: dashboardName,
+          format,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.html) {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data.html);
+          printWindow.document.close();
+          toast.success('Relatório gerado! Use Ctrl+P para imprimir/salvar.');
         }
       }
-    });
-
-    return Object.values(months);
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Erro ao gerar relatório');
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
-          <p className="text-muted-foreground">Análise de performance e métricas</p>
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          {isEditing ? (
+            <Input
+              value={dashboardName}
+              onChange={(e) => setDashboardName(e.target.value)}
+              className="text-2xl font-bold h-10 w-64"
+            />
+          ) : (
+            <h1 className="text-3xl font-bold text-foreground">{dashboardName}</h1>
+          )}
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Últimos 7 dias</SelectItem>
-            <SelectItem value="30">Últimos 30 dias</SelectItem>
-            <SelectItem value="90">Últimos 90 dias</SelectItem>
-            <SelectItem value="365">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {isEditing ? (
+            <>
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Widget
+              </Button>
+              <Button variant="outline" onClick={handleResetToDefault}>
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Resetar
+              </Button>
+              <Button variant="ghost" onClick={() => setIsEditing(false)}>
+                <X className="mr-2 h-4 w-4" />
+                Cancelar
+              </Button>
+              <Button onClick={() => saveConfigMutation.mutate()} disabled={saveConfigMutation.isPending}>
+                <Save className="mr-2 h-4 w-4" />
+                Salvar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar Dashboard
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" disabled={isPrinting}>
+                    <Printer className="mr-2 h-4 w-4" />
+                    Imprimir
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handlePrint('graph')}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Formato Gráfico
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePrint('list')}>
+                    <List className="mr-2 h-4 w-4" />
+                    Formato Lista
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Pipeline Total
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(activeDealsValue)}</div>
-            <p className="text-xs text-muted-foreground">{activeDeals.length} negócios ativos</p>
-          </CardContent>
-        </Card>
+      {isEditing && (
+        <p className="text-sm text-muted-foreground">
+          Arraste os cards para reorganizar, use o menu de cada card para alterar tipo de gráfico ou tamanho.
+        </p>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Vendas Ganhas
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(wonDealsValue)}</div>
-            <p className="text-xs text-muted-foreground">{wonDeals.length} negócios fechados</p>
-          </CardContent>
-        </Card>
+      {/* Widgets Grid */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {widgets.map((widget) => (
+              <DashboardWidget
+                key={widget.id}
+                widget={widget}
+                data={getMetricData(widget.type)}
+                onRemove={handleRemoveWidget}
+                onChangeChart={handleChangeChart}
+                onChangeSize={handleChangeSize}
+                isEditing={isEditing}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Taxa de Conversão
-            </CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{winRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              {wonDeals.length} ganhos / {wonDeals.length + lostDeals.length} finalizados
-            </p>
-          </CardContent>
-        </Card>
+      {widgets.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <FileText className="h-12 w-12 mb-4 opacity-50" />
+          <p className="text-lg mb-2">Nenhum widget no dashboard</p>
+          <Button onClick={() => setIsAddDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Adicionar Widget
+          </Button>
+        </div>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tarefas Concluídas
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{taskCompletionRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              {completedTasks} de {totalTasks} tarefas
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Secondary KPIs */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Empresas
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{companies}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Contatos
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{contacts}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pipeline por Etapa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={pipelineByStage} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [
-                      name === 'count' ? `${value} negócios` : formatCurrency(value),
-                      name === 'count' ? 'Quantidade' : 'Valor'
-                    ]}
-                  />
-                  <Bar dataKey="count" fill="#3b82f6" name="count" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Distribuição por Etapa (Valor)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pipelineByStage.filter(s => s.value > 0)}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {pipelineByStage.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Evolução de Negócios (Últimos 6 meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dealsByMonth()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis yAxisId="left" />
-                  <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip 
-                    formatter={(value: number, name: string) => [
-                      name === 'value' ? formatCurrency(value) : value,
-                      name === 'created' ? 'Criados' : name === 'won' ? 'Ganhos' : 'Valor'
-                    ]}
-                  />
-                  <Legend />
-                  <Line yAxisId="left" type="monotone" dataKey="created" stroke="#3b82f6" name="Criados" />
-                  <Line yAxisId="left" type="monotone" dataKey="won" stroke="#10b981" name="Ganhos" />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Add Widget Dialog */}
+      <AddWidgetDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onAdd={handleAddWidgets}
+        existingWidgets={widgets}
+      />
     </div>
   );
 }
