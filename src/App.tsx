@@ -19,6 +19,8 @@ import WhatsApp from "./pages/WhatsApp";
 import InflexIntegration from "./pages/InflexIntegration";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
+import Bots from "./pages/Bots";
+import BotBuilder from "./pages/BotBuilder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/whatsapp" element={<WhatsApp />} />
+                <Route path="/bots" element={<Bots />} />
+                <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
