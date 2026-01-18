@@ -16,6 +16,7 @@ import Emails from "./pages/Emails";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import WhatsApp from "./pages/WhatsApp";
+import InflexIntegration from "./pages/InflexIntegration";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/integracao-iniflex" element={<InflexIntegration />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

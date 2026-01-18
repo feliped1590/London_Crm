@@ -12,7 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircle,
-  X
+  X,
+  RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,7 @@ const navItems = [
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp' },
   { to: '/emails', icon: Mail, label: 'Emails' },
   { to: '/reports', icon: BarChart3, label: 'Relatórios' },
+  { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex' },
   { to: '/settings', icon: Settings, label: 'Configurações' },
 ];
 
