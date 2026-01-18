@@ -11,17 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
+import { PermissionsManager } from '@/components/settings/PermissionsManager';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
 type PipelineStage = Tables<'pipeline_stages'>;
 type CustomFieldEntity = 'company' | 'contact' | 'deal';
 type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'email' | 'phone' | 'currency';
-type AppRole = 'admin' | 'vendedor';
+type AppRole = 'admin' | 'vendedor' | 'atendente';
 
 const fieldTypeLabels: Record<CustomFieldType, string> = {
   text: 'Texto',
@@ -45,6 +46,7 @@ const entityLabels: Record<CustomFieldEntity, string> = {
 const roleLabels: Record<AppRole, string> = {
   admin: 'Administrador',
   vendedor: 'Vendedor',
+  atendente: 'Atendente',
 };
 
 export default function Settings() {
@@ -390,6 +392,10 @@ export default function Settings() {
             <Zap className="h-4 w-4" />
             Automações
           </TabsTrigger>
+          <TabsTrigger value="permissions" className="gap-2">
+            <Lock className="h-4 w-4" />
+            Permissões
+          </TabsTrigger>
           <TabsTrigger value="users" className="gap-2">
             <Users className="h-4 w-4" />
             Usuários
@@ -675,6 +681,10 @@ export default function Settings() {
           <AutomationsManager />
         </TabsContent>
 
+        <TabsContent value="permissions" className="mt-6">
+          <PermissionsManager />
+        </TabsContent>
+
         <TabsContent value="users" className="mt-6 space-y-6">
           <div className="flex items-center justify-between">
             <div>
@@ -737,6 +747,12 @@ export default function Settings() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="atendente">
+                            <div className="flex items-center gap-2">
+                              <Headphones className="h-4 w-4" />
+                              Atendente
+                            </div>
+                          </SelectItem>
                           <SelectItem value="vendedor">
                             <div className="flex items-center gap-2">
                               <Users className="h-4 w-4" />
@@ -877,6 +893,12 @@ export default function Settings() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="atendente">
+                          <div className="flex items-center gap-2">
+                            <Headphones className="h-4 w-4" />
+                            Atendente
+                          </div>
+                        </SelectItem>
                         <SelectItem value="vendedor">
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
