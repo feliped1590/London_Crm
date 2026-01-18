@@ -77,8 +77,19 @@ export default function Settings() {
 
   // User management states
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
-  const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<{ userId: string; currentRole: AppRole; fullName: string } | null>(null);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<{ 
+    userId: string; 
+    currentRole: AppRole; 
+    fullName: string;
+    email: string;
+  } | null>(null);
+  const [editUserFormData, setEditUserFormData] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    role: 'vendedor' as AppRole,
+  });
   const [userFormData, setUserFormData] = useState({
     email: '',
     password: '',
@@ -222,20 +233,27 @@ export default function Settings() {
     onError: (error: Error) => toast.error(error.message || 'Erro ao criar usuário'),
   });
 
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role })
-        .eq('user_id', userId);
+  const updateUserMutation = useMutation({
+    mutationFn: async (data: { 
+      user_id: string; 
+      email?: string; 
+      password?: string; 
+      full_name?: string; 
+      role?: AppRole 
+    }) => {
+      const { data: response, error } = await supabase.functions.invoke('update-user', {
+        body: data,
+      });
       if (error) throw error;
+      if (response?.error) throw new Error(response.error);
+      return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user_roles'] });
-      toast.success('Nível de acesso atualizado!');
-      resetEditRoleDialog();
+      queryClient.invalidateQueries({ queryKey: ['user_roles_with_profiles'] });
+      toast.success('Usuário atualizado com sucesso!');
+      resetEditUserDialog();
     },
-    onError: () => toast.error('Erro ao atualizar nível de acesso'),
+    onError: (error: Error) => toast.error(error.message || 'Erro ao atualizar usuário'),
   });
 
   const deleteUserMutation = useMutation({
@@ -339,14 +357,21 @@ export default function Settings() {
     setIsUserDialogOpen(false);
   };
 
-  const resetEditRoleDialog = () => {
+  const resetEditUserDialog = () => {
     setEditingUser(null);
-    setIsEditRoleDialogOpen(false);
+    setEditUserFormData({ full_name: '', email: '', password: '', role: 'vendedor' });
+    setIsEditUserDialogOpen(false);
   };
 
-  const handleEditRole = (userId: string, currentRole: AppRole, fullName: string) => {
-    setEditingUser({ userId, currentRole, fullName });
-    setIsEditRoleDialogOpen(true);
+  const handleEditUser = (userId: string, currentRole: AppRole, fullName: string, email: string) => {
+    setEditingUser({ userId, currentRole, fullName, email });
+    setEditUserFormData({
+      full_name: fullName,
+      email: email,
+      password: '',
+      role: currentRole,
+    });
+    setIsEditUserDialogOpen(true);
   };
 
   const handleUserSubmit = (e: React.FormEvent) => {
@@ -354,12 +379,40 @@ export default function Settings() {
     createUserMutation.mutate(userFormData);
   };
 
-  const handleRoleUpdate = () => {
+  const handleUserUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
     if (editingUser) {
-      updateRoleMutation.mutate({ 
-        userId: editingUser.userId, 
-        role: editingUser.currentRole 
-      });
+      const updateData: { 
+        user_id: string; 
+        email?: string; 
+        password?: string; 
+        full_name?: string; 
+        role?: AppRole 
+      } = {
+        user_id: editingUser.userId,
+      };
+
+      // Only include fields that have changed
+      if (editUserFormData.full_name && editUserFormData.full_name !== editingUser.fullName) {
+        updateData.full_name = editUserFormData.full_name;
+      }
+      if (editUserFormData.email && editUserFormData.email !== editingUser.email) {
+        updateData.email = editUserFormData.email;
+      }
+      if (editUserFormData.password) {
+        updateData.password = editUserFormData.password;
+      }
+      if (editUserFormData.role !== editingUser.currentRole) {
+        updateData.role = editUserFormData.role;
+      }
+
+      // Check if there are any changes
+      if (Object.keys(updateData).length === 1) {
+        toast.info('Nenhuma alteração detectada');
+        return;
+      }
+
+      updateUserMutation.mutate(updateData);
     }
   };
 
@@ -826,7 +879,7 @@ export default function Settings() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-8 w-8"
-                                onClick={() => handleEditRole(ur.user_id, ur.role as AppRole, fullName)}
+                                onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, '')}
                               >
                                 <Pencil className="h-3 w-3" />
                               </Button>
@@ -872,22 +925,58 @@ export default function Settings() {
             </CardContent>
           </Card>
 
-          {/* Dialog de edição de role */}
-          <Dialog open={isEditRoleDialogOpen} onOpenChange={(open) => { setIsEditRoleDialogOpen(open); if (!open) resetEditRoleDialog(); }}>
-            <DialogContent>
+          {/* Dialog de edição de usuário */}
+          <Dialog open={isEditUserDialogOpen} onOpenChange={(open) => { setIsEditUserDialogOpen(open); if (!open) resetEditUserDialog(); }}>
+            <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Alterar Nível de Acesso</DialogTitle>
+                <DialogTitle>Editar Usuário</DialogTitle>
               </DialogHeader>
               {editingUser && (
-                <div className="space-y-4">
+                <form onSubmit={handleUserUpdate} className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Alterando permissões de <strong>{editingUser.fullName}</strong>
+                    Editando <strong>{editingUser.fullName}</strong>
                   </p>
                   <div>
-                    <Label htmlFor="user-role">Nível de Acesso</Label>
+                    <Label htmlFor="edit-full_name">Nome Completo</Label>
+                    <Input
+                      id="edit-full_name"
+                      value={editUserFormData.full_name}
+                      onChange={(e) => setEditUserFormData({ ...editUserFormData, full_name: e.target.value })}
+                      placeholder="Nome completo do usuário"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-email">Novo Email de Acesso</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editUserFormData.email}
+                      onChange={(e) => setEditUserFormData({ ...editUserFormData, email: e.target.value })}
+                      placeholder="Deixe em branco para manter o atual"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Deixe em branco para não alterar o email atual.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-password">Nova Senha</Label>
+                    <Input
+                      id="edit-password"
+                      type="password"
+                      value={editUserFormData.password}
+                      onChange={(e) => setEditUserFormData({ ...editUserFormData, password: e.target.value })}
+                      placeholder="Deixe em branco para manter a atual"
+                      minLength={6}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Mínimo 6 caracteres. Deixe em branco para não alterar.
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-user-role">Nível de Acesso</Label>
                     <Select 
-                      value={editingUser.currentRole} 
-                      onValueChange={(v) => setEditingUser({ ...editingUser, currentRole: v as AppRole })}
+                      value={editUserFormData.role} 
+                      onValueChange={(v) => setEditUserFormData({ ...editUserFormData, role: v as AppRole })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -915,14 +1004,14 @@ export default function Settings() {
                     </Select>
                   </div>
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={resetEditRoleDialog}>
+                    <Button type="button" variant="outline" onClick={resetEditUserDialog}>
                       Cancelar
                     </Button>
-                    <Button onClick={handleRoleUpdate} disabled={updateRoleMutation.isPending}>
-                      {updateRoleMutation.isPending ? 'Salvando...' : 'Salvar'}
+                    <Button type="submit" disabled={updateUserMutation.isPending}>
+                      {updateUserMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
                     </Button>
                   </div>
-                </div>
+                </form>
               )}
             </DialogContent>
           </Dialog>
