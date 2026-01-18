@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
 import { PermissionsManager } from '@/components/settings/PermissionsManager';
+import { LicenseCard } from '@/components/settings/LicenseCard';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -164,6 +165,18 @@ export default function Settings() {
     },
   });
 
+  // License status query
+  const { data: licenseStatus } = useQuery({
+    queryKey: ['license_status'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_license_status');
+      if (error) throw error;
+      // RPC returns an array, get the first element
+      const result = Array.isArray(data) ? data[0] : data;
+      return result as { can_add_user: boolean; current_users: number; max_users: number } | null;
+    },
+  });
+
   const createFieldMutation = useMutation({
     mutationFn: async (data: TablesInsert<'custom_fields'>) => {
       const { error } = await supabase.from('custom_fields').insert(data);
@@ -227,6 +240,8 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_roles'] });
+      queryClient.invalidateQueries({ queryKey: ['user_roles_with_profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['license_status'] });
       toast.success('Usuário criado com sucesso!');
       resetUserForm();
     },
@@ -267,6 +282,8 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_roles'] });
+      queryClient.invalidateQueries({ queryKey: ['user_roles_with_profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['license_status'] });
       toast.success('Usuário excluído com sucesso!');
     },
     onError: (error: Error) => toast.error(error.message || 'Erro ao excluir usuário'),
@@ -739,6 +756,9 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="users" className="mt-6 space-y-6">
+          {/* License Card */}
+          <LicenseCard />
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Usuários e Permissões</h2>
@@ -747,7 +767,11 @@ export default function Settings() {
             {isAdmin && (
               <Dialog open={isUserDialogOpen} onOpenChange={(open) => { setIsUserDialogOpen(open); if (!open) resetUserForm(); }}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button 
+                    className="gap-2"
+                    disabled={!licenseStatus?.can_add_user}
+                    title={!licenseStatus?.can_add_user ? 'Limite de usuários atingido' : undefined}
+                  >
                     <UserPlus className="h-4 w-4" />
                     Novo Usuário
                   </Button>

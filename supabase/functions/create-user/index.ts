@@ -65,6 +65,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Create a service role client to check license and create users
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Check license limit before creating user
+    console.log('Checking license status...');
+    const { data: licenseStatus, error: licenseError } = await supabaseAdmin
+      .rpc('get_license_status');
+
+    if (licenseError) {
+      console.error('Error checking license:', licenseError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar licença' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('License status:', licenseStatus);
+
+    if (!licenseStatus?.can_add_user) {
+      console.error('License limit reached:', licenseStatus);
+      return new Response(
+        JSON.stringify({ 
+          error: `Limite de usuários atingido (${licenseStatus?.current_users}/${licenseStatus?.max_users}). Entre em contato para aumentar sua licença.`
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Parse request body
     const { email, password, full_name, role } = await req.json();
 
@@ -83,9 +111,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Creating user with email:', email);
-
-    // Create a service role client to create users
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
     // Create the user using admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({

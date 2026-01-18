@@ -724,6 +724,36 @@ export type Database = {
         }
         Relationships: []
       }
+      license_settings: {
+        Row: {
+          created_at: string
+          features: Json | null
+          id: string
+          max_users: number
+          plan_name: string
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          features?: Json | null
+          id?: string
+          max_users?: number
+          plan_name?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          features?: Json | null
+          id?: string
+          max_users?: number
+          plan_name?: string
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -1546,6 +1576,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_license_status: {
+        Args: never
+        Returns: {
+          can_add_user: boolean
+          current_users: number
+          max_users: number
+          plan_name: string
+          usage_percentage: number
+          valid_until: string
+        }[]
+      }
       get_module_access_type: {
         Args: { _module_key: string; _user_id: string }
         Returns: string
