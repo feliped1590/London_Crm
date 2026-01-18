@@ -913,6 +913,77 @@ export type Database = {
           },
         ]
       }
+      role_module_permissions: {
+        Row: {
+          access_type: Database["public"]["Enums"]["access_level"] | null
+          can_access: boolean | null
+          created_at: string | null
+          id: string
+          module_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          access_type?: Database["public"]["Enums"]["access_level"] | null
+          can_access?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_id?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          access_type?: Database["public"]["Enums"]["access_level"] | null
+          can_access?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_module_permissions_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "system_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_modules: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          path: string
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          path: string
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          path?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -1162,6 +1233,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_module_access_type: {
+        Args: { _module_key: string; _user_id: string }
+        Returns: string
+      }
+      get_user_modules: {
+        Args: { _user_id: string }
+        Returns: {
+          access_type: string
+          module_icon: string
+          module_key: string
+          module_name: string
+          module_path: string
+        }[]
+      }
+      has_module_access: {
+        Args: { _module_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1172,7 +1261,8 @@ export type Database = {
       is_authenticated: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "vendedor"
+      access_level: "restrito" | "total"
+      app_role: "admin" | "vendedor" | "atendente"
       automation_action:
         | "send_whatsapp"
         | "create_task"
@@ -1342,7 +1432,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "vendedor"],
+      access_level: ["restrito", "total"],
+      app_role: ["admin", "vendedor", "atendente"],
       automation_action: [
         "send_whatsapp",
         "create_task",
