@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Building2, 
@@ -56,6 +56,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const { data: unreadCount } = useUnreadCount();
@@ -74,11 +75,12 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     if (isMobile && onClose) {
       onClose();
     }
-    signOut();
+    await signOut();
+    navigate('/auth', { replace: true });
   };
 
   // Mobile: always expanded, use isOpen prop
