@@ -1037,6 +1037,44 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_access_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string
+          proposal_id: string | null
+          success: boolean
+          token_prefix: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address: string
+          proposal_id?: string | null
+          success?: boolean
+          token_prefix?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string
+          proposal_id?: string | null
+          success?: boolean
+          token_prefix?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_access_logs_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_items: {
         Row: {
           created_at: string

@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
+const MAX_FAILED_ATTEMPTS = 10;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -16,9 +20,49 @@ serve(async (req) => {
     const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // Get client IP for rate limiting and audit
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
     const { token, action, approver_name, rejection_reason } = await req.json();
+    const tokenPrefix = token ? token.substring(0, 8) : null;
+
+    // Helper function to log access attempts
+    const logAccess = async (proposalId: string | null, actionType: string, success: boolean) => {
+      try {
+        await supabase.from('proposal_access_logs').insert({
+          proposal_id: proposalId,
+          ip_address: clientIp,
+          action: actionType,
+          success,
+          token_prefix: tokenPrefix,
+        });
+      } catch (logError) {
+        console.error('Failed to log access attempt:', logError);
+      }
+    };
+
+    // Check rate limiting - count failed attempts in last hour
+    const oneHourAgo = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+    const { count: failedAttempts } = await supabase
+      .from('proposal_access_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('ip_address', clientIp)
+      .eq('success', false)
+      .gte('created_at', oneHourAgo);
+
+    if (failedAttempts && failedAttempts >= MAX_FAILED_ATTEMPTS) {
+      console.log(`Rate limit exceeded for IP: ${clientIp}`);
+      await logAccess(null, 'rate_limited', false);
+      return new Response(
+        JSON.stringify({ error: 'Muitas tentativas. Por favor, aguarde antes de tentar novamente.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!token) {
+      await logAccess(null, 'invalid_request', false);
       return new Response(
         JSON.stringify({ error: 'Token é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -26,6 +70,7 @@ serve(async (req) => {
     }
 
     if (!action || !['approve', 'reject'].includes(action)) {
+      await logAccess(null, 'invalid_request', false);
       return new Response(
         JSON.stringify({ error: 'Ação deve ser "approve" ou "reject"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -33,18 +78,14 @@ serve(async (req) => {
     }
 
     if (action === 'approve' && !approver_name) {
+      await logAccess(null, 'invalid_request', false);
       return new Response(
         JSON.stringify({ error: 'Nome do responsável é obrigatório para aprovação' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get client IP from headers
-    const clientIp = req.headers.get('x-forwarded-for') || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-
-    console.log('Processing approval for token:', token, 'action:', action);
+    console.log('Processing approval for token prefix:', tokenPrefix, 'action:', action);
 
     // Fetch proposal by approval token
     const { data: proposal, error: proposalError } = await supabase
@@ -55,6 +96,7 @@ serve(async (req) => {
 
     if (proposalError || !proposal) {
       console.error('Error fetching proposal:', proposalError);
+      await logAccess(null, 'invalid_token', false);
       return new Response(
         JSON.stringify({ error: 'Proposta não encontrada ou link inválido' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -63,6 +105,7 @@ serve(async (req) => {
 
     // Check if already processed
     if (proposal.status === 'aprovada' || proposal.status === 'recusada') {
+      await logAccess(proposal.id, 'already_processed', false);
       return new Response(
         JSON.stringify({ error: 'Esta proposta já foi processada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -73,6 +116,7 @@ serve(async (req) => {
     if (proposal.approval_token_expires_at) {
       const expiresAt = new Date(proposal.approval_token_expires_at);
       if (expiresAt < new Date()) {
+        await logAccess(proposal.id, 'expired_token', false);
         return new Response(
           JSON.stringify({ error: 'O link de aprovação expirou' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -97,8 +141,12 @@ serve(async (req) => {
 
       if (updateError) {
         console.error('Error updating proposal:', updateError);
+        await logAccess(proposal.id, 'approve_error', false);
         throw updateError;
       }
+
+      // Log successful approval
+      await logAccess(proposal.id, 'approve', true);
 
       // Create order from approved proposal
       const { data: newOrder, error: orderError } = await supabase
@@ -165,8 +213,12 @@ serve(async (req) => {
 
       if (updateError) {
         console.error('Error updating proposal:', updateError);
+        await logAccess(proposal.id, 'reject_error', false);
         throw updateError;
       }
+
+      // Log successful rejection
+      await logAccess(proposal.id, 'reject', true);
 
       return new Response(
         JSON.stringify({
@@ -181,7 +233,7 @@ serve(async (req) => {
     console.error('Error in proposal-approve:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: 'Erro interno', details: errorMessage }),
+      JSON.stringify({ error: 'Erro interno' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
