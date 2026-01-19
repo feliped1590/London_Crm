@@ -26,19 +26,19 @@ Deno.serve(async (req) => {
       || url.searchParams.get('token')
       || url.searchParams.get('client-token')
     
-    // Temporarily hardcode token until secret propagation is fixed
-    const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN') || '25F5326B88FA031B1E9FD983'
+    // Get token from environment - no fallback for security
+    const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN')
     
-    console.log('Token received:', clientToken ? `${clientToken.substring(0, 5)}...` : 'null')
-    console.log('Token expected:', expectedToken ? `${expectedToken.substring(0, 5)}...` : 'null')
-
     if (!expectedToken) {
-      console.error('ZAPI_CLIENT_TOKEN not configured')
+      console.error('ZAPI_CLIENT_TOKEN not configured - webhook authentication disabled')
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    console.log('Token received:', clientToken ? `${clientToken.substring(0, 5)}...` : 'null')
+    console.log('Token expected:', expectedToken ? `${expectedToken.substring(0, 5)}...` : 'null')
 
     // Case-insensitive comparison for token validation
     if (!clientToken || clientToken.toLowerCase() !== expectedToken.toLowerCase()) {
