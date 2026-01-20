@@ -45,7 +45,7 @@ const allNavItems: NavItem[] = [
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
-  { to: '/reports', icon: BarChart3, label: 'Relatórios', moduleKey: 'reports' },
+  { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
 ];
