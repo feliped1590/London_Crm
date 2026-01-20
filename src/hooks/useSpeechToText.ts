@@ -46,6 +46,8 @@ export const useSpeechToText = (): UseSpeechToTextReturn => {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef('');
+  const isManualStopRef = useRef(false);
+  const isListeningRef = useRef(false);
 
   const isSupported = useMemo(() => {
     return typeof window !== 'undefined' && 
@@ -58,17 +60,29 @@ export const useSpeechToText = (): UseSpeechToTextReturn => {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognitionAPI();
 
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'pt-BR';
 
     recognition.onstart = () => {
       setIsListening(true);
+      isListeningRef.current = true;
       setError(null);
     };
 
     recognition.onend = () => {
-      setIsListening(false);
+      // Se não foi parada manual e ainda deveria estar gravando, reinicia
+      if (!isManualStopRef.current && isListeningRef.current) {
+        try {
+          recognition.start();
+        } catch (err) {
+          setIsListening(false);
+          isListeningRef.current = false;
+        }
+      } else {
+        setIsListening(false);
+        isListeningRef.current = false;
+      }
     };
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -122,6 +136,7 @@ export const useSpeechToText = (): UseSpeechToTextReturn => {
   const startListening = useCallback(() => {
     if (!recognitionRef.current || isListening) return;
     
+    isManualStopRef.current = false;
     setTranscript('');
     finalTranscriptRef.current = '';
     setError(null);
@@ -136,6 +151,8 @@ export const useSpeechToText = (): UseSpeechToTextReturn => {
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current || !isListening) return;
+    
+    isManualStopRef.current = true;
     
     try {
       recognitionRef.current.stop();
