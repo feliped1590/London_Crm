@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 interface SpeechRecognitionEvent {
   resultIndex: number;
@@ -47,8 +47,10 @@ export const useSpeechToText = (): UseSpeechToTextReturn => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef('');
 
-  const isSupported = typeof window !== 'undefined' && 
-    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  const isSupported = useMemo(() => {
+    return typeof window !== 'undefined' && 
+      ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+  }, []);
 
   useEffect(() => {
     if (!isSupported) return;
