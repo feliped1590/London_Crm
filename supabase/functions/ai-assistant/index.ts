@@ -13,18 +13,18 @@ const tools = [
     type: "function",
     function: {
       name: "search_database",
-      description: "Search for records in the database (companies, contacts, deals, products, tasks)",
+      description: "Search for records in the database (companies, contacts, deals, products, tasks, orders, proposals, activities)",
       parameters: {
         type: "object",
         properties: {
           entity: {
             type: "string",
-            enum: ["companies", "contacts", "deals", "products", "tasks"],
+            enum: ["companies", "contacts", "deals", "products", "tasks", "orders", "proposals", "activities"],
             description: "The type of entity to search"
           },
           query: {
             type: "string",
-            description: "Search query (name, email, phone, etc.)"
+            description: "Search query (name, email, phone, number, etc.)"
           },
           limit: {
             type: "number",
@@ -180,13 +180,13 @@ const tools = [
         properties: {
           entity: {
             type: "string",
-            enum: ["companies", "contacts", "deals", "tasks"],
+            enum: ["companies", "contacts", "deals", "tasks", "orders", "proposals"],
             description: "The type of entity to update"
           },
           id: { type: "string", description: "UUID of the record to update" },
           updates: { 
             type: "object", 
-            description: "Key-value pairs of fields to update" 
+            description: "Key-value pairs of fields to update. For orders: status can be pendente, em_producao, produzido, faturado, entregue, cancelado. For proposals: status can be rascunho, enviada, em_analise, aprovada, recusada, expirada." 
           }
         },
         required: ["entity", "id", "updates"]
@@ -242,6 +242,24 @@ async function executeTool(
           const result = query
             ? await supabase.from("tasks").select("*").ilike("title", `%${query}%`).limit(limit)
             : await supabase.from("tasks").select("*").limit(limit);
+          data = result.data || [];
+          error = result.error;
+        } else if (entity === "orders") {
+          const result = query
+            ? await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").or(`number.ilike.%${query}%,observations.ilike.%${query}%`).limit(limit)
+            : await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").order("created_at", { ascending: false }).limit(limit);
+          data = result.data || [];
+          error = result.error;
+        } else if (entity === "proposals") {
+          const result = query
+            ? await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`number.ilike.%${query}%,observations.ilike.%${query}%`).limit(limit)
+            : await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(limit);
+          data = result.data || [];
+          error = result.error;
+        } else if (entity === "activities") {
+          const result = query
+            ? await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`subject.ilike.%${query}%,content.ilike.%${query}%`).limit(limit)
+            : await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(limit);
           data = result.data || [];
           error = result.error;
         }
@@ -530,6 +548,14 @@ async function executeTool(
           const result = await supabase.from("tasks").update(updates as Record<string, string>).eq("id", id).select().single();
           data = result.data;
           error = result.error;
+        } else if (entity === "orders") {
+          const result = await supabase.from("orders").update(updates as Record<string, string>).eq("id", id).select().single();
+          data = result.data;
+          error = result.error;
+        } else if (entity === "proposals") {
+          const result = await supabase.from("proposals").update(updates as Record<string, string>).eq("id", id).select().single();
+          data = result.data;
+          error = result.error;
         }
         
         if (error) throw error;
@@ -649,12 +675,18 @@ INFORMAÇÕES DO USUÁRIO:
 - Email: ${user.email}
 
 CAPACIDADES:
-- Buscar empresas, contatos, negócios, produtos e tarefas
+- Buscar empresas, contatos, negócios, produtos, tarefas, pedidos, propostas e atividades
 - Criar novos contatos, empresas, negócios e tarefas
+- Consultar e atualizar pedidos (orders) e propostas (proposals)
 - Enviar mensagens via WhatsApp
 - Agendar envio de emails
 - Consultar estatísticas do dashboard
 - Atualizar registros existentes
+
+MÓDULOS DISPONÍVEIS:
+- Pedidos (orders): Campos principais: number, status, total_value, delivery_date, observations. Status possíveis: pendente, em_producao, produzido, faturado, entregue, cancelado
+- Propostas (proposals): Campos principais: number, status, total_value, validity_date, payment_terms, delivery_terms. Status possíveis: rascunho, enviada, em_analise, aprovada, recusada, expirada
+- Atividades (activities): Campos principais: type, subject, content. Tipos: note, call, email, meeting, task
 
 INSTRUÇÕES:
 1. Seja prestativo e execute as ações solicitadas
