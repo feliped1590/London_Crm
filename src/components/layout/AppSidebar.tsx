@@ -35,7 +35,7 @@ interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', moduleKey: 'dashboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', moduleKey: 'dashboard' },
   { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
   { to: '/contacts', icon: Users, label: 'Contatos', moduleKey: 'contacts' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
