@@ -75,6 +75,33 @@ export type Database = {
           },
         ]
       }
+      ai_conversations: {
+        Row: {
+          context: Json
+          created_at: string
+          id: string
+          messages: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: Json
+          created_at?: string
+          id?: string
+          messages?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_flow_edges: {
         Row: {
           created_at: string
