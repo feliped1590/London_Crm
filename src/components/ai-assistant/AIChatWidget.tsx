@@ -9,16 +9,36 @@ import {
   Loader2, 
   MessageSquare,
   Trash2,
-  Sparkles
+  Sparkles,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { useAIAssistant } from "@/hooks/useAIAssistant";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { ChatMessage } from "./ChatMessage";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const { messages, isLoading, sendMessage, clearConversation } = useAIAssistant();
+  const { 
+    transcript, 
+    isListening, 
+    isSupported, 
+    startListening, 
+    stopListening, 
+    resetTranscript,
+    error: speechError 
+  } = useSpeechToText();
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,11 +56,26 @@ export function AIChatWidget() {
     }
   }, [isOpen]);
 
+  // Update input with transcript
+  useEffect(() => {
+    if (transcript) {
+      setInput(transcript);
+    }
+  }, [transcript]);
+
+  // Show speech error as toast
+  useEffect(() => {
+    if (speechError) {
+      toast.error(speechError);
+    }
+  }, [speechError]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
       sendMessage(input);
       setInput("");
+      resetTranscript();
     }
   };
 
@@ -48,6 +83,14 @@ export function AIChatWidget() {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
     }
   };
 
@@ -86,7 +129,7 @@ export function AIChatWidget() {
             <div>
               <h3 className="font-semibold text-foreground">Assistente IA</h3>
               <p className="text-xs text-muted-foreground">
-                {isLoading ? "Processando..." : "Como posso ajudar?"}
+                {isLoading ? "Processando..." : isListening ? "Ouvindo..." : "Como posso ajudar?"}
               </p>
             </div>
           </div>
@@ -160,10 +203,47 @@ export function AIChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Digite sua mensagem..."
+              placeholder={isListening ? "Fale agora..." : "Digite sua mensagem..."}
               disabled={isLoading}
-              className="flex-1"
+              className={cn(
+                "flex-1 transition-all",
+                isListening && "border-primary ring-2 ring-primary/20"
+              )}
             />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant={isListening ? "destructive" : "outline"}
+                    onClick={handleMicClick}
+                    disabled={!isSupported || isLoading}
+                    className={cn(
+                      "relative transition-all",
+                      isListening && "animate-pulse"
+                    )}
+                  >
+                    {isListening ? (
+                      <MicOff className="h-4 w-4" />
+                    ) : (
+                      <Mic className="h-4 w-4" />
+                    )}
+                    {isListening && (
+                      <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-destructive animate-ping" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!isSupported 
+                    ? "Seu navegador não suporta entrada por voz" 
+                    : isListening 
+                      ? "Parar gravação" 
+                      : "Falar mensagem"
+                  }
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button
               type="submit"
               size="icon"
