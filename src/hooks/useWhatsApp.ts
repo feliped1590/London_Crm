@@ -69,15 +69,39 @@ export function useWhatsAppInstances() {
 }
 
 // Fetch conversations (grouped messages by phone)
-export function useWhatsAppConversations() {
+// filterUserId: optional user ID to filter conversations (for admin viewing specific user)
+export function useWhatsAppConversations(filterUserId?: string | null) {
   return useQuery({
-    queryKey: ['whatsapp-conversations'],
+    queryKey: ['whatsapp-conversations', filterUserId],
     queryFn: async () => {
-      // Get all messages
-      const { data: messages, error: messagesError } = await supabase
+      let instanceIds: string[] | null = null;
+
+      // If filtering by a specific user, get their instance IDs
+      if (filterUserId && filterUserId !== 'all') {
+        const { data: instances, error: instancesError } = await supabase
+          .from('whatsapp_instances')
+          .select('id')
+          .eq('user_id', filterUserId);
+
+        if (instancesError) throw instancesError;
+        instanceIds = instances?.map(i => i.id) || [];
+        
+        // If user has no instances, return empty array
+        if (instanceIds.length === 0) return [];
+      }
+
+      // Get messages (RLS already filters for non-admins)
+      let messagesQuery = supabase
         .from('whatsapp_messages')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // If admin selected a specific user, filter by their instances
+      if (instanceIds && instanceIds.length > 0) {
+        messagesQuery = messagesQuery.in('instance_id', instanceIds);
+      }
+
+      const { data: messages, error: messagesError } = await messagesQuery;
 
       if (messagesError) throw messagesError;
 
