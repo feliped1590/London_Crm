@@ -10,10 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ConversationListProps {
   selectedPhone: string | null;
   onSelectConversation: (conversation: Conversation) => void;
+  filterUserId?: string | null;
 }
 
-export function ConversationList({ selectedPhone, onSelectConversation }: ConversationListProps) {
-  const { data: conversations, isLoading } = useWhatsAppConversations();
+export function ConversationList({ selectedPhone, onSelectConversation, filterUserId }: ConversationListProps) {
+  const { data: conversations, isLoading } = useWhatsAppConversations(filterUserId);
 
   if (isLoading) {
     return (
