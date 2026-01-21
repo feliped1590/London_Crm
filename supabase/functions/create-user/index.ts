@@ -83,11 +83,14 @@ Deno.serve(async (req) => {
 
     console.log('License status:', licenseStatus);
 
-    if (!licenseStatus?.can_add_user) {
-      console.error('License limit reached:', licenseStatus);
+    // get_license_status returns an array, get the first element
+    const license = Array.isArray(licenseStatus) ? licenseStatus[0] : licenseStatus;
+
+    if (!license?.can_add_user) {
+      console.error('License limit reached:', license);
       return new Response(
         JSON.stringify({ 
-          error: `Limite de usuários atingido (${licenseStatus?.current_users}/${licenseStatus?.max_users}). Entre em contato para aumentar sua licença.`
+          error: `Limite de usuários atingido (${license?.current_users}/${license?.max_users}). Entre em contato para aumentar sua licença.`
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
