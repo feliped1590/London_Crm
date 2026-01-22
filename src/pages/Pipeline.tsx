@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List } from 'lucide-react';
+import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
+import { PipelineListView } from '@/components/pipeline/PipelineListView';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -63,6 +66,12 @@ export default function Pipeline() {
     subject: '',
     body: '',
   });
+
+  // View mode and filters
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [filterOwner, setFilterOwner] = useState('all');
+  const [filterStage, setFilterStage] = useState('all');
+  const [filterCompany, setFilterCompany] = useState('all');
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals'],
@@ -337,7 +346,25 @@ export default function Pipeline() {
     e.preventDefault();
   };
 
-  const getStageDeals = (stage: DealStage) => deals?.filter(d => d.stage === stage) || [];
+  // Filtered deals
+  const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all';
+  
+  const filteredDeals = useMemo(() => {
+    return deals?.filter(deal => {
+      // Filter by owner
+      if (filterOwner === 'mine' && deal.owner_id !== user?.id) return false;
+      
+      // Filter by stage
+      if (filterStage !== 'all' && deal.stage !== filterStage) return false;
+      
+      // Filter by company
+      if (filterCompany !== 'all' && deal.company_id !== filterCompany) return false;
+      
+      return true;
+    }) || [];
+  }, [deals, filterOwner, filterStage, filterCompany, user?.id]);
+
+  const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
 
   return (
@@ -347,13 +374,30 @@ export default function Pipeline() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
           <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Negócio
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-3">
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(value) => value && setViewMode(value as 'kanban' | 'list')}
+            className="bg-muted rounded-lg p-1"
+          >
+            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" className="gap-1.5 px-3">
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Kanban</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="Visualização Lista" className="gap-1.5 px-3">
+              <List className="h-4 w-4" />
+              <span className="hidden sm:inline">Lista</span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+          
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Negócio
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>{editingDeal ? `Detalhes: ${editingDeal.name}` : 'Novo Negócio'}</DialogTitle>
@@ -647,7 +691,20 @@ export default function Pipeline() {
             )}
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      {/* Filters Bar */}
+      <PipelineFilters
+        filterOwner={filterOwner}
+        setFilterOwner={setFilterOwner}
+        filterStage={filterStage}
+        setFilterStage={setFilterStage}
+        filterCompany={filterCompany}
+        setFilterCompany={setFilterCompany}
+        companies={companies}
+        hasActiveFilters={hasActiveFilters}
+      />
 
       {/* Email Dialog */}
       <Dialog open={isEmailDialogOpen} onOpenChange={(open) => { setIsEmailDialogOpen(open); if (!open) resetEmailForm(); }}>
@@ -731,9 +788,17 @@ export default function Pipeline() {
         <div className="flex items-center justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
+      ) : viewMode === 'list' ? (
+        <div className="h-[calc(100vh-280px)] overflow-auto">
+          <PipelineListView
+            deals={filteredDeals}
+            onEdit={handleEdit}
+            onSendEmail={handleOpenEmailDialog}
+          />
+        </div>
       ) : (
         <div className={cn(
-          "h-[calc(100vh-200px)] sm:h-[calc(100vh-220px)]",
+          "h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)]",
           isMobile 
             ? "flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2" 
             : "grid grid-cols-6 gap-4"
