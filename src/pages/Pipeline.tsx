@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
 import { StageHistoryTab } from '@/components/pipeline/StageHistoryTab';
+import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -87,11 +88,27 @@ export default function Pipeline() {
   const { data: contacts } = useQuery({
     queryKey: ['contacts'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email').order('first_name');
+      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile').order('first_name');
       if (error) throw error;
       return data;
     },
   });
+
+  // Helper functions to get contact info
+  const getContactInfo = (contactId: string | null) => {
+    if (!contactId) return null;
+    return contacts?.find(c => c.id === contactId);
+  };
+
+  const getContactPhone = (contactId: string | null) => {
+    const contact = getContactInfo(contactId);
+    return contact?.mobile || contact?.phone || null;
+  };
+
+  const getContactName = (contactId: string | null) => {
+    const contact = getContactInfo(contactId);
+    return contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : '';
+  };
 
   const { data: templates } = useQuery({
     queryKey: ['email_templates'],
@@ -337,14 +354,14 @@ export default function Pipeline() {
               Novo Negócio
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>{editingDeal ? 'Editar Negócio' : 'Novo Negócio'}</DialogTitle>
+              <DialogTitle>{editingDeal ? `Detalhes: ${editingDeal.name}` : 'Novo Negócio'}</DialogTitle>
             </DialogHeader>
             
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
                   <TabsTrigger value="propostas" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
@@ -353,6 +370,10 @@ export default function Pipeline() {
                   <TabsTrigger value="historico" className="flex items-center gap-2">
                     <History className="h-4 w-4" />
                     Histórico
+                  </TabsTrigger>
+                  <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
                   </TabsTrigger>
                 </TabsList>
                 
@@ -498,6 +519,14 @@ export default function Pipeline() {
                 
                 <TabsContent value="historico" className="flex-1 overflow-auto mt-4">
                   <StageHistoryTab dealId={editingDeal.id} />
+                </TabsContent>
+                
+                <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4">
+                  <DealWhatsAppChat
+                    contactId={editingDeal.contact_id}
+                    contactPhone={getContactPhone(editingDeal.contact_id)}
+                    contactName={getContactName(editingDeal.contact_id)}
+                  />
                 </TabsContent>
               </Tabs>
             ) : (
