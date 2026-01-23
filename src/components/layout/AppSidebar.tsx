@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Package,
   ShoppingCart,
+  Lightbulb,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ const allNavItems: NavItem[] = [
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
+  { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' },
   { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
 ];
