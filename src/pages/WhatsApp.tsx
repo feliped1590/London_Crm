@@ -4,8 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConversationList } from '@/components/whatsapp/ConversationList';
 import { ChatView } from '@/components/whatsapp/ChatView';
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
+import { WhatsAppMetrics } from '@/components/whatsapp/WhatsAppMetrics';
 import { Conversation, useWhatsAppRealtime, useUnreadCount } from '@/hooks/useWhatsApp';
-import { MessageSquare, Smartphone, ArrowLeft, Users } from 'lucide-react';
+import { MessageSquare, Smartphone, ArrowLeft, Users, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -124,6 +125,10 @@ export default function WhatsApp() {
               <Smartphone className="h-4 w-4" />
               <span className="hidden sm:inline">Instâncias</span>
             </TabsTrigger>
+            <TabsTrigger value="metrics" className="gap-2 flex-1 sm:flex-initial">
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Métricas</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -179,6 +184,10 @@ export default function WhatsApp() {
 
         <TabsContent value="instances" className="flex-1 m-0 overflow-auto p-4 sm:p-6">
           <InstanceManager />
+        </TabsContent>
+
+        <TabsContent value="metrics" className="flex-1 m-0 overflow-auto">
+          <WhatsAppMetrics />
         </TabsContent>
       </Tabs>
     </div>
