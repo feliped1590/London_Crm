@@ -47,7 +47,7 @@ const allNavItems: NavItem[] = [
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
-  { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' },
+  // { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' }, // Temporariamente oculto para apresentação
   // { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' }, // Temporariamente oculto para apresentação
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
 ];
