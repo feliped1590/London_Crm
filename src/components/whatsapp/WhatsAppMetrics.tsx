@@ -5,7 +5,8 @@ import {
   useVolumeByDay, 
   useVolumeByHour,
   useSellerPerformance,
-  useResponseTimeTrend 
+  useResponseTimeTrend,
+  useContactsWithMetrics 
 } from '@/hooks/useWhatsAppMetrics';
 import { 
   Clock, 
@@ -16,7 +17,11 @@ import {
   ArrowUpRight,
   Timer,
   Trophy,
-  Percent
+  Percent,
+  AlertCircle,
+  Phone,
+  Building2,
+  User
 } from 'lucide-react';
 import {
   ChartContainer,
@@ -38,6 +43,9 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // Helper to format minutes to readable time
 function formatMinutes(minutes: number | null): string {
@@ -57,12 +65,24 @@ function getResponseTimeBadge(minutes: number | null): { variant: 'default' | 's
   return { variant: 'destructive', label: 'Lento' };
 }
 
+// Helper to format phone number
+function formatPhoneNumber(phone: string): string {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 13) {
+    return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+  } else if (cleaned.length === 12) {
+    return `+${cleaned.slice(0, 2)} (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 8)}-${cleaned.slice(8)}`;
+  }
+  return phone;
+}
+
 export function WhatsAppMetrics() {
   const { data: metrics, isLoading: metricsLoading } = useWhatsAppMetrics(30);
   const { data: volumeByDay, isLoading: volumeLoading } = useVolumeByDay(30);
   const { data: volumeByHour, isLoading: hourLoading } = useVolumeByHour(30);
   const { data: sellerPerformance, isLoading: sellerLoading } = useSellerPerformance(30);
   const { data: responseTrend, isLoading: trendLoading } = useResponseTimeTrend(30);
+  const { data: contactsMetrics, isLoading: contactsLoading } = useContactsWithMetrics(30);
 
   const chartConfig = {
     inbound: {
@@ -83,10 +103,13 @@ export function WhatsAppMetrics() {
     },
   };
 
+  // Filter pending contacts
+  const pendingContacts = contactsMetrics?.filter(c => c.isPending) || [];
+
   return (
     <div className="space-y-6 p-4 sm:p-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Tempo de Primeira Resposta */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -169,6 +192,36 @@ export function WhatsAppMetrics() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Conversas respondidas
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pendentes */}
+        <Card className={cn(
+          pendingContacts.length > 0 && "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20"
+        )}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+            <AlertCircle className={cn(
+              "h-4 w-4",
+              pendingContacts.length > 0 ? "text-amber-500" : "text-muted-foreground"
+            )} />
+          </CardHeader>
+          <CardContent>
+            {metricsLoading || contactsLoading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <>
+                <div className={cn(
+                  "text-2xl font-bold",
+                  pendingContacts.length > 0 && "text-amber-600 dark:text-amber-400"
+                )}>
+                  {metrics?.pendingConversations ?? 0}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Aguardando resposta
                 </p>
               </>
             )}
@@ -391,6 +444,104 @@ export function WhatsAppMetrics() {
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               Nenhum dado de vendedor disponível
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Contacts List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Phone className="h-5 w-5 text-primary" />
+            Lista de Contatos
+          </CardTitle>
+          <CardDescription>Métricas individuais por contato (últimos 30 dias)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {contactsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : contactsMetrics && contactsMetrics.length > 0 ? (
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-2 pr-4">
+                {contactsMetrics.map((contact) => {
+                  const badge = getResponseTimeBadge(contact.avgResponseTime);
+                  return (
+                    <div 
+                      key={contact.phone}
+                      className={cn(
+                        "p-3 rounded-lg border flex flex-col sm:flex-row sm:items-center gap-3 transition-colors",
+                        contact.isPending 
+                          ? "border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20" 
+                          : "hover:bg-muted/50"
+                      )}
+                    >
+                      {/* Contact Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {contact.isPending && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500 text-xs shrink-0">
+                              Pendente
+                            </Badge>
+                          )}
+                          <span className="font-medium truncate">
+                            {contact.contactName || formatPhoneNumber(contact.phone)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                          {contact.contactName && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {formatPhoneNumber(contact.phone)}
+                            </span>
+                          )}
+                          {contact.companyName && (
+                            <span className="flex items-center gap-1 truncate">
+                              <Building2 className="h-3 w-3" />
+                              {contact.companyName}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Última msg: {formatDistanceToNow(new Date(contact.lastMessageAt), { addSuffix: true, locale: ptBR })}
+                        </div>
+                      </div>
+
+                      {/* Metrics */}
+                      <div className="flex items-center gap-4 text-sm shrink-0">
+                        <div className="text-center">
+                          <div className="font-medium">{contact.totalMessages}</div>
+                          <div className="text-xs text-muted-foreground">msgs</div>
+                        </div>
+                        <div className="text-center">
+                          <div className={cn(
+                            "font-medium",
+                            contact.responseRate >= 90 ? "text-green-600" :
+                            contact.responseRate >= 50 ? "text-amber-600" : "text-red-600"
+                          )}>
+                            {contact.responseRate}%
+                          </div>
+                          <div className="text-xs text-muted-foreground">resp.</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-medium">{formatMinutes(contact.avgResponseTime)}</div>
+                          <Badge variant={badge.variant} className="text-xs mt-0.5">
+                            {badge.label}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum contato encontrado no período
             </div>
           )}
         </CardContent>
