@@ -21,6 +21,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
+import { InsightsSummary } from '@/components/insights/InsightsSummary';
 
 interface ExtendedDashboardStats extends DashboardStats {
   pendingProposals: number;
@@ -284,7 +285,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Tasks Stats */}
+      {/* Tasks Stats + Insights */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Tarefas Pendentes" 
@@ -299,6 +300,9 @@ export default function Dashboard() {
           description={stats?.overdueTasks ? 'Atenção necessária' : 'Tudo em dia'}
           trend={stats?.overdueTasks ? 'down' : null}
         />
+        <div className="lg:col-span-2">
+          <InsightsSummary />
+        </div>
       </div>
 
       {/* Recent Deals and Tasks */}
