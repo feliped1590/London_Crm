@@ -37,18 +37,18 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', moduleKey: 'dashboard' },
+  { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
   { to: '/contacts', icon: Users, label: 'Contatos', moduleKey: 'contacts' },
-  { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
-  { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
+  // { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' }, // Temporariamente oculto para apresentação
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' },
-  { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' },
+  // { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' }, // Temporariamente oculto para apresentação
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
 ];
 
