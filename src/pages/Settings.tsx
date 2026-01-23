@@ -11,12 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
 import { PermissionsManager } from '@/components/settings/PermissionsManager';
 import { LicenseCard } from '@/components/settings/LicenseCard';
+import { TestDataManager } from '@/components/settings/TestDataManager';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -469,6 +470,10 @@ export default function Settings() {
           <TabsTrigger value="users" className="gap-2">
             <Users className="h-4 w-4" />
             Usuários
+          </TabsTrigger>
+          <TabsTrigger value="test-data" className="gap-2">
+            <FlaskConical className="h-4 w-4" />
+            Dados de Teste
           </TabsTrigger>
         </TabsList>
 
@@ -1039,6 +1044,10 @@ export default function Settings() {
               )}
             </DialogContent>
           </Dialog>
+        </TabsContent>
+
+        <TabsContent value="test-data" className="mt-6 space-y-6">
+          <TestDataManager />
         </TabsContent>
       </Tabs>
     </div>
