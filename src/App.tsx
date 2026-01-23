@@ -24,6 +24,7 @@ import Orders from "./pages/Orders";
 import Bots from "./pages/Bots";
 import BotBuilder from "./pages/BotBuilder";
 import ProposalPublic from "./pages/ProposalPublic";
+import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -80,6 +81,7 @@ const App = () => (
                 <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/insights" element={<Insights />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integracao-iniflex" element={<InflexIntegration />} />
               </Route>
