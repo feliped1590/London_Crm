@@ -19,6 +19,7 @@ import { usePricingTables, PricingTable, PricingRule } from '@/hooks/usePricingT
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { EntityAssignmentsTab } from '@/components/pricing/EntityAssignmentsTab';
 
 export default function PricingTables() {
   const { isAdmin } = useModulePermissions();
@@ -315,88 +316,112 @@ export default function PricingTables() {
         </div>
       )}
 
-      {/* Rules Section */}
+      {/* Rules & Assignments Section */}
       {selectedTableId && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Regras de Preço</CardTitle>
-                <CardDescription>
-                  Configure as regras de desconto para a tabela selecionada
-                </CardDescription>
-              </div>
-              <Button onClick={() => setIsRuleDialogOpen(true)} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nova Regra
-              </Button>
-            </div>
+            <CardTitle>Configuração da Tabela</CardTitle>
+            <CardDescription>
+              Gerencie regras de preço e vínculos com clientes
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {getRulesForTable(selectedTableId).length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Percent className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Nenhuma regra definida para esta tabela.</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produto/Categoria</TableHead>
-                    <TableHead>Faixa de Quantidade</TableHead>
-                    <TableHead>Desconto</TableHead>
-                    <TableHead>Preço Fixo</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getRulesForTable(selectedTableId).map((rule: any) => (
-                    <TableRow key={rule.id}>
-                      <TableCell>
-                        {rule.products?.name || rule.category || <span className="text-muted-foreground">Todos</span>}
-                      </TableCell>
-                      <TableCell>
-                        {rule.min_quantity}
-                        {rule.max_quantity ? ` - ${rule.max_quantity}` : '+'}
-                      </TableCell>
-                      <TableCell>
-                        {rule.discount_percent > 0 ? `${rule.discount_percent}%` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {rule.fixed_price !== null
-                          ? formatCurrency(rule.fixed_price)
-                          : rule.price_per_unit !== null
-                          ? `${formatCurrency(rule.price_per_unit)}/un`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditRule(rule)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive"
-                            onClick={() => {
-                              setItemToDelete({ type: 'rule', id: rule.id });
-                              setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <Tabs defaultValue="rules">
+              <TabsList className="mb-4">
+                <TabsTrigger value="rules" className="gap-2">
+                  <Percent className="h-4 w-4" />
+                  Regras de Preço
+                </TabsTrigger>
+                <TabsTrigger value="assignments" className="gap-2">
+                  <Link2 className="h-4 w-4" />
+                  Vínculos
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="rules">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-sm text-muted-foreground">
+                    Configure descontos e preços especiais para esta tabela
+                  </div>
+                  <Button onClick={() => setIsRuleDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Nova Regra
+                  </Button>
+                </div>
+                
+                {getRulesForTable(selectedTableId).length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Percent className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma regra definida para esta tabela.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Produto/Categoria</TableHead>
+                        <TableHead>Faixa de Quantidade</TableHead>
+                        <TableHead>Desconto</TableHead>
+                        <TableHead>Preço Fixo</TableHead>
+                        <TableHead className="w-[100px]">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {getRulesForTable(selectedTableId).map((rule: any) => (
+                        <TableRow key={rule.id}>
+                          <TableCell>
+                            {rule.products?.name || rule.category || <span className="text-muted-foreground">Todos</span>}
+                          </TableCell>
+                          <TableCell>
+                            {rule.min_quantity}
+                            {rule.max_quantity ? ` - ${rule.max_quantity}` : '+'}
+                          </TableCell>
+                          <TableCell>
+                            {rule.discount_percent > 0 ? `${rule.discount_percent}%` : '-'}
+                          </TableCell>
+                          <TableCell>
+                            {rule.fixed_price !== null
+                              ? formatCurrency(rule.fixed_price)
+                              : rule.price_per_unit !== null
+                              ? `${formatCurrency(rule.price_per_unit)}/un`
+                              : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEditRule(rule)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => {
+                                  setItemToDelete({ type: 'rule', id: rule.id });
+                                  setDeleteConfirmOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="assignments">
+                <EntityAssignmentsTab 
+                  selectedTableId={selectedTableId} 
+                  tableName={pricingTables.find(t => t.id === selectedTableId)?.name || ''}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}

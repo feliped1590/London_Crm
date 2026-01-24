@@ -216,7 +216,41 @@ export function usePricingTables() {
       (a) => a.entity_type === entityType && a.entity_id === entityId
     );
     if (!assignment) return null;
-    return pricingTables?.find((t) => t.id === assignment.pricing_table_id) || null;
+    return pricingTables?.find((t) => t.id === assignment.pricing_table_id && t.is_active) || null;
+  };
+
+  // NEW: Get pricing table that contains a rule for a specific product
+  const getTableForProduct = (productId: string): PricingTable | null => {
+    const rule = pricingRules?.find(r => r.product_id === productId);
+    if (!rule) return null;
+    return pricingTables?.find(t => t.id === rule.pricing_table_id && t.is_active) || null;
+  };
+
+  // NEW: Get default pricing table
+  const getDefaultTable = (): PricingTable | null => {
+    return pricingTables?.find(t => t.is_default && t.is_active) || null;
+  };
+
+  // NEW: Get applicable table following hierarchy: Client > Product > Default
+  const getApplicableTable = (
+    entityType: 'company' | 'contact' | null,
+    entityId: string | null,
+    productId: string | null
+  ): PricingTable | null => {
+    // 1st - Client/Entity table
+    if (entityType && entityId) {
+      const entityTable = getTableForEntity(entityType, entityId);
+      if (entityTable) return entityTable;
+    }
+
+    // 2nd - Product table (if product is linked to any pricing rule)
+    if (productId) {
+      const productTable = getTableForProduct(productId);
+      if (productTable) return productTable;
+    }
+
+    // 3rd - Default table
+    return getDefaultTable();
   };
 
   const getRulesForTable = (tableId: string) => {
@@ -232,12 +266,14 @@ export function usePricingTables() {
   ): { finalPrice: number; discount: number; rule: PricingRule | null } => {
     const rules = getRulesForTable(tableId);
     
-    // Find matching rule
+    // Find matching rule - prioritize product-specific rules
     const matchingRule = rules.find((r) => {
-      // Check product match
-      if (productId && r.product_id && r.product_id !== productId) return false;
-      // Check category match
-      if (category && r.category && r.category !== category) return false;
+      // Product match check
+      if (r.product_id && productId && r.product_id !== productId) return false;
+      // If rule has product_id and we don't match, skip
+      if (r.product_id && !productId) return false;
+      // Check category match if no product specified in rule
+      if (!r.product_id && r.category && category && r.category !== category) return false;
       // Check quantity range
       if (quantity < r.min_quantity) return false;
       if (r.max_quantity !== null && quantity > r.max_quantity) return false;
@@ -291,6 +327,9 @@ export function usePricingTables() {
     assignTable: assignTableMutation.mutate,
     unassignTable: unassignTableMutation.mutate,
     getTableForEntity,
+    getTableForProduct,
+    getDefaultTable,
+    getApplicableTable,
     getRulesForTable,
     calculatePrice,
     isPending:

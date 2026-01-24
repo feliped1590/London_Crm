@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Package, Edit, Trash2, Filter } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
+import { usePricingTables } from '@/hooks/usePricingTables';
 import {
   Product,
   categoryOptions,
@@ -26,6 +27,7 @@ import {
 export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -184,6 +186,27 @@ export default function Products() {
       active: product.active ?? true,
     });
     setIsDialogOpen(true);
+  };
+
+  // Helper to get pricing info for a product
+  const getProductPricingInfo = (product: Product) => {
+    const table = getTableForProduct(product.id);
+    if (!table) return null;
+    
+    const { finalPrice, rule } = calculatePrice(
+      table.id,
+      product.id,
+      product.category,
+      1,
+      product.unit_price || 0
+    );
+    
+    return {
+      table,
+      finalPrice,
+      rule,
+      hasDiscount: finalPrice < (product.unit_price || 0),
+    };
   };
 
   const filteredProducts = products?.filter((p) =>
@@ -432,68 +455,92 @@ export default function Products() {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Material</TableHead>
                   <TableHead>Medidas (LxCxE)</TableHead>
-                  <TableHead>Preço Unit.</TableHead>
+                  <TableHead>Preço Base</TableHead>
+                  <TableHead>Tabela de Preços</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-mono font-medium">{product.sku}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                        {product.name}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {product.category && (
-                        <Badge variant="secondary">
-                          {categoryOptions.find((c) => c.value === product.category)?.label || product.category}
+                {filteredProducts.map((product) => {
+                  const pricingInfo = getProductPricingInfo(product);
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-mono font-medium">{product.sku}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          {product.name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {product.category && (
+                          <Badge variant="secondary">
+                            {categoryOptions.find((c) => c.value === product.category)?.label || product.category}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.material && (
+                          <span className="text-sm text-muted-foreground">
+                            {materialOptions.find((m) => m.value === product.material)?.label || product.material}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {(product.width || product.length || product.thickness) ? (
+                          <span className="text-sm font-mono">
+                            {product.width || '-'} x {product.length || '-'} x {product.thickness || '-'}
+                          </span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>{formatCurrency(product.unit_price || 0)}</TableCell>
+                      <TableCell>
+                        {pricingInfo ? (
+                          <div className="flex flex-col gap-1">
+                            <Badge variant="outline" className="text-xs gap-1 w-fit">
+                              <DollarSign className="h-3 w-3" />
+                              {pricingInfo.table.name}
+                            </Badge>
+                            {pricingInfo.hasDiscount && (
+                              <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                → {formatCurrency(pricingInfo.finalPrice)}
+                                {pricingInfo.rule?.discount_percent && pricingInfo.rule.discount_percent > 0 && (
+                                  <span className="ml-1">(-{pricingInfo.rule.discount_percent}%)</span>
+                                )}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.active ? 'default' : 'outline'}>
+                          {product.active ? 'Ativo' : 'Inativo'}
                         </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {product.material && (
-                        <span className="text-sm text-muted-foreground">
-                          {materialOptions.find((m) => m.value === product.material)?.label || product.material}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {(product.width || product.length || product.thickness) ? (
-                        <span className="text-sm font-mono">
-                          {product.width || '-'} x {product.length || '-'} x {product.thickness || '-'}
-                        </span>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>{formatCurrency(product.unit_price || 0)}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.active ? 'default' : 'outline'}>
-                        {product.active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            if (confirm('Tem certeza que deseja excluir este produto?')) {
-                              deleteMutation.mutate(product.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                deleteMutation.mutate(product.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
