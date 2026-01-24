@@ -5,10 +5,12 @@ import { ConversationList } from '@/components/whatsapp/ConversationList';
 import { ChatView } from '@/components/whatsapp/ChatView';
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { WhatsAppMetrics } from '@/components/whatsapp/WhatsAppMetrics';
+import { ConversationAnalyticsPanel } from '@/components/whatsapp/ConversationAnalyticsPanel';
 import { Conversation, useWhatsAppRealtime, useUnreadCount } from '@/hooks/useWhatsApp';
-import { MessageSquare, Smartphone, ArrowLeft, Users, BarChart3 } from 'lucide-react';
+import { MessageSquare, Smartphone, ArrowLeft, Users, BarChart3, BarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -134,10 +136,10 @@ export default function WhatsApp() {
 
         <TabsContent value="conversations" className="flex-1 m-0 overflow-hidden">
           {isMobile ? (
-            // Mobile: show one view at a time
+            // Mobile: show one view at a time with analytics sheet
             selectedConversation ? (
               <div className="flex flex-col h-full">
-                <div className="p-2 border-b bg-card">
+                <div className="p-2 border-b bg-card flex items-center justify-between">
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -147,6 +149,26 @@ export default function WhatsApp() {
                     <ArrowLeft className="h-4 w-4" />
                     Voltar
                   </Button>
+                  
+                  {/* Analytics Sheet for Mobile */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <BarChart2 className="h-4 w-4" />
+                        Análises
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="w-full sm:w-96 p-0">
+                      <SheetHeader className="p-4 border-b">
+                        <SheetTitle>Análise da Conversa</SheetTitle>
+                      </SheetHeader>
+                      <ConversationAnalyticsPanel
+                        phone={selectedConversation.phone}
+                        contactId={selectedConversation.contactId}
+                        contactName={selectedConversation.contactName}
+                      />
+                    </SheetContent>
+                  </Sheet>
                 </div>
                 <ChatView conversation={selectedConversation} />
               </div>
@@ -163,9 +185,10 @@ export default function WhatsApp() {
               </div>
             )
           ) : (
-            // Desktop: side by side layout
+            // Desktop: three column layout - List | Chat | Analytics
             <div className="flex h-full">
-              <div className="w-80 border-r bg-card flex flex-col">
+              {/* Conversations List */}
+              <div className="w-80 border-r bg-card flex flex-col shrink-0">
                 <div className="p-4 border-b">
                   <h2 className="font-semibold">Conversas</h2>
                 </div>
@@ -177,7 +200,22 @@ export default function WhatsApp() {
                   />
                 </div>
               </div>
-              <ChatView conversation={selectedConversation} />
+              
+              {/* Chat View */}
+              <div className="flex-1 min-w-0">
+                <ChatView conversation={selectedConversation} />
+              </div>
+              
+              {/* Analytics Panel - Only shows when conversation selected */}
+              {selectedConversation && (
+                <div className="w-80 xl:w-96 border-l bg-card shrink-0">
+                  <ConversationAnalyticsPanel
+                    phone={selectedConversation.phone}
+                    contactId={selectedConversation.contactId}
+                    contactName={selectedConversation.contactName}
+                  />
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
