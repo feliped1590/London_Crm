@@ -259,15 +259,21 @@ export default function Pipeline() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Clean up empty date strings
+    const cleanedFormData = {
+      ...formData,
+      expected_close_date: formData.expected_close_date || null,
+    };
+    
     if (editingDeal) {
       updateMutation.mutate({ 
         id: editingDeal.id, 
-        ...formData,
+        ...cleanedFormData,
         custom_fields: customFieldsData as Json,
       });
     } else {
       createMutation.mutate({
-        ...formData,
+        ...cleanedFormData,
         name: formData.name || '',
         created_by: user?.id,
         owner_id: user?.id,
