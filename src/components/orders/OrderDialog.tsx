@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,9 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
+  // IMPORTANT: useRef to avoid race condition between onConfirm -> onOpenChange(false)
+  // (state updates are async and could cause a false revert)
+  const priceChangeConfirmedRef = useRef(false);
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     index: number;
@@ -229,6 +232,8 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     }
 
     // Admin: show authorization modal
+    priceChangeConfirmedRef.current = false;
+    setPriceChangeConfirmed(false);
     setPendingPriceChange({
       index,
       value: item.unit_price || 0,
@@ -279,6 +284,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     if (!pendingPriceChange) return;
 
     // Mark that the change was confirmed so we don't revert on close
+    priceChangeConfirmedRef.current = true;
     setPriceChangeConfirmed(true);
     
     // Log the override (no deal_id for orders, so we skip audit log)
@@ -291,6 +297,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       
       if (nextOutOfRange) {
         // There are more items pending authorization
+        priceChangeConfirmedRef.current = false;
         setPendingPriceChange(nextOutOfRange);
         setShowPriceOverrideModal(true);
         setPriceChangeConfirmed(false);
@@ -667,6 +674,8 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                 
                 if (outOfRange) {
                   // Open authorization modal for this item
+                  priceChangeConfirmedRef.current = false;
+                  setPriceChangeConfirmed(false);
                   setPendingPriceChange(outOfRange);
                   setPendingSubmit(true);
                   setShowPriceOverrideModal(true);
@@ -689,10 +698,11 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
           onOpenChange={(open) => {
             if (!open) {
               // Only revert if the change was NOT confirmed
-              if (!priceChangeConfirmed) {
+              if (!priceChangeConfirmedRef.current) {
                 handlePriceOverrideCancel();
               }
               // Reset the confirmation flag
+              priceChangeConfirmedRef.current = false;
               setPriceChangeConfirmed(false);
             }
             setShowPriceOverrideModal(open);
