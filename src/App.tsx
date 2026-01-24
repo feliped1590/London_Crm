@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -32,23 +32,41 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000,
       retry: 1,
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-// Componente que monitora mudanças de autenticação e limpa o cache
+// Componente que monitora mudanças de autenticação e limpa o cache apenas quando necessário
 function AuthStateListener() {
   const qc = useQueryClient();
+  const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Obter sessão inicial para rastrear o usuário atual
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      previousUserIdRef.current = session?.user?.id ?? null;
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event) => {
-        if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') {
-          console.log('Auth state changed:', event, '- Clearing React Query cache');
+      (event, session) => {
+        const currentUserId = session?.user?.id ?? null;
+        const previousUserId = previousUserIdRef.current;
+
+        // Só limpar cache se realmente mudou de usuário (não apenas restauração de sessão)
+        if (event === 'SIGNED_OUT') {
+          console.log('User signed out - Clearing React Query cache');
           qc.clear();
+          previousUserIdRef.current = null;
+        } else if (event === 'SIGNED_IN' && previousUserId !== currentUserId) {
+          console.log('New user signed in - Clearing React Query cache');
+          qc.clear();
+          previousUserIdRef.current = currentUserId;
         }
+        // Ignora SIGNED_IN quando é apenas restauração de sessão do mesmo usuário
       }
     );
+
     return () => subscription.unsubscribe();
   }, [qc]);
 
