@@ -56,6 +56,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     index: number;
     value: number;
@@ -239,6 +240,40 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     setShowPriceOverrideModal(true);
   };
 
+  // Find the next item that's out of pricing table range (starting from a given index)
+  const findNextOutOfRangeItem = (startIndex: number = 0): typeof pendingPriceChange => {
+    for (let i = startIndex; i < items.length; i++) {
+      const item = items[i];
+      if (!item.product_id) continue;
+      
+      const product = products?.find(p => p.id === item.product_id);
+      if (!product) continue;
+      
+      const validation = validatePriceAgainstTable(
+        companyId ? 'company' : contactId ? 'contact' : null,
+        companyId || contactId || null,
+        item.product_id,
+        product.category || null,
+        item.quantity || 1,
+        product.unit_price || 0,
+        item.unit_price || 0
+      );
+      
+      // If validation exists and price differs from expected
+      if (validation && !validation.isValid) {
+        return {
+          index: i,
+          value: item.unit_price || 0,
+          itemDescription: item.description || 'Item',
+          currentPrice: validation.expectedPrice,
+          proposedPrice: item.unit_price || 0,
+          pricingTableName: validation.tableName || 'Tabela de Preços',
+        };
+      }
+    }
+    return null;
+  };
+
   // Handle price override confirmation
   const handlePriceOverrideConfirm = async (justification: string) => {
     if (!pendingPriceChange) return;
@@ -249,6 +284,22 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     // Log the override (no deal_id for orders, so we skip audit log)
     toast.success(`Alteração de preço autorizada: ${justification}`);
     setPendingPriceChange(null);
+    
+    // If there was a pending submit, check for more items or execute submit
+    if (pendingSubmit) {
+      const nextOutOfRange = findNextOutOfRangeItem(pendingPriceChange.index + 1);
+      
+      if (nextOutOfRange) {
+        // There are more items pending authorization
+        setPendingPriceChange(nextOutOfRange);
+        setShowPriceOverrideModal(true);
+        setPriceChangeConfirmed(false);
+      } else {
+        // All items authorized, execute submit
+        setPendingSubmit(false);
+        createOrderMutation.mutate();
+      }
+    }
   };
 
   // Handle price override cancellation - revert to table price
@@ -261,9 +312,16 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     updatedItems[index].subtotal = updatedItems[index].quantity * currentPrice;
     setItems(updatedItems);
     
+    // If there was a pending submit, cancel it
+    if (pendingSubmit) {
+      setPendingSubmit(false);
+      toast.info('Criação cancelada - preço fora do range não autorizado');
+    } else {
+      toast.info('Preço revertido para o valor da tabela');
+    }
+    
     setPendingPriceChange(null);
     setShowPriceOverrideModal(false);
-    toast.info('Preço revertido para o valor da tabela');
   };
 
   // Update item
@@ -602,7 +660,21 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
             Cancelar
           </Button>
           <Button
-            onClick={() => createOrderMutation.mutate()}
+            onClick={() => {
+              // For admins: validate if there are prices out of range before submitting
+              if (isAdmin) {
+                const outOfRange = findNextOutOfRangeItem(0);
+                
+                if (outOfRange) {
+                  // Open authorization modal for this item
+                  setPendingPriceChange(outOfRange);
+                  setPendingSubmit(true);
+                  setShowPriceOverrideModal(true);
+                  return; // Interrupt submit until authorization
+                }
+              }
+              createOrderMutation.mutate();
+            }}
             disabled={createOrderMutation.isPending || items.length === 0 || (!companyId && !contactId)}
           >
             {createOrderMutation.isPending ? 'Criando...' : 'Criar Pedido'}
