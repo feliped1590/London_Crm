@@ -35,7 +35,8 @@ export default function Orders() {
           contact:contacts(id, first_name, last_name),
           proposal:proposals(id, number)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus as OrderStatus);

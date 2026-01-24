@@ -168,7 +168,7 @@ export default function Dashboard() {
         supabase.from("deals").select("*", { count: "exact", head: true }),
         supabase.from("contacts").select("*", { count: "exact", head: true }),
         supabase.from("companies").select("*", { count: "exact", head: true }),
-        supabase.from("deals").select("*").order("created_at", { ascending: false }).limit(5),
+        supabase.from("deals").select("*").order("created_at", { ascending: false }).limit(100),
         supabase
           .from("tasks")
           .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
@@ -219,6 +219,7 @@ export default function Dashboard() {
       setUpcomingTasks((tasks || []) as Task[]);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      toast.error("Erro ao carregar dados do dashboard");
     } finally {
       setLoading(false);
     }

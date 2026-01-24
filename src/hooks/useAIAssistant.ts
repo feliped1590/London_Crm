@@ -101,6 +101,11 @@ export function useAIAssistant() {
       }
     } catch (error) {
       console.error("Error loading conversation:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a conversa",
+        variant: "destructive",
+      });
     }
   }, []);
 
