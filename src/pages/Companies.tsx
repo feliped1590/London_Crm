@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail, RefreshCw, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
@@ -59,10 +60,10 @@ export default function Companies() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('companies')
-        .select('*')
+        .select('*, deals(id, name, stage, value)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Company[];
+      return data as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[];
     },
   });
 
@@ -418,6 +419,12 @@ export default function Companies() {
                   <TableHead>Empresa</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Setor</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Funil
+                    </div>
+                  </TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Localização</TableHead>
                   <TableHead>Iniflex</TableHead>
@@ -455,6 +462,9 @@ export default function Companies() {
                       </TableCell>
                       <TableCell>
                         {company.industry && <Badge variant="secondary">{company.industry}</Badge>}
+                      </TableCell>
+                      <TableCell>
+                        <DealStageBadges deals={company.deals || []} />
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

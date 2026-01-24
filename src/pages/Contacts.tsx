@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
@@ -49,7 +50,7 @@ export default function Contacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contacts')
-        .select('*, companies(name)')
+        .select('*, companies(name), deals(id, name, stage, value)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -394,6 +395,12 @@ export default function Contacts() {
                   <TableHead>Contato</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>Empresa</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Funil
+                    </div>
+                  </TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Iniflex</TableHead>
@@ -435,6 +442,9 @@ export default function Contacts() {
                             {(contact as any).companies.name}
                           </div>
                         ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <DealStageBadges deals={(contact as any).deals || []} />
                       </TableCell>
                       <TableCell>
                         <div>
