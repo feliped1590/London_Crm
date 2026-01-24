@@ -3,17 +3,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Textarea } from '@/components/ui/textarea';
-import { Search, ShoppingCart, Eye, Building2, User, Calendar, Package } from 'lucide-react';
+import { Search, ShoppingCart, Eye, Building2, User, Calendar, Package, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, OrderItem, orderStatusConfig, OrderStatus } from '@/types/products';
+import { OrderDialog } from '@/components/orders/OrderDialog';
 
 export default function Orders() {
   const queryClient = useQueryClient();
@@ -21,6 +21,7 @@ export default function Orders() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<OrderStatus | null>(null);
 
   const { data: orders, isLoading } = useQuery({
@@ -117,6 +118,10 @@ export default function Orders() {
           <h1 className="text-3xl font-bold text-foreground">Pedidos</h1>
           <p className="text-muted-foreground">Gerencie os pedidos de venda</p>
         </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Pedido
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -357,6 +362,13 @@ export default function Orders() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Order Dialog */}
+      <OrderDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['orders'] })}
+      />
     </div>
   );
 }
