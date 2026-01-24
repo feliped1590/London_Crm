@@ -80,6 +80,7 @@ export function ProposalDialog({
 
   // Price override modal states (for admin authorization)
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+  const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     index: number;
     field: 'unit_price' | 'discount_percent';
@@ -462,7 +463,8 @@ export function ProposalDialog({
         changed_by: user?.id,
       });
 
-      // The price is already set, just confirm it stays
+      // Mark that the change was confirmed so we don't revert on close
+      setPriceChangeConfirmed(true);
       toast.success('Alteração de preço autorizada e registrada');
     } catch (error) {
       console.error('Error logging price override:', error);
@@ -912,7 +914,12 @@ export function ProposalDialog({
           open={showPriceOverrideModal}
           onOpenChange={(open) => {
             if (!open) {
-              handlePriceOverrideCancel();
+              // Only revert if the change was NOT confirmed
+              if (!priceChangeConfirmed) {
+                handlePriceOverrideCancel();
+              }
+              // Reset the confirmation flag
+              setPriceChangeConfirmed(false);
             }
             setShowPriceOverrideModal(open);
           }}
