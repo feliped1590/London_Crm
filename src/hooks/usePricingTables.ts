@@ -313,6 +313,53 @@ export function usePricingTables() {
     return { finalPrice: basePrice, discount: 0, rule: matchingRule };
   };
 
+  // NEW: Validate if a price differs from the pricing table price
+  // Returns null if no pricing table applies, otherwise returns the expected price and difference
+  const validatePriceAgainstTable = (
+    entityType: 'company' | 'contact' | null,
+    entityId: string | null,
+    productId: string | null,
+    productCategory: string | null,
+    quantity: number,
+    basePrice: number,
+    inputPrice: number
+  ): { 
+    isValid: boolean; 
+    expectedPrice: number; 
+    difference: number; 
+    differencePercent: number;
+    tableName: string | null;
+  } | null => {
+    const applicableTable = getApplicableTable(entityType, entityId, productId);
+    
+    if (!applicableTable) {
+      // No pricing table applies, any price is valid
+      return null;
+    }
+
+    const { finalPrice } = calculatePrice(
+      applicableTable.id,
+      productId,
+      productCategory,
+      quantity,
+      basePrice
+    );
+
+    const difference = inputPrice - finalPrice;
+    const differencePercent = finalPrice > 0 ? (difference / finalPrice) * 100 : 0;
+    
+    // Price is valid if it matches the table price (with small tolerance for floating point)
+    const isValid = Math.abs(difference) < 0.01;
+
+    return {
+      isValid,
+      expectedPrice: finalPrice,
+      difference,
+      differencePercent,
+      tableName: applicableTable.name,
+    };
+  };
+
   return {
     pricingTables: pricingTables || [],
     pricingRules: pricingRules || [],
@@ -332,6 +379,7 @@ export function usePricingTables() {
     getApplicableTable,
     getRulesForTable,
     calculatePrice,
+    validatePriceAgainstTable,
     isPending:
       createTableMutation.isPending ||
       updateTableMutation.isPending ||

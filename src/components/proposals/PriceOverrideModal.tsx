@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
+import { AlertCircle, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PriceOverrideModalProps {
@@ -11,6 +11,7 @@ interface PriceOverrideModalProps {
   onConfirm: (justification: string) => void;
   itemDescription: string;
   currentPrice: number;
+  proposedPrice: number;
   pricingTableName: string;
 }
 
@@ -20,9 +21,14 @@ export function PriceOverrideModal({
   onConfirm,
   itemDescription,
   currentPrice,
+  proposedPrice,
   pricingTableName,
 }: PriceOverrideModalProps) {
   const [justification, setJustification] = useState('');
+
+  const difference = proposedPrice - currentPrice;
+  const differencePercent = currentPrice > 0 ? (difference / currentPrice) * 100 : 0;
+  const isDiscount = difference < 0;
 
   const handleConfirm = () => {
     if (justification.trim().length < 10) {
@@ -57,9 +63,31 @@ export function PriceOverrideModal({
               </div>
             </div>
             
-            <div className="space-y-1 text-sm">
+            <div className="space-y-2 text-sm">
               <p><strong>Item:</strong> {itemDescription}</p>
-              <p><strong>Preço atual da tabela:</strong> R$ {currentPrice.toFixed(2)}</p>
+              <div className="grid grid-cols-2 gap-2 p-3 bg-muted rounded-lg">
+                <div>
+                  <p className="text-muted-foreground text-xs">Preço da tabela</p>
+                  <p className="font-semibold">R$ {currentPrice.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Preço proposto</p>
+                  <p className="font-semibold">R$ {proposedPrice.toFixed(2)}</p>
+                </div>
+              </div>
+              
+              {/* Difference indicator */}
+              <div className={`flex items-center gap-2 p-2 rounded-lg ${isDiscount ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300' : 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300'}`}>
+                {isDiscount ? (
+                  <TrendingDown className="h-4 w-4" />
+                ) : (
+                  <TrendingUp className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {isDiscount ? 'Desconto' : 'Acréscimo'} de {Math.abs(differencePercent).toFixed(1)}% 
+                  ({isDiscount ? '-' : '+'}R$ {Math.abs(difference).toFixed(2)})
+                </span>
+              </div>
             </div>
             
             <p className="text-sm">
