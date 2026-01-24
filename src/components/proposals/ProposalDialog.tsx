@@ -48,17 +48,19 @@ export function ProposalDialog({
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { isAdmin } = useModulePermissions();
-  const { getTableForEntity, calculatePrice, pricingTables } = usePricingTables();
+  const { getTableForEntity, getApplicableTable, calculatePrice, pricingTables } = usePricingTables();
   const isEditing = !!proposal;
 
-  // Get linked pricing table based on company or contact
-  const linkedPricingTable = companyId 
+  // Get linked pricing table based on company or contact (legacy method)
+  const linkedPricingTableFromEntity = companyId 
     ? getTableForEntity('company', companyId)
     : contactId 
       ? getTableForEntity('contact', contactId) 
       : null;
 
-  const hasPricingTableLinked = linkedPricingTable !== null;
+  // Check if any pricing table applies (via entity OR product rules OR default)
+  // We'll determine this per-product when adding items
+  const hasPricingTableLinked = linkedPricingTableFromEntity !== null;
   // Price editing is now blocked for EVERYONE when a pricing table is linked
   // Admins need to use the authorization modal to override
   const priceEditingBlocked = hasPricingTableLinked;
@@ -344,10 +346,16 @@ export function ProposalDialog({
     let unitPrice = product.unit_price || 0;
     let discountPercent = 0;
 
-    // Apply pricing table rules if linked
-    if (linkedPricingTable) {
-      const { finalPrice, discount, rule } = calculatePrice(
-        linkedPricingTable.id,
+    // Apply pricing table rules using hierarchy: Entity > Product > Default
+    const applicableTable = getApplicableTable(
+      companyId ? 'company' : contactId ? 'contact' : null,
+      companyId || contactId || null,
+      product.id
+    );
+
+    if (applicableTable) {
+      const { finalPrice, rule } = calculatePrice(
+        applicableTable.id,
         product.id,
         product.category,
         1, // initial quantity
@@ -462,20 +470,27 @@ export function ProposalDialog({
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     
-    // If quantity changed and pricing table is linked, recalculate price
-    if (field === 'quantity' && linkedPricingTable && updatedItems[index].product_id) {
+    // If quantity changed and pricing table applies, recalculate price
+    if (field === 'quantity' && updatedItems[index].product_id) {
       const product = products?.find(p => p.id === updatedItems[index].product_id);
       if (product) {
-        const { finalPrice, rule } = calculatePrice(
-          linkedPricingTable.id,
-          product.id,
-          product.category,
-          value as number,
-          product.unit_price || 0
+        const applicableTable = getApplicableTable(
+          companyId ? 'company' : contactId ? 'contact' : null,
+          companyId || contactId || null,
+          product.id
         );
-        updatedItems[index].unit_price = finalPrice;
-        if (rule?.discount_percent) {
-          updatedItems[index].discount_percent = rule.discount_percent;
+        if (applicableTable) {
+          const { finalPrice, rule } = calculatePrice(
+            applicableTable.id,
+            product.id,
+            product.category,
+            value as number,
+            product.unit_price || 0
+          );
+          updatedItems[index].unit_price = finalPrice;
+          if (rule?.discount_percent) {
+            updatedItems[index].discount_percent = rule.discount_percent;
+          }
         }
       }
     }
@@ -632,12 +647,12 @@ export function ProposalDialog({
               </div>
 
               {/* Pricing Table Indicator */}
-              {linkedPricingTable && (
+              {linkedPricingTableFromEntity && (
                 <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <div className="flex-1">
                     <span className="text-sm text-amber-700 dark:text-amber-300">
-                      Tabela de preços aplicada: <strong>{linkedPricingTable.name}</strong>
+                      Tabela de preços vinculada: <strong>{linkedPricingTableFromEntity.name}</strong>
                     </span>
                     <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
                       {isAdmin 
@@ -882,7 +897,7 @@ export function ProposalDialog({
       />
 
       {/* Price Override Authorization Modal */}
-      {pendingPriceChange && linkedPricingTable && (
+      {pendingPriceChange && linkedPricingTableFromEntity && (
         <PriceOverrideModal
           open={showPriceOverrideModal}
           onOpenChange={(open) => {
@@ -892,7 +907,7 @@ export function ProposalDialog({
           onConfirm={handlePriceOverrideConfirm}
           itemDescription={pendingPriceChange.itemDescription}
           currentPrice={pendingPriceChange.currentPrice}
-          pricingTableName={linkedPricingTable.name}
+          pricingTableName={linkedPricingTableFromEntity.name}
         />
       )}
     </Dialog>
