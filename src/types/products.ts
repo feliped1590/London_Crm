@@ -105,10 +105,11 @@ export interface OrderItem {
   width?: number;
   length?: number;
   thickness?: number;
+  discount_percent?: number;
   subtotal: number;
   sort_order?: number;
   created_at: string;
-  product?: Product;
+  product?: Partial<Product> | { id: string; sku: string; name: string };
 }
 
 export const proposalStatusConfig: Record<ProposalStatus, { label: string; color: string }> = {

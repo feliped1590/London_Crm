@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, Lock, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
 
 interface OrderDialogProps {
   open: boolean;
@@ -43,7 +44,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
-  const { getApplicableTable, calculatePrice, pricingTables } = usePricingTables();
+  const { getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
   
   const [companyId, setCompanyId] = useState<string>('');
   const [contactId, setContactId] = useState<string>('');
@@ -51,6 +52,17 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   const [observations, setObservations] = useState('');
   const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+
+  // Price override modal states
+  const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+  const [pendingPriceChange, setPendingPriceChange] = useState<{
+    index: number;
+    value: number;
+    itemDescription: string;
+    currentPrice: number;
+    proposedPrice: number;
+    pricingTableName: string;
+  } | null>(null);
 
   // Fetch companies
   const { data: companies } = useQuery({
@@ -110,6 +122,8 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       ? pricingTables?.find(t => t.id === getApplicableTable('contact', contactId, null)?.id)
       : null;
 
+  const hasPricingTable = !!linkedPricingTable;
+
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
@@ -119,6 +133,8 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       setObservations('');
       setItems([]);
       setSelectedProductId('');
+      setPendingPriceChange(null);
+      setShowPriceOverrideModal(false);
     }
   }, [open]);
 
@@ -174,6 +190,80 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     setSelectedProductId('');
   };
 
+  // Handle price blur validation
+  const handlePriceBlur = (index: number) => {
+    const item = items[index];
+    if (!item.product_id) return;
+
+    const product = products?.find(p => p.id === item.product_id);
+    if (!product) return;
+
+    // Validate against pricing table
+    const validation = validatePriceAgainstTable(
+      companyId ? 'company' : contactId ? 'contact' : null,
+      companyId || contactId || null,
+      product.id,
+      product.category || null,
+      item.quantity || 1,
+      product.unit_price || 0,
+      item.unit_price || 0
+    );
+
+    // If no pricing table applies, no validation needed
+    if (!validation) return;
+
+    // If price matches table, no action needed
+    if (validation.isValid) return;
+
+    // Price differs from table - check if user is admin
+    if (!isAdmin) {
+      // Non-admin: revert to table price
+      toast.error('Preço revertido. Apenas administradores podem alterar preços fora da tabela.');
+      const updatedItems = [...items];
+      updatedItems[index].unit_price = validation.expectedPrice;
+      updatedItems[index].subtotal = updatedItems[index].quantity * validation.expectedPrice;
+      setItems(updatedItems);
+      return;
+    }
+
+    // Admin: show authorization modal
+    setPendingPriceChange({
+      index,
+      value: item.unit_price || 0,
+      itemDescription: item.description || 'Item',
+      currentPrice: validation.expectedPrice,
+      proposedPrice: item.unit_price || 0,
+      pricingTableName: validation.tableName || 'Tabela de Preços',
+    });
+    setShowPriceOverrideModal(true);
+  };
+
+  // Handle price override confirmation
+  const handlePriceOverrideConfirm = async (justification: string) => {
+    if (!pendingPriceChange) return;
+
+    // Log the override (no deal_id for orders, so we skip audit log)
+    // Just confirm and keep the price
+    toast.success(`Alteração de preço autorizada: ${justification}`);
+    setPendingPriceChange(null);
+    setShowPriceOverrideModal(false);
+  };
+
+  // Handle price override cancellation - revert to table price
+  const handlePriceOverrideCancel = () => {
+    if (!pendingPriceChange) return;
+    
+    const { index, currentPrice } = pendingPriceChange;
+    const updatedItems = [...items];
+    updatedItems[index].unit_price = currentPrice;
+    updatedItems[index].subtotal = updatedItems[index].quantity * currentPrice;
+    setItems(updatedItems);
+    
+    setPendingPriceChange(null);
+    setShowPriceOverrideModal(false);
+    toast.info('Preço revertido para o valor da tabela');
+  };
+
   // Update item
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
     const updatedItems = [...items];
@@ -207,11 +297,11 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       }
       
       item.subtotal = item.quantity * item.unit_price;
+    } else if (field === 'unit_price') {
+      item.unit_price = Number(value) || 0;
+      item.subtotal = item.quantity * item.unit_price;
     } else {
       (item as any)[field] = value;
-      if (field === 'unit_price') {
-        item.subtotal = item.quantity * Number(value);
-      }
     }
     
     setItems(updatedItems);
@@ -221,17 +311,6 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
-
-  // Check if any pricing table is active
-  const hasPricingTable = !!linkedPricingTable || items.some(item => {
-    const product = products?.find(p => p.id === item.product_id);
-    if (!product) return false;
-    return !!getApplicableTable(
-      companyId ? 'company' : contactId ? 'contact' : null,
-      companyId || contactId || null,
-      product.id
-    );
-  });
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -344,11 +423,19 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
 
           {/* Pricing Table Indicator */}
           {linkedPricingTable && (
-            <div className="p-3 bg-muted rounded-lg">
-              <Badge variant="secondary" className="gap-1.5 px-2 py-1">
-                <DollarSign className="h-3.5 w-3.5" />
-                {linkedPricingTable.name}
-              </Badge>
+            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <div className="flex-1">
+                <span className="text-sm text-amber-700 dark:text-amber-300">
+                  Tabela de preços vinculada: <strong>{linkedPricingTable.name}</strong>
+                </span>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                  {isAdmin 
+                    ? 'Você pode editar preços. Alterações fora da tabela requerem justificativa.'
+                    : 'Preços são ajustados automaticamente conforme a tabela.'
+                  }
+                </p>
+              </div>
             </div>
           )}
 
@@ -420,12 +507,6 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                 <TableBody>
                   {items.map((item, index) => {
                     const product = products?.find(p => p.id === item.product_id);
-                    const itemHasPricingTable = product && !!getApplicableTable(
-                      companyId ? 'company' : contactId ? 'contact' : null,
-                      companyId || contactId || null,
-                      product.id
-                    );
-                    const isPriceLocked = itemHasPricingTable && !isAdmin;
                     
                     return (
                       <TableRow key={index}>
@@ -453,11 +534,15 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                               step="0.01"
                               value={item.unit_price}
                               onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
-                              className={cn('w-28', isPriceLocked && 'pr-8')}
-                              disabled={isPriceLocked}
+                              onBlur={() => handlePriceBlur(index)}
+                              className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
+                              disabled={hasPricingTable && !isAdmin}
                             />
-                            {isPriceLocked && (
-                              <Lock className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            {hasPricingTable && (
+                              <DollarSign className={cn(
+                                'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4',
+                                isAdmin ? 'text-amber-500' : 'text-muted-foreground'
+                              )} />
                             )}
                           </div>
                         </TableCell>
@@ -522,6 +607,24 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Price Override Authorization Modal */}
+      {pendingPriceChange && (
+        <PriceOverrideModal
+          open={showPriceOverrideModal}
+          onOpenChange={(open) => {
+            if (!open) {
+              handlePriceOverrideCancel();
+            }
+            setShowPriceOverrideModal(open);
+          }}
+          onConfirm={handlePriceOverrideConfirm}
+          itemDescription={pendingPriceChange.itemDescription}
+          currentPrice={pendingPriceChange.currentPrice}
+          proposedPrice={pendingPriceChange.proposedPrice}
+          pricingTableName={pendingPriceChange.pricingTableName}
+        />
+      )}
     </Dialog>
   );
 }
