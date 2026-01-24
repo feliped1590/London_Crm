@@ -94,14 +94,26 @@ export default function Companies() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('companies').delete().eq('id', id);
+      const { data, error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', id)
+        .select();
+      
       if (error) throw error;
+      
+      // Verificar se algum registro foi realmente deletado
+      if (!data || data.length === 0) {
+        throw new Error('Você não tem permissão para excluir esta empresa');
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Empresa excluída com sucesso!');
     },
-    onError: () => toast.error('Erro ao excluir empresa'),
+    onError: (error: Error) => toast.error(error.message || 'Erro ao excluir empresa'),
   });
 
   const syncInflexMutation = useMutation({
