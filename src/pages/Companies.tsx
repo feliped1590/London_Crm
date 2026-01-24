@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail, RefreshCw, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Search, Building2, Pencil, Trash2, Globe, Phone, Mail, RefreshCw, CheckCircle2, Clock, TrendingUp, DollarSign } from 'lucide-react';
 import { DealStageBadges } from '@/components/DealStageBadges';
+import { PricingTableBadge } from '@/components/pricing/PricingTableBadge';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
@@ -425,8 +426,13 @@ export default function Companies() {
                       Funil
                     </div>
                   </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      Tabela Preços
+                    </div>
+                  </TableHead>
                   <TableHead>Contato</TableHead>
-                  <TableHead>Localização</TableHead>
                   <TableHead>Iniflex</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -467,6 +473,9 @@ export default function Companies() {
                         <DealStageBadges deals={company.deals || []} />
                       </TableCell>
                       <TableCell>
+                        <PricingTableBadge entityType="company" entityId={company.id} compact />
+                      </TableCell>
+                      <TableCell>
                         <div className="space-y-1">
                           {company.email && (
                             <div className="flex items-center gap-1 text-sm">
@@ -481,9 +490,6 @@ export default function Companies() {
                             </div>
                           )}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {company.city && company.state ? `${company.city}, ${company.state}` : company.city || company.state || '-'}
                       </TableCell>
                       <TableCell>
                         <TooltipProvider>
