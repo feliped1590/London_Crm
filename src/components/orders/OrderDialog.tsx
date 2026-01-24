@@ -310,12 +310,12 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Empresa</Label>
-              <Select value={companyId} onValueChange={setCompanyId}>
+              <Select value={companyId} onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma empresa" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="__none__">Nenhuma</SelectItem>
                   {companies?.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
@@ -326,12 +326,12 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
             </div>
             <div className="space-y-2">
               <Label>Contato</Label>
-              <Select value={contactId} onValueChange={setContactId}>
+              <Select value={contactId} onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um contato" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
                   {contacts?.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.first_name} {contact.last_name}
