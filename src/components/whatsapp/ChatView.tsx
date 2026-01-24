@@ -3,7 +3,7 @@ import { useWhatsAppMessages, useSendMessage, useMarkAsRead, WhatsAppMessage, Co
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Send, Image, FileText, Mic, Video, User, MessageCircle, AlertCircle } from 'lucide-react';
+import { Send, Image, FileText, Mic, Video, User, MessageCircle, AlertCircle, MessageSquarePlus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +24,9 @@ export function ChatView({ conversation }: ChatViewProps) {
   const { data: instances } = useWhatsAppInstances();
   const sendMessage = useSendMessage();
   const markAsRead = useMarkAsRead();
+
+  // Check if this is a new conversation (no lastMessage)
+  const isNewConversation = conversation && !conversation.lastMessage;
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -96,6 +99,11 @@ export function ChatView({ conversation }: ChatViewProps) {
           </h3>
           <p className="text-sm text-muted-foreground">{formatPhoneNumber(conversation.phone)}</p>
         </div>
+        {isNewConversation && (
+          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
+            Nova conversa
+          </span>
+        )}
       </div>
 
       {/* Messages Area */}
@@ -107,6 +115,18 @@ export function ChatView({ conversation }: ChatViewProps) {
                 <Skeleton className="h-12 w-48 rounded-lg" />
               </div>
             ))}
+          </div>
+        ) : isNewConversation || !messages || messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <MessageSquarePlus className="h-16 w-16 text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-muted-foreground mb-1">
+              {isNewConversation ? 'Iniciar nova conversa' : 'Nenhuma mensagem ainda'}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              {conversation.contactName 
+                ? `Envie a primeira mensagem para ${conversation.contactName}`
+                : 'Envie a primeira mensagem para iniciar a conversa'}
+            </p>
           </div>
         ) : (
           <>
@@ -267,6 +287,12 @@ function formatPhoneNumber(phone: string): string {
     const ddd = phone.slice(2, 4);
     const part1 = phone.slice(4, 9);
     const part2 = phone.slice(9);
+    return `(${ddd}) ${part1}-${part2}`;
+  }
+  if (phone.length === 12 && phone.startsWith('55')) {
+    const ddd = phone.slice(2, 4);
+    const part1 = phone.slice(4, 8);
+    const part2 = phone.slice(8);
     return `(${ddd}) ${part1}-${part2}`;
   }
   return phone;
