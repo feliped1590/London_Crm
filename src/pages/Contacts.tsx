@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock, TrendingUp, MessageCircle } from 'lucide-react';
 import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +27,7 @@ type Company = Tables<'companies'>;
 export default function Contacts() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -204,6 +206,15 @@ export default function Contacts() {
       };
     }
     return { synced: false, date: null };
+  };
+
+  const handleOpenWhatsApp = (contact: Contact) => {
+    const phone = contact.mobile || contact.phone;
+    if (!phone) {
+      toast.error('Este contato não possui telefone cadastrado');
+      return;
+    }
+    navigate(`/whatsapp?phone=${encodeURIComponent(phone)}&contactId=${contact.id}&contactName=${encodeURIComponent(contact.first_name + (contact.last_name ? ' ' + contact.last_name : ''))}`);
   };
 
   return (
@@ -494,6 +505,22 @@ export default function Contacts() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => handleOpenWhatsApp(contact)}
+                                  disabled={!contact.mobile && !contact.phone}
+                                  className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Abrir WhatsApp</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
