@@ -17,7 +17,8 @@ import {
   Package,
   ShoppingCart,
   Lightbulb,
-  LucideIcon
+  LucideIcon,
+  DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +42,7 @@ const allNavItems: NavItem[] = [
   { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
   { to: '/contacts', icon: Users, label: 'Contatos', moduleKey: 'contacts' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
+  { to: '/pricing', icon: DollarSign, label: 'Tabelas de Preços', moduleKey: 'pricing' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },

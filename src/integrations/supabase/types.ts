@@ -532,6 +532,82 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          deal_id: string
+          field_label: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          deal_id: string
+          field_label: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          deal_id?: string
+          field_label?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_audit_log_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_participants: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          deal_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          deal_id: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          deal_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_participants_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_stage_history: {
         Row: {
           changed_at: string
@@ -1013,6 +1089,137 @@ export type Database = {
           to_user_id?: string
           transferred_at?: string | null
           transferred_by?: string
+        }
+        Relationships: []
+      }
+      pricing_rules: {
+        Row: {
+          category: string | null
+          created_at: string
+          discount_percent: number | null
+          fixed_price: number | null
+          id: string
+          max_quantity: number | null
+          min_quantity: number
+          price_per_unit: number | null
+          pricing_table_id: string
+          product_id: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          discount_percent?: number | null
+          fixed_price?: number | null
+          id?: string
+          max_quantity?: number | null
+          min_quantity?: number
+          price_per_unit?: number | null
+          pricing_table_id: string
+          product_id?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          discount_percent?: number | null
+          fixed_price?: number | null
+          id?: string
+          max_quantity?: number | null
+          min_quantity?: number
+          price_per_unit?: number | null
+          pricing_table_id?: string
+          product_id?: string | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_rules_pricing_table_id_fkey"
+            columns: ["pricing_table_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_rules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_table_assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          pricing_table_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          pricing_table_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          pricing_table_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_table_assignments_pricing_table_id_fkey"
+            columns: ["pricing_table_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_tables: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }
