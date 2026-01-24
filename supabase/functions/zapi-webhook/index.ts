@@ -15,88 +15,80 @@ Deno.serve(async (req) => {
     // Log all headers for debugging
     console.log('Webhook called - All headers:', JSON.stringify(Object.fromEntries(req.headers.entries())))
     
-    // Try to get token from multiple sources (Z-API sends it in z-api-token header)
-    const url = new URL(req.url)
-    const clientToken = req.headers.get('z-api-token')
-      || req.headers.get('Z-Api-Token')
-      || req.headers.get('client-token') 
-      || req.headers.get('Client-Token')
-      || req.headers.get('x-client-token')
-      || req.headers.get('X-Client-Token')
-      || url.searchParams.get('token')
-      || url.searchParams.get('client-token')
-    
-    // Get token from environment - no fallback for security
-    const expectedToken = Deno.env.get('ZAPI_CLIENT_TOKEN')
-    
-    if (!expectedToken) {
-      console.error('ZAPI_CLIENT_TOKEN not configured - webhook authentication disabled')
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    console.log('Token received:', clientToken ? `${clientToken.substring(0, 5)}...` : 'null')
-    console.log('Token expected:', expectedToken ? `${expectedToken.substring(0, 5)}...` : 'null')
-
-    // Case-insensitive comparison for token validation
-    if (!clientToken || clientToken.toLowerCase() !== expectedToken.toLowerCase()) {
-      console.error('Invalid client token - received:', clientToken, 'expected:', expectedToken)
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-    
-    console.log('Token validated successfully')
-
-    const body = await req.json()
-    console.log('Received webhook payload:', JSON.stringify(body))
-    console.log('Payload keys:', Object.keys(body).join(', '))
-
     // Initialize Supabase client with service role for webhook processing
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
+    
+    // Z-API sends the Instance Token in the z-api-token header
+    // We validate against tokens registered in our database (whatsapp_instances.instance_token)
+    const instanceToken = req.headers.get('z-api-token')
+      || req.headers.get('Z-Api-Token')
+      || req.headers.get('client-token') 
+      || req.headers.get('Client-Token')
+    
+    console.log('Token received:', instanceToken ? `${instanceToken.substring(0, 8)}...` : 'null')
+
+    if (!instanceToken) {
+      console.error('No token provided in request headers')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - No token provided' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate token against registered instances in database
+    const { data: instanceByToken, error: tokenLookupError } = await supabase
+      .from('whatsapp_instances')
+      .select('id, instance_id, name')
+      .eq('instance_token', instanceToken)
+      .maybeSingle()
+
+    if (tokenLookupError) {
+      console.error('Error looking up instance token:', tokenLookupError)
+      return new Response(
+        JSON.stringify({ error: 'Server error during authentication' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!instanceByToken) {
+      console.error('Token not found in registered instances:', instanceToken.substring(0, 8) + '...')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - Token not registered' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    console.log('Token validated successfully for instance:', instanceByToken.name, '(', instanceByToken.instance_id, ')')
+
+    const body = await req.json()
+    console.log('Received webhook payload:', JSON.stringify(body))
+    console.log('Payload keys:', Object.keys(body).join(', '))
 
     // Z-API can send different payload structures depending on the event type
     // Common fields: instanceId, phone, isFromMe, messageId, text, image, etc.
-    // Also check for alternative field names used by Z-API
-    const instanceId = body.instanceId || body.instance_id || body.zapiInstanceId
+    const instanceIdFromPayload = body.instanceId || body.instance_id || body.zapiInstanceId
     const phone = body.phone || body.from || body.chatId || body.sender
     const isFromMe = body.isFromMe ?? body.fromMe ?? false
     const messageId = body.messageId || body.id || body.msgId
     
-    console.log('Extracted fields - instanceId:', instanceId, 'phone:', phone, 'isFromMe:', isFromMe, 'messageId:', messageId)
+    console.log('Extracted fields - instanceId from payload:', instanceIdFromPayload, 'phone:', phone, 'isFromMe:', isFromMe, 'messageId:', messageId)
+
+    // Use the instance we found via token validation
+    const instance = instanceByToken
+
+    if (!phone) {
+      console.log('Missing phone field - available keys:', Object.keys(body).join(', '))
+      return new Response(
+        JSON.stringify({ success: true, message: 'Skipped - missing phone field' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Destructure message content fields
     const { text, image, document, audio, video, sticker } = body
-
-    if (!instanceId || !phone) {
-      console.log('Missing required fields after extraction - instanceId:', instanceId, 'phone:', phone)
-      console.log('Available top-level keys:', Object.keys(body).join(', '))
-      return new Response(
-        JSON.stringify({ success: true, message: 'Skipped - missing required fields' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Find the instance in our database
-    const { data: instance, error: instanceError } = await supabase
-      .from('whatsapp_instances')
-      .select('id')
-      .eq('instance_id', instanceId)
-      .single()
-
-    if (instanceError || !instance) {
-      console.log('Instance not found:', instanceId)
-      return new Response(
-        JSON.stringify({ success: true, message: 'Instance not registered' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
 
     // Normalize phone number (remove @c.us or @g.us suffix)
     const normalizedPhone = phone.replace(/@c\.us|@g\.us/g, '')
