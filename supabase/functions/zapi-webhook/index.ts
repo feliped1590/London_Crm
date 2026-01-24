@@ -129,12 +129,21 @@ Deno.serve(async (req) => {
       mediaUrl = sticker.stickerUrl
     }
 
-    // Check if we have a contact linked to this phone number
+    // Create phone variations to search (with and without 55 prefix)
+    const phoneWithoutCountry = normalizedPhone.startsWith('55') 
+      ? normalizedPhone.slice(2) 
+      : normalizedPhone
+    const phoneWithCountry = normalizedPhone.startsWith('55') 
+      ? normalizedPhone 
+      : `55${normalizedPhone}`
+
+    // Check if we have a contact linked to this phone number - try multiple formats
     const { data: whatsappContact } = await supabase
       .from('whatsapp_contacts')
       .select('contact_id')
-      .eq('phone_number', normalizedPhone)
-      .single()
+      .or(`phone_number.eq.${phoneWithCountry},phone_number.eq.${phoneWithoutCountry}`)
+      .limit(1)
+      .maybeSingle()
 
     // Also check the contacts table for phone/mobile match
     let contactId = whatsappContact?.contact_id || null
@@ -144,9 +153,9 @@ Deno.serve(async (req) => {
       const { data: crmContact } = await supabase
         .from('contacts')
         .select('id, company_id')
-        .or(`phone.eq.${normalizedPhone},mobile.eq.${normalizedPhone}`)
+        .or(`phone.eq.${phoneWithCountry},phone.eq.${phoneWithoutCountry},mobile.eq.${phoneWithCountry},mobile.eq.${phoneWithoutCountry}`)
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (crmContact) {
         contactId = crmContact.id

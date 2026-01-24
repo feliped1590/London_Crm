@@ -263,7 +263,9 @@ export function useSendMessage() {
       return result;
     },
     onSuccess: (_, variables) => {
+      // Invalidate all WhatsApp message queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ['whatsapp-messages', variables.phone] });
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-messages-contact'] });
       queryClient.invalidateQueries({ queryKey: ['whatsapp-conversations'] });
     },
     onError: (error) => {

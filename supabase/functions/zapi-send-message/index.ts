@@ -86,17 +86,39 @@ Deno.serve(async (req) => {
       throw new Error(zapiResult.error || 'Failed to send message via Z-API')
     }
 
-    // Get linked contact if exists
+    // Create phone variations to search (with and without 55 prefix)
+    const phoneWithoutCountry = formattedPhone.startsWith('55') 
+      ? formattedPhone.slice(2) 
+      : formattedPhone
+    const phoneWithCountry = formattedPhone.startsWith('55') 
+      ? formattedPhone 
+      : `55${formattedPhone}`
+    
+    // Get linked contact if exists - try multiple phone formats
     const { data: whatsappContact } = await supabase
       .from('whatsapp_contacts')
       .select('contact_id')
-      .eq('phone_number', formattedPhone)
-      .single()
+      .or(`phone_number.eq.${phoneWithCountry},phone_number.eq.${phoneWithoutCountry}`)
+      .limit(1)
+      .maybeSingle()
 
     let contactId = whatsappContact?.contact_id || null
     let companyId = null
 
-    if (contactId) {
+    // If not found in whatsapp_contacts, search in CRM contacts table
+    if (!contactId) {
+      const { data: crmContact } = await supabase
+        .from('contacts')
+        .select('id, company_id')
+        .or(`phone.eq.${phoneWithCountry},phone.eq.${phoneWithoutCountry},mobile.eq.${phoneWithCountry},mobile.eq.${phoneWithoutCountry}`)
+        .limit(1)
+        .maybeSingle()
+      
+      if (crmContact) {
+        contactId = crmContact.id
+        companyId = crmContact.company_id
+      }
+    } else if (contactId) {
       const { data: contact } = await supabase
         .from('contacts')
         .select('company_id')
