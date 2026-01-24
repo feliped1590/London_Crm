@@ -1527,6 +1527,56 @@ export type Database = {
           },
         ]
       }
+      whatsapp_conversation_summaries: {
+        Row: {
+          analyzed_at: string | null
+          contact_id: string | null
+          created_at: string | null
+          customer_intent: string | null
+          id: string
+          message_count: number | null
+          next_steps: string[] | null
+          phone: string
+          sentiment: string | null
+          summary: string
+          updated_at: string | null
+        }
+        Insert: {
+          analyzed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          customer_intent?: string | null
+          id?: string
+          message_count?: number | null
+          next_steps?: string[] | null
+          phone: string
+          sentiment?: string | null
+          summary: string
+          updated_at?: string | null
+        }
+        Update: {
+          analyzed_at?: string | null
+          contact_id?: string | null
+          created_at?: string | null
+          customer_intent?: string | null
+          id?: string
+          message_count?: number | null
+          next_steps?: string[] | null
+          phone?: string
+          sentiment?: string | null
+          summary?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversation_summaries_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_instances: {
         Row: {
           connected_at: string | null
@@ -1632,6 +1682,56 @@ export type Database = {
             columns: ["instance_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_objections: {
+        Row: {
+          contact_id: string | null
+          created_at: string | null
+          description: string
+          detected_at: string | null
+          id: string
+          message_excerpt: string | null
+          phone: string
+          resolution: string | null
+          status: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string | null
+          description: string
+          detected_at?: string | null
+          id?: string
+          message_excerpt?: string | null
+          phone: string
+          resolution?: string | null
+          status?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string | null
+          description?: string
+          detected_at?: string | null
+          id?: string
+          message_excerpt?: string | null
+          phone?: string
+          resolution?: string | null
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_objections_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
         ]
