@@ -55,6 +55,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+  const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
   const [pendingPriceChange, setPendingPriceChange] = useState<{
     index: number;
     value: number;
@@ -242,11 +243,12 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   const handlePriceOverrideConfirm = async (justification: string) => {
     if (!pendingPriceChange) return;
 
+    // Mark that the change was confirmed so we don't revert on close
+    setPriceChangeConfirmed(true);
+    
     // Log the override (no deal_id for orders, so we skip audit log)
-    // Just confirm and keep the price
     toast.success(`Alteração de preço autorizada: ${justification}`);
     setPendingPriceChange(null);
-    setShowPriceOverrideModal(false);
   };
 
   // Handle price override cancellation - revert to table price
@@ -614,7 +616,12 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
           open={showPriceOverrideModal}
           onOpenChange={(open) => {
             if (!open) {
-              handlePriceOverrideCancel();
+              // Only revert if the change was NOT confirmed
+              if (!priceChangeConfirmed) {
+                handlePriceOverrideCancel();
+              }
+              // Reset the confirmation flag
+              setPriceChangeConfirmed(false);
             }
             setShowPriceOverrideModal(open);
           }}
