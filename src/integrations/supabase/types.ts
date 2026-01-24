@@ -977,6 +977,45 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_transfers: {
+        Row: {
+          created_at: string | null
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          from_user_id: string | null
+          id: string
+          notes: string | null
+          to_user_id: string
+          transferred_at: string | null
+          transferred_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          from_user_id?: string | null
+          id?: string
+          notes?: string | null
+          to_user_id: string
+          transferred_at?: string | null
+          transferred_by: string
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string
+          entity_name?: string
+          entity_type?: string
+          from_user_id?: string | null
+          id?: string
+          notes?: string | null
+          to_user_id?: string
+          transferred_at?: string | null
+          transferred_by?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           active: boolean | null
