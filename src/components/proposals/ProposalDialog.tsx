@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
+import { usePricingTables } from '@/hooks/usePricingTables';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import {
   Proposal,
   ProposalItem,
@@ -44,7 +46,19 @@ export function ProposalDialog({
 }: ProposalDialogProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { isAdmin } = useModulePermissions();
+  const { getTableForEntity, calculatePrice, pricingTables } = usePricingTables();
   const isEditing = !!proposal;
+
+  // Get linked pricing table based on company or contact
+  const linkedPricingTable = companyId 
+    ? getTableForEntity('company', companyId)
+    : contactId 
+      ? getTableForEntity('contact', contactId) 
+      : null;
+
+  const hasPricingTableLinked = linkedPricingTable !== null;
+  const priceEditingBlocked = hasPricingTableLinked && !isAdmin;
 
   const [formData, setFormData] = useState({
     validity_date: '',
@@ -56,7 +70,7 @@ export function ProposalDialog({
 
   const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  
+
   // Approval link states
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalLink, setApprovalLink] = useState('');
@@ -314,18 +328,36 @@ export function ProposalDialog({
     const product = products?.find((p) => p.id === selectedProductId);
     if (!product) return;
 
+    let unitPrice = product.unit_price || 0;
+    let discountPercent = 0;
+
+    // Apply pricing table rules if linked
+    if (linkedPricingTable) {
+      const { finalPrice, discount, rule } = calculatePrice(
+        linkedPricingTable.id,
+        product.id,
+        product.category,
+        1, // initial quantity
+        product.unit_price || 0
+      );
+      unitPrice = finalPrice;
+      if (rule?.discount_percent) {
+        discountPercent = rule.discount_percent;
+      }
+    }
+
     setItems([
       ...items,
       {
         product_id: product.id,
         description: product.name,
         quantity: 1,
-        unit_price: product.unit_price || 0,
+        unit_price: unitPrice,
         width: product.width,
         length: product.length,
         thickness: product.thickness,
-        discount_percent: 0,
-        subtotal: product.unit_price || 0,
+        discount_percent: discountPercent,
+        subtotal: unitPrice,
         product: product,
       },
     ]);
@@ -339,6 +371,25 @@ export function ProposalDialog({
   const updateItem = (index: number, field: keyof ProposalItem, value: any) => {
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
+    
+    // If quantity changed and pricing table is linked, recalculate price
+    if (field === 'quantity' && linkedPricingTable && updatedItems[index].product_id) {
+      const product = products?.find(p => p.id === updatedItems[index].product_id);
+      if (product) {
+        const { finalPrice, rule } = calculatePrice(
+          linkedPricingTable.id,
+          product.id,
+          product.category,
+          value as number,
+          product.unit_price || 0
+        );
+        updatedItems[index].unit_price = finalPrice;
+        if (rule?.discount_percent) {
+          updatedItems[index].discount_percent = rule.discount_percent;
+        }
+      }
+    }
+    
     updatedItems[index].subtotal = calculateItemSubtotal(updatedItems[index]);
     setItems(updatedItems);
   };
@@ -490,6 +541,19 @@ export function ProposalDialog({
                 </div>
               </div>
 
+              {/* Pricing Table Indicator */}
+              {linkedPricingTable && (
+                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm text-blue-700 dark:text-blue-300">
+                    Tabela de preços aplicada: <strong>{linkedPricingTable.name}</strong>
+                    {!isAdmin && (
+                      <span className="ml-2 text-blue-500">(Preços bloqueados)</span>
+                    )}
+                  </span>
+                </div>
+              )}
+
               {/* Add Product */}
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
@@ -586,14 +650,20 @@ export function ProposalDialog({
                             />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={item.unit_price || 0}
-                              onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                              className="h-8"
-                            />
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={item.unit_price || 0}
+                                onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                className={`h-8 ${priceEditingBlocked ? 'bg-muted cursor-not-allowed pr-8' : ''}`}
+                                disabled={priceEditingBlocked}
+                              />
+                              {priceEditingBlocked && (
+                                <Lock className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Input
@@ -603,7 +673,8 @@ export function ProposalDialog({
                               max="100"
                               value={item.discount_percent || 0}
                               onChange={(e) => updateItem(index, 'discount_percent', parseFloat(e.target.value) || 0)}
-                              className="h-8"
+                              className={`h-8 ${priceEditingBlocked ? 'bg-muted cursor-not-allowed' : ''}`}
+                              disabled={priceEditingBlocked}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">

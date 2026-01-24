@@ -57,6 +57,8 @@ export function DealHistoryTab({ dealId }: DealHistoryTabProps) {
       return data;
     },
     enabled: !!dealId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Audit log
@@ -72,6 +74,8 @@ export function DealHistoryTab({ dealId }: DealHistoryTabProps) {
       return data;
     },
     enabled: !!dealId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Get company/contact names for display

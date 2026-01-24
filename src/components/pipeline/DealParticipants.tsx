@@ -31,7 +31,7 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
   const canManageParticipants = isAdmin || user?.id === ownerId || user?.id === createdBy;
 
   // Fetch participants
-  const { data: participants, isLoading } = useQuery({
+  const { data: participants, isLoading, refetch } = useQuery({
     queryKey: ['deal_participants', dealId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -42,6 +42,8 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
       return data;
     },
     enabled: !!dealId,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: true,
   });
 
   // Fetch all users for adding
@@ -69,6 +71,12 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
 
   const addParticipantMutation = useMutation({
     mutationFn: async () => {
+      // Verify the user profile exists before adding
+      const selectedProfile = allUsers?.find((u) => u.user_id === selectedUserId);
+      if (!selectedProfile) {
+        throw new Error('Usuário não encontrado');
+      }
+      
       const { error } = await supabase.from('deal_participants').insert({
         deal_id: dealId,
         user_id: selectedUserId,
@@ -78,13 +86,17 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
       if (error) throw error;
     },
     onSuccess: () => {
+      // Invalidate both queries to ensure fresh data
       queryClient.invalidateQueries({ queryKey: ['deal_participants', dealId] });
+      queryClient.invalidateQueries({ queryKey: ['all_profiles'] });
+      // Force immediate refetch
+      refetch();
       toast.success('Participante adicionado!');
       setIsAddDialogOpen(false);
       setSelectedUserId('');
       setSelectedRole('viewer');
     },
-    onError: () => toast.error('Erro ao adicionar participante'),
+    onError: (error: Error) => toast.error(error.message || 'Erro ao adicionar participante'),
   });
 
   const updateRoleMutation = useMutation({
@@ -97,6 +109,7 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deal_participants', dealId] });
+      refetch();
       toast.success('Permissão atualizada!');
     },
     onError: () => toast.error('Erro ao atualizar permissão'),
@@ -112,6 +125,7 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deal_participants', dealId] });
+      refetch();
       toast.success('Participante removido!');
       setDeleteConfirmOpen(false);
       setParticipantToRemove(null);

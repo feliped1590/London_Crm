@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock, TrendingUp, MessageCircle } from 'lucide-react';
+import { Plus, Search, Users, Pencil, Trash2, Phone, Mail, Linkedin, Building2, RefreshCw, CheckCircle2, Clock, TrendingUp, MessageCircle, DollarSign } from 'lucide-react';
 import { DealStageBadges } from '@/components/DealStageBadges';
+import { PricingTableBadge } from '@/components/pricing/PricingTableBadge';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
@@ -412,7 +413,12 @@ export default function Contacts() {
                       Funil
                     </div>
                   </TableHead>
-                  <TableHead>Cargo</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="h-3.5 w-3.5" />
+                      Tabela Preços
+                    </div>
+                  </TableHead>
                   <TableHead>Contato</TableHead>
                   <TableHead>Iniflex</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -458,10 +464,7 @@ export default function Contacts() {
                         <DealStageBadges deals={(contact as any).deals || []} />
                       </TableCell>
                       <TableCell>
-                        <div>
-                          {contact.job_title && <p className="text-sm">{contact.job_title}</p>}
-                          {contact.department && <p className="text-xs text-muted-foreground">{contact.department}</p>}
-                        </div>
+                        <PricingTableBadge entityType="contact" entityId={contact.id} compact />
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
