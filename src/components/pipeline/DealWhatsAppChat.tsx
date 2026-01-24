@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSendMessage, useWhatsAppInstances, WhatsAppMessage } from '@/hooks/useWhatsApp';
 import { format } from 'date-fns';
@@ -90,6 +90,7 @@ export function DealWhatsAppChat({ contactId, contactPhone, contactName }: DealW
   const [message, setMessage] = useState('');
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   
   const { data: messages, isLoading } = useWhatsAppMessagesByContact(contactId, contactPhone);
   const { data: instances } = useWhatsAppInstances();
@@ -110,6 +111,28 @@ export function DealWhatsAppChat({ contactId, contactPhone, contactName }: DealW
       setSelectedInstanceId(connectedInstance?.id || instances[0].id);
     }
   }, [instances, selectedInstanceId]);
+
+  // Realtime subscription for new messages
+  useEffect(() => {
+    if (!contactId && !contactPhone) return;
+    
+    const channel = supabase
+      .channel(`deal-whatsapp-${contactId || contactPhone}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'whatsapp_messages',
+      }, () => {
+        queryClient.invalidateQueries({ 
+          queryKey: ['whatsapp-messages-contact', contactId, contactPhone] 
+        });
+      })
+      .subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+    };
+  }, [contactId, contactPhone, queryClient]);
 
   const handleSend = () => {
     if (!message.trim() || !selectedInstanceId || !phoneToUse) return;
