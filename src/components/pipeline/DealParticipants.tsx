@@ -30,20 +30,34 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
   // Check if current user can manage participants
   const canManageParticipants = isAdmin || user?.id === ownerId || user?.id === createdBy;
 
-  // Fetch participants
+  // Fetch participants with profile names
   const { data: participants, isLoading, refetch } = useQuery({
     queryKey: ['deal_participants', dealId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get participants
+      const { data: participantsData, error: participantsError } = await supabase
         .from('deal_participants')
-        .select('*, profiles:user_id(user_id, full_name)')
+        .select('*')
         .eq('deal_id', dealId);
-      if (error) throw error;
-      return data;
+      if (participantsError) throw participantsError;
+      
+      // Then get all profiles to join manually (Supabase JS has issues with FK joins on non-standard columns)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      if (profilesError) throw profilesError;
+      
+      // Manually join profiles to participants
+      const participantsWithProfiles = participantsData.map(p => ({
+        ...p,
+        profile_name: profilesData.find(prof => prof.user_id === p.user_id)?.full_name || null
+      }));
+      
+      return participantsWithProfiles;
     },
     enabled: !!dealId,
     staleTime: 0, // Always fetch fresh data
-    refetchOnMount: true,
+    refetchOnMount: 'always',
   });
 
   // Fetch all users for adding
@@ -216,11 +230,11 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs">
-                    {getInitials((participant.profiles as any)?.full_name || '?')}
+                    {getInitials(participant.profile_name || '?')}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-sm font-medium">{(participant.profiles as any)?.full_name}</p>
+                  <p className="text-sm font-medium">{participant.profile_name || 'Usuário'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">

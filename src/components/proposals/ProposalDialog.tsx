@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -24,6 +24,7 @@ import {
   proposalStatusConfig,
 } from '@/types/products';
 import { ApprovalLinkModal } from './ApprovalLinkModal';
+import { PriceOverrideModal } from './PriceOverrideModal';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -58,7 +59,9 @@ export function ProposalDialog({
       : null;
 
   const hasPricingTableLinked = linkedPricingTable !== null;
-  const priceEditingBlocked = hasPricingTableLinked && !isAdmin;
+  // Price editing is now blocked for EVERYONE when a pricing table is linked
+  // Admins need to use the authorization modal to override
+  const priceEditingBlocked = hasPricingTableLinked;
 
   const [formData, setFormData] = useState({
     validity_date: '',
@@ -76,6 +79,16 @@ export function ProposalDialog({
   const [approvalLink, setApprovalLink] = useState('');
   const [approvalExpires, setApprovalExpires] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+
+  // Price override modal states (for admin authorization)
+  const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+  const [pendingPriceChange, setPendingPriceChange] = useState<{
+    index: number;
+    field: 'unit_price' | 'discount_percent';
+    value: number;
+    itemDescription: string;
+    currentPrice: number;
+  } | null>(null);
 
   // Load proposal data when editing
   useEffect(() => {
@@ -368,7 +381,84 @@ export function ProposalDialog({
     setItems(items.filter((_, i) => i !== index));
   };
 
+  // Helper to handle price/discount field changes with admin authorization
+  const handlePriceFieldChange = (index: number, field: 'unit_price' | 'discount_percent', value: number) => {
+    // If no pricing table linked, allow direct edit
+    if (!hasPricingTableLinked) {
+      updateItemDirect(index, field, value);
+      return;
+    }
+
+    // Pricing table is linked - check if admin
+    if (!isAdmin) {
+      toast.error('Alteração de preço bloqueada. Tabela de preços vinculada.');
+      return;
+    }
+
+    // Admin trying to change price - show authorization modal
+    const item = items[index];
+    setPendingPriceChange({
+      index,
+      field,
+      value,
+      itemDescription: item.description || 'Item',
+      currentPrice: item.unit_price || 0,
+    });
+    setShowPriceOverrideModal(true);
+  };
+
+  // Direct item update without authorization check
+  const updateItemDirect = (index: number, field: keyof ProposalItem, value: any) => {
+    const updatedItems = [...items];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    updatedItems[index].subtotal = calculateItemSubtotal(updatedItems[index]);
+    setItems(updatedItems);
+  };
+
+  // Handle price override confirmation from admin
+  const handlePriceOverrideConfirm = async (justification: string) => {
+    if (!pendingPriceChange) return;
+
+    const { index, field, value } = pendingPriceChange;
+    const item = items[index];
+
+    // Record the override in deal_audit_log
+    try {
+      const fieldLabel = field === 'unit_price' ? 'Preço Unitário' : 'Desconto %';
+      const oldValue = field === 'unit_price' 
+        ? `R$ ${(item.unit_price || 0).toFixed(2)}`
+        : `${item.discount_percent || 0}%`;
+      const newValue = field === 'unit_price' 
+        ? `R$ ${value.toFixed(2)}`
+        : `${value}%`;
+
+      await supabase.from('deal_audit_log').insert({
+        deal_id: dealId,
+        field_name: `proposal_price_override`,
+        field_label: `Override de Preço (Proposta ${proposal?.number || 'Nova'})`,
+        old_value: `${item.description}: ${fieldLabel} = ${oldValue}`,
+        new_value: `${fieldLabel} = ${newValue} | Justificativa: ${justification}`,
+        changed_by: user?.id,
+      });
+
+      // Apply the change
+      updateItemDirect(index, field, value);
+      toast.success('Alteração de preço autorizada e registrada');
+    } catch (error) {
+      console.error('Error logging price override:', error);
+      toast.error('Erro ao registrar alteração');
+    }
+
+    setPendingPriceChange(null);
+  };
+
   const updateItem = (index: number, field: keyof ProposalItem, value: any) => {
+    // For price fields, use special handling
+    if (field === 'unit_price' || field === 'discount_percent') {
+      handlePriceFieldChange(index, field, value as number);
+      return;
+    }
+
     const updatedItems = [...items];
     updatedItems[index] = { ...updatedItems[index], [field]: value };
     
@@ -543,14 +633,19 @@ export function ProposalDialog({
 
               {/* Pricing Table Indicator */}
               {linkedPricingTable && (
-                <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm text-blue-700 dark:text-blue-300">
-                    Tabela de preços aplicada: <strong>{linkedPricingTable.name}</strong>
-                    {!isAdmin && (
-                      <span className="ml-2 text-blue-500">(Preços bloqueados)</span>
-                    )}
-                  </span>
+                <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <div className="flex-1">
+                    <span className="text-sm text-amber-700 dark:text-amber-300">
+                      Tabela de preços aplicada: <strong>{linkedPricingTable.name}</strong>
+                    </span>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                      {isAdmin 
+                        ? 'Preços bloqueados. Clique no campo para solicitar autorização de alteração.'
+                        : 'Preços bloqueados. Apenas administradores podem solicitar alterações.'
+                      }
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -657,25 +752,40 @@ export function ProposalDialog({
                                 min="0"
                                 value={item.unit_price || 0}
                                 onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                                className={`h-8 ${priceEditingBlocked ? 'bg-muted cursor-not-allowed pr-8' : ''}`}
-                                disabled={priceEditingBlocked}
+                                className={`h-8 ${priceEditingBlocked ? 'bg-muted pr-8' : ''} ${priceEditingBlocked && isAdmin ? 'cursor-pointer hover:border-amber-400' : priceEditingBlocked ? 'cursor-not-allowed' : ''}`}
+                                readOnly={priceEditingBlocked}
+                                onClick={() => {
+                                  if (priceEditingBlocked && isAdmin) {
+                                    handlePriceFieldChange(index, 'unit_price', item.unit_price || 0);
+                                  }
+                                }}
                               />
                               {priceEditingBlocked && (
-                                <Lock className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                                <Lock className={`absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 ${isAdmin ? 'text-amber-500' : 'text-muted-foreground'}`} />
                               )}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              max="100"
-                              value={item.discount_percent || 0}
-                              onChange={(e) => updateItem(index, 'discount_percent', parseFloat(e.target.value) || 0)}
-                              className={`h-8 ${priceEditingBlocked ? 'bg-muted cursor-not-allowed' : ''}`}
-                              disabled={priceEditingBlocked}
-                            />
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                value={item.discount_percent || 0}
+                                onChange={(e) => updateItem(index, 'discount_percent', parseFloat(e.target.value) || 0)}
+                                className={`h-8 ${priceEditingBlocked ? 'bg-muted pr-8' : ''} ${priceEditingBlocked && isAdmin ? 'cursor-pointer hover:border-amber-400' : priceEditingBlocked ? 'cursor-not-allowed' : ''}`}
+                                readOnly={priceEditingBlocked}
+                                onClick={() => {
+                                  if (priceEditingBlocked && isAdmin) {
+                                    handlePriceFieldChange(index, 'discount_percent', item.discount_percent || 0);
+                                  }
+                                }}
+                              />
+                              {priceEditingBlocked && (
+                                <Lock className={`absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 ${isAdmin ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(calculateItemSubtotal(item))}
@@ -770,6 +880,21 @@ export function ProposalDialog({
         expiresAt={approvalExpires}
         proposalNumber={proposal?.number || ''}
       />
+
+      {/* Price Override Authorization Modal */}
+      {pendingPriceChange && linkedPricingTable && (
+        <PriceOverrideModal
+          open={showPriceOverrideModal}
+          onOpenChange={(open) => {
+            setShowPriceOverrideModal(open);
+            if (!open) setPendingPriceChange(null);
+          }}
+          onConfirm={handlePriceOverrideConfirm}
+          itemDescription={pendingPriceChange.itemDescription}
+          currentPrice={pendingPriceChange.currentPrice}
+          pricingTableName={linkedPricingTable.name}
+        />
+      )}
     </Dialog>
   );
 }

@@ -61,17 +61,33 @@ export function DealHistoryTab({ dealId }: DealHistoryTabProps) {
     refetchOnMount: 'always',
   });
 
-  // Audit log
+  // Audit log - fetch separately and join manually to avoid Supabase FK join issues
   const { data: auditLog, isLoading: isLoadingAudit } = useQuery({
     queryKey: ['deal_audit_log', dealId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get audit logs
+      const { data: auditData, error: auditError } = await supabase
         .from('deal_audit_log')
-        .select('*, profiles:changed_by(full_name)')
+        .select('*')
         .eq('deal_id', dealId)
         .order('changed_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      if (auditError) throw auditError;
+      
+      // Get profiles for joining
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      if (profilesError) throw profilesError;
+      
+      // Manually join profiles
+      const auditWithProfiles = auditData.map(entry => ({
+        ...entry,
+        profiles: {
+          full_name: profilesData.find(p => p.user_id === entry.changed_by)?.full_name || null
+        }
+      }));
+      
+      return auditWithProfiles;
     },
     enabled: !!dealId,
     staleTime: 0,
