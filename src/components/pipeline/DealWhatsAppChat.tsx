@@ -28,6 +28,34 @@ function normalizePhone(phone: string): string {
   return `55${digits}`;
 }
 
+// Generate all phone variations for matching (with/without 55, with/without 9th digit)
+function generatePhoneVariations(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+  const variations = new Set<string>();
+  
+  // Base: with and without 55 prefix
+  const without55 = digits.startsWith('55') ? digits.slice(2) : digits;
+  const with55 = digits.startsWith('55') ? digits : `55${digits}`;
+  
+  variations.add(without55);
+  variations.add(with55);
+  
+  // Handle 9th digit (position 2 after DDD for mobile numbers)
+  if (without55.length === 11) {
+    // Has 11 digits (DDD + 9 + 8 digits), try removing the 9
+    const without9 = without55.slice(0, 2) + without55.slice(3);
+    variations.add(without9);
+    variations.add(`55${without9}`);
+  } else if (without55.length === 10) {
+    // Has 10 digits (DDD + 8 digits), try adding the 9
+    const with9 = without55.slice(0, 2) + '9' + without55.slice(2);
+    variations.add(with9);
+    variations.add(`55${with9}`);
+  }
+  
+  return Array.from(variations);
+}
+
 // Format phone for display
 function formatPhoneNumber(phone: string): string {
   if (phone.length === 13 && phone.startsWith('55')) {
@@ -45,13 +73,11 @@ function formatPhoneNumber(phone: string): string {
   return phone;
 }
 
-// Hook to fetch messages by contact
+// Hook to fetch messages by contact using multiple phone variations
 function useWhatsAppMessagesByContact(contactId: string | null, contactPhone: string | null) {
   return useQuery({
     queryKey: ['whatsapp-messages-contact', contactId, contactPhone],
     queryFn: async () => {
-      let messages: WhatsAppMessage[] = [];
-      
       // First try to find by contact_id
       if (contactId) {
         const { data } = await supabase
@@ -65,14 +91,15 @@ function useWhatsAppMessagesByContact(contactId: string | null, contactPhone: st
         }
       }
       
-      // If not found by contact_id, try by phone number
+      // If not found by contact_id, try by all phone number variations
       if (contactPhone) {
-        const normalizedPhone = normalizePhone(contactPhone);
-        // Try different formats
+        const variations = generatePhoneVariations(contactPhone);
+        const orConditions = variations.map(v => `phone.eq.${v}`).join(',');
+        
         const { data } = await supabase
           .from('whatsapp_messages')
           .select('*')
-          .or(`phone.eq.${normalizedPhone},phone.eq.${normalizedPhone.slice(2)}`)
+          .or(orConditions)
           .order('created_at', { ascending: true });
         
         if (data && data.length > 0) {
@@ -80,7 +107,7 @@ function useWhatsAppMessagesByContact(contactId: string | null, contactPhone: st
         }
       }
       
-      return messages;
+      return [];
     },
     enabled: !!(contactId || contactPhone)
   });
@@ -112,9 +139,11 @@ export function DealWhatsAppChat({ contactId, contactPhone, contactName }: DealW
     }
   }, [instances, selectedInstanceId]);
 
-  // Realtime subscription for new messages
+  // Realtime subscription for new messages - check both contact_id and phone variations
   useEffect(() => {
     if (!contactId && !contactPhone) return;
+    
+    const phoneVariations = contactPhone ? generatePhoneVariations(contactPhone) : [];
     
     const channel = supabase
       .channel(`deal-whatsapp-${contactId || contactPhone}`)
@@ -122,10 +151,18 @@ export function DealWhatsAppChat({ contactId, contactPhone, contactName }: DealW
         event: 'INSERT',
         schema: 'public',
         table: 'whatsapp_messages',
-      }, () => {
-        queryClient.invalidateQueries({ 
-          queryKey: ['whatsapp-messages-contact', contactId, contactPhone] 
-        });
+      }, (payload) => {
+        // Check if message is for this contact
+        const newMessage = payload.new as WhatsAppMessage;
+        const isForThisContact = 
+          (contactId && newMessage.contact_id === contactId) ||
+          phoneVariations.includes(newMessage.phone);
+        
+        if (isForThisContact) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['whatsapp-messages-contact', contactId, contactPhone] 
+          });
+        }
       })
       .subscribe();
 

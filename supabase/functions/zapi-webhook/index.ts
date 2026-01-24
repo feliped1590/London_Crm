@@ -5,6 +5,34 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, client-token',
 }
 
+// Generate all phone variations for matching (with/without 55, with/without 9th digit)
+function generatePhoneVariations(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+  const variations = new Set<string>();
+  
+  // Base: with and without 55 prefix
+  const without55 = digits.startsWith('55') ? digits.slice(2) : digits;
+  const with55 = digits.startsWith('55') ? digits : `55${digits}`;
+  
+  variations.add(without55);
+  variations.add(with55);
+  
+  // Handle 9th digit (position 2 after DDD for mobile numbers)
+  if (without55.length === 11) {
+    // Has 11 digits (DDD + 9 + 8 digits), try removing the 9
+    const without9 = without55.slice(0, 2) + without55.slice(3);
+    variations.add(without9);
+    variations.add(`55${without9}`);
+  } else if (without55.length === 10) {
+    // Has 10 digits (DDD + 8 digits), try adding the 9
+    const with9 = without55.slice(0, 2) + '9' + without55.slice(2);
+    variations.add(with9);
+    variations.add(`55${with9}`);
+  }
+  
+  return Array.from(variations);
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -121,19 +149,16 @@ Deno.serve(async (req) => {
       mediaUrl = sticker.stickerUrl
     }
 
-    // Create phone variations to search (with and without 55 prefix)
-    const phoneWithoutCountry = normalizedPhone.startsWith('55') 
-      ? normalizedPhone.slice(2) 
-      : normalizedPhone
-    const phoneWithCountry = normalizedPhone.startsWith('55') 
-      ? normalizedPhone 
-      : `55${normalizedPhone}`
+    // Generate all phone variations for better matching
+    const phoneVariations = generatePhoneVariations(normalizedPhone)
+    console.log('Phone variations for matching:', phoneVariations)
 
     // Check if we have a contact linked to this phone number - try multiple formats
+    const phoneOrConditions = phoneVariations.map(v => `phone_number.eq.${v}`).join(',')
     const { data: whatsappContact } = await supabase
       .from('whatsapp_contacts')
       .select('contact_id')
-      .or(`phone_number.eq.${phoneWithCountry},phone_number.eq.${phoneWithoutCountry}`)
+      .or(phoneOrConditions)
       .limit(1)
       .maybeSingle()
 
@@ -142,16 +167,23 @@ Deno.serve(async (req) => {
     let companyId = null
 
     if (!contactId) {
+      // Build OR conditions for all variations
+      const contactOrConditions = phoneVariations.flatMap(v => [
+        `phone.eq.${v}`,
+        `mobile.eq.${v}`
+      ]).join(',')
+      
       const { data: crmContact } = await supabase
         .from('contacts')
         .select('id, company_id')
-        .or(`phone.eq.${phoneWithCountry},phone.eq.${phoneWithoutCountry},mobile.eq.${phoneWithCountry},mobile.eq.${phoneWithoutCountry}`)
+        .or(contactOrConditions)
         .limit(1)
         .maybeSingle()
 
       if (crmContact) {
         contactId = crmContact.id
         companyId = crmContact.company_id
+        console.log('Found CRM contact:', contactId, 'company:', companyId)
 
         // Create the link in whatsapp_contacts
         await supabase
@@ -161,6 +193,8 @@ Deno.serve(async (req) => {
             phone_number: normalizedPhone,
             profile_name: body.senderName || null
           }, { onConflict: 'phone_number' })
+      } else {
+        console.log('No CRM contact found for phone variations:', phoneVariations)
       }
     }
 
