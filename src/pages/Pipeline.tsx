@@ -15,6 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineListView } from '@/components/pipeline/PipelineListView';
+import { LossReasonModal } from '@/components/pipeline/LossReasonModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -72,6 +73,10 @@ export default function Pipeline() {
   const [filterOwner, setFilterOwner] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
+
+  // Loss reason modal state
+  const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
+  const [pendingLossDeal, setPendingLossDeal] = useState<{ id: string; name: string } | null>(null);
 
   const { data: deals, isLoading } = useQuery({
     queryKey: ['deals'],
@@ -338,7 +343,30 @@ export default function Pipeline() {
     e.preventDefault();
     const dealId = e.dataTransfer.getData('dealId');
     if (dealId) {
+      // If dropping to fechado_perdido, show loss reason modal
+      if (stage === 'fechado_perdido') {
+        const deal = deals?.find(d => d.id === dealId);
+        if (deal) {
+          setPendingLossDeal({ id: dealId, name: deal.name });
+          setLossReasonModalOpen(true);
+          return;
+        }
+      }
       updateMutation.mutate({ id: dealId, stage });
+    }
+  };
+
+  // Handle loss reason confirmation
+  const handleLossReasonConfirm = (reason: string, notes: string) => {
+    if (pendingLossDeal) {
+      updateMutation.mutate({
+        id: pendingLossDeal.id,
+        stage: 'fechado_perdido' as DealStage,
+        lost_reason: reason,
+        notes: notes || undefined,
+      });
+      setPendingLossDeal(null);
+      setLossReasonModalOpen(false);
     }
   };
 
@@ -891,6 +919,18 @@ export default function Pipeline() {
           ))}
         </div>
       )}
+
+      {/* Loss Reason Modal */}
+      <LossReasonModal
+        open={lossReasonModalOpen}
+        onOpenChange={(open) => {
+          setLossReasonModalOpen(open);
+          if (!open) setPendingLossDeal(null);
+        }}
+        dealName={pendingLossDeal?.name || ''}
+        onConfirm={handleLossReasonConfirm}
+        isLoading={updateMutation.isPending}
+      />
     </div>
   );
 }
