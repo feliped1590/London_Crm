@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineListView } from '@/components/pipeline/PipelineListView';
 import { LossReasonModal } from '@/components/pipeline/LossReasonModal';
@@ -23,8 +23,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
-import { StageHistoryTab } from '@/components/pipeline/StageHistoryTab';
+import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
+import { DealParticipants } from '@/components/pipeline/DealParticipants';
 import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -43,6 +45,7 @@ const stages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociac
 
 export default function Pipeline() {
   const { user } = useAuth();
+  const { isAdmin } = useModulePermissions();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -433,19 +436,23 @@ export default function Pipeline() {
             
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
                   <TabsTrigger value="propostas" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
-                    Propostas
+                    <span className="hidden sm:inline">Propostas</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="participantes" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="hidden sm:inline">Equipe</span>
                   </TabsTrigger>
                   <TabsTrigger value="historico" className="flex items-center gap-2">
                     <History className="h-4 w-4" />
-                    Histórico
+                    <span className="hidden sm:inline">Histórico</span>
                   </TabsTrigger>
                   <TabsTrigger value="whatsapp" className="flex items-center gap-2">
                     <MessageCircle className="h-4 w-4" />
-                    WhatsApp
+                    <span className="hidden sm:inline">WhatsApp</span>
                   </TabsTrigger>
                 </TabsList>
                 
@@ -589,8 +596,16 @@ export default function Pipeline() {
                   />
                 </TabsContent>
                 
+                <TabsContent value="participantes" className="flex-1 overflow-auto mt-4">
+                  <DealParticipants
+                    dealId={editingDeal.id}
+                    ownerId={editingDeal.owner_id}
+                    createdBy={editingDeal.created_by}
+                  />
+                </TabsContent>
+                
                 <TabsContent value="historico" className="flex-1 overflow-auto mt-4">
-                  <StageHistoryTab dealId={editingDeal.id} />
+                  <DealHistoryTab dealId={editingDeal.id} />
                 </TabsContent>
                 
                 <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4">
