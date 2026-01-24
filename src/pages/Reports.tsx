@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, 
   Pencil, 
@@ -36,12 +37,17 @@ import {
   MoreVertical,
   RotateCcw,
   Download,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { DashboardWidget } from '@/components/reports/DashboardWidget';
 import { AddWidgetDialog } from '@/components/reports/AddWidgetDialog';
+import { SalesFunnelChart } from '@/components/reports/SalesFunnelChart';
+import { PipelineVelocityCard } from '@/components/reports/PipelineVelocityCard';
+import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -218,105 +224,140 @@ export default function Reports() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          {isEditing ? (
-            <Input
-              value={dashboardName}
-              onChange={(e) => setDashboardName(e.target.value)}
-              className="text-2xl font-bold h-10 w-64"
-            />
-          ) : (
-            <h1 className="text-3xl font-bold text-foreground">{dashboardName}</h1>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Widget
-              </Button>
-              <Button variant="outline" onClick={handleResetToDefault}>
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Resetar
-              </Button>
-              <Button variant="ghost" onClick={() => setIsEditing(false)}>
-                <X className="mr-2 h-4 w-4" />
-                Cancelar
-              </Button>
-              <Button onClick={() => saveConfigMutation.mutate()} disabled={saveConfigMutation.isPending}>
-                <Save className="mr-2 h-4 w-4" />
-                Salvar
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Pencil className="mr-2 h-4 w-4" />
-                Editar Dashboard
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" disabled={isPrinting}>
-                    <Printer className="mr-2 h-4 w-4" />
-                    Imprimir
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handlePrint('graph')}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    Formato Gráfico
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handlePrint('list')}>
-                    <List className="mr-2 h-4 w-4" />
-                    Formato Lista
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
+          <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
         </div>
       </div>
 
-      {isEditing && (
-        <p className="text-sm text-muted-foreground">
-          Arraste os cards para reorganizar, use o menu de cada card para alterar tipo de gráfico ou tamanho.
-        </p>
-      )}
+      {/* Tabs for different report sections */}
+      <Tabs defaultValue="funnel" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="funnel" className="gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Funil de Vendas
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dashboard Personalizado
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Widgets Grid */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {widgets.map((widget) => (
-              <DashboardWidget
-                key={widget.id}
-                widget={widget}
-                data={getMetricData(widget.type)}
-                onRemove={handleRemoveWidget}
-                onChangeChart={handleChangeChart}
-                onChangeSize={handleChangeSize}
-                isEditing={isEditing}
-              />
-            ))}
+        {/* Sales Funnel Tab */}
+        <TabsContent value="funnel" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesFunnelChart />
+            <PipelineVelocityCard />
           </div>
-        </SortableContext>
-      </DndContext>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <LossReasonsChart />
+          </div>
+        </TabsContent>
 
-      {widgets.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <FileText className="h-12 w-12 mb-4 opacity-50" />
-          <p className="text-lg mb-2">Nenhum widget no dashboard</p>
-          <Button onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Adicionar Widget
-          </Button>
-        </div>
-      )}
+        {/* Custom Dashboard Tab */}
+        <TabsContent value="dashboard" className="space-y-6">
+          {/* Dashboard Header */}
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              {isEditing ? (
+                <Input
+                  value={dashboardName}
+                  onChange={(e) => setDashboardName(e.target.value)}
+                  className="text-xl font-bold h-10 w-64"
+                />
+              ) : (
+                <h2 className="text-xl font-semibold text-foreground">{dashboardName}</h2>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {isEditing ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Widget
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleResetToDefault}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Resetar
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                    <X className="mr-2 h-4 w-4" />
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={() => saveConfigMutation.mutate()} disabled={saveConfigMutation.isPending}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Salvar
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={isPrinting}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handlePrint('graph')}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Formato Gráfico
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handlePrint('list')}>
+                        <List className="mr-2 h-4 w-4" />
+                        Formato Lista
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
+            </div>
+          </div>
+
+          {isEditing && (
+            <p className="text-sm text-muted-foreground">
+              Arraste os cards para reorganizar, use o menu de cada card para alterar tipo de gráfico ou tamanho.
+            </p>
+          )}
+
+          {/* Widgets Grid */}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={widgets.map((w) => w.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {widgets.map((widget) => (
+                  <DashboardWidget
+                    key={widget.id}
+                    widget={widget}
+                    data={getMetricData(widget.type)}
+                    onRemove={handleRemoveWidget}
+                    onChangeChart={handleChangeChart}
+                    onChangeSize={handleChangeSize}
+                    isEditing={isEditing}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
+          {widgets.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <FileText className="h-12 w-12 mb-4 opacity-50" />
+              <p className="text-lg mb-2">Nenhum widget no dashboard</p>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Widget
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Add Widget Dialog */}
       <AddWidgetDialog
