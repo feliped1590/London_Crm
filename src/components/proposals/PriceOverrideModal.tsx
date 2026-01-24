@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, ShieldAlert, TrendingDown, TrendingUp } from 'lucide-react';
@@ -50,15 +59,15 @@ export function PriceOverrideModal({
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-full bg-amber-100 dark:bg-amber-900/20">
-              <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-full bg-muted">
+              <ShieldAlert className="h-5 w-5 text-foreground" />
             </div>
             <AlertDialogTitle>Autorização para Alteração de Preço</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="space-y-3 pt-2">
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-amber-700 dark:text-amber-300">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-accent text-accent-foreground border border-border">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
                 <p>Você está prestes a alterar o preço de um item que está vinculado à tabela de preços <strong>"{pricingTableName}"</strong>.</p>
               </div>
             </div>
@@ -77,7 +86,14 @@ export function PriceOverrideModal({
               </div>
               
               {/* Difference indicator */}
-              <div className={`flex items-center gap-2 p-2 rounded-lg ${isDiscount ? 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300' : 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300'}`}>
+              <div
+                className={
+                  `flex items-center gap-2 p-2 rounded-lg ` +
+                  (isDiscount
+                    ? 'bg-destructive/10 text-destructive'
+                    : 'bg-primary/10 text-primary')
+                }
+              >
                 {isDiscount ? (
                   <TrendingDown className="h-4 w-4" />
                 ) : (
@@ -114,14 +130,20 @@ export function PriceOverrideModal({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={handleCancel}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction
+          <AlertDialogCancel asChild>
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancelar
+            </Button>
+          </AlertDialogCancel>
+          {/* Use asChild to fully control close timing and avoid Radix closing before onConfirm runs */}
+          <Button
+            type="button"
+            variant="default"
             onClick={handleConfirm}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
             disabled={justification.trim().length < 10}
           >
             Autorizar Alteração
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
