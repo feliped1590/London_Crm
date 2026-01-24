@@ -55,7 +55,8 @@ export default function Products() {
       let query = supabase
         .from('products')
         .select('*')
-        .order('name');
+        .order('name')
+        .limit(500);
 
       if (filterCategory !== 'all') {
         query = query.eq('category', filterCategory);
