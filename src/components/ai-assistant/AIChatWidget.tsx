@@ -166,7 +166,7 @@ export function AIChatWidget() {
               <h4 className="font-medium text-foreground mb-2">Olá! Sou seu assistente.</h4>
               <p className="text-sm max-w-[280px]">
                 Posso ajudar você a criar contatos, empresas, tarefas, 
-                enviar WhatsApp, buscar informações e muito mais.
+                buscar informações e muito mais.
               </p>
               <div className="mt-4 space-y-2 text-xs">
                 <p className="bg-muted px-3 py-2 rounded-lg">

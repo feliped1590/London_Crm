@@ -9,6 +9,7 @@ import { WhatsAppMetrics } from '@/components/whatsapp/WhatsAppMetrics';
 import { ConversationAnalyticsPanel } from '@/components/whatsapp/ConversationAnalyticsPanel';
 import { Conversation, useWhatsAppRealtime, useUnreadCount, useWhatsAppConversations } from '@/hooks/useWhatsApp';
 import { MessageSquare, Smartphone, ArrowLeft, Users, BarChart3, BarChart2 } from 'lucide-react';
+import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -175,8 +176,13 @@ export default function WhatsApp() {
   }, [searchParams, conversations, handleUrlConversation]);
 
   return (
-    <div className="h-[calc(100vh-4rem)]">
-      <Tabs defaultValue="conversations" className="h-full flex flex-col">
+    <div className="h-[calc(100vh-4rem)] flex flex-col">
+      <div className="px-4 sm:px-6 pt-4">
+        <UnderDevelopmentBanner 
+          description="A integração com WhatsApp está sendo aprimorada para facilitar a configuração. Em breve você poderá conectar sua conta de forma simplificada."
+        />
+      </div>
+      <Tabs defaultValue="conversations" className="flex-1 flex flex-col overflow-hidden">
         <div className="border-b px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-4">
             <div>

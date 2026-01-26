@@ -27,6 +27,7 @@ import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
 import { DealParticipants } from '@/components/pipeline/DealParticipants';
 import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -614,7 +615,11 @@ export default function Pipeline() {
                   <DealHistoryTab dealId={editingDeal.id} />
                 </TabsContent>
                 
-                <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4">
+                <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4 flex flex-col gap-4">
+                  <UnderDevelopmentBanner 
+                    compact
+                    title="Em Desenvolvimento"
+                  />
                   <DealWhatsAppChat
                     contactId={editingDeal.contact_id}
                     contactPhone={getContactPhone(editingDeal.contact_id)}
