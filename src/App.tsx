@@ -26,6 +26,7 @@ import BotBuilder from "./pages/BotBuilder";
 import ProposalPublic from "./pages/ProposalPublic";
 import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/pricing" element={<PricingTables />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integracao-iniflex" element={<InflexIntegration />} />
+                <Route path="/help" element={<Help />} />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

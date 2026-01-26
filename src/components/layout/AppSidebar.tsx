@@ -18,7 +18,8 @@ import {
   ShoppingCart,
   Lightbulb,
   LucideIcon,
-  DollarSign
+  DollarSign,
+  HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -53,6 +54,7 @@ const allNavItems: NavItem[] = [
   // { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' }, // Temporariamente oculto para apresentação
   // { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' }, // Temporariamente oculto para apresentação
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
+  { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
 ];
 
 interface AppSidebarProps {
