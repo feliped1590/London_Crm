@@ -32,6 +32,7 @@ import {
   Flag,
 } from 'lucide-react';
 import { BotFlow, BotFlowNode, BotFlowEdge, NodeConfig } from '@/types/bot';
+import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 
 // Custom Node Components
 import { TriggerNode } from '@/components/bot-builder/nodes/TriggerNode';
@@ -313,6 +314,14 @@ export default function BotBuilder() {
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col">
+      {/* Under Development Banner */}
+      <div className="px-4 pt-4">
+        <UnderDevelopmentBanner 
+          compact
+          description="O editor visual de bots está em desenvolvimento."
+        />
+      </div>
+      
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b bg-background">
         <div className="flex items-center gap-4">

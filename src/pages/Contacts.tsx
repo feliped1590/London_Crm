@@ -521,7 +521,7 @@ export default function Contacts() {
                                   <MessageCircle className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Abrir WhatsApp</TooltipContent>
+                              <TooltipContent>WhatsApp (Em Desenvolvimento)</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                           <TooltipProvider>

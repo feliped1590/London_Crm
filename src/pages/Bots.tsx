@@ -34,6 +34,7 @@ import { Bot, Plus, MoreVertical, Pencil, Copy, Trash2, Zap, Play } from 'lucide
 import { toast } from 'sonner';
 import { BotFlow, TriggerType } from '@/types/bot';
 import { useAuth } from '@/hooks/useAuth';
+import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 
 export default function Bots() {
   const navigate = useNavigate();
@@ -203,6 +204,10 @@ export default function Bots() {
 
   return (
     <div className="space-y-6">
+      <UnderDevelopmentBanner 
+        description="O construtor de bots está sendo aprimorado para integrar com o WhatsApp. Em breve você poderá criar automações de atendimento."
+      />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Bots</h1>
