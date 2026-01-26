@@ -48,7 +48,7 @@ export default function Contacts() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  const { data: contacts, isLoading } = useQuery({
+  const { data: contacts, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['contacts'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -58,7 +58,14 @@ export default function Contacts() {
       if (error) throw error;
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Dados atualizados!');
+  };
 
   const { data: companies } = useQuery({
     queryKey: ['companies'],
@@ -387,6 +394,16 @@ export default function Contacts() {
                 className="pl-10"
               />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

@@ -45,6 +45,7 @@ import {
   Save,
   X,
   RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import { DashboardStats, Task, Deal } from "@/types/crm";
 import { formatCurrency } from "@/lib/formatters";
@@ -225,6 +226,12 @@ export default function Dashboard() {
     }
   };
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    await fetchDashboardData();
+    toast.success('Dados atualizados!');
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
@@ -390,10 +397,16 @@ export default function Dashboard() {
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Personalizar
-            </Button>
+            <>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Personalizar
+              </Button>
+            </>
           )}
         </div>
       </div>
