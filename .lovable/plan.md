@@ -1,183 +1,181 @@
 
-## Plano: Resolver Definitivamente o Problema de Dados Desatualizados
+# Plano: Criar Documentação de Uso do CRMPro
 
-### Problema Identificado
+## Objetivo
+Criar um manual de usuário completo e acessível para orientar os usuários finais no uso do software CRMPro, com instruções passo a passo para cada tela e funcionalidade.
 
-A imagem mostra que colunas como **CPF**, **Empresa** e **Funil** estão vazias ("-") na tela de Contatos, mesmo tendo dados no banco de dados. Após investigação, confirmei que:
+## Estrutura da Documentação
 
-1. **Os dados existem** no banco (contatos têm CPF, company_id vinculado, e deals associados)
-2. **A UI está usando cache antigo** do React Query que não reflete os dados atuais
+A documentação será criada como uma página acessível dentro do próprio sistema, com navegação por tópicos e seções bem organizadas.
 
-### Causa Raiz
+### Arquivo Principal
+**Criar**: `src/pages/Help.tsx` - Página de documentação/ajuda integrada ao sistema
 
-A configuração atual do React Query prioriza performance sobre atualização:
-
-| Configuração | Valor Atual | Impacto |
-|--------------|-------------|---------|
-| `staleTime` | 5 minutos | Dados em cache são usados por 5 min sem revalidação |
-| `refetchOnWindowFocus` | `false` | Trocar de aba não atualiza os dados |
-| `refetchOnMount` | não definido (usa default) | Revisitar página pode usar cache stale |
-
-**Resultado**: Usuário vê dados desatualizados e precisa "adivinhar" como atualizar.
-
-### Solucao Proposta
-
-Implementar **3 camadas de proteção** para garantir dados sempre atualizados:
+### Conteúdo Organizado por Módulos
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                    CAMADA 1: QUERIES CRÍTICAS               │
-│  Páginas principais forçam refresh ao montar                │
-│  staleTime: 0, refetchOnMount: 'always'                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    CAMADA 2: BOTÃO MANUAL                   │
-│  Todas as páginas de listagem têm botão "Atualizar"         │
-│  Feedback visual via toast + ícone animado                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    CAMADA 3: VISUAL DE LOADING              │
-│  Estados de loading claros enquanto busca dados             │
-│  Skeleton loaders durante carregamento inicial              │
-└─────────────────────────────────────────────────────────────┘
+MANUAL DO USUÁRIO - CRMPro
+├── 1. Primeiros Passos
+│   ├── Login e Autenticação
+│   ├── Navegação pelo Sistema
+│   └── Botão Atualizar Dados
+├── 2. Visão Geral (Dashboard)
+│   ├── Cards de Estatísticas
+│   ├── Widgets Personalizáveis
+│   ├── Botão Personalizar Dashboard
+│   └── Insights Resumidos
+├── 3. Pipeline de Vendas
+│   ├── Visão Kanban vs Lista
+│   ├── Criar Novo Negócio
+│   ├── Arrastar entre Etapas
+│   ├── Editar Negócio (Abas: Dados, Propostas, Equipe, Histórico)
+│   ├── Registrar Motivo de Perda
+│   └── Filtros por Responsável, Etapa e Empresa
+├── 4. Empresas
+│   ├── Cadastrar Nova Empresa
+│   ├── Campos: Razão Social, CNPJ, Fantasia, IE
+│   ├── Visualizar Negócios Vinculados (Coluna Funil)
+│   └── Tabela de Preços da Empresa
+├── 5. Contatos
+│   ├── Cadastrar Novo Contato
+│   ├── Vincular a Empresa
+│   ├── CPF e Tipo de Pessoa
+│   ├── Visualizar Negócios Vinculados
+│   └── Acessar WhatsApp do Contato
+├── 6. Produtos
+│   ├── Cadastrar Produto (SKU, Nome, Categoria)
+│   ├── Medidas: Largura, Comprimento, Espessura
+│   ├── Materiais e Cores
+│   ├── Filtros por Categoria e Status
+│   └── Ativar/Inativar Produto
+├── 7. Tabelas de Preços
+│   ├── Criar Nova Tabela
+│   ├── Definir Regras de Desconto
+│   ├── Vincular a Empresas/Contatos
+│   └── Validade da Tabela
+├── 8. Pedidos
+│   ├── Criar Pedido Manual
+│   ├── Pedido via Proposta Aprovada
+│   ├── Status: Pendente, Em Produção, Faturado, Entregue
+│   ├── Visualizar Itens do Pedido
+│   └── Histórico de Alterações
+├── 9. Tarefas
+│   ├── Criar Nova Tarefa
+│   ├── Prioridades: Baixa, Média, Alta, Urgente
+│   ├── Vincular a Empresa, Contato ou Negócio
+│   ├── Marcar como Concluída
+│   └── Filtros: Pendentes, Concluídas, Atrasadas
+├── 10. Relatórios
+│   ├── Funil de Vendas
+│   ├── Velocidade do Pipeline
+│   ├── Motivos de Perda
+│   ├── Dashboard Personalizado
+│   └── Imprimir/Exportar Relatório
+├── 11. Configurações (Apenas Administradores)
+│   ├── Campos Personalizados
+│   ├── Etapas do Pipeline
+│   ├── Automações
+│   ├── Permissões por Perfil
+│   ├── Carteiras de Clientes
+│   ├── Gerenciar Usuários
+│   └── Dados de Teste
+└── 12. Dicas e Boas Práticas
+    ├── Manter Dados Atualizados
+    ├── Usar o Botão Atualizar
+    └── Registrar Atividades no Histórico
 ```
 
-### Parte 1: Forçar Refresh em Páginas Principais
+## Implementação
 
-Atualizar as queries de listagem para sempre buscar dados frescos ao montar a página:
+### 1. Criar Página de Ajuda (`src/pages/Help.tsx`)
+- Página dedicada com navegação lateral por seções
+- Conteúdo organizado em Accordion expandível
+- Busca por palavra-chave nas instruções
+- Ícones ilustrativos para cada seção
+- Links de navegação direta para as telas do sistema
 
-**Antes:**
-```typescript
-const { data: contacts, isLoading } = useQuery({
-  queryKey: ['contacts'],
-  queryFn: async () => { /* ... */ },
-});
+### 2. Adicionar Rota no Sistema
+- Registrar rota `/help` no App.tsx
+- Adicionar link "Ajuda" na sidebar (ícone de interrogação)
+
+### 3. Estrutura do Conteúdo
+
+Cada seção seguirá o formato:
+
+```text
+┌──────────────────────────────────────────┐
+│ 📖 [Título do Módulo]                    │
+├──────────────────────────────────────────┤
+│ Descrição breve do que o módulo faz      │
+├──────────────────────────────────────────┤
+│ ✅ Passo 1: Ação inicial                 │
+│    → Instrução detalhada                 │
+│ ✅ Passo 2: Preencher campos             │
+│    → Lista de campos obrigatórios        │
+│ ✅ Passo 3: Salvar                       │
+│    → O que acontece após salvar          │
+├──────────────────────────────────────────┤
+│ 💡 Dica: Informação útil adicional       │
+│ ⚠️ Atenção: Cuidados importantes         │
+└──────────────────────────────────────────┘
 ```
 
-**Depois:**
-```typescript
-const { data: contacts, isLoading, refetch } = useQuery({
-  queryKey: ['contacts'],
-  queryFn: async () => { /* ... */ },
-  staleTime: 0,                    // Sempre considera dados como "stale"
-  refetchOnMount: 'always',        // Sempre refaz query ao montar
-});
+### 4. Design Visual
+- Usar componentes existentes: Accordion, Card, Badge, Tabs
+- Navegação lateral sticky para acesso rápido
+- Indicador de progresso de leitura
+- Botões de "Ir para Módulo" para navegação direta
+
+---
+
+## Arquivos a Criar/Modificar
+
+| Ação | Arquivo | Descrição |
+|------|---------|-----------|
+| **Criar** | `src/pages/Help.tsx` | Página principal da documentação |
+| **Modificar** | `src/App.tsx` | Adicionar rota `/help` |
+| **Modificar** | `src/components/layout/AppSidebar.tsx` | Adicionar link para Ajuda |
+
+---
+
+## Exemplo de Conteúdo (Pipeline)
+
+```markdown
+## Pipeline de Vendas
+
+O Pipeline é o coração do CRM, onde você gerencia todas as oportunidades de negócio.
+
+### Criar um Novo Negócio
+
+1. Clique no botão **"Novo Negócio"** no canto superior direito
+2. Preencha os campos:
+   - **Nome**: Título identificador do negócio
+   - **Valor**: Valor estimado da venda (R$)
+   - **Empresa**: Selecione a empresa relacionada
+   - **Contato**: Selecione o contato principal
+   - **Data Prevista**: Quando espera fechar o negócio
+3. Clique em **"Criar"**
+
+### Mover entre Etapas
+
+**Modo Kanban:**
+- Arraste o card do negócio de uma coluna para outra
+- Ao mover para "Fechado (Perdido)", será solicitado o motivo da perda
+
+**Modo Lista:**
+- Clique no negócio para abrir o formulário
+- Altere o campo "Etapa" para a nova posição
+- Salve as alterações
+
+💡 **Dica**: O histórico de mudanças de etapa fica registrado na aba "Histórico" do negócio
 ```
 
-### Parte 2: Adicionar Botão de Atualizar
+---
 
-Adicionar botão "Atualizar" no header de cada página de listagem:
+## Benefícios
 
-```typescript
-<div className="flex items-center gap-2">
-  <Button 
-    variant="outline" 
-    size="sm"
-    onClick={handleRefresh}
-    disabled={isLoading}
-    className="gap-2"
-  >
-    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-    Atualizar
-  </Button>
-  {/* outros botões... */}
-</div>
-```
-
-Com handler padronizado:
-
-```typescript
-const handleRefresh = async () => {
-  await refetch();
-  toast.success('Dados atualizados!');
-};
-```
-
-### Parte 3: Estado Visual de Carregamento
-
-Garantir que durante a busca de dados, o usuário veja claramente que algo está acontecendo:
-
-1. **Loading inicial**: Spinner centralizado (já existe)
-2. **Refresh manual**: Ícone do botão gira (animação `animate-spin`)
-3. **Background refresh**: Indicador sutil na tabela
-
-### Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Contacts.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Companies.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Pipeline.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Orders.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Products.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Tasks.tsx` | Adicionar `staleTime: 0`, `refetchOnMount: 'always'`, botão Atualizar |
-| `src/pages/Dashboard.tsx` | Adicionar botão Atualizar no header |
-
-### Exemplo Completo: Contacts.tsx
-
-```typescript
-// Query com refresh garantido
-const { data: contacts, isLoading, refetch, isFetching } = useQuery({
-  queryKey: ['contacts'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*, companies(name), deals(id, name, stage, value)')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data;
-  },
-  staleTime: 0,
-  refetchOnMount: 'always',
-});
-
-// Handler de refresh
-const handleRefresh = async () => {
-  await refetch();
-  toast.success('Dados atualizados!');
-};
-
-// No JSX - Botão ao lado do campo de busca
-<div className="flex items-center gap-4">
-  <div className="relative flex-1">
-    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-    <Input placeholder="Buscar contatos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
-  </div>
-  <Button 
-    variant="outline" 
-    size="sm"
-    onClick={handleRefresh}
-    disabled={isFetching}
-    className="gap-2"
-  >
-    <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-    Atualizar
-  </Button>
-</div>
-```
-
-### Comportamento Esperado Após Implementação
-
-1. **Ao abrir Contatos**: Sistema busca dados frescos do banco automaticamente
-2. **Ao criar/editar contato**: Tabela atualiza imediatamente (já funciona via invalidateQueries)
-3. **Na dúvida**: Usuário clica "Atualizar" e vê feedback visual + toast de confirmação
-4. **Trocar de aba e voltar**: Dados são rebuscados ao remontar a página
-
-### Por Que Esta Solucao é Definitiva
-
-| Problema Anterior | Solução |
-|-------------------|---------|
-| Cache de 5 minutos | `staleTime: 0` - sempre busca dados novos |
-| Não atualiza ao voltar na página | `refetchOnMount: 'always'` - sempre refaz query |
-| Usuário não sabe como atualizar | Botão "Atualizar" visível e intuitivo |
-| Sem feedback de carregamento | Ícone animado + toast de confirmação |
-
-### Impacto em Performance
-
-- **Trade-off**: Mais requests ao servidor, mas dados sempre corretos
-- **Mitigação**: As queries são rápidas (poucos ms) e o benefício de UX supera o custo
-- **Cache ainda funciona**: Entre visitas à mesma página (sem sair), ainda usa cache local
+1. **Onboarding mais rápido**: Novos usuários aprendem sozinhos
+2. **Menos suporte**: Dúvidas comuns respondidas na documentação
+3. **Acessível no sistema**: Não precisa sair para consultar
+4. **Navegação direta**: Links para ir direto à tela mencionada
+5. **Buscável**: Encontre rapidamente o que precisa
