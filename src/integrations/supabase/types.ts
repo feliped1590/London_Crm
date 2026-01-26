@@ -857,6 +857,47 @@ export type Database = {
         }
         Relationships: []
       }
+      order_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          field_label: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          field_label: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          field_label?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_audit_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
