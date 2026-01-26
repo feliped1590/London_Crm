@@ -63,7 +63,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Timeout de 3 segundos para evitar travamento no Chrome
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout no logout')), 3000)
+      );
+      
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      console.warn('Erro no signOut (continuando com limpeza local):', error);
+    } finally {
+      // SEMPRE limpar estado local, independente de erro ou timeout
+      setSession(null);
+      setUser(null);
+      
+      // Fallback: limpar localStorage manualmente
+      const storageKey = `sb-lusyhkizwoihixcvcgap-auth-token`;
+      localStorage.removeItem(storageKey);
+    }
   };
 
   return (
