@@ -21,6 +21,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
@@ -84,8 +85,17 @@ export function AppSidebar({ isOpen = false, onClose }: AppSidebarProps) {
     if (isMobile && onClose) {
       onClose();
     }
-    await signOut();
-    navigate('/auth', { replace: true });
+    
+    try {
+      await signOut();
+      toast.success('Logout realizado com sucesso');
+    } catch (error) {
+      console.error('Erro no logout:', error);
+      toast.info('Sessão encerrada');
+    } finally {
+      // SEMPRE navegar para auth, mesmo com erro ou timeout
+      navigate('/auth', { replace: true });
+    }
   };
 
   // Mobile: always expanded, use isOpen prop
