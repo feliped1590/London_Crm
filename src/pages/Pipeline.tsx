@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineListView } from '@/components/pipeline/PipelineListView';
 import { LossReasonModal } from '@/components/pipeline/LossReasonModal';
@@ -82,7 +82,7 @@ export default function Pipeline() {
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
   const [pendingLossDeal, setPendingLossDeal] = useState<{ id: string; name: string } | null>(null);
 
-  const { data: deals, isLoading } = useQuery({
+  const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -92,7 +92,14 @@ export default function Pipeline() {
       if (error) throw error;
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Dados atualizados!');
+  };
 
   const { data: companies } = useQuery({
     queryKey: ['companies'],
@@ -413,6 +420,16 @@ export default function Pipeline() {
           <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Atualizar</span>
+          </Button>
           <ToggleGroup 
             type="single" 
             value={viewMode} 

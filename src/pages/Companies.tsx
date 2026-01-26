@@ -56,7 +56,7 @@ export default function Companies() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  const { data: companies, isLoading } = useQuery({
+  const { data: companies, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -66,7 +66,14 @@ export default function Companies() {
       if (error) throw error;
       return data as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Dados atualizados!');
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'companies'>) => {
@@ -400,6 +407,16 @@ export default function Companies() {
                 className="pl-10"
               />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

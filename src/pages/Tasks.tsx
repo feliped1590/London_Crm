@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, CheckSquare, Calendar, Clock, Building2, User, Target } from 'lucide-react';
+import { Plus, Search, CheckSquare, Calendar, Clock, Building2, User, Target, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
@@ -54,7 +54,7 @@ export default function Tasks() {
     deal_id: null,
   });
 
-  const { data: tasks, isLoading } = useQuery({
+  const { data: tasks, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -64,7 +64,14 @@ export default function Tasks() {
       if (error) throw error;
       return data;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Dados atualizados!');
+  };
 
   const { data: companies } = useQuery({
     queryKey: ['companies'],
@@ -352,6 +359,16 @@ export default function Tasks() {
                 className="pl-10"
               />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isFetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
           </div>
         </CardHeader>
         <CardContent>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, ShoppingCart, Eye, Building2, User, Calendar, Package, Plus, Edit, History } from 'lucide-react';
+import { Search, ShoppingCart, Eye, Building2, User, Calendar, Package, Plus, Edit, History, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, OrderItem, orderStatusConfig, OrderStatus } from '@/types/products';
@@ -30,7 +30,7 @@ export default function Orders() {
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<OrderStatus | null>(null);
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['orders', filterStatus],
     queryFn: async () => {
       let query = supabase
@@ -52,7 +52,14 @@ export default function Orders() {
       if (error) throw error;
       return data as unknown as Order[];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
+
+  const handleRefresh = async () => {
+    await refetch();
+    toast.success('Dados atualizados!');
+  };
 
   const { data: orderItems } = useQuery({
     queryKey: ['order_items', selectedOrder?.id],
@@ -137,10 +144,22 @@ export default function Orders() {
           <h1 className="text-3xl font-bold text-foreground">Pedidos</h1>
           <p className="text-muted-foreground">Gerencie os pedidos de venda</p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Pedido
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Pedido
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
