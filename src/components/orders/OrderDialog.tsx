@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
@@ -21,14 +21,17 @@ import { usePricingTables } from '@/hooks/usePricingTables';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
+import { Order, OrderItem, OrderStatus, orderStatusConfig } from '@/types/products';
 
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  order?: Order | null; // If passed, it's edit mode; otherwise, create mode
   onSuccess?: () => void;
 }
 
 interface OrderItemDraft {
+  id?: string; // For existing items
   product_id: string;
   description: string;
   quantity: number;
@@ -40,11 +43,20 @@ interface OrderItemDraft {
   thickness?: number;
 }
 
-export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const { getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
+  
+  const isEditMode = !!order;
+  
+  // Check edit permission based on status and role
+  const canEdit = useMemo(() => {
+    if (!order) return true; // Creation always allowed
+    if (order.status === 'pendente') return true; // Pending = everyone can edit
+    return isAdmin; // Other statuses = admin only
+  }, [order, isAdmin]);
   
   const [companyId, setCompanyId] = useState<string>('');
   const [contactId, setContactId] = useState<string>('');
@@ -52,6 +64,9 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
   const [observations, setObservations] = useState('');
   const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  
+  // Store original items for comparison (audit logging)
+  const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
@@ -120,6 +135,33 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     },
   });
 
+  // Fetch order items when editing
+  const { data: existingOrderItems } = useQuery({
+    queryKey: ['order_items_for_edit', order?.id],
+    queryFn: async (): Promise<OrderItemDraft[]> => {
+      if (!order) return [];
+      const { data, error } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', order.id)
+        .order('sort_order');
+      if (error) throw error;
+      return (data ?? []).map(item => ({
+        id: item.id,
+        product_id: item.product_id || '',
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+        discount_percent: item.discount_percent || 0,
+        width: item.width || undefined,
+        length: item.length || undefined,
+        thickness: item.thickness || undefined,
+      }));
+    },
+    enabled: !!order?.id && open,
+  });
+
   // Check linked pricing table
   const linkedPricingTable = companyId
     ? pricingTables?.find(t => t.id === getApplicableTable('company', companyId, null)?.id)
@@ -129,6 +171,24 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
 
   const hasPricingTable = !!linkedPricingTable;
 
+  // Initialize form when dialog opens in edit mode
+  useEffect(() => {
+    if (open && order) {
+      setCompanyId(order.company_id || '');
+      setContactId(order.contact_id || '');
+      setDeliveryDate(order.delivery_date ? new Date(order.delivery_date) : undefined);
+      setObservations(order.observations || '');
+    }
+  }, [open, order]);
+
+  // Set items when existingOrderItems are loaded
+  useEffect(() => {
+    if (existingOrderItems && existingOrderItems.length > 0) {
+      setItems(existingOrderItems);
+      setOriginalItems(existingOrderItems);
+    }
+  }, [existingOrderItems]);
+
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
@@ -137,6 +197,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       setDeliveryDate(undefined);
       setObservations('');
       setItems([]);
+      setOriginalItems([]);
       setSelectedProductId('');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
@@ -287,7 +348,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     priceChangeConfirmedRef.current = true;
     setPriceChangeConfirmed(true);
     
-    // Log the override (no deal_id for orders, so we skip audit log)
+    // Log the override
     toast.success(`Alteração de preço autorizada: ${justification}`);
     setPendingPriceChange(null);
     
@@ -304,7 +365,11 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       } else {
         // All items authorized, execute submit
         setPendingSubmit(false);
-        createOrderMutation.mutate();
+        if (isEditMode) {
+          updateOrderMutation.mutate();
+        } else {
+          createOrderMutation.mutate();
+        }
       }
     }
   };
@@ -322,7 +387,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     // If there was a pending submit, cancel it
     if (pendingSubmit) {
       setPendingSubmit(false);
-      toast.info('Criação cancelada - preço fora do range não autorizado');
+      toast.info('Operação cancelada - preço fora do range não autorizado');
     } else {
       toast.info('Preço revertido para o valor da tabela');
     }
@@ -379,6 +444,68 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     setItems(items.filter((_, i) => i !== index));
   };
 
+  // Log item changes for audit
+  const logItemChanges = async (orderId: string) => {
+    if (!isEditMode || order?.status === 'pendente') return; // No audit for pending orders
+    
+    const auditLogs: Array<{
+      order_id: string;
+      field_name: string;
+      field_label: string;
+      old_value: string | null;
+      new_value: string | null;
+      changed_by: string;
+    }> = [];
+
+    // Items removed
+    for (const original of originalItems) {
+      if (!items.find(n => n.id === original.id)) {
+        auditLogs.push({
+          order_id: orderId,
+          field_name: 'item_removed',
+          field_label: 'Item Removido',
+          old_value: `${original.description} (Qtd: ${original.quantity}, Preço: R$ ${original.unit_price.toFixed(2)})`,
+          new_value: null,
+          changed_by: user?.id || '',
+        });
+      }
+    }
+
+    // Items added
+    for (const newItem of items) {
+      if (!newItem.id || !originalItems.find(o => o.id === newItem.id)) {
+        auditLogs.push({
+          order_id: orderId,
+          field_name: 'item_added',
+          field_label: 'Item Adicionado',
+          old_value: null,
+          new_value: `${newItem.description} (Qtd: ${newItem.quantity}, Preço: R$ ${newItem.unit_price.toFixed(2)})`,
+          changed_by: user?.id || '',
+        });
+      }
+    }
+
+    // Items modified
+    for (const newItem of items) {
+      if (!newItem.id) continue;
+      const original = originalItems.find(o => o.id === newItem.id);
+      if (original && (original.quantity !== newItem.quantity || original.unit_price !== newItem.unit_price)) {
+        auditLogs.push({
+          order_id: orderId,
+          field_name: 'item_modified',
+          field_label: 'Item Alterado',
+          old_value: `${original.description}: Qtd=${original.quantity}, Preço=R$ ${original.unit_price.toFixed(2)}`,
+          new_value: `${newItem.description}: Qtd=${newItem.quantity}, Preço=R$ ${newItem.unit_price.toFixed(2)}`,
+          changed_by: user?.id || '',
+        });
+      }
+    }
+
+    if (auditLogs.length > 0) {
+      await supabase.from('order_audit_log').insert(auditLogs);
+    }
+  };
+
   // Create order mutation
   const createOrderMutation = useMutation({
     mutationFn: async () => {
@@ -390,7 +517,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       }
 
       // Create order - number is auto-generated by database trigger
-      const { data: order, error: orderError } = await supabase
+      const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
           number: '', // Will be auto-generated
@@ -408,6 +535,76 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
       if (orderError) throw orderError;
 
       // Create order items
+      const orderItems = items.map((item, index) => ({
+        order_id: newOrder.id,
+        product_id: item.product_id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+        discount_percent: item.discount_percent,
+        width: item.width,
+        length: item.length,
+        thickness: item.thickness,
+        sort_order: index,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      return newOrder;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Pedido criado com sucesso!');
+      onOpenChange(false);
+      onSuccess?.();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao criar pedido');
+    },
+  });
+
+  // Update order mutation
+  const updateOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) throw new Error('Pedido não encontrado');
+      if (items.length === 0) {
+        throw new Error('Adicione pelo menos um item ao pedido');
+      }
+      if (!companyId && !contactId) {
+        throw new Error('Selecione uma empresa ou contato');
+      }
+
+      // Update order
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({
+          company_id: companyId || null,
+          contact_id: contactId || null,
+          delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
+          observations,
+          total_value: calculateTotal(),
+        })
+        .eq('id', order.id);
+
+      if (orderError) throw orderError;
+
+      // Log item changes for audit (only for non-pending orders)
+      await logItemChanges(order.id);
+
+      // Delete existing items and insert new ones
+      const { error: deleteError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', order.id);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new items
       const orderItems = items.map((item, index) => ({
         order_id: order.id,
         product_id: item.product_id,
@@ -432,31 +629,86 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Pedido criado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['order_items'] });
+      queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+      toast.success('Pedido atualizado com sucesso!');
       onOpenChange(false);
       onSuccess?.();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Erro ao criar pedido');
+      toast.error(error.message || 'Erro ao atualizar pedido');
     },
   });
+
+  const handleSubmit = () => {
+    // For admins: validate if there are prices out of range before submitting
+    if (isAdmin) {
+      const outOfRange = findNextOutOfRangeItem(0);
+      
+      if (outOfRange) {
+        // Open authorization modal for this item
+        priceChangeConfirmedRef.current = false;
+        setPriceChangeConfirmed(false);
+        setPendingPriceChange(outOfRange);
+        setPendingSubmit(true);
+        setShowPriceOverrideModal(true);
+        return; // Interrupt submit until authorization
+      }
+    }
+    
+    if (isEditMode) {
+      updateOrderMutation.mutate();
+    } else {
+      createOrderMutation.mutate();
+    }
+  };
+
+  const isPending = createOrderMutation.isPending || updateOrderMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Novo Pedido
+            {isEditMode ? <Edit className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
+            {isEditMode ? `Editar Pedido ${order?.number}` : 'Novo Pedido'}
+            {isEditMode && !canEdit && (
+              <Badge variant="outline" className="ml-2 text-amber-600">
+                <Lock className="h-3 w-3 mr-1" />
+                Somente Leitura
+              </Badge>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Permission warning */}
+          {isEditMode && !canEdit && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                Este pedido está com status <strong>{orderStatusConfig[order?.status as OrderStatus]?.label}</strong> e só pode ser editado por administradores.
+              </p>
+            </div>
+          )}
+
+          {/* Audit logging notice for non-pending orders */}
+          {isEditMode && order?.status !== 'pendente' && canEdit && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Alterações neste pedido serão registradas no histórico de auditoria.
+              </p>
+            </div>
+          )}
+
           {/* Client Selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Empresa</Label>
-              <Select value={companyId} onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}>
+              <Select 
+                value={companyId} 
+                onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}
+                disabled={!canEdit}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma empresa" />
                 </SelectTrigger>
@@ -472,7 +724,11 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
             </div>
             <div className="space-y-2">
               <Label>Contato</Label>
-              <Select value={contactId} onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}>
+              <Select 
+                value={contactId} 
+                onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}
+                disabled={!canEdit}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um contato" />
                 </SelectTrigger>
@@ -517,6 +773,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                     'w-full justify-start text-left font-normal',
                     !deliveryDate && 'text-muted-foreground'
                   )}
+                  disabled={!canEdit}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {deliveryDate ? format(deliveryDate, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
@@ -535,27 +792,29 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
           </div>
 
           {/* Add Product */}
-          <div className="space-y-2">
-            <Label>Adicionar Produto</Label>
-            <div className="flex gap-2">
-              <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products?.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.sku} - {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={addProductToItems} disabled={!selectedProductId}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
+          {canEdit && (
+            <div className="space-y-2">
+              <Label>Adicionar Produto</Label>
+              <div className="flex gap-2">
+                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products?.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.sku} - {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button onClick={addProductToItems} disabled={!selectedProductId}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Items Table */}
           {items.length > 0 && (
@@ -568,7 +827,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                     <TableHead className="w-32">Preço Unit.</TableHead>
                     <TableHead className="w-24">Desc %</TableHead>
                     <TableHead className="w-32 text-right">Subtotal</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    {canEdit && <TableHead className="w-12"></TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -592,6 +851,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                             value={item.quantity}
                             onChange={(e) => updateItem(index, 'quantity', e.target.value)}
                             className="w-20"
+                            disabled={!canEdit}
                           />
                         </TableCell>
                         <TableCell>
@@ -603,7 +863,7 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                               onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
                               onBlur={() => handlePriceBlur(index)}
                               className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
-                              disabled={hasPricingTable && !isAdmin}
+                              disabled={(hasPricingTable && !isAdmin) || !canEdit}
                             />
                             {hasPricingTable && (
                               <DollarSign className={cn(
@@ -623,15 +883,17 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
                         <TableCell className="text-right font-medium">
                           {formatCurrency(item.subtotal)}
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
+                        {canEdit && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })}
@@ -658,36 +920,23 @@ export function OrderDialog({ open, onOpenChange, onSuccess }: OrderDialogProps)
               onChange={(e) => setObservations(e.target.value)}
               placeholder="Observações do pedido..."
               rows={3}
+              disabled={!canEdit}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
+            {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
-          <Button
-            onClick={() => {
-              // For admins: validate if there are prices out of range before submitting
-              if (isAdmin) {
-                const outOfRange = findNextOutOfRangeItem(0);
-                
-                if (outOfRange) {
-                  // Open authorization modal for this item
-                  priceChangeConfirmedRef.current = false;
-                  setPriceChangeConfirmed(false);
-                  setPendingPriceChange(outOfRange);
-                  setPendingSubmit(true);
-                  setShowPriceOverrideModal(true);
-                  return; // Interrupt submit until authorization
-                }
-              }
-              createOrderMutation.mutate();
-            }}
-            disabled={createOrderMutation.isPending || items.length === 0 || (!companyId && !contactId)}
-          >
-            {createOrderMutation.isPending ? 'Criando...' : 'Criar Pedido'}
-          </Button>
+          {canEdit && (
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending || items.length === 0 || (!companyId && !contactId)}
+            >
+              {isPending ? 'Salvando...' : isEditMode ? 'Salvar Alterações' : 'Criar Pedido'}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
 
