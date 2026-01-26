@@ -15,10 +15,22 @@ interface ChatMessageProps {
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === "user";
 
-  // Simple markdown-like formatting
+  // Escape HTML to prevent XSS attacks
+  const escapeHtml = (text: string): string => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // Simple markdown-like formatting with XSS protection
   const formatContent = (content: string) => {
+    // First escape all HTML to prevent XSS
+    let formatted = escapeHtml(content);
     // Replace **bold** with <strong>
-    let formatted = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     // Replace *italic* with <em>
     formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
     // Replace `code` with <code>
