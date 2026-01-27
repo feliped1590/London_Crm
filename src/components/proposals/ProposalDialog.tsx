@@ -326,6 +326,31 @@ export function ProposalDialog({
       await supabase.from('order_items').insert(orderItems);
     }
 
+    // Move deal to "fechado_ganho" if proposal is linked to a deal
+    if (proposalData.deal_id) {
+      const { error: dealUpdateError } = await supabase
+        .from('deals')
+        .update({
+          stage: 'fechado_ganho',
+          closed_at: new Date().toISOString(),
+        })
+        .eq('id', proposalData.deal_id);
+
+      if (!dealUpdateError) {
+        // Record in deal audit log
+        await supabase.from('deal_audit_log').insert({
+          deal_id: proposalData.deal_id,
+          field_name: 'stage',
+          field_label: 'Etapa',
+          old_value: null, // We don't have previous stage here
+          new_value: 'fechado_ganho',
+          changed_by: user?.id,
+        });
+
+        toast.success('Negócio movido para Fechado Ganho!');
+      }
+    }
+
     toast.success('Pedido gerado automaticamente!');
   };
 
