@@ -109,9 +109,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (savedConfig) {
-      const parsedWidgets = savedConfig.widgets as unknown as WidgetType[];
-      if (Array.isArray(parsedWidgets) && parsedWidgets.length > 0) {
-        setWidgets(parsedWidgets);
+      try {
+        const parsedWidgets = savedConfig.widgets as unknown as WidgetType[];
+        // Validate widgets structure
+        if (Array.isArray(parsedWidgets) && parsedWidgets.length > 0) {
+          const validWidgets = parsedWidgets.filter(
+            (w) => w && typeof w === 'object' && w.id && w.type && w.chartType
+          );
+          if (validWidgets.length > 0) {
+            setWidgets(validWidgets);
+          } else {
+            console.warn('Invalid widget configuration, using defaults');
+            setWidgets(DEFAULT_WIDGETS);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing saved dashboard config:', error);
+        toast.error('Erro ao carregar configuração salva, usando padrão');
+        setWidgets(DEFAULT_WIDGETS);
       }
     }
   }, [savedConfig]);
