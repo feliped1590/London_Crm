@@ -191,11 +191,46 @@ serve(async (req) => {
         }
       }
 
+      // Move deal to "fechado_ganho" if proposal is linked to a deal
+      if (proposal.deal_id) {
+        // Get current deal stage for audit log
+        const { data: currentDeal } = await supabase
+          .from('deals')
+          .select('stage')
+          .eq('id', proposal.deal_id)
+          .single();
+
+        const { error: dealUpdateError } = await supabase
+          .from('deals')
+          .update({
+            stage: 'fechado_ganho',
+            closed_at: now,
+          })
+          .eq('id', proposal.deal_id);
+
+        if (!dealUpdateError) {
+          // Record in deal audit log (system as author - null changed_by)
+          await supabase.from('deal_audit_log').insert({
+            deal_id: proposal.deal_id,
+            field_name: 'stage',
+            field_label: 'Etapa',
+            old_value: currentDeal?.stage || null,
+            new_value: 'fechado_ganho',
+            changed_by: null, // System action via client approval
+          });
+
+          console.log('Deal moved to fechado_ganho:', proposal.deal_id);
+        } else {
+          console.error('Error updating deal stage:', dealUpdateError);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: true,
           message: 'Proposta aprovada com sucesso!',
-          order_number: newOrder?.number
+          order_number: newOrder?.number,
+          deal_closed: !!proposal.deal_id
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
