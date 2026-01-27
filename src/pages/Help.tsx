@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Search, 
@@ -24,7 +24,9 @@ import {
   FileText,
   Clock,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Download,
+  Printer
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface HelpSection {
   id: string;
@@ -584,6 +587,7 @@ const helpSections: HelpSection[] = [
 export default function Help() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const printContentRef = useRef<HTMLDivElement>(null);
 
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return helpSections;
@@ -608,6 +612,294 @@ export default function Help() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handlePrintPDF = () => {
+    toast.info('Preparando documento para impressão...');
+    
+    // Create print-friendly content
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Erro ao abrir janela de impressão. Verifique as permissões do navegador.');
+      return;
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Manual do Usuário - CRMPro</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          
+          .cover {
+            text-align: center;
+            padding: 80px 20px;
+            border-bottom: 3px solid #3b82f6;
+            margin-bottom: 40px;
+            page-break-after: always;
+          }
+          
+          .cover h1 {
+            font-size: 36px;
+            color: #1e40af;
+            margin-bottom: 16px;
+          }
+          
+          .cover p {
+            font-size: 18px;
+            color: #64748b;
+          }
+          
+          .cover .version {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #94a3b8;
+          }
+          
+          .toc {
+            margin-bottom: 40px;
+            page-break-after: always;
+          }
+          
+          .toc h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1e40af;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+          }
+          
+          .toc ul {
+            list-style: none;
+          }
+          
+          .toc li {
+            padding: 8px 0;
+            border-bottom: 1px dotted #e2e8f0;
+          }
+          
+          .section {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+          }
+          
+          .section-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          
+          .section-header h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+          }
+          
+          .section-header p {
+            font-size: 14px;
+            opacity: 0.9;
+          }
+          
+          .admin-badge {
+            display: inline-block;
+            background: #fbbf24;
+            color: #78350f;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: 600;
+          }
+          
+          .subsection {
+            margin-bottom: 24px;
+            padding-left: 16px;
+            border-left: 3px solid #e2e8f0;
+          }
+          
+          .subsection h3 {
+            font-size: 16px;
+            color: #334155;
+            margin-bottom: 12px;
+          }
+          
+          .steps {
+            margin: 0;
+            padding-left: 0;
+            list-style: none;
+          }
+          
+          .steps li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 14px;
+          }
+          
+          .step-number {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            background: #dbeafe;
+            color: #1e40af;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+          }
+          
+          .tip {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 13px;
+          }
+          
+          .tip::before {
+            content: '💡 Dica: ';
+            font-weight: 600;
+            color: #166534;
+          }
+          
+          .warning {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            font-size: 13px;
+          }
+          
+          .warning::before {
+            content: '⚠️ Atenção: ';
+            font-weight: 600;
+            color: #dc2626;
+          }
+          
+          .footer {
+            margin-top: 60px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+          }
+          
+          @media print {
+            body {
+              padding: 20px;
+            }
+            
+            .section {
+              page-break-inside: avoid;
+            }
+            
+            .cover {
+              page-break-after: always;
+            }
+            
+            .toc {
+              page-break-after: always;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <!-- Cover Page -->
+        <div class="cover">
+          <h1>📖 Manual do Usuário</h1>
+          <p>CRMPro - Sistema de Gestão de Relacionamento com Clientes</p>
+          <div class="version">
+            Versão 1.0 • Gerado em ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+          </div>
+        </div>
+        
+        <!-- Table of Contents -->
+        <div class="toc">
+          <h2>Índice</h2>
+          <ul>
+            ${helpSections.map(section => `
+              <li>${section.title}${section.adminOnly ? ' <span class="admin-badge">Admin</span>' : ''}</li>
+            `).join('')}
+          </ul>
+        </div>
+        
+        <!-- Sections -->
+        ${helpSections.map(section => `
+          <div class="section">
+            <div class="section-header">
+              <h2>${section.title}${section.adminOnly ? ' <span class="admin-badge">Admin</span>' : ''}</h2>
+              <p>${section.description}</p>
+            </div>
+            
+            ${section.content.map(item => `
+              <div class="subsection">
+                <h3>${item.subtitle}</h3>
+                
+                ${item.steps && item.steps.length > 0 ? `
+                  <ol class="steps">
+                    ${item.steps.map((step, idx) => `
+                      <li>
+                        <span class="step-number">${idx + 1}</span>
+                        <span>${step}</span>
+                      </li>
+                    `).join('')}
+                  </ol>
+                ` : ''}
+                
+                ${item.tips && item.tips.length > 0 ? item.tips.map(tip => `
+                  <div class="tip">${tip}</div>
+                `).join('') : ''}
+                
+                ${item.warnings && item.warnings.length > 0 ? item.warnings.map(warning => `
+                  <div class="warning">${warning}</div>
+                `).join('') : ''}
+              </div>
+            `).join('')}
+          </div>
+        `).join('')}
+        
+        <!-- Footer -->
+        <div class="footer">
+          <p>CRMPro - Manual do Usuário</p>
+          <p>© ${new Date().getFullYear()} - Todos os direitos reservados</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    
+    // Wait for content to load then print
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        toast.success('Documento pronto para impressão/download!');
+      }, 250);
+    };
   };
 
   return (
@@ -666,13 +958,19 @@ export default function Help() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 space-y-6">
+      <main className="flex-1 space-y-6" ref={printContentRef}>
         {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Central de Ajuda</h1>
-          <p className="text-muted-foreground">
-            Encontre instruções detalhadas para todas as funcionalidades do CRMPro.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Central de Ajuda</h1>
+            <p className="text-muted-foreground">
+              Encontre instruções detalhadas para todas as funcionalidades do CRMPro.
+            </p>
+          </div>
+          <Button onClick={handlePrintPDF} className="shrink-0">
+            <Download className="mr-2 h-4 w-4" />
+            Baixar PDF
+          </Button>
         </div>
 
         {/* Sections */}
