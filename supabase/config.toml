@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.analyze-whatsapp-conversation]
 verify_jwt = false
+
+[functions.zapi-get-qrcode]
+verify_jwt = false

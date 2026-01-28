@@ -8,6 +8,7 @@ import {
   Mail, 
   BarChart3, 
   Settings,
+  Plug,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -52,7 +53,7 @@ const allNavItems: NavItem[] = [
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   // { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' }, // Temporariamente oculto para apresentação
-  // { to: '/integracao-iniflex', icon: RefreshCw, label: 'Iniflex', moduleKey: 'iniflex' }, // Temporariamente oculto para apresentação
+  { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations' },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
 ];
