@@ -884,7 +884,7 @@ export default function Settings() {
                 </div>
               ) : userRoles?.length ? (
                 <div className="space-y-2">
-                  {userRoles.map((ur) => {
+                  {userRoles.filter(ur => ur.role !== 'desenvolvedor').map((ur) => {
                     const fullName = ur.profile?.full_name || 'Usuário';
                     const isCurrentUser = ur.user_id === user?.id;
                     

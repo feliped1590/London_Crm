@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, RefreshCw, Smartphone, Wifi, WifiOff, ExternalLink, Copy, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Smartphone, Wifi, WifiOff, ExternalLink, Copy, Trash2, QrCode } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { QRCodeConnectionModal } from './QRCodeConnectionModal';
 import { ptBR } from 'date-fns/locale';
 
 export function InstanceManager() {
@@ -19,6 +20,7 @@ export function InstanceManager() {
   const checkStatus = useCheckInstanceStatus();
   const deleteInstance = useDeleteInstance();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [qrCodeInstance, setQrCodeInstance] = useState<WhatsAppInstance | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     instance_id: '',
@@ -172,12 +174,20 @@ export function InstanceManager() {
               instance={instance} 
               onCheckStatus={handleCheckStatus}
               onDelete={handleDeleteInstance}
+              onConnectQR={() => setQrCodeInstance(instance)}
               isCheckingStatus={checkStatus.isPending}
               isDeleting={deleteInstance.isPending}
             />
           ))}
         </div>
       )}
+
+      {/* QR Code Modal */}
+      <QRCodeConnectionModal
+        instance={qrCodeInstance}
+        isOpen={!!qrCodeInstance}
+        onClose={() => setQrCodeInstance(null)}
+      />
 
       {/* Help Link */}
       <Card className="bg-muted/50">
@@ -209,11 +219,12 @@ interface InstanceCardProps {
   instance: WhatsAppInstance;
   onCheckStatus: (instance: WhatsAppInstance) => void;
   onDelete: (instanceId: string) => void;
+  onConnectQR: () => void;
   isCheckingStatus: boolean;
   isDeleting: boolean;
 }
 
-function InstanceCard({ instance, onCheckStatus, onDelete, isCheckingStatus, isDeleting }: InstanceCardProps) {
+function InstanceCard({ instance, onCheckStatus, onDelete, onConnectQR, isCheckingStatus, isDeleting }: InstanceCardProps) {
   const isConnected = instance.status === 'connected';
 
   return (
@@ -257,17 +268,28 @@ function InstanceCard({ instance, onCheckStatus, onDelete, isCheckingStatus, isD
             </p>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            onClick={() => onCheckStatus(instance)}
-            disabled={isCheckingStatus}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingStatus ? 'animate-spin' : ''}`} />
-            Verificar Status
-          </Button>
+        <div className="flex flex-col gap-2">
+          {!isConnected && (
+            <Button 
+              size="sm" 
+              className="w-full gap-2"
+              onClick={onConnectQR}
+            >
+              <QrCode className="h-4 w-4" />
+              Conectar via QR Code
+            </Button>
+          )}
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => onCheckStatus(instance)}
+              disabled={isCheckingStatus}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isCheckingStatus ? 'animate-spin' : ''}`} />
+              Verificar
+            </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button 
@@ -302,6 +324,7 @@ function InstanceCard({ instance, onCheckStatus, onDelete, isCheckingStatus, isD
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         </div>
       </CardContent>
     </Card>

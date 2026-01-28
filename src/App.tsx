@@ -18,7 +18,7 @@ import Emails from "./pages/Emails";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import WhatsApp from "./pages/WhatsApp";
-import InflexIntegration from "./pages/InflexIntegration";
+import Integrations from "./pages/Integrations";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
 import Bots from "./pages/Bots";
@@ -104,7 +104,7 @@ const App = () => (
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/pricing" element={<PricingTables />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/integracao-iniflex" element={<InflexIntegration />} />
+                <Route path="/integrations" element={<Integrations />} />
                 <Route path="/help" element={<Help />} />
               </Route>
             </Route>
