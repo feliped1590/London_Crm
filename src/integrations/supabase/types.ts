@@ -2071,7 +2071,7 @@ export type Database = {
     }
     Enums: {
       access_level: "restrito" | "total"
-      app_role: "admin" | "vendedor" | "atendente"
+      app_role: "admin" | "vendedor" | "atendente" | "desenvolvedor"
       automation_action:
         | "send_whatsapp"
         | "create_task"
@@ -2242,7 +2242,7 @@ export const Constants = {
   public: {
     Enums: {
       access_level: ["restrito", "total"],
-      app_role: ["admin", "vendedor", "atendente"],
+      app_role: ["admin", "vendedor", "atendente", "desenvolvedor"],
       automation_action: [
         "send_whatsapp",
         "create_task",
