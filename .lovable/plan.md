@@ -1,19 +1,21 @@
 
 
-# Correção: Atribuir Roles Corretamente
+# Correção das Roles de Usuário
 
-## Estado Atual (Incorreto)
+## Situação Atual (Incorreta)
 
-| E-mail | Nome | Role Atual | Role Correto |
-|--------|------|------------|--------------|
-| fdkdigital2@gmail.com | José | desenvolvedor ❌ | atendente |
-| felipeduarte1590@hotmail.com | Felipe Duarte (Você) | admin | desenvolvedor |
+| E-mail | Nome | Role Atual |
+|--------|------|------------|
+| felipeduarte1590@hotmail.com | Felipe Duarte (Você) | admin |
+| bianca.mello@qualyvac.com.br | Bianca | admin |
+| felipe.duarte.univest@gmail.com | Jonatan | vendedor |
+| fdkdigital2@gmail.com | José | desenvolvedor ❌ |
 
 ---
 
-## Operações Necessárias
+## Correções Necessárias
 
-### 1. Reverter José para atendente
+### Operação 1: Reverter José para atendente
 
 ```sql
 UPDATE public.user_roles 
@@ -21,7 +23,7 @@ SET role = 'atendente'
 WHERE user_id = 'a3d2d266-1d82-437f-b05c-4136fe9441a6';
 ```
 
-### 2. Alterar você para desenvolvedor
+### Operação 2: Alterar você para desenvolvedor
 
 ```sql
 UPDATE public.user_roles 
@@ -31,7 +33,7 @@ WHERE user_id = '84652ee7-a841-4702-880d-a75952b22aeb';
 
 ---
 
-## Resultado Final
+## Resultado Final Esperado
 
 | E-mail | Nome | Role |
 |--------|------|------|
@@ -40,8 +42,18 @@ WHERE user_id = '84652ee7-a841-4702-880d-a75952b22aeb';
 | felipe.duarte.univest@gmail.com | Jonatan | vendedor |
 | felipeduarte1590@hotmail.com | Felipe Duarte | desenvolvedor |
 
-**Efeitos para você (Felipe Duarte):**
-- Não aparecerá mais na lista de usuários em Configurações
-- Não será contabilizado no limite de licenças (4 → 3 usuários contados)
-- Manterá todas as permissões de administrador
+---
+
+## Efeitos para Você (Felipe Duarte)
+
+Após a correção:
+- Você não aparecerá mais na lista de usuários em Configurações
+- Você não será contabilizado no limite de licenças (4 para 3 usuários)
+- Você manterá todas as permissões de administrador (o role desenvolvedor tem acesso total)
+
+---
+
+## Detalhes Técnicos
+
+A alteração será feita via migração SQL que executará ambos os UPDATEs em uma única transação, garantindo que as mudanças sejam atômicas.
 
