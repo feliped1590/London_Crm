@@ -34,16 +34,21 @@ export interface SandboxResult {
  * 
  * @param payload - Dados a serem enviados (a chave será injetada automaticamente)
  * @param timeoutMs - Timeout em milissegundos (default: 15000)
+ * @param customUrl - URL customizada (opcional, usa env var se não fornecida)
+ * @param customToken - Token customizado (opcional, usa env var se não fornecido)
  * @returns SandboxResult com todos os detalhes para debug
  */
 export async function sendToInflexSandbox(
   payload: unknown,
-  timeoutMs: number = 15000
+  timeoutMs: number = 15000,
+  customUrl?: string,
+  customToken?: string
 ): Promise<SandboxResult> {
   const startTime = Date.now();
   
-  const SANDBOX_URL = Deno.env.get('INIFLEX_SANDBOX_API_URL');
-  const SANDBOX_TOKEN = Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
+  // Usar valores customizados ou fallback para env vars
+  const SANDBOX_URL = customUrl || Deno.env.get('INIFLEX_SANDBOX_API_URL');
+  const SANDBOX_TOKEN = customToken || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
 
   // Validação de credenciais
   if (!SANDBOX_URL || !SANDBOX_TOKEN) {

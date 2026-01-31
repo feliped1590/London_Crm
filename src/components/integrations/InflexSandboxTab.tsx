@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Play, 
   RefreshCw, 
@@ -21,7 +21,9 @@ import {
   RotateCcw,
   History,
   Terminal,
-  Settings2
+  Settings2,
+  Info,
+  Trash2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -74,6 +76,10 @@ export function InflexSandboxTab() {
   const [timeoutMs, setTimeoutMs] = useState(15000);
   const [lastResult, setLastResult] = useState<SandboxTestResult | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  
+  // Estados para URL e Token manuais
+  const [apiUrl, setApiUrl] = useState('');
+  const [apiToken, setApiToken] = useState('');
 
   // Buscar logs anteriores
   const { data: logs, isLoading: isLoadingLogs, refetch: refetchLogs } = useQuery({
@@ -93,7 +99,13 @@ export function InflexSandboxTab() {
   const testMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
       const { data, error } = await supabase.functions.invoke('iniflex-sandbox-test', {
-        body: { payload, timeout_ms: timeoutMs, save_log: true },
+        body: { 
+          payload, 
+          timeout_ms: timeoutMs, 
+          save_log: true,
+          api_url: apiUrl || undefined,
+          api_token: apiToken || undefined,
+        },
       });
       if (error) throw error;
       return data as SandboxTestResult;
@@ -132,6 +144,13 @@ export function InflexSandboxTab() {
     setPayloadJson(JSON.stringify(log.request_payload, null, 2));
     setJsonError(null);
   };
+
+  const handleClearManualConfig = () => {
+    setApiUrl('');
+    setApiToken('');
+  };
+
+  const isUsingManualConfig = apiUrl.trim() !== '' || apiToken.trim() !== '';
 
   const validateJson = (value: string) => {
     try {
@@ -182,31 +201,73 @@ export function InflexSandboxTab() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>URL da API (Sandbox)</Label>
-                <Input 
-                  value={lastResult?.test_result.request.url || 'Configurado via INIFLEX_SANDBOX_API_URL'}
-                  disabled
-                  className="font-mono text-xs"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Token de Autenticação</Label>
-                <div className="flex items-center gap-2">
+              <TooltipProvider>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label>URL da API (Sandbox)</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-xs">
+                          Deixe vazio para usar INIFLEX_SANDBOX_API_URL do Vault
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    {apiUrl && (
+                      <Badge variant="secondary" className="text-xs">Manual</Badge>
+                    )}
+                  </div>
                   <Input 
-                    type="password"
-                    value={lastResult?.test_result.request.tokenPreview || '••••••••••••••••'}
-                    disabled
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    placeholder="https://iniflex.novafix.ind.br/api/v1/runtime/endpoint/integracao/iniflex/json"
                     className="font-mono text-xs"
                   />
-                  <Badge variant="outline">
-                    {lastResult?.test_result.request.tokenLength || '?'} chars
-                  </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Token armazenado via INIFLEX_SANDBOX_API_TOKEN (Vault)
-                </p>
-              </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label>Token de Autenticação</Label>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="max-w-xs text-xs">
+                          Deixe vazio para usar INIFLEX_SANDBOX_API_TOKEN do Vault
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    {apiToken && (
+                      <Badge variant="secondary" className="text-xs">
+                        Manual ({apiToken.length} chars)
+                      </Badge>
+                    )}
+                  </div>
+                  <Input 
+                    type="password"
+                    value={apiToken}
+                    onChange={(e) => setApiToken(e.target.value)}
+                    placeholder="Cole o token aqui..."
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </TooltipProvider>
+
+              {isUsingManualConfig && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleClearManualConfig}
+                  className="gap-1 text-xs"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Limpar e usar Vault
+                </Button>
+              )}
+
               <div className="space-y-2">
                 <Label>Timeout (ms)</Label>
                 <Input 
