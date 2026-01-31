@@ -25,6 +25,7 @@ export type SyncStatus = typeof SYNC_STATUS[keyof typeof SYNC_STATUS];
 export const ENTITY_TYPE = {
   COMPANY: 'company',
   CONTACT: 'contact',
+  CUSTOMER_LOOKUP: 'customer_lookup',
 } as const;
 
 export type EntityType = typeof ENTITY_TYPE[keyof typeof ENTITY_TYPE];

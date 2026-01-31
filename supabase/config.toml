@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.lookup-cnpj]
 verify_jwt = false
+
+[functions.iniflex-customer-lookup]
+verify_jwt = true
