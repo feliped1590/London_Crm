@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.zapi-get-qrcode]
 verify_jwt = false
+
+[functions.lookup-cnpj]
+verify_jwt = false
