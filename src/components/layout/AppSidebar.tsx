@@ -44,8 +44,7 @@ const allNavItems: NavItem[] = [
   { to: '/today', icon: CalendarCheck, label: 'Meu Dia', moduleKey: 'dashboard' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', moduleKey: 'dashboard' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
-  { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
-  { to: '/contacts', icon: Users, label: 'Contatos', moduleKey: 'contacts' },
+  { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
   { to: '/pricing', icon: DollarSign, label: 'Tabelas de Preços', moduleKey: 'pricing' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
@@ -54,7 +53,6 @@ const allNavItems: NavItem[] = [
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
-  // { to: '/insights', icon: Lightbulb, label: 'Insights', moduleKey: 'insights' }, // Temporariamente oculto para apresentação
   { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations' },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },

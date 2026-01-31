@@ -13,6 +13,9 @@ import Dashboard from "./pages/Dashboard";
 import Today from "./pages/Today";
 import Companies from "./pages/Companies";
 import Contacts from "./pages/Contacts";
+import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
+import CustomerNew from "./pages/CustomerNew";
 import Pipeline from "./pages/Pipeline";
 import Tasks from "./pages/Tasks";
 import Emails from "./pages/Emails";
@@ -92,6 +95,9 @@ const App = () => (
               <Route element={<AppLayout />}>
                 <Route path="/today" element={<Today />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/customers/new" element={<CustomerNew />} />
+                <Route path="/customers/:id" element={<CustomerDetail />} />
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/pipeline" element={<Pipeline />} />
