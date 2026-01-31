@@ -827,6 +827,48 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_sync_logs: {
+        Row: {
+          created_at: string | null
+          direction: string
+          entity_id: string
+          entity_type: string
+          error_message: string | null
+          external_id: string | null
+          id: string
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          direction?: string
+          entity_id: string
+          entity_type: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          direction?: string
+          entity_id?: string
+          entity_type?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       license_settings: {
         Row: {
           created_at: string
