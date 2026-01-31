@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
+import { GlobalSearch } from './GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,15 @@ export function AppLayout() {
         </header>
       )}
 
+      {/* Desktop Header with Global Search */}
+      {!isMobile && (
+        <header className="fixed top-0 left-64 right-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-6 py-3">
+          <div className="max-w-md">
+            <GlobalSearch />
+          </div>
+        </header>
+      )}
+
       {/* Mobile Backdrop */}
       {isMobile && sidebarOpen && (
         <div 
@@ -47,7 +57,7 @@ export function AppLayout() {
       {/* Main Content */}
       <main className={cn(
         "min-h-screen",
-        !isMobile && "pl-64"
+        !isMobile && "pl-64 pt-16"
       )}>
         <div className={cn(
           isMobile ? "p-4" : "p-6"
