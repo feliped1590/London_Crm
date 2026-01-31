@@ -406,8 +406,9 @@ export default function Pipeline() {
   
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
-      // Filter by pipeline
-      if (currentPipelineId && deal.pipeline_id !== currentPipelineId) return false;
+      // Filter by pipeline - deals sem pipeline_id são considerados do pipeline padrão
+      const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;
+      if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;
       
       // Filter by owner
       if (filterOwner === 'mine' && deal.owner_id !== user?.id) return false;
@@ -420,7 +421,7 @@ export default function Pipeline() {
       
       return true;
     }) || [];
-  }, [deals, filterOwner, filterStage, filterCompany, user?.id, currentPipelineId]);
+  }, [deals, filterOwner, filterStage, filterCompany, user?.id, currentPipelineId, defaultPipeline?.id]);
 
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
