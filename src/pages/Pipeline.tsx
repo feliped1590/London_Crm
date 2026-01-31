@@ -480,6 +480,7 @@ export default function Pipeline() {
             
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
+                {/* Sprint 4: 7 tabs - Dados, Timeline, Notas, Propostas, Equipe, Histórico, WhatsApp */}
                 <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
                   <TabsTrigger value="atividades" className="flex items-center gap-2">
