@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageCircle, RefreshCw } from 'lucide-react';
+import { MessageCircle, RefreshCw, FlaskConical } from 'lucide-react';
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { InflexTab } from '@/components/integrations/InflexTab';
+import { InflexSandboxTab } from '@/components/integrations/InflexSandboxTab';
 
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState('whatsapp');
@@ -24,6 +25,10 @@ export default function Integrations() {
             <RefreshCw className="h-4 w-4" />
             Iniflex
           </TabsTrigger>
+          <TabsTrigger value="sandbox" className="gap-2">
+            <FlaskConical className="h-4 w-4" />
+            Sandbox
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="whatsapp" className="mt-6">
@@ -32,6 +37,10 @@ export default function Integrations() {
 
         <TabsContent value="iniflex" className="mt-6">
           <InflexTab />
+        </TabsContent>
+
+        <TabsContent value="sandbox" className="mt-6">
+          <InflexSandboxTab />
         </TabsContent>
       </Tabs>
     </div>
