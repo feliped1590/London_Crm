@@ -1,18 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { ArrowLeft, ArrowRight, Building2, User, Check } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ArrowLeft, ArrowRight, Building2, User, Check, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
+import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 
 const industries = [
@@ -30,6 +30,12 @@ export default function CustomerNew() {
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // CNPJ lookup states
+  const [isLookingUpCnpj, setIsLookingUpCnpj] = useState(false);
+  const [cnpjLookupDone, setCnpjLookupDone] = useState(false);
+  const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
+  const lastLookedUpCnpj = useRef<string>('');
   
   // Step 1: Company/PF data
   const [companyForm, setCompanyForm] = useState({
@@ -53,12 +59,63 @@ export default function CustomerNew() {
     job_title: '',
   });
 
+  // CNPJ lookup function
+  const lookupCnpj = async (cnpjClean: string) => {
+    if (cnpjClean.length !== 14 || cnpjClean === lastLookedUpCnpj.current) return;
+    if (!isValidCNPJ(cnpjClean)) return; // Don't lookup invalid CNPJ
+    
+    lastLookedUpCnpj.current = cnpjClean;
+    setIsLookingUpCnpj(true);
+    setCnpjLookupError(null);
+    
+    try {
+      const response = await supabase.functions.invoke('lookup-cnpj', {
+        body: { cnpj: cnpjClean }
+      });
+      
+      if (response.data?.success) {
+        const { data } = response.data;
+        
+        // Fill fields - don't overwrite if already edited by user
+        setCompanyForm(prev => ({
+          ...prev,
+          name: prev.name || data.razao_social,
+          fantasia: prev.fantasia || data.nome_fantasia,
+          phone: prev.phone || data.telefone,
+          address: prev.address || [data.endereco.logradouro, data.endereco.numero].filter(Boolean).join(', '),
+          city: prev.city || data.endereco.cidade,
+          state: prev.state || data.endereco.uf,
+        }));
+        
+        setCnpjLookupDone(true);
+      } else {
+        setCnpjLookupError(response.data?.error || 'Erro ao consultar');
+      }
+    } catch (error) {
+      console.error('CNPJ lookup error:', error);
+      setCnpjLookupError('Não foi possível consultar. Preencha manualmente.');
+    } finally {
+      setIsLookingUpCnpj(false);
+    }
+  };
+
   const createCustomerMutation = useMutation({
     mutationFn: async () => {
       setIsSubmitting(true);
       
-      // Create company first
       const documentClean = cleanDocument(companyForm.document);
+      
+      // Backend validation: PJ requires valid CNPJ
+      if (customerType === 'PJ') {
+        if (!documentClean || documentClean.length !== 14) {
+          throw new Error('CNPJ é obrigatório para Pessoa Jurídica');
+        }
+        if (!isValidCNPJ(documentClean)) {
+          throw new Error('CNPJ inválido');
+        }
+      }
+      
+      // Create company first
       const companyData: any = {
         name: customerType === 'PJ' ? companyForm.name : `${contactForm.first_name} ${contactForm.last_name}`.trim(),
         fantasia: companyForm.fantasia || null,
@@ -109,20 +166,43 @@ export default function CustomerNew() {
       toast.success('Cliente criado com sucesso!');
       navigate(`/customers/${company.id}`);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error creating customer:', error);
-      toast.error('Erro ao criar cliente');
+      toast.error(error.message || 'Erro ao criar cliente');
     },
     onSettled: () => {
       setIsSubmitting(false);
     },
   });
 
+  const validateCnpjField = (): boolean => {
+    if (customerType !== 'PJ') return true;
+    
+    const cnpjClean = cleanDocument(companyForm.document);
+    
+    if (!cnpjClean || cnpjClean.length !== 14) {
+      toast.error('CNPJ é obrigatório para Pessoa Jurídica');
+      return false;
+    }
+    
+    if (!isValidCNPJ(cnpjClean)) {
+      toast.error('CNPJ inválido. Verifique os dígitos');
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleNext = () => {
     // Validate step 1
-    if (customerType === 'PJ' && !companyForm.name) {
-      toast.error('Informe a razão social');
-      return;
+    if (customerType === 'PJ') {
+      if (!companyForm.name) {
+        toast.error('Informe a razão social');
+        return;
+      }
+      if (!validateCnpjField()) {
+        return;
+      }
     }
     setStep(2);
   };
@@ -144,13 +224,44 @@ export default function CustomerNew() {
       return;
     }
     
+    // Final validation for PJ
+    if (!validateCnpjField()) {
+      setStep(1);
+      return;
+    }
+    
     createCustomerMutation.mutate();
   };
 
   const handleDocumentChange = (value: string) => {
     const formatted = customerType === 'PJ' ? formatCNPJ(value) : formatCPF(value);
     setCompanyForm({ ...companyForm, document: formatted });
+    
+    // Reset lookup state when CNPJ changes
+    if (customerType === 'PJ') {
+      const cnpjClean = cleanDocument(formatted);
+      if (cnpjClean !== lastLookedUpCnpj.current) {
+        setCnpjLookupDone(false);
+        setCnpjLookupError(null);
+      }
+      
+      // Auto-lookup when CNPJ is complete (14 digits)
+      if (cnpjClean.length === 14 && isValidCNPJ(cnpjClean)) {
+        lookupCnpj(cnpjClean);
+      }
+    }
   };
+
+  const getCnpjValidationState = () => {
+    if (customerType !== 'PJ') return null;
+    const cnpjClean = cleanDocument(companyForm.document);
+    if (cnpjClean.length === 0) return null;
+    if (cnpjClean.length < 14) return 'incomplete';
+    if (!isValidCNPJ(cnpjClean)) return 'invalid';
+    return 'valid';
+  };
+
+  const cnpjState = getCnpjValidationState();
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -192,6 +303,9 @@ export default function CustomerNew() {
                 onValueChange={(v) => {
                   setCustomerType(v as CustomerType);
                   setCompanyForm({ ...companyForm, document: '' });
+                  setCnpjLookupDone(false);
+                  setCnpjLookupError(null);
+                  lastLookedUpCnpj.current = '';
                 }}
                 className="flex gap-4"
               >
@@ -215,6 +329,69 @@ export default function CustomerNew() {
             <div className="grid grid-cols-2 gap-4">
               {customerType === 'PJ' ? (
                 <>
+                  {/* CNPJ field with lookup - comes first for PJ */}
+                  <div className="col-span-2">
+                    <Label htmlFor="document">CNPJ *</Label>
+                    <div className="relative">
+                      <Input
+                        id="document"
+                        value={companyForm.document}
+                        onChange={(e) => handleDocumentChange(e.target.value)}
+                        placeholder="00.000.000/0000-00"
+                        maxLength={18}
+                        disabled={isLookingUpCnpj}
+                        className={
+                          cnpjState === 'invalid' 
+                            ? 'border-destructive focus-visible:ring-destructive' 
+                            : cnpjState === 'valid' 
+                              ? 'border-green-500 focus-visible:ring-green-500' 
+                              : ''
+                        }
+                      />
+                      {isLookingUpCnpj && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                      {cnpjState === 'valid' && !isLookingUpCnpj && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                    {isLookingUpCnpj && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Buscando dados na Receita Federal...
+                      </p>
+                    )}
+                    {cnpjState === 'invalid' && (
+                      <p className="text-sm text-destructive mt-1">
+                        CNPJ inválido. Verifique os dígitos.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Alert for lookup result */}
+                  {cnpjLookupDone && (
+                    <Alert className="col-span-2 border-green-500/50 bg-green-500/10">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <AlertTitle className="text-green-700">Dados encontrados</AlertTitle>
+                      <AlertDescription className="text-green-600">
+                        Dados obtidos da Receita Federal via BrasilAPI. Confira antes de salvar.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {cnpjLookupError && (
+                    <Alert className="col-span-2 border-yellow-500/50 bg-yellow-500/10">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <AlertTitle className="text-yellow-700">Consulta indisponível</AlertTitle>
+                      <AlertDescription className="text-yellow-600">
+                        {cnpjLookupError}. Você pode preencher os dados manualmente.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="col-span-2">
                     <Label htmlFor="name">Razão Social *</Label>
                     <Input
@@ -224,7 +401,7 @@ export default function CustomerNew() {
                       required
                     />
                   </div>
-                  <div>
+                  <div className="col-span-2 sm:col-span-1">
                     <Label htmlFor="fantasia">Nome Fantasia</Label>
                     <Input
                       id="fantasia"
@@ -232,15 +409,21 @@ export default function CustomerNew() {
                       onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="document">CNPJ</Label>
-                    <Input
-                      id="document"
-                      value={companyForm.document}
-                      onChange={(e) => handleDocumentChange(e.target.value)}
-                      placeholder="00.000.000/0000-00"
-                      maxLength={18}
-                    />
+                  <div className="col-span-2 sm:col-span-1">
+                    <Label htmlFor="industry">Setor</Label>
+                    <Select 
+                      value={companyForm.industry} 
+                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {industries.map((i) => (
+                          <SelectItem key={i} value={i}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </>
               ) : (
@@ -274,24 +457,14 @@ export default function CustomerNew() {
                 />
               </div>
               
-              {customerType === 'PJ' && (
-                <div>
-                  <Label htmlFor="industry">Setor</Label>
-                  <Select 
-                    value={companyForm.industry} 
-                    onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {industries.map((i) => (
-                        <SelectItem key={i} value={i}>{i}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="col-span-2">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={companyForm.address}
+                  onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                />
+              </div>
               
               <div>
                 <Label htmlFor="city">Cidade</Label>
@@ -314,7 +487,11 @@ export default function CustomerNew() {
             </div>
 
             <div className="flex justify-end">
-              <Button onClick={handleNext} className="gap-2">
+              <Button 
+                onClick={handleNext} 
+                className="gap-2"
+                disabled={customerType === 'PJ' && cnpjState !== 'valid'}
+              >
                 Próximo: Contato
                 <ArrowRight className="h-4 w-4" />
               </Button>
