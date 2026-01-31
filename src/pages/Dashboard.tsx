@@ -53,6 +53,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { InsightsSummary } from "@/components/insights/InsightsSummary";
+import { GoalProgressWidget } from "@/components/dashboard/GoalProgressWidget";
 import { toast } from "sonner";
 
 interface ExtendedDashboardStats extends DashboardStats {
@@ -455,8 +456,9 @@ export default function Dashboard() {
         </SortableContext>
       </DndContext>
 
-      {/* Secondary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Secondary Stats with Goal Progress */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <GoalProgressWidget />
         <StatCard
           title="Propostas Pendentes"
           value={stats?.pendingProposals || 0}

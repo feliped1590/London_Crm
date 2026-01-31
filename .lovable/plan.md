@@ -1,6 +1,26 @@
 
 # Backlog Executável: Fase 1 - Licença para Jogar
 
+## ✅ Progresso da Implementação
+
+### Sprint 1: Fundação - CONCLUÍDO
+- [x] Migração: Tabela `pipelines` criada com RLS
+- [x] Migração: Tabela `sales_goals` criada com RLS
+- [x] Migração: Coluna `pipeline_id` adicionada a `deals`
+- [x] Hook `usePipelines` implementado
+- [x] Hook `useSalesGoals` implementado
+- [x] Componente `PipelinesManager` em Settings
+- [x] Componente `SalesGoalsManager` em Settings
+- [x] Componente `GoalProgressWidget` no Dashboard
+
+### Próximos Passos (Sprint 2)
+- [ ] Página `/today` (Modo Execução Diário)
+- [ ] Hook `useTodayData`
+- [ ] Busca Global com Cmd+K
+- [ ] Badge "Dias na Etapa" no Pipeline
+
+---
+
 ## Ajustes Conceituais Incorporados
 
 ### 1. Responsável por Etapa (Documentado)

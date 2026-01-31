@@ -1,0 +1,171 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  description: string | null;
+  type: 'sales' | 'post_sales' | 'support';
+  is_default: boolean;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PipelineInsert {
+  name: string;
+  description?: string;
+  type?: 'sales' | 'post_sales' | 'support';
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+export interface PipelineUpdate extends Partial<PipelineInsert> {
+  id: string;
+}
+
+export function usePipelines() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: pipelines, isLoading, error } = useQuery({
+    queryKey: ['pipelines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipelines')
+        .select('*')
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data as Pipeline[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: allPipelines } = useQuery({
+    queryKey: ['pipelines', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipelines')
+        .select('*')
+        .order('is_default', { ascending: false })
+        .order('name', { ascending: true });
+      
+      if (error) throw error;
+      return data as Pipeline[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const defaultPipeline = pipelines?.find(p => p.is_default) || pipelines?.[0];
+
+  const createPipeline = useMutation({
+    mutationFn: async (data: PipelineInsert) => {
+      const { data: result, error } = await supabase
+        .from('pipelines')
+        .insert({
+          ...data,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return result as Pipeline;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      toast.success('Pipeline criado com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Error creating pipeline:', error);
+      toast.error('Erro ao criar pipeline');
+    },
+  });
+
+  const updatePipeline = useMutation({
+    mutationFn: async ({ id, ...data }: PipelineUpdate) => {
+      const { data: result, error } = await supabase
+        .from('pipelines')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return result as Pipeline;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      toast.success('Pipeline atualizado!');
+    },
+    onError: (error) => {
+      console.error('Error updating pipeline:', error);
+      toast.error('Erro ao atualizar pipeline');
+    },
+  });
+
+  const deletePipeline = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('pipelines')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      toast.success('Pipeline excluído!');
+    },
+    onError: (error) => {
+      console.error('Error deleting pipeline:', error);
+      toast.error('Erro ao excluir pipeline');
+    },
+  });
+
+  const setDefaultPipeline = useMutation({
+    mutationFn: async (id: string) => {
+      // First, unset all defaults
+      const { error: unsetError } = await supabase
+        .from('pipelines')
+        .update({ is_default: false })
+        .neq('id', id);
+      
+      if (unsetError) throw unsetError;
+
+      // Then, set the new default
+      const { error } = await supabase
+        .from('pipelines')
+        .update({ is_default: true })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      toast.success('Pipeline padrão definido!');
+    },
+    onError: (error) => {
+      console.error('Error setting default pipeline:', error);
+      toast.error('Erro ao definir pipeline padrão');
+    },
+  });
+
+  return {
+    pipelines,
+    allPipelines,
+    defaultPipeline,
+    isLoading,
+    error,
+    createPipeline,
+    updatePipeline,
+    deletePipeline,
+    setDefaultPipeline,
+  };
+}

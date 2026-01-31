@@ -663,6 +663,7 @@ export type Database = {
           name: string
           notes: string | null
           owner_id: string | null
+          pipeline_id: string | null
           probability: number | null
           stage: Database["public"]["Enums"]["deal_stage"]
           updated_at: string
@@ -681,6 +682,7 @@ export type Database = {
           name: string
           notes?: string | null
           owner_id?: string | null
+          pipeline_id?: string | null
           probability?: number | null
           stage?: Database["public"]["Enums"]["deal_stage"]
           updated_at?: string
@@ -699,6 +701,7 @@ export type Database = {
           name?: string
           notes?: string | null
           owner_id?: string | null
+          pipeline_id?: string | null
           probability?: number | null
           stage?: Database["public"]["Enums"]["deal_stage"]
           updated_at?: string
@@ -717,6 +720,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -1113,29 +1123,85 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          default_owner_id: string | null
           id: string
           name: string
+          pipeline_id: string | null
           probability: number | null
+          sla_hours: number | null
+          sla_warning_hours: number | null
           sort_order: number
           stage: Database["public"]["Enums"]["deal_stage"]
         }
         Insert: {
           color?: string | null
           created_at?: string
+          default_owner_id?: string | null
           id?: string
           name: string
+          pipeline_id?: string | null
           probability?: number | null
+          sla_hours?: number | null
+          sla_warning_hours?: number | null
           sort_order: number
           stage: Database["public"]["Enums"]["deal_stage"]
         }
         Update: {
           color?: string | null
           created_at?: string
+          default_owner_id?: string | null
           id?: string
           name?: string
+          pipeline_id?: string | null
           probability?: number | null
+          sla_hours?: number | null
+          sla_warning_hours?: number | null
           sort_order?: number
           stage?: Database["public"]["Enums"]["deal_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipelines: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1625,6 +1691,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_goals: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          period_end: string
+          period_start: string
+          period_type: string
+          target_deals: number | null
+          target_value: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          period_type?: string
+          target_deals?: number | null
+          target_value?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          target_deals?: number | null
+          target_value?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       system_modules: {
         Row: {
