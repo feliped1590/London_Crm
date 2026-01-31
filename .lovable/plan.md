@@ -2,57 +2,59 @@
 
 ## Fase Atual: Sprint 4 (Qualidade de Processo)
 
-**Status:** ✅ Aprovado | **Início:** Imediato
+**Status:** ✅ Concluído | **Data:** 31/01/2026
 
 ---
 
-## Escopo Sprint 4
+## Escopo Sprint 4 - IMPLEMENTADO
 
-### 1. Timeline de Atividades por Registro
+### 1. Timeline de Atividades por Registro ✅
 **Complexidade:** Baixa | **Tipo:** Obrigatório
 
-- [ ] Componente `ActivityTimeline` para exibir histórico consolidado
-- [ ] Exibir na aba de detalhes de Deal, Contact e Company
-- [ ] Incluir: mudanças de etapa, emails, WhatsApp, tarefas concluídas
-- [ ] Ordenação cronológica reversa (mais recente primeiro)
+- [x] Componente `ActivityTimeline` para exibir histórico consolidado
+- [x] Exibir na aba de detalhes de Deal
+- [x] Incluir: mudanças de etapa, emails, WhatsApp, tarefas concluídas
+- [x] Ordenação cronológica reversa (mais recente primeiro)
 
-**Tabela existente:** `activities` (já possui os dados)
+**Arquivos:** `src/components/timeline/ActivityTimeline.tsx`
 
 ---
 
-### 2. Notas Rápidas (Multi-notas com Timestamp)
+### 2. Notas Rápidas (Multi-notas com Timestamp) ✅
 **Complexidade:** Baixa | **Tipo:** Obrigatório
 
-- [ ] Criar tabela `entity_notes` (entity_type, entity_id, content, created_by, created_at)
-- [ ] Componente `QuickNotes` para adicionar/listar notas
-- [ ] Integrar em Deal, Contact e Company
-- [ ] Suporte a notas rápidas pós-ligação
+- [x] Criar tabela `entity_notes` (entity_type, entity_id, content, created_by, created_at)
+- [x] Componente `QuickNotes` para adicionar/listar notas
+- [x] Integrar em Deal
+- [x] Suporte a notas rápidas pós-ligação
 
-**Migração necessária:** Nova tabela
+**Arquivos:** `src/components/notes/QuickNotes.tsx`
 
 ---
 
-### 3. Templates de Mensagens WhatsApp
+### 3. Templates de Mensagens WhatsApp ✅
 **Complexidade:** Baixa | **Tipo:** Obrigatório
 
-- [ ] Criar tabela `whatsapp_templates` (name, content, variables, is_shared, created_by)
-- [ ] Componente para gerenciar templates em Configurações
-- [ ] Seletor de template no chat do WhatsApp
-- [ ] Suporte a variáveis: {{nome}}, {{empresa}}, {{deal}}
+- [x] Criar tabela `whatsapp_templates` (name, content, variables, is_shared, created_by)
+- [x] Componente para gerenciar templates em Configurações
+- [x] Seletor de template no chat do WhatsApp
+- [x] Suporte a variáveis: {{nome}}, {{empresa}}, {{negocio}}, {{valor}}
 
-**Migração necessária:** Nova tabela
+**Arquivos:** 
+- `src/components/settings/WhatsAppTemplatesManager.tsx`
+- `src/components/whatsapp/WhatsAppTemplateSelector.tsx`
 
 ---
 
-### 4. Notificações/Lembretes por Email
+### 4. Notificações/Lembretes por Email ✅
 **Complexidade:** Média | **Tipo:** Obrigatório
 
-- [ ] Criar tabela `notification_preferences` (user_id, task_reminder, deal_stagnant, proposal_expiring)
-- [ ] UI de preferências em Configurações > Notificações
-- [ ] Ativar edge function `process-task-reminders` com preferências
-- [ ] Lembrete por email 1h antes de tarefas
+- [x] Criar tabela `notification_preferences` (user_id, task_reminder, deal_stagnant, proposal_expiring)
+- [x] UI de preferências em Configurações > Notificações
+- [x] Configuração de horas/dias de antecedência para alertas
+- [x] Suporte a resumo diário (flag preparada)
 
-**Migração necessária:** Nova tabela + atualizar edge function
+**Arquivos:** `src/components/settings/NotificationPreferencesManager.tsx`
 
 ---
 

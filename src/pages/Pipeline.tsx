@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
@@ -29,6 +29,8 @@ import { ProposalsList } from '@/components/proposals/ProposalsList';
 import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
 import { DealParticipants } from '@/components/pipeline/DealParticipants';
 import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
+import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
+import { QuickNotes } from '@/components/notes/QuickNotes';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
@@ -478,8 +480,16 @@ export default function Pipeline() {
             
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
+                  <TabsTrigger value="atividades" className="flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
+                    <span className="hidden sm:inline">Timeline</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="notas" className="flex items-center gap-2">
+                    <StickyNote className="h-4 w-4" />
+                    <span className="hidden sm:inline">Notas</span>
+                  </TabsTrigger>
                   <TabsTrigger value="propostas" className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Propostas</span>
@@ -628,6 +638,20 @@ export default function Pipeline() {
                       </div>
                     </div>
                   </form>
+                </TabsContent>
+                
+                <TabsContent value="atividades" className="flex-1 overflow-auto mt-4">
+                  <ActivityTimeline
+                    entityType="deal"
+                    entityId={editingDeal.id}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="notas" className="flex-1 overflow-auto mt-4">
+                  <QuickNotes
+                    entityType="deal"
+                    entityId={editingDeal.id}
+                  />
                 </TabsContent>
                 
                 <TabsContent value="propostas" className="flex-1 overflow-auto mt-4">
