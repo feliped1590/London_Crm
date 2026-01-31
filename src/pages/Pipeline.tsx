@@ -14,6 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
+import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
+import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
+import { usePipelines } from '@/hooks/usePipelines';
 import { PipelineListView } from '@/components/pipeline/PipelineListView';
 import { LossReasonModal } from '@/components/pipeline/LossReasonModal';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -77,6 +80,10 @@ export default function Pipeline() {
   const [filterOwner, setFilterOwner] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+
+  // Pipelines hook
+  const { pipelines, defaultPipeline } = usePipelines();
 
   // Loss reason modal state
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
@@ -394,8 +401,14 @@ export default function Pipeline() {
   // Filtered deals
   const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all';
   
+  // Get current pipeline ID (selected or default)
+  const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
+  
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
+      // Filter by pipeline
+      if (currentPipelineId && deal.pipeline_id !== currentPipelineId) return false;
+      
       // Filter by owner
       if (filterOwner === 'mine' && deal.owner_id !== user?.id) return false;
       
@@ -407,7 +420,7 @@ export default function Pipeline() {
       
       return true;
     }) || [];
-  }, [deals, filterOwner, filterStage, filterCompany, user?.id]);
+  }, [deals, filterOwner, filterStage, filterCompany, user?.id, currentPipelineId]);
 
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
@@ -420,6 +433,10 @@ export default function Pipeline() {
           <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
         </div>
         <div className="flex items-center gap-3">
+          <PipelineSelector
+            value={selectedPipelineId}
+            onChange={setSelectedPipelineId}
+          />
           <Button
             variant="outline"
             size="sm"
@@ -933,8 +950,9 @@ export default function Pipeline() {
                                 </div>
                               )}
                             </div>
-                            <div className="mt-2 flex items-center gap-1">
-                              <Badge variant="secondary" className="text-xs">
+                            <div className="mt-2 flex items-center gap-1 flex-wrap">
+                              <DaysInStageBadge stageEnteredAt={deal.updated_at} />
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                                 {deal.probability}% prob.
                               </Badge>
                               {(deal as any).contacts?.email && (
