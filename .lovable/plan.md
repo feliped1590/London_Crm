@@ -1,347 +1,353 @@
 
+# Backlog Executável: Fase 1 - Licença para Jogar
 
-# Ajustes Finos: Fundação v1 - ERP Iniflex
+## Ajustes Conceituais Incorporados
 
-## Resumo dos Ajustes
+### 1. Responsável por Etapa (Documentado)
+- O responsável por etapa **NÃO substitui** o `owner_id` do deal
+- Define quem executa **naquela fase específica** do processo
+- Serve para: SLA, cobrança operacional, clareza de ownership
+- Campo: `pipeline_stages.default_owner_id` (opcional, sugere owner ao entrar na etapa)
 
-Refinamentos pontuais na base aprovada para melhorar observabilidade e evitar problemas operacionais.
+### 2. Checklists Validados por IA (Princípios)
+- IA **sugere e valida automaticamente** quando possível
+- **Decisões críticas** sempre exigem confirmação humana
+- IA **não bloqueia o fluxo** sem transparência ao usuário
+- Tipos: `manual`, `ai_suggest` (IA marca, humano confirma), `ai_auto` (IA valida silenciosamente)
+
+### 3. IA Proativa (Níveis Claros)
+| Nível | Descrição | Fase |
+|-------|-----------|------|
+| 1 | Alertas e Daily Digest | Fase 3 |
+| 2 | Sugestão de próxima ação | Fase 3 |
+| 3 | Coaching, reorganização, scoring | Fase 3+ |
+
+### 4. Métrica Norte da Fase 1
+- **Tempo médio diário de uso do CRM por usuário**
+- Uso recorrente = valor percebido
+- Meta: +20% após implementação
 
 ---
 
-## 1. Tabela `erp_sync_logs` (Atualizada)
+## Estrutura de Entrega
 
-### Mudanças
+### Sprint 1: Fundação (1-2 semanas)
 
-| Campo | Antes | Depois |
-|-------|-------|--------|
-| `status` CHECK | `pending`, `success`, `failed` | `pending`, `processing`, `success`, `failed` |
+#### 1.1 Tabela `pipelines` + Migração de Dados
+**Complexidade:** Média | **Risco:** Baixo
 
-### SQL Final
+**Entregáveis:**
+- Criar tabela `pipelines` com campos:
+  - `id`, `name`, `description`, `type` (sales, post_sales, support)
+  - `is_default`, `is_active`, `created_by`, `created_at`
+- Criar índices e RLS policies
+- Criar pipeline padrão "Vendas" automaticamente
+- Adicionar `pipeline_id` à tabela `deals` (FK opcional)
+- Migrar todos os deals existentes para pipeline padrão
 
+**SQL Proposto:**
 ```sql
-CREATE TABLE public.erp_sync_logs (
+-- Tabela de Pipelines
+CREATE TABLE public.pipelines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  
-  -- O que foi sincronizado
-  entity_type TEXT NOT NULL,
-  entity_id UUID NOT NULL,
-  direction TEXT NOT NULL DEFAULT 'crm_to_erp',
-  
-  -- Resultado
-  status TEXT NOT NULL DEFAULT 'pending',
-  external_id TEXT,
-  error_message TEXT,
-  
-  -- Payloads para debug
-  request_payload JSONB,
-  response_payload JSONB,
-  
-  -- Timestamps
+  name TEXT NOT NULL,
+  description TEXT,
+  type TEXT NOT NULL DEFAULT 'sales',
+  is_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
   
-  -- Validação de status
-  CONSTRAINT valid_status CHECK (status IN ('pending', 'processing', 'success', 'failed')),
-  CONSTRAINT valid_direction CHECK (direction IN ('crm_to_erp', 'erp_to_crm'))
+  CONSTRAINT valid_type CHECK (type IN ('sales', 'post_sales', 'support'))
 );
 
+-- Adicionar pipeline_id aos deals
+ALTER TABLE deals ADD COLUMN pipeline_id UUID REFERENCES pipelines(id);
+
 -- Índices
-CREATE INDEX idx_erp_logs_entity ON erp_sync_logs(entity_type, entity_id);
-CREATE INDEX idx_erp_logs_status ON erp_sync_logs(status);
-CREATE INDEX idx_erp_logs_direction ON erp_sync_logs(direction);
+CREATE INDEX idx_pipelines_type ON pipelines(type);
+CREATE INDEX idx_pipelines_active ON pipelines(is_active);
+CREATE INDEX idx_deals_pipeline ON deals(pipeline_id);
 
--- Trigger para updated_at
-CREATE TRIGGER update_erp_sync_logs_updated_at
-  BEFORE UPDATE ON erp_sync_logs
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- RLS
+ALTER TABLE pipelines ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Authenticated can view pipelines"
+  ON pipelines FOR SELECT
+  USING (public.is_authenticated());
+
+CREATE POLICY "Admins can manage pipelines"
+  ON pipelines FOR ALL
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 ```
+
+**Arquivos a criar/modificar:**
+- `src/types/crm.ts` - Adicionar tipo `Pipeline`
+- `src/hooks/usePipelines.ts` - Hook para CRUD de pipelines
+- `src/components/settings/PipelinesManager.tsx` - UI de gerenciamento
 
 ---
 
-## 2. Fluxo de Status
+#### 1.2 Tabela `sales_goals` + Widget de Metas
+**Complexidade:** Média | **Risco:** Baixo
 
-```text
-INÍCIO
-   │
-   v
-┌──────────┐
-│ pending  │  ← Log criado
-└────┬─────┘
-     │
-     v
-┌──────────┐
-│processing│  ← Antes de chamar ERP
-└────┬─────┘
-     │
-     ├───────────────┐
-     v               v
-┌──────────┐   ┌──────────┐
-│ success  │   │  failed  │
-└──────────┘   └──────────┘
-```
+**Entregáveis:**
+- Criar tabela `sales_goals` com campos:
+  - `id`, `user_id`, `period_type` (monthly, quarterly)
+  - `period_start`, `period_end`, `target_value`, `target_deals`
+  - `created_at`, `updated_at`
+- Widget no Dashboard mostrando progresso da meta
+- Tela simples de configuração de metas (Settings)
 
-### Cenários de Falha (Pré-ERP)
-
-| Cenário | Status Final | error_message |
-|---------|--------------|---------------|
-| Entidade não encontrada | `failed` | "Empresa não encontrada" |
-| Validação inválida | `failed` | "CNPJ deve ter 14 dígitos" |
-| Dependência falhou | `failed` | "Falha ao sincronizar empresa: ..." |
-| Erro HTTP do ERP | `failed` | "HTTP 500: Internal Server Error" |
-| Timeout | `failed` | "Request timeout" |
-
----
-
-## 3. Constantes de Direction
-
-Criar constante para evitar hardcode espalhado:
-
-```typescript
-// _shared/iniflex/types.ts (novo arquivo)
-
-export const SYNC_DIRECTION = {
-  CRM_TO_ERP: 'crm_to_erp',
-  ERP_TO_CRM: 'erp_to_crm',
-} as const;
-
-export type SyncDirection = typeof SYNC_DIRECTION[keyof typeof SYNC_DIRECTION];
-
-export const SYNC_STATUS = {
-  PENDING: 'pending',
-  PROCESSING: 'processing',
-  SUCCESS: 'success',
-  FAILED: 'failed',
-} as const;
-
-export type SyncStatus = typeof SYNC_STATUS[keyof typeof SYNC_STATUS];
-```
-
----
-
-## 4. Ajustes no `erp-sync/index.ts`
-
-### 4.1 Criar log com status `pending`
-
-```typescript
-// Criar log inicial (status: pending)
-const { data: log } = await supabase
-  .from('erp_sync_logs')
-  .insert({
-    entity_type,
-    entity_id,
-    direction: SYNC_DIRECTION.CRM_TO_ERP,
-    status: SYNC_STATUS.PENDING,
-  })
-  .select('id')
-  .single();
-```
-
-### 4.2 Atualizar para `processing` antes do ERP
-
-```typescript
-async function syncCompanyInternal(supabase: any, companyId: string, logId?: string) {
-  // Buscar empresa
-  const { data: company, error } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', companyId)
-    .single();
-
-  if (error || !company) {
-    // Falha PRÉ-ERP: entidade não encontrada
-    await updateLog(supabase, logId, SYNC_STATUS.FAILED, null, 'Empresa não encontrada');
-    return { success: false, error: 'Empresa não encontrada' };
-  }
-
-  // Validar
-  const validation = validateCompany(company);
-  if (!validation.valid) {
-    // Falha PRÉ-ERP: validação
-    await updateLog(supabase, logId, SYNC_STATUS.FAILED, null, validation.errors.join(', '));
-    return { success: false, error: validation.errors.join(', ') };
-  }
-
-  // Mapear payload
-  const payload = mapCompanyToIniflex(company);
+**SQL Proposto:**
+```sql
+CREATE TABLE public.sales_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  period_type TEXT NOT NULL DEFAULT 'monthly',
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  target_value NUMERIC DEFAULT 0,
+  target_deals INTEGER DEFAULT 0,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
   
-  // *** ATUALIZAR PARA PROCESSING ANTES DE CHAMAR ERP ***
-  await supabase
-    .from('erp_sync_logs')
-    .update({
-      status: SYNC_STATUS.PROCESSING,
-      request_payload: payload,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', logId);
+  CONSTRAINT valid_period CHECK (period_end > period_start),
+  CONSTRAINT valid_period_type CHECK (period_type IN ('monthly', 'quarterly', 'yearly'))
+);
 
-  // Chamar ERP
-  const result = await sendToIniflex(payload);
+CREATE INDEX idx_goals_user ON sales_goals(user_id);
+CREATE INDEX idx_goals_period ON sales_goals(period_start, period_end);
 
-  if (!result.success) {
-    await updateLog(supabase, logId, SYNC_STATUS.FAILED, null, result.error, result.rawResponse);
-    return { success: false, error: result.error };
-  }
+-- RLS
+ALTER TABLE sales_goals ENABLE ROW LEVEL SECURITY;
 
-  // Sucesso
-  await supabase
-    .from('companies')
-    .update({
-      iniflex_id: result.externalId,
-      iniflex_synced_at: new Date().toISOString(),
-    })
-    .eq('id', companyId);
+CREATE POLICY "Users can view own goals"
+  ON sales_goals FOR SELECT
+  USING (user_id = auth.uid() OR public.is_admin());
 
-  await updateLog(supabase, logId, SYNC_STATUS.SUCCESS, result.externalId, null, result.rawResponse);
-
-  return { success: true, externalId: result.externalId };
-}
+CREATE POLICY "Admins can manage goals"
+  ON sales_goals FOR ALL
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());
 ```
 
-### 4.3 Falha em dependência também registrada
+**Arquivos a criar:**
+- `src/hooks/useSalesGoals.ts` - Hook para metas
+- `src/components/settings/SalesGoalsManager.tsx` - Config de metas
+- `src/components/dashboard/GoalProgressWidget.tsx` - Widget de progresso
 
-```typescript
-if (entity_type === 'contact') {
-  if (ensure_dependencies) {
-    const { data: contact } = await supabase
-      .from('contacts')
-      .select('company_id, companies(iniflex_id)')
-      .eq('id', entity_id)
-      .single();
+---
 
-    if (contact?.company_id && !contact?.companies?.iniflex_id) {
-      // Criar sub-log para empresa (opcional, mas recomendado)
-      const companyResult = await syncCompanyInternal(supabase, contact.company_id);
-      
-      if (!companyResult.success) {
-        // Falha PRÉ-ERP: dependência falhou
-        await updateLog(
-          supabase, 
-          logId, 
-          SYNC_STATUS.FAILED, 
-          null, 
-          `Falha ao sincronizar empresa dependente: ${companyResult.error}`
-        );
-        return errorResponse(400, `Falha ao sincronizar empresa: ${companyResult.error}`);
-      }
-    }
-  }
-  return await syncContact(supabase, entity_id, logId);
-}
+### Sprint 2: Modo Execução Diário (1-2 semanas)
+
+#### 2.1 Página `/today` - Modo Execução
+**Complexidade:** Média | **Risco:** Baixo
+
+**Conceito:**
+- Tela focada no DIA do vendedor
+- Zero configuração
+- Prioridades, tarefas, follow-ups
+- Base para futuras sugestões de IA
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  Bom dia, João! 👋                                       │
+│  Seu dia: Sexta, 31 de Janeiro                          │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  📋 TAREFAS DE HOJE (3)                    [Ver todas →] │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │ ☐ Follow-up Empresa XYZ               vence às 14h  ││
+│  │ ☐ Enviar proposta Delta Corp          vence hoje    ││
+│  │ ☐ Reunião cliente Omega               16:30         ││
+│  └─────────────────────────────────────────────────────┘│
+│                                                          │
+│  ⚠️ DEALS SEM FOLLOW-UP (>5 dias)        [Ver pipeline]  │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │ • Beta Corp - R$ 28.000 (8 dias) [Ligar] [WhatsApp] ││
+│  │ • Gamma Inc - R$ 15.000 (6 dias) [Ligar] [WhatsApp] ││
+│  └─────────────────────────────────────────────────────┘│
+│                                                          │
+│  📊 SEU RESUMO                                           │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
+│  │ Pipeline │ │  Meta    │ │ Fechados │ │  Atrasados  │ │
+│  │ R$ 320k  │ │   65%    │ │    2     │ │     1       │ │
+│  └──────────┘ └──────────┘ └──────────┘ └─────────────┘ │
+│                                                          │
+│  🕐 PRÓXIMAS TAREFAS                                     │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │ Amanhã: 2 tarefas | Próxima semana: 5 tarefas      ││
+│  └─────────────────────────────────────────────────────┘│
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Arquivos a criar:**
+- `src/pages/Today.tsx` - Página principal
+- `src/hooks/useTodayData.ts` - Hook agregando dados do dia
+- `src/components/today/TodayTaskList.tsx` - Lista de tarefas
+- `src/components/today/StagnantDealsCard.tsx` - Deals parados
+- `src/components/today/DailySummary.tsx` - Resumo do dia
+
+**Modificações:**
+- `src/App.tsx` - Adicionar rota `/today`
+- `src/components/layout/AppSidebar.tsx` - Adicionar item "Meu Dia" no topo
+
+---
+
+#### 2.2 Busca Global
+**Complexidade:** Baixa | **Risco:** Baixo
+
+**Entregáveis:**
+- Componente de busca no header do layout
+- Busca em: Empresas, Contatos, Deals, Tarefas
+- Retorna top 5 de cada categoria
+- Atalho de teclado: Cmd/Ctrl + K
+
+**Arquivos a criar:**
+- `src/components/layout/GlobalSearch.tsx` - Componente de busca
+- `src/hooks/useGlobalSearch.ts` - Hook de busca agregada
+
+**Modificações:**
+- `src/components/layout/AppLayout.tsx` - Adicionar busca no header
+
+---
+
+### Sprint 3: UX e Polish (1 semana)
+
+#### 3.1 Badge "Dias na Etapa" nos Cards do Pipeline
+**Complexidade:** Baixa | **Risco:** Muito Baixo
+
+**Entregáveis:**
+- Calcular dias desde última transição de etapa
+- Exibir badge colorido:
+  - Verde: < 7 dias
+  - Amarelo: 7-14 dias
+  - Vermelho: > 14 dias
+
+**Modificações:**
+- `src/pages/Pipeline.tsx` - Adicionar badge nos cards
+- Usar `deal_stage_history` existente para cálculo
+
+---
+
+#### 3.2 Seletor de Pipeline (Preparação)
+**Complexidade:** Baixa | **Risco:** Baixo
+
+**Entregáveis:**
+- Dropdown para selecionar pipeline ativo na página Pipeline
+- Filtrar deals por `pipeline_id`
+- Preparação para múltiplos funis
+
+**Modificações:**
+- `src/pages/Pipeline.tsx` - Adicionar seletor de pipeline
+
+---
+
+## Ordem de Implementação Recomendada
+
+```
+Semana 1-2 (Sprint 1)
+├── 1. Migração: Tabela pipelines
+├── 2. Migração: Tabela sales_goals
+├── 3. Hook usePipelines + useSalesGoals
+└── 4. PipelinesManager + SalesGoalsManager (Settings)
+
+Semana 2-3 (Sprint 2)
+├── 5. Página /today (estrutura básica)
+├── 6. Hook useTodayData
+├── 7. Componentes: TodayTaskList, StagnantDealsCard
+├── 8. GlobalSearch + atalho Cmd+K
+└── 9. Integrar /today no Sidebar
+
+Semana 3-4 (Sprint 3)
+├── 10. Badge "Dias na Etapa" no Pipeline
+├── 11. GoalProgressWidget no Dashboard
+├── 12. Seletor de Pipeline
+└── 13. Testes e polish
 ```
 
 ---
 
-## 5. Helper `updateLog` Atualizado
+## Critérios de Aceite
 
-```typescript
-async function updateLog(
-  supabase: any,
-  logId: string | undefined,
-  status: SyncStatus,
-  externalId: string | null,
-  error?: string | null,
-  response?: unknown
-) {
-  if (!logId) return;
-  
-  await supabase
-    .from('erp_sync_logs')
-    .update({
-      status,
-      external_id: externalId,
-      error_message: error || null,
-      response_payload: response || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', logId);
-}
-```
+### Funcional
+- [ ] Usuário pode criar/editar pipelines (Admin)
+- [ ] Usuário pode ver sua meta e progresso
+- [ ] Página /today carrega em < 2s
+- [ ] Busca global retorna resultados em < 500ms
+- [ ] Badge de dias aparece em todos os cards do pipeline
+
+### UX
+- [ ] /today é acessível com 1 clique
+- [ ] Busca global abre com Cmd+K
+- [ ] Layout responsivo (mobile-first)
+
+### Técnico
+- [ ] Todas as tabelas com RLS
+- [ ] Índices criados para queries frequentes
+- [ ] Hooks com React Query para cache
 
 ---
 
-## 6. Estrutura Final de Arquivos
+## O que foi SIMPLIFICADO (Confirmado)
 
-```
-supabase/functions/
-├── erp-sync/
-│   └── index.ts                 # Função central
-│
-├── _shared/
-│   └── iniflex/
-│       ├── types.ts             # NOVO: Constantes e tipos
-│       ├── adapter.ts           # Comunicação com Iniflex
-│       ├── mapper.ts            # Mapeamento CRM ↔ ERP
-│       └── validator.ts         # Validações básicas
-│
-├── iniflex-list-correntistas/   # Mantido
-└── iniflex-import-correntista/  # Mantido
-```
+| Feature Original | Simplificação |
+|------------------|---------------|
+| Configurador visual de funis | Lista simples em Settings |
+| Metas por equipe/território | Apenas metas por usuário |
+| Busca com filtros avançados | Top 5 por categoria, sem filtros |
+| Sugestões de IA no /today | Versão inicial sem IA (Fase 3) |
 
 ---
 
-## 7. Documentação do `ensure_dependencies`
+## O que foi EXCLUÍDO (Confirmado)
 
-Adicionar comentário no código para referência futura:
-
-```typescript
-interface SyncRequest {
-  entity_type: 'company' | 'contact';
-  entity_id: string;
-  
-  /**
-   * Se true, sincroniza dependências automaticamente.
-   * Ex: para contact, sincroniza company primeiro se não existir no ERP.
-   * 
-   * NOTA FUTURA: Esta lógica será movida para o backend,
-   * tornando a orquestração transparente para o frontend.
-   * Por enquanto, o frontend deve enviar este parâmetro explicitamente.
-   */
-  ensure_dependencies?: boolean;
-}
-```
+- Templates de pipeline
+- Histórico de metas
+- Comparação entre usuários
+- Funis condicionais
+- IA proativa (fica para Fase 3)
 
 ---
 
-## Checklist dos Ajustes
+## Próximos Passos Imediatos
 
-| Ajuste | Status |
-|--------|--------|
-| Status `processing` na tabela | Incluído |
-| Constraint de `direction` | Incluído |
-| Constantes para evitar hardcode | Incluído |
-| Trigger `updated_at` | Incluído |
-| Log de falha pré-ERP (entidade não encontrada) | Incluído |
-| Log de falha pré-ERP (validação) | Incluído |
-| Log de falha pré-ERP (dependência) | Incluído |
-| Status `processing` antes de chamar ERP | Incluído |
-| Documentação `ensure_dependencies` | Incluído |
-
----
-
-## Fora do Escopo (Confirmado)
-
-- Retry automático
-- Fila de processamento
-- Cron jobs
-- Dashboard na UI
-- Múltiplos ERPs
-- Sync de pedidos
+1. **Aprovar plano** e criar tasks de implementação
+2. **Executar migrações** das tabelas `pipelines` e `sales_goals`
+3. **Implementar hooks** base (`usePipelines`, `useSalesGoals`)
+4. **Criar página /today** como MVP
+5. **Validar com usuário real** antes de avançar para Fase 2
 
 ---
 
 ## Detalhes Técnicos
 
-### Arquivos a Criar
+### Novas Rotas
+| Rota | Página | Descrição |
+|------|--------|-----------|
+| `/today` | Today.tsx | Modo Execução Diário |
 
-1. `supabase/functions/_shared/iniflex/types.ts` - Constantes e tipos
-2. `supabase/functions/_shared/iniflex/adapter.ts` - Comunicação HTTP
-3. `supabase/functions/_shared/iniflex/mapper.ts` - Mapeamentos
-4. `supabase/functions/_shared/iniflex/validator.ts` - Validações
-5. `supabase/functions/erp-sync/index.ts` - Função central
+### Novos Hooks
+| Hook | Finalidade |
+|------|------------|
+| `usePipelines` | CRUD de pipelines |
+| `useSalesGoals` | Metas do usuário |
+| `useTodayData` | Dados agregados do dia |
+| `useGlobalSearch` | Busca em todas entidades |
 
-### Migração de Banco
-
-1. Criar tabela `erp_sync_logs` com constraints atualizados
-2. Reutilizar trigger `update_updated_at_column` existente
-
+### Novos Componentes
+| Componente | Local |
+|------------|-------|
+| `PipelinesManager` | Settings |
+| `SalesGoalsManager` | Settings |
+| `GoalProgressWidget` | Dashboard |
+| `GlobalSearch` | Layout Header |
+| `TodayTaskList` | Today |
+| `StagnantDealsCard` | Today |
+| `DailySummary` | Today |
