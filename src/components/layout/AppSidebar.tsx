@@ -20,7 +20,8 @@ import {
   Lightbulb,
   LucideIcon,
   DollarSign,
-  HelpCircle
+  HelpCircle,
+  CalendarCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ interface NavItem {
 }
 
 const allNavItems: NavItem[] = [
+  { to: '/today', icon: CalendarCheck, label: 'Meu Dia', moduleKey: 'dashboard' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', moduleKey: 'dashboard' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/companies', icon: Building2, label: 'Empresas', moduleKey: 'companies' },
