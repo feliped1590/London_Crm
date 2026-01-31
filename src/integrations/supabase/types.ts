@@ -573,6 +573,48 @@ export type Database = {
           },
         ]
       }
+      deal_checklist_completions: {
+        Row: {
+          checklist_item_id: string
+          completed_at: string | null
+          completed_by: string | null
+          deal_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          checklist_item_id: string
+          completed_at?: string | null
+          completed_by?: string | null
+          deal_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          checklist_item_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          deal_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_checklist_completions_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "stage_checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_checklist_completions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_participants: {
         Row: {
           added_by: string | null
@@ -1799,6 +1841,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      stage_checklist_items: {
+        Row: {
+          auto_condition: Json | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_required: boolean | null
+          pipeline_id: string | null
+          sort_order: number | null
+          stage: Database["public"]["Enums"]["deal_stage"]
+          title: string
+          validation_type: string | null
+        }
+        Insert: {
+          auto_condition?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_required?: boolean | null
+          pipeline_id?: string | null
+          sort_order?: number | null
+          stage: Database["public"]["Enums"]["deal_stage"]
+          title: string
+          validation_type?: string | null
+        }
+        Update: {
+          auto_condition?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_required?: boolean | null
+          pipeline_id?: string | null
+          sort_order?: number | null
+          stage?: Database["public"]["Enums"]["deal_stage"]
+          title?: string
+          validation_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_checklist_items_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_modules: {
         Row: {

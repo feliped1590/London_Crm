@@ -33,6 +33,8 @@ import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
+import { ChecklistValidationModal } from '@/components/pipeline/ChecklistValidationModal';
+import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
@@ -90,6 +92,14 @@ export default function Pipeline() {
   // Loss reason modal state
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
   const [pendingLossDeal, setPendingLossDeal] = useState<{ id: string; name: string } | null>(null);
+
+  // Checklist validation modal state
+  const [checklistModalOpen, setChecklistModalOpen] = useState(false);
+  const [checklistModalData, setChecklistModalData] = useState<{
+    deal: { id: string; name: string; stage: DealStage; pipeline_id?: string | null };
+    targetStage: DealStage;
+    pendingItems: ChecklistItem[];
+  } | null>(null);
 
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
@@ -365,19 +375,44 @@ export default function Pipeline() {
     e.dataTransfer.setData('dealId', dealId);
   };
 
-  const handleDrop = (e: React.DragEvent, stage: DealStage) => {
+  const handleDrop = async (e: React.DragEvent, stage: DealStage) => {
     e.preventDefault();
     const dealId = e.dataTransfer.getData('dealId');
-    if (dealId) {
-      // If dropping to fechado_perdido, show loss reason modal
-      if (stage === 'fechado_perdido') {
-        const deal = deals?.find(d => d.id === dealId);
-        if (deal) {
-          setPendingLossDeal({ id: dealId, name: deal.name });
-          setLossReasonModalOpen(true);
-          return;
-        }
+    if (!dealId) return;
+    
+    const deal = deals?.find(d => d.id === dealId);
+    if (!deal) return;
+    
+    // Skip checklist validation if moving to the same stage
+    if (deal.stage === stage) return;
+    
+    // If dropping to fechado_perdido, show loss reason modal
+    if (stage === 'fechado_perdido') {
+      setPendingLossDeal({ id: dealId, name: deal.name });
+      setLossReasonModalOpen(true);
+      return;
+    }
+    
+    // Check for pending checklist items before allowing stage change
+    try {
+      const pendingItems = await getPendingChecklistItems(dealId, deal.stage, deal.pipeline_id);
+      
+      if (pendingItems.length > 0) {
+        // Open checklist validation modal
+        setChecklistModalData({
+          deal: { id: deal.id, name: deal.name, stage: deal.stage, pipeline_id: deal.pipeline_id },
+          targetStage: stage,
+          pendingItems,
+        });
+        setChecklistModalOpen(true);
+        return;
       }
+      
+      // No pending items, proceed with stage change
+      updateMutation.mutate({ id: dealId, stage });
+    } catch (error) {
+      console.error('Error checking checklist items:', error);
+      // If there's an error checking, allow the change anyway
       updateMutation.mutate({ id: dealId, stage });
     }
   };
@@ -1017,6 +1052,26 @@ export default function Pipeline() {
         dealName={pendingLossDeal?.name || ''}
         onConfirm={handleLossReasonConfirm}
         isLoading={updateMutation.isPending}
+      />
+
+      {/* Checklist Validation Modal */}
+      <ChecklistValidationModal
+        open={checklistModalOpen}
+        onOpenChange={(open) => {
+          setChecklistModalOpen(open);
+          if (!open) setChecklistModalData(null);
+        }}
+        deal={checklistModalData?.deal || null}
+        targetStage={checklistModalData?.targetStage || 'prospeccao'}
+        pendingItems={checklistModalData?.pendingItems || []}
+        onConfirm={() => {
+          if (checklistModalData) {
+            updateMutation.mutate({ 
+              id: checklistModalData.deal.id, 
+              stage: checklistModalData.targetStage 
+            });
+          }
+        }}
       />
     </div>
   );
