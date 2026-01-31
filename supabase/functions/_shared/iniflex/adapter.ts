@@ -59,7 +59,12 @@ export async function sendToIniflex(payload: unknown): Promise<SyncResult> {
   // Log seguro: excluir chave sensível
   const { chave: _chave, ...safePayload } = payloadWithKey;
   console.log('[iniflex-adapter] Enviando para Iniflex:', JSON.stringify(safePayload, null, 2).substring(0, 500));
-  console.log('[iniflex-adapter] Chave presente:', !!_chave, '| Tamanho:', String(_chave || '').length);
+  // Debug: mostrar primeiros e últimos caracteres do token para validação
+  const tokenStr = String(_chave || '');
+  const tokenPreview = tokenStr.length > 20 
+    ? `${tokenStr.substring(0, 10)}...${tokenStr.substring(tokenStr.length - 10)}`
+    : tokenStr;
+  console.log('[iniflex-adapter] Chave presente:', !!_chave, '| Tamanho:', tokenStr.length, '| Preview:', tokenPreview);
 
   // Request com timeout de 10 segundos
   const controller = new AbortController();
