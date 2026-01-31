@@ -1,37 +1,71 @@
 
-# Plano: Testar Conexao com ERP Iniflex
+# Plano: Correção Definitiva da Autenticação Iniflex ✅
 
-## Problema Identificado
+## Status: IMPLEMENTADO
 
-A funcao `iniflex-customer-lookup` esta configurada com `verify_jwt = true`, bloqueando chamadas de teste direto. Todas as outras funcoes do projeto usam `verify_jwt = false`.
+Todas as Edge Functions Iniflex agora usam o adapter centralizado com autenticação correta.
 
-## Acao Necessaria
+## Regras Implementadas
 
-Alterar temporariamente para `verify_jwt = false` para testar a conexao com o ERP:
+1. **Token no Body** - A API Novafix/Iniflex recebe `chave` no body da requisição, não no header
+2. **Adapter Centralizado** - `sendToIniflex()` é o único ponto de comunicação com o ERP
+3. **Logging Seguro** - Chave excluída dos logs de produção
+4. **SyncResult Completo** - Todos os cenários retornam estrutura padronizada
 
-```toml
-[functions.iniflex-customer-lookup]
-verify_jwt = false
+## Arquivos Modificados
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `_shared/iniflex/adapter.ts` | Chave no body, logging seguro, SyncResult completo |
+| `iniflex-customer-lookup/index.ts` | Usa adapter, remove fetch direto |
+| `iniflex-sync-contact/index.ts` | Usa adapter, remove Authorization header |
+| `iniflex-sync-company/index.ts` | Usa adapter, remove Authorization header |
+
+## Interface SyncResult
+
+```typescript
+{
+  success: boolean;        // true/false
+  externalId: string | null;  // ID retornado pelo ERP
+  rawResponse: unknown;    // Resposta bruta para debug
+  error?: string;          // Presente quando success = false
+}
 ```
 
-## Sequencia de Teste
+### Cenários Tratados pelo Adapter
 
-1. **Alterar config.toml** - Mudar para `verify_jwt = false`
-2. **Deploy da funcao** - Aplicar a mudanca
-3. **Testar via curl** - Enviar CNPJ valido para a funcao
-4. **Verificar logs** - Confirmar se a requisicao chegou ao ERP
-5. **Verificar auditoria** - Confirmar registro em `erp_sync_logs`
+| Cenário | success | error |
+|---------|---------|-------|
+| Credenciais não configuradas | false | "Credenciais do ERP não configuradas" |
+| Timeout (10s) | false | "Timeout: ERP não respondeu em 10 segundos" |
+| Erro HTTP 4xx/5xx | false | "HTTP {status}: {statusText}" |
+| Erro de parse JSON | false | "Resposta inválida do ERP" |
+| Exceção inesperada | false | {mensagem da exceção} |
+| Sucesso | true | undefined |
 
-## CNPJs para Teste
+## Segurança
 
-| CNPJ | Descricao |
-|------|-----------|
-| `14649675000170` | CNPJ real (P C VIANI VIDROS LTDA) |
-| `11222333000181` | CNPJ generico valido (checksum ok) |
+- `verify_jwt = true` mantido nas Edge Functions
+- Token Iniflex nunca exposto em logs
+- Frontend não conhece credenciais do ERP
 
-## Resultados Esperados
+## Teste de Validação
 
-### Se ERP responder:
+**Nota:** A função `iniflex-customer-lookup` tem `verify_jwt = true`, então precisa de JWT válido.
+
+### Opção 1: Testar via Frontend (recomendado)
+Usar o wizard de "Novo Cliente" no CRM e digitar um CNPJ.
+
+### Opção 2: Testar via curl com JWT
+```bash
+# Primeiro, obter um JWT válido logando no sistema
+curl -X POST https://lusyhkizwoihixcvcgap.supabase.co/functions/v1/iniflex-customer-lookup \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <USER_JWT>" \
+  -d '{"cnpj": "14649675000170"}'
+```
+
+### Resultado Esperado
 ```json
 {
   "success": true,
@@ -41,25 +75,11 @@ verify_jwt = false
 }
 ```
 
-### Se ERP indisponivel:
-```json
-{
-  "success": false,
-  "error": "Servico de consulta temporariamente indisponivel"
-}
+## Verificação de Logs
+
+```sql
+SELECT * FROM erp_sync_logs 
+WHERE entity_type = 'customer_lookup' 
+ORDER BY created_at DESC 
+LIMIT 5;
 ```
-
-## Nota sobre Seguranca
-
-O padrao do projeto e `verify_jwt = false` para todas as funcoes. A seguranca e implementada via:
-- Validacao de CNPJ antes de chamar ERP
-- Logs de auditoria em `erp_sync_logs`
-- Credenciais Iniflex no vault (nao expostas)
-
-Manter `verify_jwt = false` para consistencia com o resto do projeto.
-
-## Arquivos a Modificar
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `supabase/config.toml` | Linha 73: `verify_jwt = false` |

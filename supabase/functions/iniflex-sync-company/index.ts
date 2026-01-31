@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendToIniflex } from '../_shared/iniflex/adapter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,8 +18,6 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const inflexUrl = Deno.env.get('INIFLEX_API_URL')!;
-    const inflexToken = Deno.env.get('INIFLEX_API_TOKEN')!;
     const inflexCompanyId = Deno.env.get('INIFLEX_COMPANY_ID')!;
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -49,7 +48,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Montar payload para Iniflex
+    // Montar payload para Iniflex (SEM chave - adapter injeta automaticamente)
     const cnpjLimpo = company.cnpj?.replace(/\D/g, '') || '';
 
     // Montar endereço se disponível
@@ -93,38 +92,21 @@ Deno.serve(async (req) => {
       },
     };
 
-    console.log('[iniflex-sync-company] Enviando para Iniflex:', JSON.stringify(payload, null, 2));
+    console.log('[iniflex-sync-company] Payload preparado para empresa:', company_id);
 
-    // Enviar para API Iniflex
-    const response = await fetch(inflexUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${inflexToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
+    // Usar adapter centralizado (chave injetada automaticamente)
+    const result = await sendToIniflex(payload);
 
-    const responseText = await response.text();
-    console.log('[iniflex-sync-company] Resposta Iniflex:', responseText);
-
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch {
-      responseData = { raw: responseText };
-    }
-
-    if (!response.ok) {
-      console.error('[iniflex-sync-company] Erro na API Iniflex:', response.status);
+    if (!result.success) {
+      console.error('[iniflex-sync-company] Erro na API Iniflex:', result.error);
       return new Response(
-        JSON.stringify({ success: false, error: 'Erro na API Iniflex', details: responseData }),
+        JSON.stringify({ success: false, error: 'Erro na API Iniflex', details: result.error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Extrair iniflex_id da resposta
-    const inflexId = responseData.id || responseData.codigo || responseData.p_retorno || cnpjLimpo;
+    const inflexId = result.externalId || cnpjLimpo;
 
     // Atualizar empresa com iniflex_id
     const { error: updateError } = await supabase

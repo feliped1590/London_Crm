@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendToIniflex } from '../_shared/iniflex/adapter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,6 +92,7 @@ function extractCustomers(data: unknown): InflexCustomer[] {
   return [];
 }
 
+// deno-lint-ignore no-explicit-any
 async function updateLog(
   supabase: any,
   logId: string | undefined,
@@ -149,7 +151,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ===== CHECK CREDENTIALS =====
+    // ===== CHECK CREDENTIALS (quick fail) =====
     const INIFLEX_URL = Deno.env.get('INIFLEX_API_URL');
     const INIFLEX_TOKEN = Deno.env.get('INIFLEX_API_TOKEN');
 
@@ -178,9 +180,8 @@ Deno.serve(async (req) => {
 
     const logId = log?.id;
 
-    // ===== INIFLEX PAYLOAD (chave vai no body, não no header) =====
+    // ===== INIFLEX PAYLOAD (chave será injetada pelo adapter) =====
     const payload = {
-      chave: INIFLEX_TOKEN,
       tipoComando: 'ASDCOMANDO',
       grupoComando: 'EXP_CLIENTE',
       '#out#p_retorno': 'T',
@@ -189,85 +190,55 @@ Deno.serve(async (req) => {
       },
     };
 
-    // ===== REQUEST WITH TIMEOUT =====
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    // ===== USAR ADAPTER CENTRALIZADO =====
+    const result = await sendToIniflex(payload);
 
-    try {
-      console.log('[iniflex-customer-lookup] URL:', INIFLEX_URL);
-      console.log('[iniflex-customer-lookup] Sending request with chave in body');
-
-      const response = await fetch(INIFLEX_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      console.log('[iniflex-customer-lookup] HTTP Status:', response.status, response.statusText);
-      const responseText = await response.text();
-      console.log('[iniflex-customer-lookup] Response:', responseText.substring(0, 1000));
-
-      let data: unknown;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        data = { raw: responseText };
-      }
-
-      if (!response.ok) {
-        await updateLog(supabase, logId, 'failed', null, 'Erro na API Iniflex', data);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Serviço de consulta temporariamente indisponível' }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // ===== PROCESS RESPONSE =====
-      const customers = extractCustomers(data);
-      const found = customers.find((c) =>
-        String(c.cnpj_cpf).replace(/\D/g, '') === cnpjClean
+    if (!result.success) {
+      await updateLog(supabase, logId, 'failed', null, result.error || 'Erro desconhecido', result.rawResponse);
+      
+      // Determinar status HTTP apropriado
+      const isTimeout = result.error?.includes('Timeout');
+      const status = isTimeout ? 504 : 503;
+      const userMessage = isTimeout 
+        ? 'Consulta demorou muito. Tente novamente' 
+        : 'Serviço de consulta temporariamente indisponível';
+      
+      return new Response(
+        JSON.stringify({ success: false, error: userMessage }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
 
-      if (found) {
-        const normalized = normalizeCustomer(found, cnpjClean);
-        await updateLog(supabase, logId, 'success', normalized.external_id, null, data);
+    // ===== PROCESS RESPONSE =====
+    const customers = extractCustomers(result.rawResponse);
+    const found = customers.find((c) =>
+      String(c.cnpj_cpf).replace(/\D/g, '') === cnpjClean
+    );
 
-        return new Response(
-          JSON.stringify({
-            success: true,
-            found: true,
-            data: normalized,
-            source: 'iniflex',
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } else {
-        // Not found is a valid state, not an error
-        await updateLog(supabase, logId, 'success', null, 'not_found', data);
+    if (found) {
+      const normalized = normalizeCustomer(found, cnpjClean);
+      await updateLog(supabase, logId, 'success', normalized.external_id, null, result.rawResponse);
 
-        return new Response(
-          JSON.stringify({
-            success: true,
-            found: false,
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      return new Response(
+        JSON.stringify({
+          success: true,
+          found: true,
+          data: normalized,
+          source: 'iniflex',
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      // Not found is a valid state, not an error
+      await updateLog(supabase, logId, 'success', null, 'not_found', result.rawResponse);
 
-    } catch (fetchError) {
-      clearTimeout(timeout);
-      if ((fetchError as Error).name === 'AbortError') {
-        await updateLog(supabase, logId, 'failed', null, 'Timeout', null);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Consulta demorou muito. Tente novamente' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      throw fetchError;
+      return new Response(
+        JSON.stringify({
+          success: true,
+          found: false,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
   } catch (error) {
