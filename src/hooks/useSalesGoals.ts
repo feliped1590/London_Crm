@@ -64,9 +64,9 @@ export function useSalesGoals(userId?: string) {
   // Get current active goal
   const currentGoal = goals?.find(goal => {
     const now = new Date();
-    const start = new Date(goal.period_start);
-    const end = new Date(goal.period_end);
-    return isWithinInterval(now, { start, end });
+    const todayStr = now.toISOString().split('T')[0];
+    // Compare as strings (YYYY-MM-DD) to avoid timezone issues
+    return todayStr >= goal.period_start && todayStr <= goal.period_end;
   });
 
   // Calculate progress for current goal
