@@ -3,13 +3,15 @@ import { useWhatsAppMessages, useSendMessage, useMarkAsRead, WhatsAppMessage, Co
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Send, Image, FileText, Mic, Video, User, MessageCircle, AlertCircle, MessageSquarePlus } from 'lucide-react';
+import { Send, Image, FileText, Mic, Video, User, MessageCircle, AlertCircle, MessageSquarePlus, FileStack } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { WhatsAppTemplateSelector } from './WhatsAppTemplateSelector';
 
 interface ChatViewProps {
   conversation: Conversation | null;
@@ -18,6 +20,7 @@ interface ChatViewProps {
 export function ChatView({ conversation }: ChatViewProps) {
   const [message, setMessage] = useState('');
   const [selectedInstanceId, setSelectedInstanceId] = useState<string>('');
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { data: messages, isLoading } = useWhatsAppMessages(conversation?.phone || null);
@@ -175,6 +178,31 @@ export function ChatView({ conversation }: ChatViewProps) {
         )}
         
         <div className="flex items-end gap-2">
+          <Popover open={templatesOpen} onOpenChange={setTemplatesOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-11 w-11 shrink-0"
+                disabled={!selectedInstanceId || connectedInstances.length === 0}
+              >
+                <FileStack className="h-5 w-5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-80 p-3">
+              <WhatsAppTemplateSelector
+                onSelect={(content) => {
+                  // Replace variables with contact info if available
+                  let finalContent = content;
+                  if (conversation?.contactName) {
+                    finalContent = finalContent.replace(/\{\{nome\}\}/g, conversation.contactName);
+                  }
+                  setMessage(finalContent);
+                  setTemplatesOpen(false);
+                }}
+              />
+            </PopoverContent>
+          </Popover>
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
