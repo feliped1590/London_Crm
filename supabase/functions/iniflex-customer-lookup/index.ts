@@ -178,8 +178,9 @@ Deno.serve(async (req) => {
 
     const logId = log?.id;
 
-    // ===== INIFLEX PAYLOAD =====
+    // ===== INIFLEX PAYLOAD (chave vai no body, não no header) =====
     const payload = {
+      chave: INIFLEX_TOKEN,
       tipoComando: 'ASDCOMANDO',
       grupoComando: 'EXP_CLIENTE',
       '#out#p_retorno': 'T',
@@ -193,19 +194,22 @@ Deno.serve(async (req) => {
     const timeout = setTimeout(() => controller.abort(), 10000);
 
     try {
+      console.log('[iniflex-customer-lookup] URL:', INIFLEX_URL);
+      console.log('[iniflex-customer-lookup] Sending request with chave in body');
+
       const response = await fetch(INIFLEX_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${INIFLEX_TOKEN}`,
         },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
       clearTimeout(timeout);
 
+      console.log('[iniflex-customer-lookup] HTTP Status:', response.status, response.statusText);
       const responseText = await response.text();
-      console.log('[iniflex-customer-lookup] Response:', responseText.substring(0, 500));
+      console.log('[iniflex-customer-lookup] Response:', responseText.substring(0, 1000));
 
       let data: unknown;
       try {
