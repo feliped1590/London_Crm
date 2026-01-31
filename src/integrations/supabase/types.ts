@@ -837,6 +837,33 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
       erp_sync_logs: {
         Row: {
           created_at: string | null
@@ -906,6 +933,48 @@ export type Database = {
           plan_name?: string
           updated_at?: string
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          daily_summary_email: boolean | null
+          deal_stagnant_alert: boolean | null
+          deal_stagnant_days: number | null
+          id: string
+          proposal_expiring_alert: boolean | null
+          proposal_expiring_days: number | null
+          task_reminder_email: boolean | null
+          task_reminder_hours: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          daily_summary_email?: boolean | null
+          deal_stagnant_alert?: boolean | null
+          deal_stagnant_days?: number | null
+          id?: string
+          proposal_expiring_alert?: boolean | null
+          proposal_expiring_days?: number | null
+          task_reminder_email?: boolean | null
+          task_reminder_hours?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          daily_summary_email?: boolean | null
+          deal_stagnant_alert?: boolean | null
+          deal_stagnant_days?: number | null
+          id?: string
+          proposal_expiring_alert?: boolean | null
+          proposal_expiring_days?: number | null
+          task_reminder_email?: boolean | null
+          task_reminder_hours?: number | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2172,6 +2241,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_templates: {
+        Row: {
+          category: string | null
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_shared: boolean | null
+          name: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          category?: string | null
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          category?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_shared?: boolean | null
+          name?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
       }
     }
     Views: {
