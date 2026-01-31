@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.iniflex-customer-lookup]
 verify_jwt = false
+
+[functions.iniflex-sandbox-test]
+verify_jwt = false

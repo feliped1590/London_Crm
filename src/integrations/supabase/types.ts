@@ -948,6 +948,39 @@ export type Database = {
         }
         Relationships: []
       }
+      iniflex_sandbox_logs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          http_status: number | null
+          id: string
+          latency_ms: number | null
+          request_payload: Json
+          response_payload: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          request_payload: Json
+          response_payload?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          latency_ms?: number | null
+          request_payload?: Json
+          response_payload?: Json | null
+        }
+        Relationships: []
+      }
       license_settings: {
         Row: {
           created_at: string
