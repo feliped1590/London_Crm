@@ -31,11 +31,22 @@ export default function CustomerNew() {
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // CNPJ lookup states
+  // CNPJ lookup states (BrasilAPI)
   const [isLookingUpCnpj, setIsLookingUpCnpj] = useState(false);
   const [cnpjLookupDone, setCnpjLookupDone] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const lastLookedUpCnpj = useRef<string>('');
+  
+  // Iniflex ERP lookup states
+  const [isCheckingIniflex, setIsCheckingIniflex] = useState(false);
+  const [iniflexCustomer, setIniflexCustomer] = useState<{
+    found: boolean;
+    data?: {
+      external_id: string;
+      razao_social: string;
+      situacao: string;
+    };
+  } | null>(null);
   
   // Step 1: Company/PF data
   const [companyForm, setCompanyForm] = useState({
@@ -59,7 +70,7 @@ export default function CustomerNew() {
     job_title: '',
   });
 
-  // CNPJ lookup function
+  // BrasilAPI CNPJ lookup function
   const lookupCnpj = async (cnpjClean: string) => {
     if (cnpjClean.length !== 14 || cnpjClean === lastLookedUpCnpj.current) return;
     if (!isValidCNPJ(cnpjClean)) return; // Don't lookup invalid CNPJ
@@ -96,6 +107,32 @@ export default function CustomerNew() {
       setCnpjLookupError('Não foi possível consultar. Preencha manualmente.');
     } finally {
       setIsLookingUpCnpj(false);
+    }
+  };
+
+  // Iniflex ERP customer lookup function
+  const checkIniflexCustomer = async (cnpjClean: string) => {
+    if (cnpjClean.length !== 14 || !isValidCNPJ(cnpjClean)) return;
+
+    setIsCheckingIniflex(true);
+    setIniflexCustomer(null);
+
+    try {
+      const response = await supabase.functions.invoke('iniflex-customer-lookup', {
+        body: { cnpj: cnpjClean }
+      });
+
+      if (response.data?.success) {
+        setIniflexCustomer({
+          found: response.data.found,
+          data: response.data.data,
+        });
+      }
+    } catch (error) {
+      console.error('Iniflex lookup error:', error);
+      // Silent failure - doesn't block the flow
+    } finally {
+      setIsCheckingIniflex(false);
     }
   };
 
@@ -243,11 +280,13 @@ export default function CustomerNew() {
       if (cnpjClean !== lastLookedUpCnpj.current) {
         setCnpjLookupDone(false);
         setCnpjLookupError(null);
+        setIniflexCustomer(null); // Reset Iniflex state
       }
       
-      // Auto-lookup when CNPJ is complete (14 digits)
+      // Auto-lookup when CNPJ is complete (14 digits) and valid
       if (cnpjClean.length === 14 && isValidCNPJ(cnpjClean)) {
-        lookupCnpj(cnpjClean);
+        lookupCnpj(cnpjClean);           // BrasilAPI lookup
+        checkIniflexCustomer(cnpjClean); // Iniflex ERP lookup (parallel)
       }
     }
   };
@@ -305,6 +344,7 @@ export default function CustomerNew() {
                   setCompanyForm({ ...companyForm, document: '' });
                   setCnpjLookupDone(false);
                   setCnpjLookupError(null);
+                  setIniflexCustomer(null); // Reset Iniflex state
                   lastLookedUpCnpj.current = '';
                 }}
                 className="flex gap-4"
@@ -388,6 +428,46 @@ export default function CustomerNew() {
                       <AlertTitle className="text-yellow-700">Consulta indisponível</AlertTitle>
                       <AlertDescription className="text-yellow-600">
                         {cnpjLookupError}. Você pode preencher os dados manualmente.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Iniflex ERP Lookup Feedback */}
+                  {isCheckingIniflex && (
+                    <Alert className="col-span-2 border-blue-500/50 bg-blue-500/10">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      <AlertTitle className="text-blue-700">Verificando ERP</AlertTitle>
+                      <AlertDescription className="text-blue-600">
+                        Consultando cliente no sistema Iniflex...
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {iniflexCustomer?.found && (
+                    <Alert className="col-span-2 border-orange-500/50 bg-orange-500/10">
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                      <AlertTitle className="text-orange-700">Cliente encontrado no ERP</AlertTitle>
+                      <AlertDescription className="text-orange-600">
+                        <span className="font-medium">{iniflexCustomer.data?.razao_social}</span>
+                        <br />
+                        <span className="text-xs">
+                          ID Iniflex: {iniflexCustomer.data?.external_id} | 
+                          Status: {iniflexCustomer.data?.situacao}
+                        </span>
+                        <br />
+                        <span className="text-xs italic mt-1 block">
+                          Ao salvar, este cliente será vinculado ao registro existente.
+                        </span>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {iniflexCustomer !== null && !iniflexCustomer.found && (
+                    <Alert className="col-span-2 border-gray-500/50 bg-gray-500/10">
+                      <CheckCircle className="h-4 w-4 text-gray-600" />
+                      <AlertTitle className="text-gray-700">Cliente novo</AlertTitle>
+                      <AlertDescription className="text-gray-600">
+                        Cliente não encontrado no ERP. Será criado quando necessário.
                       </AlertDescription>
                     </Alert>
                   )}
