@@ -1,85 +1,89 @@
 
-# Plano: Correção Definitiva da Autenticação Iniflex ✅
 
-## Status: IMPLEMENTADO
+# Plano: Permitir Configuração Manual de URL e Token no Sandbox
 
-Todas as Edge Functions Iniflex agora usam o adapter centralizado com autenticação correta.
+## Problema Identificado
+Os campos de URL e Token na aba Sandbox estão desabilitados (`disabled`), impedindo a entrada manual de dados. O design atual assume que os valores vêm das variáveis de ambiente, mas para testes práticos é necessário poder inserir valores diretamente.
 
-## Regras Implementadas
+## Solução Proposta
 
-1. **Token no Body** - A API Novafix/Iniflex recebe `chave` no body da requisição, não no header
-2. **Adapter Centralizado** - `sendToIniflex()` é o único ponto de comunicação com o ERP
-3. **Logging Seguro** - Chave excluída dos logs de produção
-4. **SyncResult Completo** - Todos os cenários retornam estrutura padronizada
+### 1. Tornar Campos Editáveis
+Modificar o componente `InflexSandboxTab.tsx` para:
+- Remover `disabled` dos campos de URL e Token
+- Adicionar estado local para armazenar URL e Token digitados pelo usuário
+- Enviar esses valores para a Edge Function junto com o payload
 
-## Arquivos Modificados
+### 2. Atualizar Edge Function
+Modificar `iniflex-sandbox-test` para:
+- Aceitar parâmetros opcionais `api_url` e `api_token`
+- Usar os valores enviados pela UI quando fornecidos
+- Usar variáveis de ambiente como fallback
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `_shared/iniflex/adapter.ts` | Chave no body, logging seguro, SyncResult completo |
-| `iniflex-customer-lookup/index.ts` | Usa adapter, remove fetch direto |
-| `iniflex-sync-contact/index.ts` | Usa adapter, remove Authorization header |
-| `iniflex-sync-company/index.ts` | Usa adapter, remove Authorization header |
+### 3. Indicador de Origem
+Mostrar visualmente se o valor está sendo:
+- Digitado manualmente (editável)
+- Carregado do Vault (fallback)
 
-## Interface SyncResult
+---
 
+## Detalhes Técnicos
+
+### Alterações no Frontend (`InflexSandboxTab.tsx`)
+
+Adicionar estados:
 ```typescript
-{
-  success: boolean;        // true/false
-  externalId: string | null;  // ID retornado pelo ERP
-  rawResponse: unknown;    // Resposta bruta para debug
-  error?: string;          // Presente quando success = false
+const [apiUrl, setApiUrl] = useState('');
+const [apiToken, setApiToken] = useState('');
+```
+
+Modificar campos para serem editáveis:
+```tsx
+<Input 
+  value={apiUrl}
+  onChange={(e) => setApiUrl(e.target.value)}
+  placeholder="https://iniflex.novafix.ind.br/api/v1/..."
+  className="font-mono text-xs"
+/>
+
+<Input 
+  type="password"
+  value={apiToken}
+  onChange={(e) => setApiToken(e.target.value)}
+  placeholder="Cole o token aqui..."
+  className="font-mono text-xs"
+/>
+```
+
+Enviar na mutation:
+```typescript
+body: { 
+  payload, 
+  timeout_ms: timeoutMs,
+  api_url: apiUrl || undefined,  // undefined = usar variável de ambiente
+  api_token: apiToken || undefined,
+  save_log: true 
 }
 ```
 
-### Cenários Tratados pelo Adapter
+### Alterações na Edge Function (`iniflex-sandbox-test/index.ts`)
 
-| Cenário | success | error |
-|---------|---------|-------|
-| Credenciais não configuradas | false | "Credenciais do ERP não configuradas" |
-| Timeout (10s) | false | "Timeout: ERP não respondeu em 10 segundos" |
-| Erro HTTP 4xx/5xx | false | "HTTP {status}: {statusText}" |
-| Erro de parse JSON | false | "Resposta inválida do ERP" |
-| Exceção inesperada | false | {mensagem da exceção} |
-| Sucesso | true | undefined |
+Receber parâmetros opcionais:
+```typescript
+const { payload, timeout_ms, save_log, api_url, api_token } = await req.json();
 
-## Segurança
-
-- `verify_jwt = true` mantido nas Edge Functions
-- Token Iniflex nunca exposto em logs
-- Frontend não conhece credenciais do ERP
-
-## Teste de Validação
-
-**Nota:** A função `iniflex-customer-lookup` tem `verify_jwt = true`, então precisa de JWT válido.
-
-### Opção 1: Testar via Frontend (recomendado)
-Usar o wizard de "Novo Cliente" no CRM e digitar um CNPJ.
-
-### Opção 2: Testar via curl com JWT
-```bash
-# Primeiro, obter um JWT válido logando no sistema
-curl -X POST https://lusyhkizwoihixcvcgap.supabase.co/functions/v1/iniflex-customer-lookup \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <USER_JWT>" \
-  -d '{"cnpj": "14649675000170"}'
+// Usar valor da UI ou fallback para variável de ambiente
+const finalUrl = api_url || Deno.env.get('INIFLEX_SANDBOX_API_URL');
+const finalToken = api_token || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
 ```
 
-### Resultado Esperado
-```json
-{
-  "success": true,
-  "found": true | false,
-  "data": { ... },
-  "source": "iniflex"
-}
-```
+### UX Adicional
+- Adicionar tooltip explicando que deixar vazio usa o valor do Vault
+- Mostrar contagem de caracteres do token enquanto digita
+- Botão para limpar campos e voltar ao fallback
 
-## Verificação de Logs
+---
 
-```sql
-SELECT * FROM erp_sync_logs 
-WHERE entity_type = 'customer_lookup' 
-ORDER BY created_at DESC 
-LIMIT 5;
-```
+## Arquivos a Modificar
+1. `src/components/integrations/InflexSandboxTab.tsx` - Campos editáveis e estados
+2. `supabase/functions/iniflex-sandbox-test/index.ts` - Aceitar parâmetros opcionais
+
