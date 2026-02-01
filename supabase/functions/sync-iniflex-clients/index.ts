@@ -226,9 +226,9 @@ Deno.serve(async (req) => {
     console.log('[sync-clients] data_alteracao enviada:', lastSyncAt);
 
     // 3. Chamar API Iniflex
-    const cleanBaseUrl = body.baseUrl.replace(/\/+$/, '');
+    // baseUrl já contém o endpoint completo (ex: https://iniflex.novafix.ind.br/api/v1/runtime/endpoint/integracao/iniflex/json)
+    const apiUrl = body.baseUrl.replace(/\/+$/, '');
     const cleanToken = body.token.trim();
-    const apiUrl = `${cleanBaseUrl}/api/v1/runtime/endpoint/integracao/iniflex/json`;
 
     const payload = {
       tipoComando: 'ASDCOMANDO',
