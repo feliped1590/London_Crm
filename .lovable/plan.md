@@ -1,54 +1,128 @@
 
-# Plano: Correção da URL da API Iniflex (v3 → v1)
+# Plano: Correção de Campos Faltantes e Atualização de Status
 
-## Diagnóstico
+## Resumo dos Problemas Identificados
 
-Após análise detalhada do código:
+Dois problemas distintos foram encontrados:
 
-1. **Não existe `/api/v3` hardcoded** - A busca em todo o diretório `supabase/` retornou zero ocorrências
-2. **O código está correto** - O adapter usa exatamente a URL fornecida sem modificações
-3. **A origem do problema é a variável de ambiente** - A secret `INIFLEX_SANDBOX_API_URL` no Vault está configurada com `/api/v3`
+1. **Campos não preenchidos**: A função de listagem (`iniflex-list-correntistas`) não está mapeando corretamente os campos do ERP. O log mostra que o ERP envia `e_mail` (com underscore) mas o código procura `email` (sem underscore).
 
-### Evidências
-
-- Quando a URL manual (`/api/v1`) é informada: erro 401 (autenticação)
-- Quando a URL vem do Vault (vazia na UI): erro 404 (endpoint não existe = `/api/v3`)
+2. **Status não atualiza**: Existem dois fluxos de importação independentes:
+   - **Sincronização (botão "Sincronizar")**: Salva em `crm_clients`
+   - **Importação Manual (botão "Importar")**: Salva em `companies`/`contacts`
+   
+   A verificação de "Importado/Pendente" consulta `companies`/`contacts` (tabelas legadas), mas ignora `crm_clients` (tabela da sincronização).
 
 ---
 
-## Solução
+## Parte 1: Correção do Mapeamento de Campos
 
-### Ação 1: Atualizar Secret no Vault
+**Arquivo**: `supabase/functions/iniflex-list-correntistas/index.ts`
 
-A secret `INIFLEX_SANDBOX_API_URL` precisa ser atualizada para conter a URL correta:
+### Alterações Necessárias
 
-**Valor atual (incorreto)**:
-```
-https://iniflex.novafix.ind.br/api/v3/runtime/endpoint/integracao/iniflex/json
-```
+Corrigir o mapeamento na linha 89-99 para usar os nomes corretos dos campos do ERP:
 
-**Valor correto**:
-```
-https://iniflex.novafix.ind.br/api/v1/runtime/endpoint/integracao/iniflex/json
-```
+| Campo CRM | Nome no ERP (atual) | Mapeamento atual | Correção |
+|-----------|---------------------|------------------|----------|
+| email | `e_mail` | `c.email` ❌ | `c.e_mail` ✓ |
+| insc_estadual | `insc_estadual` | não mapeado ❌ | adicionar ✓ |
+| endereco | `loc_endereco` | não mapeado ❌ | adicionar ✓ |
+| cidade | `desc_loc_cidade` | `c.cidade` ❌ | `c.desc_loc_cidade` ✓ |
+| estado | `loc_uf` | `c.estado` ❌ | `c.loc_uf` ✓ |
 
-### Ação 2: Adicionar Log de Diagnóstico (Recomendado)
+### Interface Correntista Atualizada
 
-Para evitar problemas futuros, adicionar log explícito antes do envio mostrando:
-- A URL final que será usada
-- Se é manual ou do Vault
-
-Modificar `sandboxAdapter.ts`:
 ```typescript
-console.log('[iniflex-sandbox] URL FINAL (ANTES DO FETCH):', SANDBOX_URL);
-console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (UI)' : 'VAULT (ENV)');
+interface Correntista {
+  id: string;
+  cnpj_cpf: string;
+  nome: string;
+  fantasia?: string;
+  email?: string;      // será preenchido corretamente
+  fone?: string;
+  pfpj: string;
+  cidade?: string;     // será preenchido corretamente
+  estado?: string;     // será preenchido corretamente
+  // Novos campos:
+  insc_estadual?: string;
+  endereco?: string;
+  bairro?: string;
+  cep?: string;
+}
 ```
 
-### Ação 3: Validação Visual na UI (Recomendado)
+---
 
-Adicionar indicador na interface mostrando de onde a URL está vindo:
-- Badge "Vault" quando campo vazio (usando variável de ambiente)
-- Badge "Manual" quando URL digitada
+## Parte 2: Correção do Status de Importação
+
+**Arquivo**: `src/components/integrations/InflexTab.tsx`
+
+### Problema
+
+A função `isImported()` verifica apenas as tabelas `companies` e `contacts`:
+
+```typescript
+// Código atual - só verifica tabelas legadas
+const isImported = (correntista: Correntista) => {
+  if (isPJ) return existingCompanies?.has(correntista.id);
+  return existingContacts?.has(correntista.id);
+};
+```
+
+### Solução
+
+Adicionar consulta à tabela `crm_clients` e considerar ambas as fontes:
+
+```typescript
+// Nova query para buscar clientes sincronizados
+const { data: syncedClients } = useQuery({
+  queryKey: ['crm-clients-external-ids'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('crm_clients')
+      .select('external_id');
+    if (error) throw error;
+    return new Set(data.map(c => c.external_id));
+  },
+});
+
+// Função isImported atualizada
+const isImported = (correntista: Correntista) => {
+  // Verifica se foi sincronizado (crm_clients)
+  if (syncedClients?.has(correntista.id)) return true;
+  
+  // Verifica importação manual (companies/contacts)
+  const isPJ = correntista.pfpj === 'PJ' || correntista.cnpj_cpf?.length > 11;
+  if (isPJ) return existingCompanies?.has(correntista.id);
+  return existingContacts?.has(correntista.id);
+};
+```
+
+---
+
+## Parte 3: Invalidação de Cache Após Sincronização
+
+**Arquivo**: `src/components/integrations/InflexTab.tsx`
+
+### Problema
+
+Após a sincronização, o cache não é invalidado, então os stats não atualizam.
+
+### Solução
+
+```typescript
+const syncMutation = useMutation({
+  // ...
+  onSuccess: (data) => {
+    toast.success(`Sincronização concluída: ${data.processed} clientes processados`);
+    setLastSyncResult(data);
+    // Adicionar invalidação do cache
+    queryClient.invalidateQueries({ queryKey: ['crm-clients-external-ids'] });
+    queryClient.invalidateQueries({ queryKey: ['iniflex-correntistas'] });
+  },
+});
+```
 
 ---
 
@@ -56,33 +130,43 @@ Adicionar indicador na interface mostrando de onde a URL está vindo:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| **Vault (secret)** | Atualizar `INIFLEX_SANDBOX_API_URL` para `/api/v1` |
-| `supabase/functions/_shared/iniflex/sandboxAdapter.ts` | Adicionar log de diagnóstico da URL final |
+| `supabase/functions/iniflex-list-correntistas/index.ts` | Corrigir mapeamento de campos (`e_mail`, `insc_estadual`, endereço) |
+| `src/components/integrations/InflexTab.tsx` | Adicionar query para `crm_clients` e atualizar `isImported()` |
 
 ---
 
-## Detalhes Técnicos
+## Fluxo Corrigido
 
-### Alteração no sandboxAdapter.ts
-
-```typescript
-// Após linha 50-51 (onde define SANDBOX_URL)
-const SANDBOX_URL = customUrl || Deno.env.get('INIFLEX_SANDBOX_API_URL');
-const SANDBOX_TOKEN = customToken || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
-
-// NOVO: Log de diagnóstico da URL final
-console.log('[iniflex-sandbox] ===== DIAGNÓSTICO DE URL =====');
-console.log('[iniflex-sandbox] URL FINAL:', SANDBOX_URL);
-console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (informada via UI)' : 'VAULT (variável de ambiente)');
-if (!customUrl) {
-  console.log('[iniflex-sandbox] ATENÇÃO: Usando URL do Vault. Se incorreta, atualize a secret INIFLEX_SANDBOX_API_URL');
-}
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    FLUXO CORRIGIDO                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│   1. Listagem (ERP → Interface)                             │
+│      ├── e_mail → email ✓                                   │
+│      ├── insc_estadual → insc_estadual ✓                    │
+│      ├── desc_loc_cidade → cidade ✓                         │
+│      └── loc_uf → estado ✓                                  │
+│                                                             │
+│   2. Status "Importado"                                     │
+│      ├── Verificar crm_clients.external_id ✓ (prioridade)   │
+│      ├── Verificar companies.iniflex_id                     │
+│      └── Verificar contacts.iniflex_id                      │
+│                                                             │
+│   3. Após Sincronização                                     │
+│      └── Invalidar cache → Atualizar contadores ✓           │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Próximos Passos
+## Resultado Esperado
 
-1. Você precisará atualizar a secret `INIFLEX_SANDBOX_API_URL` no Vault com a URL correta
-2. Implementarei o log de diagnóstico no adapter
-3. Após atualização, os testes sem URL manual usarão `/api/v1` automaticamente
+Após as correções:
+
+1. **E-mail** aparecerá na lista e na tela de cliente
+2. **Inscrição Estadual** aparecerá preenchida
+3. **Endereço, Cidade e Estado** serão exibidos corretamente
+4. **Status "Importado"** refletirá clientes sincronizados via `crm_clients`
+5. **Contadores** (Importados/Pendentes) serão atualizados após sincronização
