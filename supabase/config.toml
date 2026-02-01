@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.sync-iniflex-products]
 verify_jwt = false
+
+[functions.sync-iniflex-orders]
+verify_jwt = false

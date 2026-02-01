@@ -639,6 +639,137 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_order_items: {
+        Row: {
+          created_at: string | null
+          descricao: string | null
+          id: string
+          order_id: string
+          product_external_id: string | null
+          product_id: string | null
+          quantidade: number | null
+          raw_data: Json | null
+          unidade: string | null
+          valor_total: number | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          order_id: string
+          product_external_id?: string | null
+          product_id?: string | null
+          quantidade?: number | null
+          raw_data?: Json | null
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          order_id?: string
+          product_external_id?: string | null
+          product_id?: string | null
+          quantidade?: number | null
+          raw_data?: Json | null
+          unidade?: string | null
+          valor_total?: number | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "crm_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "crm_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_orders: {
+        Row: {
+          client_external_id: string | null
+          client_id: string | null
+          created_at: string | null
+          data_alteracao_erp: string | null
+          data_emissao: string | null
+          data_entrega: string | null
+          empresa: number | null
+          external_id: string
+          id: string
+          numero_pedido: string | null
+          raw_data: Json | null
+          situacao: string | null
+          status: string | null
+          synced_at: string | null
+          tipo_pedido: string | null
+          updated_at: string | null
+          valor_desconto: number | null
+          valor_frete: number | null
+          valor_total: number | null
+        }
+        Insert: {
+          client_external_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          data_alteracao_erp?: string | null
+          data_emissao?: string | null
+          data_entrega?: string | null
+          empresa?: number | null
+          external_id: string
+          id?: string
+          numero_pedido?: string | null
+          raw_data?: Json | null
+          situacao?: string | null
+          status?: string | null
+          synced_at?: string | null
+          tipo_pedido?: string | null
+          updated_at?: string | null
+          valor_desconto?: number | null
+          valor_frete?: number | null
+          valor_total?: number | null
+        }
+        Update: {
+          client_external_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          data_alteracao_erp?: string | null
+          data_emissao?: string | null
+          data_entrega?: string | null
+          empresa?: number | null
+          external_id?: string
+          id?: string
+          numero_pedido?: string | null
+          raw_data?: Json | null
+          situacao?: string | null
+          status?: string | null
+          synced_at?: string | null
+          tipo_pedido?: string | null
+          updated_at?: string | null
+          valor_desconto?: number | null
+          valor_frete?: number | null
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_products: {
         Row: {
           ativo: boolean | null
