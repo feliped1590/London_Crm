@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendToIniflex } from '../_shared/iniflex/adapter.ts';
+import { sendToIniflex, InflexConfig } from '../_shared/iniflex/adapter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +61,12 @@ interface NormalizedCustomer {
     uf: string;
     cep: string;
   };
+}
+
+interface LookupRequest {
+  cnpj: string;
+  baseUrl: string;
+  token: string;
 }
 
 function normalizeCustomer(raw: InflexCustomer, cnpj: string): NormalizedCustomer {
@@ -126,8 +132,21 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const body = await req.json();
+    const body = await req.json() as LookupRequest;
     const cnpjClean = body.cnpj?.replace(/\D/g, '') || '';
+
+    // ===== VALIDAÇÃO DE CREDENCIAIS (OBRIGATÓRIO) =====
+    if (!body.baseUrl?.trim() || !body.token?.trim()) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'baseUrl e token são obrigatórios. Configure os campos na interface.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const config: InflexConfig = { 
+      baseUrl: body.baseUrl.trim(), 
+      token: body.token.trim() 
+    };
 
     // ===== VALIDATIONS (no logs if invalid) =====
     if (!cnpjClean) {
@@ -148,18 +167,6 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: 'CNPJ inválido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // ===== CHECK CREDENTIALS (quick fail) =====
-    const INIFLEX_URL = Deno.env.get('INIFLEX_API_URL');
-    const INIFLEX_TOKEN = Deno.env.get('INIFLEX_API_TOKEN');
-
-    if (!INIFLEX_URL || !INIFLEX_TOKEN) {
-      console.error('[iniflex-customer-lookup] Credentials not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Serviço de integração não configurado' }),
-        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -190,8 +197,8 @@ Deno.serve(async (req) => {
       },
     };
 
-    // ===== USAR ADAPTER CENTRALIZADO =====
-    const result = await sendToIniflex(payload);
+    // ===== USAR ADAPTER COM CREDENCIAIS EXPLÍCITAS =====
+    const result = await sendToIniflex(payload, config);
 
     if (!result.success) {
       await updateLog(supabase, logId, 'failed', null, result.error || 'Erro desconhecido', result.rawResponse);

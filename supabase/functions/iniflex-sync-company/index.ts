@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendToIniflex } from '../_shared/iniflex/adapter.ts';
+import { sendToIniflex, InflexConfig } from '../_shared/iniflex/adapter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +8,8 @@ const corsHeaders = {
 
 interface SyncRequest {
   company_id: string;
+  baseUrl: string;
+  token: string;
 }
 
 Deno.serve(async (req) => {
@@ -22,7 +24,18 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { company_id } = await req.json() as SyncRequest;
+    const body = await req.json() as SyncRequest;
+    const { company_id, baseUrl, token } = body;
+
+    // VALIDAÇÃO ESTRITA DE CREDENCIAIS
+    if (!baseUrl?.trim() || !token?.trim()) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'baseUrl e token são obrigatórios. Configure os campos na interface.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const config: InflexConfig = { baseUrl: baseUrl.trim(), token: token.trim() };
 
     if (!company_id) {
       return new Response(
@@ -94,8 +107,8 @@ Deno.serve(async (req) => {
 
     console.log('[iniflex-sync-company] Payload preparado para empresa:', company_id);
 
-    // Usar adapter centralizado (chave injetada automaticamente)
-    const result = await sendToIniflex(payload);
+    // Usar adapter com credenciais explícitas
+    const result = await sendToIniflex(payload, config);
 
     if (!result.success) {
       console.error('[iniflex-sync-company] Erro na API Iniflex:', result.error);

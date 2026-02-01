@@ -10,8 +10,8 @@ interface TestRequest {
   payload: Record<string, unknown>;
   timeout_ms?: number;
   save_log?: boolean;
-  api_url?: string;
-  api_token?: string;
+  api_url: string;    // OBRIGATÓRIO
+  api_token: string;  // OBRIGATÓRIO
 }
 
 Deno.serve(async (req) => {
@@ -38,17 +38,16 @@ Deno.serve(async (req) => {
     });
 
     // Verificar usuário autenticado
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (claimsError || !claimsData?.claims) {
+    if (userError || !user) {
       return new Response(
         JSON.stringify({ success: false, error: 'Token inválido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     // Verificar se é admin
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
@@ -68,6 +67,17 @@ Deno.serve(async (req) => {
     // Parse do request
     const body = await req.json() as TestRequest;
 
+    // VALIDAÇÃO ESTRITA - SEM FALLBACK PARA ENV VARS
+    if (!body.api_url?.trim() || !body.api_token?.trim()) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'URL e Token são obrigatórios. Preencha os campos na interface.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!body.payload || typeof body.payload !== 'object') {
       return new Response(
         JSON.stringify({ success: false, error: 'Payload é obrigatório e deve ser um objeto JSON' }),
@@ -78,15 +88,15 @@ Deno.serve(async (req) => {
     console.log('[iniflex-sandbox-test] Iniciando teste para usuário:', userId);
     console.log('[iniflex-sandbox-test] Payload recebido:', JSON.stringify(body.payload, null, 2));
     
-    // Determinar URL e Token (manual ou fallback para env vars)
-    const finalUrl = body.api_url || Deno.env.get('INIFLEX_SANDBOX_API_URL');
-    const finalToken = body.api_token || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
-    
-    console.log('[iniflex-sandbox-test] URL:', body.api_url ? 'MANUAL' : 'ENV', finalUrl?.substring(0, 50));
-    console.log('[iniflex-sandbox-test] Token:', body.api_token ? 'MANUAL' : 'ENV', `(${finalToken?.length || 0} chars)`);
-
-    // Executar teste no sandbox com URL e Token customizados
-    const result = await sendToInflexSandbox(body.payload, body.timeout_ms || 15000, finalUrl, finalToken);
+    // Executar teste no sandbox com credenciais explícitas
+    const result = await sendToInflexSandbox(
+      body.payload, 
+      { 
+        baseUrl: body.api_url.trim(), 
+        token: body.api_token.trim() 
+      },
+      body.timeout_ms || 15000
+    );
 
     // Salvar log se solicitado
     if (body.save_log !== false) {

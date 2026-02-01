@@ -1,6 +1,10 @@
 /**
  * Adapter de comunicação com API Iniflex
- * Fundação v1 - Ponto único de comunicação HTTP
+ * 
+ * ARQUITETURA SEM VARIÁVEIS DE AMBIENTE:
+ * - URL e Token são SEMPRE recebidos explicitamente via parâmetro
+ * - Não existe fallback para Deno.env.get()
+ * - Falha explícita se credenciais não forem fornecidas
  * 
  * REGRAS DE AUTENTICAÇÃO:
  * - A API Novafix/Iniflex NÃO usa Authorization Header
@@ -11,6 +15,14 @@
 import { SyncResult } from './types.ts';
 
 /**
+ * Configuração de credenciais para a API Iniflex
+ */
+export interface InflexConfig {
+  baseUrl: string;
+  token: string;
+}
+
+/**
  * Envia dados para a API do ERP Iniflex
  * 
  * IMPORTANTE: Este adapter SEMPRE retorna um SyncResult completo:
@@ -19,59 +31,58 @@ import { SyncResult } from './types.ts';
  * - rawResponse: unknown
  * - error?: string (presente quando success = false)
  * 
- * Cenários tratados:
- * - Credenciais não configuradas
- * - Timeout (10 segundos)
- * - Erro HTTP (4xx, 5xx)
- * - Erro de parse JSON
- * - Exceção inesperada
- * 
  * @param payload - Dados funcionais (SEM chave - será injetada automaticamente)
+ * @param config - Credenciais obrigatórias (baseUrl e token)
  * @returns SyncResult padronizado
  */
-export async function sendToIniflex(payload: unknown): Promise<SyncResult> {
-  const INIFLEX_URL = Deno.env.get('INIFLEX_API_URL');
-  const INIFLEX_TOKEN = Deno.env.get('INIFLEX_API_TOKEN');
-
-  // Validação de credenciais
-  if (!INIFLEX_URL || !INIFLEX_TOKEN) {
-    console.error('[iniflex-adapter] Credenciais não configuradas');
+export async function sendToIniflex(
+  payload: unknown,
+  config: InflexConfig
+): Promise<SyncResult> {
+  
+  // VALIDAÇÃO OBRIGATÓRIA - SEM FALLBACK
+  if (!config?.baseUrl?.trim() || !config?.token?.trim()) {
+    console.error('[iniflex-adapter] Credenciais não fornecidas');
     return {
       success: false,
       externalId: null,
       rawResponse: null,
-      error: 'Credenciais do ERP não configuradas (INIFLEX_API_URL ou INIFLEX_API_TOKEN)',
+      error: 'baseUrl e token são obrigatórios. Configure os campos na interface.',
     };
   }
 
-  // Injetar chave no INÍCIO do payload (ordem pode ser importante para a API)
+  // SANITIZAÇÃO DEFENSIVA DA URL (remove barras finais)
+  const baseUrl = config.baseUrl.replace(/\/+$/, '');
+  const token = config.token.trim();
+
+  // LOG MÍNIMO PADRONIZADO (nunca logar token completo)
   const payloadObj = payload as Record<string, unknown>;
+  console.log('[iniflex-adapter] URL:', baseUrl);
+  console.log('[iniflex-adapter] tokenLength:', token.length);
+  console.log('[iniflex-adapter] payload.grupoComando:', payloadObj?.grupoComando);
+
+  // Injetar chave no INÍCIO do payload (ordem pode ser importante para a API)
   const payloadWithKey = {
-    chave: payloadObj?.chave ?? INIFLEX_TOKEN, // chave PRIMEIRO
+    chave: token, // chave PRIMEIRO
     ...payloadObj,
   };
-  // Remover chave duplicada se existia no payload original
-  if ('chave' in payloadObj) {
-    delete (payloadWithKey as Record<string, unknown>)['chave'];
-    (payloadWithKey as Record<string, unknown>)['chave'] = INIFLEX_TOKEN;
-  }
 
   // Log seguro: excluir chave sensível
   const { chave: _chave, ...safePayload } = payloadWithKey;
   console.log('[iniflex-adapter] Enviando para Iniflex:', JSON.stringify(safePayload, null, 2).substring(0, 500));
-  // Debug: mostrar primeiros e últimos caracteres do token para validação
-  const tokenStr = String(_chave || '');
-  const tokenPreview = tokenStr.length > 20 
-    ? `${tokenStr.substring(0, 10)}...${tokenStr.substring(tokenStr.length - 10)}`
-    : tokenStr;
-  console.log('[iniflex-adapter] Chave presente:', !!_chave, '| Tamanho:', tokenStr.length, '| Preview:', tokenPreview);
+  
+  // Preview seguro do token para validação
+  const tokenPreview = token.length > 20 
+    ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
+    : '[token curto]';
+  console.log('[iniflex-adapter] Token preview:', tokenPreview);
 
   // Request com timeout de 10 segundos
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const response = await fetch(INIFLEX_URL, {
+    const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

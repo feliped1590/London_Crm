@@ -1,15 +1,19 @@
 /**
  * Adapter de comunicação com API Iniflex - SANDBOX
  * 
+ * ARQUITETURA SEM VARIÁVEIS DE AMBIENTE:
+ * - URL e Token são SEMPRE recebidos explicitamente via parâmetro
+ * - Não existe fallback para Deno.env.get()
+ * - Falha explícita se credenciais não forem fornecidas
+ * 
  * Este adapter é EXCLUSIVO para testes e validações.
  * NÃO deve ser usado em produção.
- * 
- * REGRAS:
- * - Usa configurações separadas (INIFLEX_SANDBOX_*)
- * - Loga request e response COMPLETOS para debug
- * - Timeout configurável
- * - Nunca grava dados no banco de produção
  */
+
+export interface SandboxConfig {
+  baseUrl: string;
+  token: string;
+}
 
 export interface SandboxResult {
   success: boolean;
@@ -33,66 +37,59 @@ export interface SandboxResult {
  * Envia dados para a API do ERP Iniflex (ambiente sandbox)
  * 
  * @param payload - Dados a serem enviados (a chave será injetada automaticamente)
+ * @param config - Credenciais OBRIGATÓRIAS (baseUrl e token)
  * @param timeoutMs - Timeout em milissegundos (default: 15000)
- * @param customUrl - URL customizada (opcional, usa env var se não fornecida)
- * @param customToken - Token customizado (opcional, usa env var se não fornecido)
  * @returns SandboxResult com todos os detalhes para debug
  */
 export async function sendToInflexSandbox(
   payload: unknown,
-  timeoutMs: number = 15000,
-  customUrl?: string,
-  customToken?: string
+  config: SandboxConfig,
+  timeoutMs: number = 15000
 ): Promise<SandboxResult> {
   const startTime = Date.now();
+  const payloadObj = payload as Record<string, unknown>;
   
-  // Usar valores customizados ou fallback para env vars
-  const SANDBOX_URL = customUrl || Deno.env.get('INIFLEX_SANDBOX_API_URL');
-  const SANDBOX_TOKEN = customToken || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
-
-  // LOG DE DIAGNÓSTICO: Mostra URL final e origem
-  console.log('[iniflex-sandbox] ===== DIAGNÓSTICO DE URL =====');
-  console.log('[iniflex-sandbox] URL FINAL:', SANDBOX_URL);
-  console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (informada via UI)' : 'VAULT (variável de ambiente)');
-  if (!customUrl) {
-    console.log('[iniflex-sandbox] ATENÇÃO: Usando URL do Vault. Se incorreta, atualize a secret INIFLEX_SANDBOX_API_URL');
-  }
-
-  // Validação de credenciais
-  if (!SANDBOX_URL || !SANDBOX_TOKEN) {
-    console.error('[iniflex-sandbox] Credenciais sandbox não configuradas');
+  // VALIDAÇÃO ESTRITA - SEM FALLBACK PARA ENV VARS
+  if (!config?.baseUrl?.trim() || !config?.token?.trim()) {
+    console.error('[iniflex-sandbox] Credenciais não fornecidas');
     return {
       success: false,
       httpStatus: null,
       latencyMs: Date.now() - startTime,
       request: {
-        url: SANDBOX_URL || 'NOT_CONFIGURED',
-        payload,
-        hasToken: !!SANDBOX_TOKEN,
-        tokenLength: SANDBOX_TOKEN?.length || 0,
+        url: config?.baseUrl || 'NOT_PROVIDED',
+        payload: payloadObj,
+        hasToken: !!config?.token,
+        tokenLength: config?.token?.length || 0,
         tokenPreview: '',
       },
       response: { raw: null },
-      error: 'Credenciais sandbox não configuradas (INIFLEX_SANDBOX_API_URL ou INIFLEX_SANDBOX_API_TOKEN)',
+      error: 'URL e Token são obrigatórios. Preencha os campos na interface.',
     };
   }
 
+  // SANITIZAÇÃO DEFENSIVA DA URL (remove barras finais)
+  const baseUrl = config.baseUrl.replace(/\/+$/, '');
+  const token = config.token.trim();
+
+  // LOG MÍNIMO PADRONIZADO
+  console.log('[iniflex-sandbox] URL:', baseUrl);
+  console.log('[iniflex-sandbox] tokenLength:', token.length);
+  console.log('[iniflex-sandbox] payload.grupoComando:', payloadObj?.grupoComando);
+
   // Injetar chave no INÍCIO do payload (ordem pode ser importante para a API)
-  const payloadObj = payload as Record<string, unknown>;
   const payloadWithKey = {
-    chave: SANDBOX_TOKEN, // chave PRIMEIRO
+    chave: token, // chave PRIMEIRO
     ...payloadObj,
   };
 
-  // Preview seguro do token para debug (como no adapter de produção)
-  const tokenStr = String(SANDBOX_TOKEN || '');
-  const tokenPreview = tokenStr.length > 20 
-    ? `${tokenStr.substring(0, 10)}...${tokenStr.substring(tokenStr.length - 10)}`
+  // Preview seguro do token para debug
+  const tokenPreview = token.length > 20 
+    ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
     : '[token muito curto]';
 
   console.log('[iniflex-sandbox] ========== INICIO DO TESTE ==========');
-  console.log('[iniflex-sandbox] URL:', SANDBOX_URL);
-  console.log('[iniflex-sandbox] Token - Tamanho:', tokenStr.length, '| Preview:', tokenPreview);
+  console.log('[iniflex-sandbox] Token preview:', tokenPreview);
   console.log('[iniflex-sandbox] Payload (sem chave):', JSON.stringify(payloadObj, null, 2));
 
   // Request com timeout
@@ -102,7 +99,7 @@ export async function sendToInflexSandbox(
   try {
     console.log('[iniflex-sandbox] Enviando requisição...');
     
-    const response = await fetch(SANDBOX_URL, {
+    const response = await fetch(baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -118,7 +115,6 @@ export async function sendToInflexSandbox(
 
     console.log('[iniflex-sandbox] HTTP Status:', response.status, response.statusText);
     console.log('[iniflex-sandbox] Latência:', latencyMs, 'ms');
-    console.log('[iniflex-sandbox] Response Headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
     console.log('[iniflex-sandbox] Response Body:', responseText);
 
     // Tentar fazer parse do JSON
@@ -135,10 +131,10 @@ export async function sendToInflexSandbox(
       httpStatus: response.status,
       latencyMs,
       request: {
-        url: SANDBOX_URL,
+        url: baseUrl,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: tokenStr.length,
+        tokenLength: token.length,
         tokenPreview,
       },
       response: {
@@ -166,10 +162,10 @@ export async function sendToInflexSandbox(
         httpStatus: null,
         latencyMs,
         request: {
-          url: SANDBOX_URL,
+          url: baseUrl,
           payload: payloadObj,
           hasToken: true,
-          tokenLength: tokenStr.length,
+          tokenLength: token.length,
           tokenPreview,
         },
         response: { raw: null },
@@ -186,10 +182,10 @@ export async function sendToInflexSandbox(
       httpStatus: null,
       latencyMs,
       request: {
-        url: SANDBOX_URL,
+        url: baseUrl,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: tokenStr.length,
+        tokenLength: token.length,
         tokenPreview,
       },
       response: { raw: null },
