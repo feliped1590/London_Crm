@@ -1,61 +1,82 @@
 
-# Plano: Correção da Correspondência de IDs na Sincronização
+# Plano: Correção da Verificação de Status com IDs Distintos
 
 ## Problema Identificado
 
-A verificação de status "Importado" está falhando porque há uma **incompatibilidade de IDs** entre os dois fluxos:
+Existe uma **incompatibilidade de IDs** entre os dois fluxos de importação:
 
-| Fluxo | Campo no ERP | Campo Mapeado | Valor Exemplo |
-|-------|--------------|---------------|---------------|
-| **Sincronização** (`sync-iniflex-clients`) | `codigo_erp` | `external_id` | `"1030"` |
-| **Listagem** (`iniflex-list-correntistas`) | `codigo` ❌ | `id` | `5378317000180` (CNPJ) |
+| Tabela | Campo | Valor Exemplo | Fonte do ID |
+|--------|-------|---------------|-------------|
+| `crm_clients` | `external_id` | `"451"` | `codigo_erp` |
+| `companies` | `iniflex_id` | `"5378317000180"` | CNPJ |
 
-O log mostra claramente:
-```json
-{
-  "codigo_erp": 451,
-  "cnpj_cpf": 5378317000180,
-  ...
-}
-```
+A última alteração fez o mapeamento da listagem usar `codigo_erp` como `id`, o que funciona para `crm_clients`, mas quebra a verificação de `companies` (que usa CNPJ).
 
-A listagem usa `c.codigo || c.id || c.cnpj_cpf`, mas o ERP envia `codigo_erp` (não `codigo`).
+**Dados atuais:**
+- `crm_clients`: 192 registros (sincronização - potencialmente indesejada)
+- `companies` com `iniflex_id`: 4 registros (importação manual - **os reais importados**)
 
 ---
 
 ## Solução
 
-Corrigir o mapeamento do `id` na função `iniflex-list-correntistas` para usar `codigo_erp` como primeira opção, mantendo consistência com a sincronização.
+Manter a listagem retornando `codigo_erp` como `id`, e ajustar a verificação de status para considerar ambos os cenários:
+
+1. **Para `crm_clients`**: comparar com `external_id` (codigo_erp)
+2. **Para `companies`/`contacts`**: comparar com CNPJ/CPF do correntista
 
 ---
 
-## Alteração
+## Alterações Necessárias
 
-**Arquivo**: `supabase/functions/iniflex-list-correntistas/index.ts`
+### 1. InflexTab.tsx - Verificação de Status
 
-**Linha 90 - Antes:**
+**Arquivo**: `src/components/integrations/InflexTab.tsx`
+
+Modificar a função `isImported()` para verificar `companies` e `contacts` usando o **CNPJ/CPF** (não o `id`):
+
 ```typescript
-id: c.codigo || c.id || c.cnpj_cpf,
+// Buscar empresas já importadas com seu CNPJ
+const { data: existingCompanies } = useQuery({
+  queryKey: ['companies-iniflex-ids'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('companies')
+      .select('iniflex_id, cnpj');
+    if (error) throw error;
+    // Criar Set com ambos: iniflex_id e cnpj (limpos)
+    const ids = new Set<string>();
+    data.forEach(c => {
+      if (c.iniflex_id) ids.add(String(c.iniflex_id));
+      if (c.cnpj) ids.add(c.cnpj.replace(/\D/g, ''));
+    });
+    return ids;
+  },
+});
+
+// Função isImported atualizada
+const isImported = (correntista: Correntista) => {
+  // Verificar crm_clients por codigo_erp
+  if (syncedClients?.has(correntista.id)) return true;
+  
+  // Verificar companies/contacts por CNPJ/CPF
+  const cleanDoc = correntista.cnpj_cpf?.replace(/\D/g, '') || '';
+  const isPJ = correntista.pfpj === 'PJ' || cleanDoc.length > 11;
+  
+  if (isPJ) {
+    return existingCompanies?.has(cleanDoc) || existingCompanies?.has(correntista.id);
+  }
+  return existingContacts?.has(cleanDoc) || existingContacts?.has(correntista.id);
+};
 ```
 
-**Depois:**
-```typescript
-id: String(c.codigo_erp || c.codigo || c.id || c.cnpj_cpf),
-```
+### 2. Limpar Dados Errados (Opcional)
 
-Isso garante que o `id` retornado pela listagem seja o mesmo valor usado como `external_id` na sincronização.
+Os 192 registros em `crm_clients` foram importados pela sincronização anterior. Se esses não deveriam estar lá, você pode:
 
----
+**Opção A**: Manter os dados (a sincronização funciona corretamente)
 
-## Validação
-
-Após a correção:
-
-1. A listagem retornará `id: "1030"` (codigo_erp como string)
-2. O banco tem `external_id: "1030"`
-3. A comparação `syncedClients.has(correntista.id)` retornará `true`
-4. O badge mostrará "Importado" em verde ✓
-5. Os contadores serão atualizados corretamente
+**Opção B**: Limpar a tabela `crm_clients` e re-sincronizar apenas os desejados
 
 ---
 
@@ -63,33 +84,40 @@ Após a correção:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/iniflex-list-correntistas/index.ts` | Adicionar `codigo_erp` como primeira opção no mapeamento do `id` |
+| `src/components/integrations/InflexTab.tsx` | Atualizar queries para incluir CNPJ/CPF nos Sets e ajustar `isImported()` |
 
 ---
 
 ## Fluxo Corrigido
 
 ```text
-ERP Iniflex
-     │
-     ▼ codigo_erp: 1030
-┌────────────────────────────────────────┐
-│                                        │
-│  sync-iniflex-clients                  │
-│  external_id = "1030" ✓                │
-│                                        │
-│  iniflex-list-correntistas             │
-│  id = "1030" ✓ (CORRIGIDO)             │
-│                                        │
-└────────────────────────────────────────┘
-     │
-     ▼
-┌────────────────────────────────────────┐
-│  Frontend (InflexTab.tsx)              │
-│                                        │
-│  syncedClients.has("1030") → true ✓    │
-│  isImported() → true ✓                 │
-│  Badge: "Importado" (verde) ✓          │
-│                                        │
-└────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              VERIFICAÇÃO DE STATUS                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Correntista do ERP:                                        │
+│    id: "451" (codigo_erp)                                   │
+│    cnpj_cpf: "05378317000180"                               │
+│                                                             │
+│  Verificação:                                               │
+│    1. crm_clients.external_id = "451" ?                     │
+│       → Sim = Importado (sincronização)                     │
+│                                                             │
+│    2. companies.iniflex_id = "5378317000180" ?              │
+│       ou companies.cnpj = "5378317000180" ?                 │
+│       → Sim = Importado (manual)                            │
+│                                                             │
+│    3. Nenhum → Pendente                                     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Resultado Esperado
+
+Após a correção:
+
+1. **4 registros** serão marcados como "Importado" (os que estão em `companies`)
+2. Registros sincronizados em `crm_clients` também serão identificados
+3. Contadores refletirão a realidade: ~4 importados, ~4368 pendentes
