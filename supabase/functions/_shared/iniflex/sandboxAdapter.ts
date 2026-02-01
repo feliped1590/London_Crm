@@ -77,12 +77,6 @@ export async function sendToInflexSandbox(
   console.log('[iniflex-sandbox] tokenLength:', token.length);
   console.log('[iniflex-sandbox] payload.grupoComando:', payloadObj?.grupoComando);
 
-  // Injetar chave no INÍCIO do payload (ordem pode ser importante para a API)
-  const payloadWithKey = {
-    chave: token, // chave PRIMEIRO
-    ...payloadObj,
-  };
-
   // Preview seguro do token para debug
   const tokenPreview = token.length > 20 
     ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
@@ -103,9 +97,11 @@ export async function sendToInflexSandbox(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // SEM Authorization header - chave vai no body
+        'Accept': 'application/json',
+        // TESTE DEFINITIVO: Iniflex usa token CRU sem prefixo
+        'Authorization': token,
       },
-      body: JSON.stringify(payloadWithKey),
+      body: JSON.stringify(payloadObj),
       signal: controller.signal,
     });
     clearTimeout(timeout);
