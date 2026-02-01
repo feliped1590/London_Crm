@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Loader2,
   ArrowDownToLine,
-  Database
+  Database,
+  Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCPF, formatCNPJ } from '@/lib/cpfCnpjMask';
@@ -55,6 +56,7 @@ export function InflexTab() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
+  const [lastProductSyncResult, setLastProductSyncResult] = useState<SyncResult | null>(null);
   const { config, isConfigured } = useInflexConfig();
 
   // Mutation para sincronização incremental de clientes
@@ -73,12 +75,34 @@ export function InflexTab() {
     onSuccess: (data) => {
       toast.success(`Sincronização concluída: ${data.processed} clientes processados`);
       setLastSyncResult(data);
-      // Invalidar cache para atualizar contadores
       queryClient.invalidateQueries({ queryKey: ['crm-clients-external-ids'] });
       queryClient.invalidateQueries({ queryKey: ['iniflex-correntistas'] });
     },
     onError: (error: Error) => {
       toast.error(`Erro na sincronização: ${error.message}`);
+    },
+  });
+
+  // Mutation para sincronização incremental de produtos
+  const syncProductsMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-iniflex-products', {
+        body: {
+          baseUrl: config.baseUrl,
+          token: config.token,
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Erro na sincronização');
+      return data as SyncResult;
+    },
+    onSuccess: (data) => {
+      toast.success(`Sincronização de produtos: ${data.processed} processados`);
+      setLastProductSyncResult(data);
+      queryClient.invalidateQueries({ queryKey: ['crm-products'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro na sincronização de produtos: ${error.message}`);
     },
   });
 
@@ -302,6 +326,61 @@ export function InflexTab() {
           ) : (
             <p className="text-sm text-muted-foreground">
               Nenhuma sincronização realizada nesta sessão.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Seção de Sincronização de Produtos */}
+      <Card className="bg-muted/30 border-primary/20">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Package className="h-5 w-5" />
+                Sincronização de Produtos
+              </CardTitle>
+              <CardDescription>
+                Busca incremental de produtos/versões do ERP Iniflex
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={() => syncProductsMutation.mutate()}
+              disabled={syncProductsMutation.isPending || !isConfigured}
+              className="gap-2"
+            >
+              {syncProductsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Sincronizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!isConfigured ? (
+            <p className="text-sm text-muted-foreground">
+              Configure URL e Token na aba <strong>Sandbox</strong> para habilitar a sincronização.
+            </p>
+          ) : lastProductSyncResult ? (
+            <div className="flex flex-wrap gap-3">
+              <Badge variant="outline" className="gap-1">
+                <Package className="h-3 w-3" />
+                Processados: {lastProductSyncResult.processed}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Criados: {lastProductSyncResult.created}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-blue-600">
+                <RefreshCw className="h-3 w-3" />
+                Atualizados: {lastProductSyncResult.updated}
+              </Badge>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma sincronização de produtos realizada nesta sessão.
             </p>
           )}
         </CardContent>

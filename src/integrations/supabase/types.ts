@@ -639,6 +639,51 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_products: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          data_alteracao_erp: string | null
+          descricao: string | null
+          external_id: string
+          id: string
+          raw_data: Json | null
+          sku: string | null
+          synced_at: string | null
+          unidade: string | null
+          updated_at: string | null
+          versao: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          data_alteracao_erp?: string | null
+          descricao?: string | null
+          external_id: string
+          id?: string
+          raw_data?: Json | null
+          sku?: string | null
+          synced_at?: string | null
+          unidade?: string | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          data_alteracao_erp?: string | null
+          descricao?: string | null
+          external_id?: string
+          id?: string
+          raw_data?: Json | null
+          sku?: string | null
+          synced_at?: string | null
+          unidade?: string | null
+          updated_at?: string | null
+          versao?: string | null
+        }
+        Relationships: []
+      }
       custom_fields: {
         Row: {
           created_at: string
