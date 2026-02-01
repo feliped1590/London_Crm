@@ -244,34 +244,43 @@ Deno.serve(async (req) => {
         }
 
         // Verificar se produto já existe (por external_id + versao)
+        const normalizedVersao = productData.versao ?? '';
         const { data: existingProduct } = await supabase
           .from('crm_products')
           .select('id')
           .eq('external_id', productData.external_id)
-          .eq('versao', productData.versao ?? '')
+          .eq('versao', normalizedVersao)
           .maybeSingle();
 
-        // UPSERT produto
-        // Usar raw SQL para o upsert com índice composto
-        const { error: upsertError } = await supabase
-          .from('crm_products')
-          .upsert({
-            ...productData,
-            // Garantir que versao vazia seja string vazia para o índice único
-            versao: productData.versao ?? '',
-          }, { 
-            onConflict: 'external_id,versao',
-            ignoreDuplicates: false
-          });
-
-        if (upsertError) {
-          console.error('[sync-products] Erro ao salvar produto:', productData.external_id, upsertError);
-          continue;
-        }
-
+        // INSERT ou UPDATE manual (evita problemas com onConflict em índice com COALESCE)
         if (existingProduct) {
+          // UPDATE
+          const { error: updateError } = await supabase
+            .from('crm_products')
+            .update({
+              ...productData,
+              versao: normalizedVersao,
+            })
+            .eq('id', existingProduct.id);
+
+          if (updateError) {
+            console.error('[sync-products] Erro ao atualizar produto:', productData.external_id, updateError);
+            continue;
+          }
           updated++;
         } else {
+          // INSERT
+          const { error: insertError } = await supabase
+            .from('crm_products')
+            .insert({
+              ...productData,
+              versao: normalizedVersao,
+            });
+
+          if (insertError) {
+            console.error('[sync-products] Erro ao inserir produto:', productData.external_id, insertError);
+            continue;
+          }
           created++;
         }
 
