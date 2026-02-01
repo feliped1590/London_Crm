@@ -50,6 +50,14 @@ export async function sendToInflexSandbox(
   const SANDBOX_URL = customUrl || Deno.env.get('INIFLEX_SANDBOX_API_URL');
   const SANDBOX_TOKEN = customToken || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
 
+  // LOG DE DIAGNÓSTICO: Mostra URL final e origem
+  console.log('[iniflex-sandbox] ===== DIAGNÓSTICO DE URL =====');
+  console.log('[iniflex-sandbox] URL FINAL:', SANDBOX_URL);
+  console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (informada via UI)' : 'VAULT (variável de ambiente)');
+  if (!customUrl) {
+    console.log('[iniflex-sandbox] ATENÇÃO: Usando URL do Vault. Se incorreta, atualize a secret INIFLEX_SANDBOX_API_URL');
+  }
+
   // Validação de credenciais
   if (!SANDBOX_URL || !SANDBOX_TOKEN) {
     console.error('[iniflex-sandbox] Credenciais sandbox não configuradas');
