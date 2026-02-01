@@ -1,89 +1,88 @@
 
+# Plano: Correção da URL da API Iniflex (v3 → v1)
 
-# Plano: Permitir Configuração Manual de URL e Token no Sandbox
+## Diagnóstico
 
-## Problema Identificado
-Os campos de URL e Token na aba Sandbox estão desabilitados (`disabled`), impedindo a entrada manual de dados. O design atual assume que os valores vêm das variáveis de ambiente, mas para testes práticos é necessário poder inserir valores diretamente.
+Após análise detalhada do código:
 
-## Solução Proposta
+1. **Não existe `/api/v3` hardcoded** - A busca em todo o diretório `supabase/` retornou zero ocorrências
+2. **O código está correto** - O adapter usa exatamente a URL fornecida sem modificações
+3. **A origem do problema é a variável de ambiente** - A secret `INIFLEX_SANDBOX_API_URL` no Vault está configurada com `/api/v3`
 
-### 1. Tornar Campos Editáveis
-Modificar o componente `InflexSandboxTab.tsx` para:
-- Remover `disabled` dos campos de URL e Token
-- Adicionar estado local para armazenar URL e Token digitados pelo usuário
-- Enviar esses valores para a Edge Function junto com o payload
+### Evidências
 
-### 2. Atualizar Edge Function
-Modificar `iniflex-sandbox-test` para:
-- Aceitar parâmetros opcionais `api_url` e `api_token`
-- Usar os valores enviados pela UI quando fornecidos
-- Usar variáveis de ambiente como fallback
+- Quando a URL manual (`/api/v1`) é informada: erro 401 (autenticação)
+- Quando a URL vem do Vault (vazia na UI): erro 404 (endpoint não existe = `/api/v3`)
 
-### 3. Indicador de Origem
-Mostrar visualmente se o valor está sendo:
-- Digitado manualmente (editável)
-- Carregado do Vault (fallback)
+---
+
+## Solução
+
+### Ação 1: Atualizar Secret no Vault
+
+A secret `INIFLEX_SANDBOX_API_URL` precisa ser atualizada para conter a URL correta:
+
+**Valor atual (incorreto)**:
+```
+https://iniflex.novafix.ind.br/api/v3/runtime/endpoint/integracao/iniflex/json
+```
+
+**Valor correto**:
+```
+https://iniflex.novafix.ind.br/api/v1/runtime/endpoint/integracao/iniflex/json
+```
+
+### Ação 2: Adicionar Log de Diagnóstico (Recomendado)
+
+Para evitar problemas futuros, adicionar log explícito antes do envio mostrando:
+- A URL final que será usada
+- Se é manual ou do Vault
+
+Modificar `sandboxAdapter.ts`:
+```typescript
+console.log('[iniflex-sandbox] URL FINAL (ANTES DO FETCH):', SANDBOX_URL);
+console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (UI)' : 'VAULT (ENV)');
+```
+
+### Ação 3: Validação Visual na UI (Recomendado)
+
+Adicionar indicador na interface mostrando de onde a URL está vindo:
+- Badge "Vault" quando campo vazio (usando variável de ambiente)
+- Badge "Manual" quando URL digitada
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| **Vault (secret)** | Atualizar `INIFLEX_SANDBOX_API_URL` para `/api/v1` |
+| `supabase/functions/_shared/iniflex/sandboxAdapter.ts` | Adicionar log de diagnóstico da URL final |
 
 ---
 
 ## Detalhes Técnicos
 
-### Alterações no Frontend (`InflexSandboxTab.tsx`)
+### Alteração no sandboxAdapter.ts
 
-Adicionar estados:
 ```typescript
-const [apiUrl, setApiUrl] = useState('');
-const [apiToken, setApiToken] = useState('');
-```
+// Após linha 50-51 (onde define SANDBOX_URL)
+const SANDBOX_URL = customUrl || Deno.env.get('INIFLEX_SANDBOX_API_URL');
+const SANDBOX_TOKEN = customToken || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
 
-Modificar campos para serem editáveis:
-```tsx
-<Input 
-  value={apiUrl}
-  onChange={(e) => setApiUrl(e.target.value)}
-  placeholder="https://iniflex.novafix.ind.br/api/v1/..."
-  className="font-mono text-xs"
-/>
-
-<Input 
-  type="password"
-  value={apiToken}
-  onChange={(e) => setApiToken(e.target.value)}
-  placeholder="Cole o token aqui..."
-  className="font-mono text-xs"
-/>
-```
-
-Enviar na mutation:
-```typescript
-body: { 
-  payload, 
-  timeout_ms: timeoutMs,
-  api_url: apiUrl || undefined,  // undefined = usar variável de ambiente
-  api_token: apiToken || undefined,
-  save_log: true 
+// NOVO: Log de diagnóstico da URL final
+console.log('[iniflex-sandbox] ===== DIAGNÓSTICO DE URL =====');
+console.log('[iniflex-sandbox] URL FINAL:', SANDBOX_URL);
+console.log('[iniflex-sandbox] ORIGEM:', customUrl ? 'MANUAL (informada via UI)' : 'VAULT (variável de ambiente)');
+if (!customUrl) {
+  console.log('[iniflex-sandbox] ATENÇÃO: Usando URL do Vault. Se incorreta, atualize a secret INIFLEX_SANDBOX_API_URL');
 }
 ```
 
-### Alterações na Edge Function (`iniflex-sandbox-test/index.ts`)
-
-Receber parâmetros opcionais:
-```typescript
-const { payload, timeout_ms, save_log, api_url, api_token } = await req.json();
-
-// Usar valor da UI ou fallback para variável de ambiente
-const finalUrl = api_url || Deno.env.get('INIFLEX_SANDBOX_API_URL');
-const finalToken = api_token || Deno.env.get('INIFLEX_SANDBOX_API_TOKEN');
-```
-
-### UX Adicional
-- Adicionar tooltip explicando que deixar vazio usa o valor do Vault
-- Mostrar contagem de caracteres do token enquanto digita
-- Botão para limpar campos e voltar ao fallback
-
 ---
 
-## Arquivos a Modificar
-1. `src/components/integrations/InflexSandboxTab.tsx` - Campos editáveis e estados
-2. `supabase/functions/iniflex-sandbox-test/index.ts` - Aceitar parâmetros opcionais
+## Próximos Passos
 
+1. Você precisará atualizar a secret `INIFLEX_SANDBOX_API_URL` no Vault com a URL correta
+2. Implementarei o log de diagnóstico no adapter
+3. Após atualização, os testes sem URL manual usarão `/api/v1` automaticamente
