@@ -14,20 +14,30 @@ interface SyncRequest {
 }
 
 interface CRMProduct {
-  external_id: string;
+  external_id: string;  // Campo "produto" do ERP (ex: "6003/1") - código + versão embutida
+  produto_codigo: string | null;
   descricao: string | null;
+  descricao_simples: string | null;
+  descricao_completa: string | null;
   versao: string | null;
   sku: string | null;
   unidade: string | null;
+  grupo: string | null;
+  subgrupo: string | null;
+  tipo_item: string | null;
+  ncm: string | null;
   ativo: boolean;
+  gera_estoque: boolean;
   data_alteracao_erp: string | null;
+  usuario_alteracao_erp: string | null;
   raw_data: unknown;
   synced_at: string;
 }
 
-// Converte S/N para boolean
+// Converte S/N para boolean (sempre retorna boolean, nunca null)
 function snToBoolean(value: unknown): boolean {
-  return value === 'S' || value === 's' || value === true || value === 1;
+  if (value === 'S' || value === 's' || value === true || value === 1) return true;
+  return false;
 }
 
 // Converte qualquer valor para string ou null
@@ -36,25 +46,45 @@ function toStringOrNull(value: unknown): string | null {
   return String(value);
 }
 
-// Mapeia produto do Iniflex para CRM
+// Mapeia produto do Iniflex para CRM com todos os campos expandidos
 function mapInflexProductToCRM(raw: unknown): CRMProduct {
   const p = raw as Record<string, unknown>;
   
-  const external_id = String(p.codigo_erp || p.codigo || p.id || '');
-  const versao = toStringOrNull(p.versao);
+  // external_id = campo "produto" do ERP (inclui código + versão embutida, ex: "6003/1")
+  const external_id = String(p.produto || p.codigo_erp || p.codigo || p.id || '');
+  const versao = toStringOrNull(p.desc_simples_versao || p.versao);
+  const produtoCodigo = toStringOrNull(p.codigo_produto);
+  
+  // Descrições com fallback robusto
+  const descSimples = toStringOrNull(p.desc_simples_item);
+  const descCompleta = toStringOrNull(p.desc_completa_item);
+  const descFallback = descCompleta || descSimples || toStringOrNull(p.descricao || p.nome);
   
   // SKU: usar codigo_sku se existir, senão compor external_id-versao
   const sku = toStringOrNull(p.codigo_sku) ?? 
     (versao ? `${external_id}-${versao}` : external_id);
   
+  // Ativo: situacao_item = 'A'
+  const situacaoItem = toStringOrNull(p.situacao_item);
+  const ativo = situacaoItem ? situacaoItem.toUpperCase() === 'A' : snToBoolean(p.ativo ?? true);
+  
   return {
     external_id,
-    descricao: toStringOrNull(p.descricao || p.nome),
+    produto_codigo: produtoCodigo,
+    descricao: descFallback,
+    descricao_simples: descSimples,
+    descricao_completa: descCompleta,
     versao,
     sku,
-    unidade: toStringOrNull(p.unidade || p.un),
-    ativo: snToBoolean(p.ativo ?? true),
+    unidade: toStringOrNull(p.desc_unidade || p.codigo_unidade || p.unidade || p.un),
+    grupo: toStringOrNull(p.desc_grupo),
+    subgrupo: toStringOrNull(p.desc_subgrupo),
+    tipo_item: toStringOrNull(p.desc_tipo_item),
+    ncm: toStringOrNull(p.codigo_ncm),
+    ativo,
+    gera_estoque: snToBoolean(p.gera_estoque),
     data_alteracao_erp: toStringOrNull(p.data_alteracao),
+    usuario_alteracao_erp: toStringOrNull(p.usuario_alteracao),
     raw_data: p,
     synced_at: new Date().toISOString(),
   };

@@ -643,43 +643,76 @@ export type Database = {
         Row: {
           ativo: boolean | null
           created_at: string | null
+          custo_medio: number | null
           data_alteracao_erp: string | null
           descricao: string | null
+          descricao_completa: string | null
+          descricao_simples: string | null
           external_id: string
+          gera_estoque: boolean | null
+          grupo: string | null
           id: string
+          ncm: string | null
+          preco_venda: number | null
+          produto_codigo: string | null
           raw_data: Json | null
           sku: string | null
+          subgrupo: string | null
           synced_at: string | null
+          tipo_item: string | null
           unidade: string | null
           updated_at: string | null
+          usuario_alteracao_erp: string | null
           versao: string | null
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string | null
+          custo_medio?: number | null
           data_alteracao_erp?: string | null
           descricao?: string | null
+          descricao_completa?: string | null
+          descricao_simples?: string | null
           external_id: string
+          gera_estoque?: boolean | null
+          grupo?: string | null
           id?: string
+          ncm?: string | null
+          preco_venda?: number | null
+          produto_codigo?: string | null
           raw_data?: Json | null
           sku?: string | null
+          subgrupo?: string | null
           synced_at?: string | null
+          tipo_item?: string | null
           unidade?: string | null
           updated_at?: string | null
+          usuario_alteracao_erp?: string | null
           versao?: string | null
         }
         Update: {
           ativo?: boolean | null
           created_at?: string | null
+          custo_medio?: number | null
           data_alteracao_erp?: string | null
           descricao?: string | null
+          descricao_completa?: string | null
+          descricao_simples?: string | null
           external_id?: string
+          gera_estoque?: boolean | null
+          grupo?: string | null
           id?: string
+          ncm?: string | null
+          preco_venda?: number | null
+          produto_codigo?: string | null
           raw_data?: Json | null
           sku?: string | null
+          subgrupo?: string | null
           synced_at?: string | null
+          tipo_item?: string | null
           unidade?: string | null
           updated_at?: string | null
+          usuario_alteracao_erp?: string | null
           versao?: string | null
         }
         Relationships: []
