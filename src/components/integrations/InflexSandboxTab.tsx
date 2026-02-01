@@ -95,6 +95,42 @@ export function InflexSandboxTab() {
     },
   });
 
+  // Mutation para testar conexão (validação rápida)
+  const connectionTestMutation = useMutation({
+    mutationFn: async () => {
+      // Payload mínimo para testar autenticação
+      const testPayload = {
+        tipoComando: "CONSULTA",
+        grupoComando: "PING",
+      };
+      const { data, error } = await supabase.functions.invoke('iniflex-sandbox-test', {
+        body: { 
+          payload: testPayload, 
+          timeout_ms: 10000, 
+          save_log: false,
+          api_url: apiUrl || undefined,
+          api_token: apiToken || undefined,
+        },
+      });
+      if (error) throw error;
+      return data as SandboxTestResult;
+    },
+    onSuccess: (data) => {
+      if (data.test_result.httpStatus === 401) {
+        toast.error('Falha na autenticação: Token inválido ou não informado');
+      } else if (data.test_result.httpStatus === 404) {
+        toast.error('URL não encontrada: Verifique o endpoint');
+      } else if (data.test_result.success || data.test_result.httpStatus === 200) {
+        toast.success('Conexão OK! Autenticação válida');
+      } else {
+        toast.warning(`Resposta recebida (HTTP ${data.test_result.httpStatus})`);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro de conexão: ${error.message}`);
+    },
+  });
+
   // Mutation para executar teste
   const testMutation = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -148,6 +184,10 @@ export function InflexSandboxTab() {
   const handleClearManualConfig = () => {
     setApiUrl('');
     setApiToken('');
+  };
+
+  const handleTestConnection = () => {
+    connectionTestMutation.mutate();
   };
 
   const isUsingManualConfig = apiUrl.trim() !== '' || apiToken.trim() !== '';
@@ -256,17 +296,33 @@ export function InflexSandboxTab() {
                 </div>
               </TooltipProvider>
 
-              {isUsingManualConfig && (
+              <div className="flex items-center gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleClearManualConfig}
-                  className="gap-1 text-xs"
+                  onClick={handleTestConnection}
+                  disabled={connectionTestMutation.isPending}
+                  className="gap-1"
                 >
-                  <Trash2 className="h-3 w-3" />
-                  Limpar e usar Vault
+                  {connectionTestMutation.isPending ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Zap className="h-3 w-3" />
+                  )}
+                  Testar Conexão
                 </Button>
-              )}
+                {isUsingManualConfig && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleClearManualConfig}
+                    className="gap-1 text-xs"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Limpar
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <Label>Timeout (ms)</Label>
