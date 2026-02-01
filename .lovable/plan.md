@@ -1,108 +1,43 @@
 
-# Plano: Adicionar Filtro de Data de Alteração na Listagem de Correntistas
 
-## Objetivo
+# Plano: Alterar Data Padrão de Sincronização de Produtos
 
-Modificar a edge function `iniflex-list-correntistas` para incluir o parâmetro `data_alteracao` no payload enviado ao ERP Iniflex, trazendo apenas clientes alterados a partir de uma data específica.
+## Contexto
+
+A sincronização de produtos está demorando muito porque a data base é `01/01/2000`, trazendo **todos** os produtos cadastrados no ERP Iniflex. Como há um volume muito grande de dados, isso causa timeout ou lentidão excessiva.
 
 ---
 
-## Alterações Necessárias
+## Alteração Necessária
 
-### Arquivo: `supabase/functions/iniflex-list-correntistas/index.ts`
+### Arquivo: `supabase/functions/sync-iniflex-products/index.ts`
 
-#### 1. Atualizar Interface de Request
-
-Adicionar o parâmetro opcional `data_alteracao`:
-
+**Linha 9 - Antes:**
 ```typescript
-interface ListRequest {
-  baseUrl: string;
-  token: string;
-  page?: number;
-  limit?: number;
-  search?: string;
-  data_alteracao?: string; // Formato: "DD/MM/YYYY"
-}
+const DEFAULT_SYNC_DATE = '01/01/2000 00:00:00';
 ```
 
-#### 2. Modificar Payload do Comando
-
-Atualizar o payload para incluir `data_alteracao` no nível raiz (conforme estrutura fornecida):
-
-**De:**
+**Depois:**
 ```typescript
-const payload = {
-  tipoComando: 'ASDCOMANDO',
-  grupoComando: 'EXP_CLIENTES_V1',
-  '#out#p_retorno': 'T',
-  json: {
-    pagina: page,
-    limite: limit,
-    filtro: search,
-  },
-};
-```
-
-**Para:**
-```typescript
-// Obter data atual no formato DD/MM/YYYY
-const hoje = new Date();
-const dataAlteracao = params.data_alteracao || 
-  `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
-
-const payload = {
-  tipoComando: 'ASDCOMANDO',
-  grupoComando: 'EXP_CLIENTES_V1',
-  data_alteracao: dataAlteracao,
-  '#out#p_retorno': 'T',
-  json: {
-    pagina: page,
-    limite: limit,
-    filtro: search,
-  },
-};
+const DEFAULT_SYNC_DATE = '01/01/2025 00:00:00';
 ```
 
 ---
 
-## Comportamento
+## Impacto
 
-| Cenário | Valor de `data_alteracao` |
-|---------|---------------------------|
-| Sem parâmetro informado | Data de hoje (ex: "01/02/2026") |
-| Com parâmetro informado | Usa o valor recebido |
-
----
-
-## Estrutura do Payload Final
-
-```json
-{
-  "tipoComando": "ASDCOMANDO",
-  "grupoComando": "EXP_CLIENTES_V1",
-  "data_alteracao": "01/02/2026",
-  "#out#p_retorno": "T",
-  "json": {
-    "pagina": 1,
-    "limite": 50,
-    "filtro": ""
-  }
-}
-```
-
----
-
-## Arquivo a Modificar
-
-| Arquivo | Alteração |
+| Aspecto | Descrição |
 |---------|-----------|
-| `supabase/functions/iniflex-list-correntistas/index.ts` | Adicionar parâmetro `data_alteracao` na interface e no payload |
+| **Performance** | Redução significativa no tempo de resposta |
+| **Dados** | Traz apenas produtos alterados a partir de 01/01/2025 |
+| **Comportamento** | Apenas afeta a primeira sincronização (quando não existe registro em `erp_sync_control`) |
 
 ---
 
-## Resultado Esperado
+## Ação Pós-Deploy
 
-1. **Por padrão**: Retorna apenas clientes alterados a partir de hoje
-2. **Opcional**: Permite informar uma data específica para sincronização incremental
-3. **Performance**: Reduz significativamente a quantidade de dados retornados
+Após a alteração:
+1. A Edge Function será redeployada automaticamente
+2. A primeira carga trará ~1 ano de alterações (2025-2026)
+3. Sincronizações seguintes usarão a data incremental normalmente
+
