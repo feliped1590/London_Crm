@@ -14,9 +14,19 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import type { Tables } from '@/integrations/supabase/types';
 
 type DealStage = Tables<'deals'>['stage'];
+const ITEMS_PER_PAGE = 25;
 
 interface CustomerDeal {
   id: string;
@@ -56,6 +66,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Debounce search - 300ms delay
   useEffect(() => {
@@ -64,6 +75,11 @@ export default function Customers() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
 
   // Fetch companies with contacts and deals
   const { data: customers, isLoading: loadingCompanies, refetch, isFetching } = useQuery({
@@ -256,6 +272,33 @@ export default function Customers() {
     );
   }, [allCustomers, debouncedSearch]);
 
+  // Pagination
+  const totalItems = filteredCustomers?.length || 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+
+  const paginatedCustomers = useMemo(() => {
+    return filteredCustomers?.slice(startIndex, endIndex) || [];
+  }, [filteredCustomers, startIndex, endIndex]);
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pages.push(i);
+      }
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   const getCustomerIcon = (tipo: 'PJ' | 'PF') => {
     return tipo === 'PJ' ? Building2 : User;
   };
@@ -323,115 +366,159 @@ export default function Customers() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contato Principal</TableHead>
-                  <TableHead>
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3.5 w-3.5" />
-                      Telefone
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" />
-                      Última Atividade
-                    </div>
-                  </TableHead>
-                  <TableHead>
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      Negócios
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers?.map((customer) => {
-                  const CustomerIcon = getCustomerIcon(customer.tipo_cliente);
-                  const phone = customer.primary_contact?.mobile || customer.phone;
-                  
-                  return (
-                    <TableRow 
-                      key={customer.id} 
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleOpenCustomer(customer.id)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              <CustomerIcon className="h-5 w-5" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{customer.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              {customer.cnpj && (
-                                <span>{formatDocument(customer.cnpj, customer.tipo_cliente)}</span>
-                              )}
-                              {customer.city && customer.state && (
-                                <span>• {customer.city}/{customer.state}</span>
-                              )}
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Contato Principal</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3.5 w-3.5" />
+                        Telefone
+                      </div>
+                    </TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        Última Atividade
+                      </div>
+                    </TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5" />
+                        Negócios
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedCustomers.map((customer) => {
+                    const CustomerIcon = getCustomerIcon(customer.tipo_cliente);
+                    const phone = customer.primary_contact?.mobile || customer.phone;
+                    
+                    return (
+                      <TableRow 
+                        key={customer.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleOpenCustomer(customer.id)}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                <CustomerIcon className="h-5 w-5" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{customer.name}</p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                {customer.cnpj && (
+                                  <span>{formatDocument(customer.cnpj, customer.tipo_cliente)}</span>
+                                )}
+                                {customer.city && customer.state && (
+                                  <span>• {customer.city}/{customer.state}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {customer.primary_contact ? (
-                          <div>
-                            <p className="font-medium">{customer.primary_contact.name}</p>
-                            {customer.primary_contact.job_title && (
-                              <p className="text-sm text-muted-foreground">{customer.primary_contact.job_title}</p>
-                            )}
-                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {customer.primary_contact ? (
+                            <div>
+                              <p className="font-medium">{customer.primary_contact.name}</p>
+                              {customer.primary_contact.job_title && (
+                                <p className="text-sm text-muted-foreground">{customer.primary_contact.job_title}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Sem contato</span>
+                          )}
+                          {customer.contacts_count > 1 && (
+                            <Badge variant="secondary" className="ml-2">
+                              +{customer.contacts_count - 1}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {phone ? (
+                            <span className="font-mono text-sm">{phone}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-sm ${!customer.last_activity_at ? 'text-muted-foreground' : ''}`}>
+                            {getLastActivityText(customer.last_activity_at)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {customer.deals.length > 0 ? (
+                            <DealStageBadges deals={customer.deals} />
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => handleOpenWhatsApp(customer, e)}
+                            disabled={!phone}
+                            title={phone ? 'Abrir WhatsApp' : 'Sem telefone'}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Exibindo {startIndex + 1}-{endIndex} de {totalItems} clientes
+                  </p>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {getPageNumbers().map((page, idx) =>
+                        page === 'ellipsis' ? (
+                          <PaginationItem key={`ellipsis-${idx}`}>
+                            <PaginationEllipsis />
+                          </PaginationItem>
                         ) : (
-                          <span className="text-muted-foreground text-sm">Sem contato</span>
-                        )}
-                        {customer.contacts_count > 1 && (
-                          <Badge variant="secondary" className="ml-2">
-                            +{customer.contacts_count - 1}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {phone ? (
-                          <span className="font-mono text-sm">{phone}</span>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-sm ${!customer.last_activity_at ? 'text-muted-foreground' : ''}`}>
-                          {getLastActivityText(customer.last_activity_at)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {customer.deals.length > 0 ? (
-                          <DealStageBadges deals={customer.deals} />
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => handleOpenWhatsApp(customer, e)}
-                          disabled={!phone}
-                          title={phone ? 'Abrir WhatsApp' : 'Sem telefone'}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      )}
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
