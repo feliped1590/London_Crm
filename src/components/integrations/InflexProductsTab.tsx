@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Search, 
   RefreshCw, 
@@ -18,6 +19,9 @@ import {
   Database,
   ChevronLeft,
   ChevronRight,
+  ArrowDownToLine,
+  Download,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useInflexConfig } from '@/hooks/useInflexConfig';
@@ -38,6 +42,7 @@ interface CRMProduct {
   ncm: string | null;
   ativo: boolean;
   gera_estoque: boolean;
+  preco_venda: number | null;
   data_alteracao_erp: string | null;
   synced_at: string | null;
 }
@@ -58,9 +63,11 @@ export function InflexProductsTab() {
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
   const { config, isConfigured } = useInflexConfig();
 
-  // Query para buscar produtos do banco
+  // Query para buscar produtos do banco (crm_products)
   const { data: products, isLoading } = useQuery({
     queryKey: ['crm-products'],
     queryFn: async () => {
@@ -70,6 +77,18 @@ export function InflexProductsTab() {
         .order('data_alteracao_erp', { ascending: false });
       if (error) throw error;
       return data as CRMProduct[];
+    },
+  });
+
+  // Query para buscar SKUs já importados na tabela products
+  const { data: existingSkus } = useQuery({
+    queryKey: ['products-skus'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('sku');
+      if (error) throw error;
+      return new Set(data.map(p => p.sku));
     },
   });
 
@@ -110,6 +129,93 @@ export function InflexProductsTab() {
     },
   });
 
+  // Mutation para importar produto
+  const importMutation = useMutation({
+    mutationFn: async (product: CRMProduct) => {
+      setImportingIds(prev => new Set(prev).add(product.id));
+      
+      // Gerar SKU único: external_id + versao
+      const sku = product.versao 
+        ? `${product.external_id}-${product.versao}` 
+        : product.external_id;
+      
+      const productData = {
+        sku,
+        name: product.descricao_completa || product.descricao || product.external_id,
+        description: product.descricao_simples || null,
+        category: product.grupo || null,
+        unit_measure: product.unidade || null,
+        unit_price: product.preco_venda || null,
+        active: product.ativo ?? true,
+      };
+
+      const { error } = await supabase
+        .from('products')
+        .upsert(productData, { onConflict: 'sku' });
+      
+      if (error) throw error;
+      return { product, sku };
+    },
+    onSuccess: ({ product }) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-skus'] });
+      toast.success(`Produto importado: ${product.descricao_completa || product.external_id}`);
+      setImportingIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    },
+    onError: (error: any, product) => {
+      toast.error(`Erro ao importar ${product.external_id}: ${error.message}`);
+      setImportingIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
+    },
+  });
+
+  // Verificar se produto já foi importado
+  const isImported = (product: CRMProduct) => {
+    const sku = product.versao 
+      ? `${product.external_id}-${product.versao}` 
+      : product.external_id;
+    return existingSkus?.has(sku);
+  };
+
+  // Handlers de seleção
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = new Set(paginatedProducts.filter(p => !isImported(p)).map(p => p.id));
+      setSelectedIds(allIds);
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelect = (id: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) {
+      next.add(id);
+    } else {
+      next.delete(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleImportSelected = async () => {
+    const selected = products?.filter(p => selectedIds.has(p.id)) || [];
+    for (const product of selected) {
+      await importMutation.mutateAsync(product);
+    }
+  };
+
   // Filtro client-side
   const filteredProducts = products?.filter(p => {
     const searchLower = search.toLowerCase();
@@ -133,6 +239,7 @@ export function InflexProductsTab() {
   const handleSearch = (value: string) => {
     setSearch(value);
     setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
   // Stats
@@ -140,7 +247,8 @@ export function InflexProductsTab() {
     total: products?.length || 0,
     ativos: products?.filter(p => p.ativo).length || 0,
     inativos: products?.filter(p => !p.ativo).length || 0,
-    geraEstoque: products?.filter(p => p.gera_estoque).length || 0,
+    imported: products?.filter(p => isImported(p)).length || 0,
+    pending: products?.filter(p => !isImported(p)).length || 0,
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -167,6 +275,10 @@ export function InflexProductsTab() {
       return dateStr;
     }
   };
+
+  const allSelected = paginatedProducts.filter(p => !isImported(p)).length > 0 && 
+    paginatedProducts.filter(p => !isImported(p)).every(p => selectedIds.has(p.id));
+  const someSelected = paginatedProducts.some(p => selectedIds.has(p.id)) && !allSelected;
 
   return (
     <div className="space-y-6">
@@ -235,7 +347,7 @@ export function InflexProductsTab() {
       </Card>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1">
@@ -263,9 +375,17 @@ export function InflexProductsTab() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1">
-              <PackageCheck className="h-3 w-3 text-blue-600" /> Gera Estoque
+              <PackageCheck className="h-3 w-3 text-blue-600" /> Importados
             </CardDescription>
-            <CardTitle className="text-2xl text-blue-600">{stats.geraEstoque}</CardTitle>
+            <CardTitle className="text-2xl text-blue-600">{stats.imported}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-1">
+              <AlertCircle className="h-3 w-3 text-amber-600" /> Pendentes
+            </CardDescription>
+            <CardTitle className="text-2xl text-amber-600">{stats.pending}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -286,6 +406,20 @@ export function InflexProductsTab() {
             <Badge variant="outline">
               {filteredProducts.length} produto(s)
             </Badge>
+            {selectedIds.size > 0 && (
+              <Button 
+                onClick={handleImportSelected}
+                disabled={importMutation.isPending}
+                className="gap-2"
+              >
+                {importMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowDownToLine className="h-4 w-4" />
+                )}
+                Importar Selecionados ({selectedIds.size})
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -307,71 +441,104 @@ export function InflexProductsTab() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox 
+                          checked={allSelected}
+                          ref={(el) => {
+                            if (el) (el as any).indeterminate = someSelected;
+                          }}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead className="w-[100px]">Produto</TableHead>
-                      <TableHead className="w-[80px]">Versão</TableHead>
                       <TableHead>Descrição</TableHead>
+                      <TableHead className="w-[100px]">Versão</TableHead>
                       <TableHead className="w-[120px]">Grupo</TableHead>
-                      <TableHead className="w-[120px]">Subgrupo</TableHead>
                       <TableHead className="w-[60px]">Unid.</TableHead>
                       <TableHead className="w-[80px]">Ativo</TableHead>
-                      <TableHead className="w-[100px]">Estoque</TableHead>
-                      <TableHead className="w-[140px]">Alteração</TableHead>
+                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-mono text-sm font-medium">
-                          {product.external_id}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {product.versao || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="max-w-[300px]">
-                            <p className="font-medium truncate" title={product.descricao_completa || product.descricao || ''}>
-                              {product.descricao_completa || product.descricao || '-'}
-                            </p>
-                            {product.descricao_simples && product.descricao_simples !== product.descricao_completa && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {product.descricao_simples}
+                    {paginatedProducts.map((product) => {
+                      const imported = isImported(product);
+                      const importing = importingIds.has(product.id);
+
+                      return (
+                        <TableRow key={product.id} className={imported ? 'opacity-60' : ''}>
+                          <TableCell>
+                            <Checkbox 
+                              checked={selectedIds.has(product.id)}
+                              onCheckedChange={(checked) => handleSelect(product.id, !!checked)}
+                              disabled={imported}
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {product.external_id}
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-[300px]">
+                              <p className="font-medium truncate" title={product.descricao_completa || product.descricao || ''}>
+                                {product.descricao_completa || product.descricao || '-'}
                               </p>
+                              {product.descricao_simples && product.descricao_simples !== product.descricao_completa && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {product.descricao_simples}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {product.versao || '-'}
+                          </TableCell>
+                          <TableCell className="text-sm">{product.grupo || '-'}</TableCell>
+                          <TableCell className="text-sm text-center">{product.unidade || '-'}</TableCell>
+                          <TableCell>
+                            {product.ativo ? (
+                              <Badge variant="secondary" className="gap-1 text-green-600">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Ativo
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="gap-1 text-red-600">
+                                <XCircle className="h-3 w-3" />
+                                Inativo
+                              </Badge>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">{product.grupo || '-'}</TableCell>
-                        <TableCell className="text-sm">{product.subgrupo || '-'}</TableCell>
-                        <TableCell className="text-sm text-center">{product.unidade || '-'}</TableCell>
-                        <TableCell>
-                          {product.ativo ? (
-                            <Badge variant="secondary" className="gap-1 text-green-600">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Ativo
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="gap-1 text-red-600">
-                              <XCircle className="h-3 w-3" />
-                              Inativo
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {product.gera_estoque ? (
-                            <Badge variant="secondary" className="gap-1 text-blue-600">
-                              <PackageCheck className="h-3 w-3" />
-                              Sim
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="gap-1 text-muted-foreground">
-                              —
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {formatDate(product.data_alteracao_erp)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            {imported ? (
+                              <Badge variant="secondary" className="gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                Importado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="gap-1 text-amber-600">
+                                <AlertCircle className="h-3 w-3" />
+                                Pendente
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => importMutation.mutate(product)}
+                              disabled={importing || imported}
+                              className="gap-1"
+                            >
+                              {importing ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="h-4 w-4" />
+                              )}
+                              {imported ? 'Importado' : 'Importar'}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
