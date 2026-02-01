@@ -9,6 +9,7 @@ interface ListRequest {
   page?: number;
   limit?: number;
   search?: string;
+  data_alteracao?: string; // Formato: "DD/MM/YYYY"
 }
 
 Deno.serve(async (req) => {
@@ -37,12 +38,18 @@ Deno.serve(async (req) => {
     const apiUrl = baseUrl.replace(/\/+$/, '');
     const cleanToken = token.trim();
 
-    console.log(`[iniflex-list-correntistas] Listando correntistas - página: ${page}, busca: ${search}`);
+    // Obter data atual no formato DD/MM/YYYY se não informada
+    const hoje = new Date();
+    const dataAlteracao = params.data_alteracao || 
+      `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
+
+    console.log(`[iniflex-list-correntistas] Listando correntistas - página: ${page}, busca: ${search}, data_alteracao: ${dataAlteracao}`);
 
     // Montar payload para consulta de correntistas
     const payload = {
       tipoComando: 'ASDCOMANDO',
       grupoComando: 'EXP_CLIENTES_V1',
+      data_alteracao: dataAlteracao,
       '#out#p_retorno': 'T',
       json: {
         pagina: page,
