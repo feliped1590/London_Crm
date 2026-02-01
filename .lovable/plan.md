@@ -1,126 +1,108 @@
 
-# Plano: Paginação para Lista de Clientes
+# Plano: Adicionar Filtro de Data de Alteração na Listagem de Correntistas
 
-## Problema
+## Objetivo
 
-A lista de clientes carrega e renderiza todos os ~200+ registros de uma vez, o que pode causar:
-- Lentidão na renderização
-- Consumo excessivo de memória
-- Experiência ruim para o usuário
+Modificar a edge function `iniflex-list-correntistas` para incluir o parâmetro `data_alteracao` no payload enviado ao ERP Iniflex, trazendo apenas clientes alterados a partir de uma data específica.
 
 ---
 
-## Solução
+## Alterações Necessárias
 
-Implementar paginação client-side com controles de navegação, exibindo **25 clientes por página**.
+### Arquivo: `supabase/functions/iniflex-list-correntistas/index.ts`
 
----
+#### 1. Atualizar Interface de Request
 
-## Alterações Detalhadas
-
-### Arquivo: `src/pages/Customers.tsx`
-
-#### 1. Adicionar Estados de Paginação
+Adicionar o parâmetro opcional `data_alteracao`:
 
 ```typescript
-const [currentPage, setCurrentPage] = useState(1);
-const itemsPerPage = 25;
+interface ListRequest {
+  baseUrl: string;
+  token: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+  data_alteracao?: string; // Formato: "DD/MM/YYYY"
+}
 ```
 
-#### 2. Reset de Página ao Filtrar
+#### 2. Modificar Payload do Comando
 
-Quando o usuário faz uma busca, voltar para a primeira página:
+Atualizar o payload para incluir `data_alteracao` no nível raiz (conforme estrutura fornecida):
 
+**De:**
 ```typescript
-useEffect(() => {
-  setCurrentPage(1);
-}, [debouncedSearch]);
+const payload = {
+  tipoComando: 'ASDCOMANDO',
+  grupoComando: 'EXP_CLIENTES_V1',
+  '#out#p_retorno': 'T',
+  json: {
+    pagina: page,
+    limite: limit,
+    filtro: search,
+  },
+};
 ```
 
-#### 3. Cálculo de Dados Paginados
-
+**Para:**
 ```typescript
-const paginatedCustomers = useMemo(() => {
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  return filteredCustomers?.slice(startIndex, endIndex) || [];
-}, [filteredCustomers, currentPage]);
+// Obter data atual no formato DD/MM/YYYY
+const hoje = new Date();
+const dataAlteracao = params.data_alteracao || 
+  `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
 
-const totalPages = Math.ceil((filteredCustomers?.length || 0) / itemsPerPage);
-```
-
-#### 4. Adicionar Controles de Paginação
-
-Utilizar os componentes já existentes em `src/components/ui/pagination.tsx`:
-
-```typescript
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from '@/components/ui/pagination';
-```
-
-#### 5. Renderizar Paginação
-
-Após a tabela, exibir:
-- Contador de registros: "Exibindo 1-25 de 203 clientes"
-- Controles: Anterior / Números / Próximo
-
----
-
-## Layout da Paginação
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  Tabela de Clientes (25 por página)                             │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  [Lista com 25 clientes]                                        │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Exibindo 1-25 de 203 clientes                                  │
-│                                                                 │
-│  ← Anterior  [1] [2] [3] ... [9]  Próximo →                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+const payload = {
+  tipoComando: 'ASDCOMANDO',
+  grupoComando: 'EXP_CLIENTES_V1',
+  data_alteracao: dataAlteracao,
+  '#out#p_retorno': 'T',
+  json: {
+    pagina: page,
+    limite: limit,
+    filtro: search,
+  },
+};
 ```
 
 ---
 
-## Arquivos a Modificar
+## Comportamento
 
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/Customers.tsx` | Adicionar estados de paginação, lógica de slice, controles de navegação |
+| Cenário | Valor de `data_alteracao` |
+|---------|---------------------------|
+| Sem parâmetro informado | Data de hoje (ex: "01/02/2026") |
+| Com parâmetro informado | Usa o valor recebido |
 
 ---
 
-## Detalhes Técnicos
+## Estrutura do Payload Final
 
-### Estados Adicionados
-- `currentPage` - Página atual (inicia em 1)
-- `itemsPerPage = 25` - Constante para itens por página
+```json
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "EXP_CLIENTES_V1",
+  "data_alteracao": "01/02/2026",
+  "#out#p_retorno": "T",
+  "json": {
+    "pagina": 1,
+    "limite": 50,
+    "filtro": ""
+  }
+}
+```
 
-### Lógica de Paginação
-- `totalPages` - Total de páginas calculado
-- `paginatedCustomers` - Slice do array filtrado
-- Reset para página 1 ao mudar busca
+---
 
-### Componentes Utilizados
-Reutilização dos componentes de paginação já existentes no projeto (`PaginationPrevious`, `PaginationNext`, `PaginationLink`, `PaginationEllipsis`)
+## Arquivo a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `supabase/functions/iniflex-list-correntistas/index.ts` | Adicionar parâmetro `data_alteracao` na interface e no payload |
 
 ---
 
 ## Resultado Esperado
 
-1. **25 clientes por página** - Interface leve e responsiva
-2. **Navegação intuitiva** - Botões anterior/próximo e números de página
-3. **Contador informativo** - "Exibindo X-Y de Z clientes"
-4. **Reset automático** - Voltar para página 1 ao pesquisar
-5. **Performance melhorada** - Renderização de apenas 25 itens por vez
+1. **Por padrão**: Retorna apenas clientes alterados a partir de hoje
+2. **Opcional**: Permite informar uma data específica para sincronização incremental
+3. **Performance**: Reduz significativamente a quantidade de dados retornados
