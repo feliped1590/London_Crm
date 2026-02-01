@@ -69,21 +69,22 @@ export async function sendToInflexSandbox(
     };
   }
 
-  // Injetar chave no payload
+  // Injetar chave no INÍCIO do payload (ordem pode ser importante para a API)
   const payloadObj = payload as Record<string, unknown>;
   const payloadWithKey = {
-    chave: SANDBOX_TOKEN,
+    chave: SANDBOX_TOKEN, // chave PRIMEIRO
     ...payloadObj,
   };
 
-  // Preview seguro do token para debug
-  const tokenPreview = SANDBOX_TOKEN.length > 30 
-    ? `${SANDBOX_TOKEN.substring(0, 15)}...${SANDBOX_TOKEN.substring(SANDBOX_TOKEN.length - 15)}`
+  // Preview seguro do token para debug (como no adapter de produção)
+  const tokenStr = String(SANDBOX_TOKEN || '');
+  const tokenPreview = tokenStr.length > 20 
+    ? `${tokenStr.substring(0, 10)}...${tokenStr.substring(tokenStr.length - 10)}`
     : '[token muito curto]';
 
   console.log('[iniflex-sandbox] ========== INICIO DO TESTE ==========');
   console.log('[iniflex-sandbox] URL:', SANDBOX_URL);
-  console.log('[iniflex-sandbox] Token - Tamanho:', SANDBOX_TOKEN.length, '| Preview:', tokenPreview);
+  console.log('[iniflex-sandbox] Token - Tamanho:', tokenStr.length, '| Preview:', tokenPreview);
   console.log('[iniflex-sandbox] Payload (sem chave):', JSON.stringify(payloadObj, null, 2));
 
   // Request com timeout
@@ -129,7 +130,7 @@ export async function sendToInflexSandbox(
         url: SANDBOX_URL,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: SANDBOX_TOKEN.length,
+        tokenLength: tokenStr.length,
         tokenPreview,
       },
       response: {
@@ -160,7 +161,7 @@ export async function sendToInflexSandbox(
           url: SANDBOX_URL,
           payload: payloadObj,
           hasToken: true,
-          tokenLength: SANDBOX_TOKEN.length,
+          tokenLength: tokenStr.length,
           tokenPreview,
         },
         response: { raw: null },
@@ -180,7 +181,7 @@ export async function sendToInflexSandbox(
         url: SANDBOX_URL,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: SANDBOX_TOKEN.length,
+        tokenLength: tokenStr.length,
         tokenPreview,
       },
       response: { raw: null },
