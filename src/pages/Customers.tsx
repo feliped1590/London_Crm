@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +35,9 @@ interface CustomerListItem {
   industry: string | null;
   city: string | null;
   state: string | null;
+  address: string | null;
   tipo_cliente: 'PJ' | 'PF';
+  source: 'crm' | 'erp';
   // Primary contact info
   primary_contact: {
     id: string;
@@ -53,9 +55,18 @@ interface CustomerListItem {
 export default function Customers() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Debounce search - 300ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Fetch companies with contacts and deals
-  const { data: customers, isLoading, refetch, isFetching } = useQuery({
+  const { data: customers, isLoading: loadingCompanies, refetch, isFetching } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
       // Get companies with their contacts and deals
@@ -71,6 +82,7 @@ export default function Customers() {
           industry,
           city,
           state,
+          address,
           custom_fields,
           contacts(id, first_name, last_name, job_title, mobile, email),
           deals(id, name, stage, value),
@@ -106,7 +118,9 @@ export default function Customers() {
           industry: company.industry,
           city: company.city,
           state: company.state,
+          address: company.address,
           tipo_cliente: tipoCliente,
+          source: 'crm' as const,
           primary_contact: primaryContact ? {
             id: primaryContact.id,
             name: `${primaryContact.first_name}${primaryContact.last_name ? ' ' + primaryContact.last_name : ''}`,
@@ -125,6 +139,81 @@ export default function Customers() {
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  // Fetch crm_clients (ERP synced)
+  const { data: crmClients, isLoading: loadingErp } = useQuery({
+    queryKey: ['crm-clients-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_clients')
+        .select(`
+          id,
+          razao_social,
+          nome_fantasia,
+          cnpj_cpf,
+          telefone,
+          celular,
+          emails,
+          regiao,
+          tipo_pessoa,
+          insc_estadual,
+          raw_data
+        `);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
+  // Combine companies + crm_clients, avoiding duplicates
+  const allCustomers = useMemo(() => {
+    // Create set of existing company CNPJs to avoid duplicates
+    const companyCnpjs = new Set(
+      customers?.map(c => c.cnpj?.replace(/\D/g, '')).filter(Boolean)
+    );
+    
+    const companiesList = customers || [];
+    
+    // Map ERP clients that don't exist in companies
+    const erpClients: CustomerListItem[] = (crmClients || [])
+      .filter(c => {
+        const cleanDoc = c.cnpj_cpf?.replace(/\D/g, '') || '';
+        return !companyCnpjs.has(cleanDoc);
+      })
+      .map(c => {
+        // Extract address from raw_data if available
+        const rawData = c.raw_data as any;
+        const address = rawData?.loc_endereco 
+          ? `${rawData.loc_endereco}${rawData.loc_numero ? ', ' + rawData.loc_numero : ''}`
+          : null;
+        const city = rawData?.loc_cidade || null;
+        const state = rawData?.loc_uf || null;
+        
+        return {
+          id: c.id,
+          name: c.nome_fantasia || c.razao_social || '',
+          fantasia: c.nome_fantasia,
+          cnpj: c.cnpj_cpf,
+          phone: c.telefone || c.celular,
+          email: c.emails?.[0] || null,
+          industry: null,
+          city,
+          state,
+          address,
+          tipo_cliente: (c.tipo_pessoa === 'PF' ? 'PF' : 'PJ') as 'PJ' | 'PF',
+          source: 'erp' as const,
+          primary_contact: null,
+          deals: [],
+          last_activity_at: null,
+          contacts_count: 0,
+        };
+      });
+
+    return [...companiesList, ...erpClients];
+  }, [customers, crmClients]);
+
+  const isLoading = loadingCompanies || loadingErp;
 
   const handleRefresh = async () => {
     await refetch();
@@ -146,14 +235,26 @@ export default function Customers() {
     navigate(`/whatsapp?phone=${encodeURIComponent(phone)}&contactName=${encodeURIComponent(contactName)}`);
   };
 
-  const filteredCustomers = customers?.filter(customer =>
-    customer.name.toLowerCase().includes(search.toLowerCase()) ||
-    customer.fantasia?.toLowerCase().includes(search.toLowerCase()) ||
-    customer.cnpj?.includes(search.replace(/\D/g, '')) ||
-    customer.primary_contact?.name.toLowerCase().includes(search.toLowerCase()) ||
-    customer.industry?.toLowerCase().includes(search.toLowerCase()) ||
-    customer.city?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Enhanced search with debounce - searches multiple fields
+  const filteredCustomers = useMemo(() => {
+    if (!debouncedSearch) return allCustomers;
+    
+    const searchLower = debouncedSearch.toLowerCase();
+    const searchDigits = debouncedSearch.replace(/\D/g, '');
+    
+    return allCustomers?.filter(customer => 
+      customer.name?.toLowerCase().includes(searchLower) ||
+      customer.fantasia?.toLowerCase().includes(searchLower) ||
+      (searchDigits && customer.cnpj?.replace(/\D/g, '').includes(searchDigits)) ||
+      customer.address?.toLowerCase().includes(searchLower) ||
+      customer.city?.toLowerCase().includes(searchLower) ||
+      customer.state?.toLowerCase().includes(searchLower) ||
+      (searchDigits && customer.phone?.replace(/\D/g, '').includes(searchDigits)) ||
+      customer.email?.toLowerCase().includes(searchLower) ||
+      customer.primary_contact?.name?.toLowerCase().includes(searchLower) ||
+      customer.industry?.toLowerCase().includes(searchLower)
+    );
+  }, [allCustomers, debouncedSearch]);
 
   const getCustomerIcon = (tipo: 'PJ' | 'PF') => {
     return tipo === 'PJ' ? Building2 : User;
