@@ -4,6 +4,8 @@ const corsHeaders = {
 };
 
 interface ListRequest {
+  baseUrl: string;
+  token: string;
   page?: number;
   limit?: number;
   search?: string;
@@ -15,23 +17,32 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const inflexUrl = Deno.env.get('INIFLEX_API_URL')!;
-    const inflexToken = Deno.env.get('INIFLEX_API_TOKEN')!;
-
-    let params: ListRequest = {};
+    let params: ListRequest = { baseUrl: '', token: '' };
     if (req.method === 'POST') {
       params = await req.json();
     }
 
-    const { page = 1, limit = 50, search = '' } = params;
+    // Validar credenciais obrigatórias
+    if (!params.baseUrl || !params.token) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Credenciais obrigatórias: baseUrl e token. Configure na aba Sandbox.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { baseUrl, token, page = 1, limit = 50, search = '' } = params;
+    const apiUrl = baseUrl.replace(/\/+$/, '');
+    const cleanToken = token.trim();
 
     console.log(`[iniflex-list-correntistas] Listando correntistas - página: ${page}, busca: ${search}`);
 
     // Montar payload para consulta de correntistas
-    // Ajustar conforme documentação real da API Iniflex
     const payload = {
       tipoComando: 'ASDCOMANDO',
-      grupoComando: 'EXP_CLIENTE', // Assumindo que existe um comando de exportação/listagem
+      grupoComando: 'EXP_CLIENTES_V1',
       '#out#p_retorno': 'T',
       json: {
         pagina: page,
@@ -40,13 +51,13 @@ Deno.serve(async (req) => {
       },
     };
 
-    console.log('[iniflex-list-correntistas] Enviando para Iniflex:', JSON.stringify(payload, null, 2));
+    console.log('[iniflex-list-correntistas] Chamando:', apiUrl);
 
-    const response = await fetch(inflexUrl, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${inflexToken}`,
+        'Authorization': `Bearer ${cleanToken}`,
       },
       body: JSON.stringify(payload),
     });
