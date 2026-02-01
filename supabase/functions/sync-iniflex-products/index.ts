@@ -5,8 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Data padrão para primeira carga
-const DEFAULT_SYNC_DATE = '01/01/2000 00:00:00';
+// Data padrão para primeira carga (ajustado para 2025 para evitar timeout com volume histórico)
+const DEFAULT_SYNC_DATE = '01/01/2025 00:00:00';
 
 interface SyncRequest {
   baseUrl: string;
