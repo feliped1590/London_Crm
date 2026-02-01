@@ -20,15 +20,35 @@ const DEFAULT_CONFIG: InflexConfig = {
   token: '',
 };
 
+/**
+ * Detecta se o token está corrompido (formato de bytes: -79$-36$-9...)
+ * Tokens válidos são alfanuméricos com alguns caracteres especiais permitidos
+ */
+function isTokenCorrupted(token: string): boolean {
+  if (!token) return false;
+  // Padrão de token corrompido: números negativos separados por $
+  const corruptedPattern = /^-?\d+\$-?\d+\$/;
+  return corruptedPattern.test(token);
+}
+
 export function useInflexConfig() {
   const [config, setConfig] = useState<InflexConfig>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
+        const token = parsed.token || '';
+        
+        // Se o token está corrompido, limpar e avisar
+        if (isTokenCorrupted(token)) {
+          console.warn('[useInflexConfig] Token corrompido detectado! Limpando configuração.');
+          localStorage.removeItem(STORAGE_KEY);
+          return DEFAULT_CONFIG;
+        }
+        
         return {
           baseUrl: parsed.baseUrl || '',
-          token: parsed.token || '',
+          token: token,
         };
       }
     } catch (error) {
