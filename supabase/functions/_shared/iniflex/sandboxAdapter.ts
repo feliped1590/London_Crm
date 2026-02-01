@@ -70,21 +70,24 @@ export async function sendToInflexSandbox(
 
   // SANITIZAÇÃO DEFENSIVA DA URL (remove barras finais)
   const baseUrl = config.baseUrl.replace(/\/+$/, '');
-  const token = config.token.trim();
+  const cleanToken = config.token.trim();
 
   // LOG MÍNIMO PADRONIZADO
   console.log('[iniflex-sandbox] URL:', baseUrl);
-  console.log('[iniflex-sandbox] tokenLength:', token.length);
+  console.log('[iniflex-sandbox] tokenLength:', cleanToken.length);
   console.log('[iniflex-sandbox] payload.grupoComando:', payloadObj?.grupoComando);
 
   // Preview seguro do token para debug
-  const tokenPreview = token.length > 20 
-    ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
+  const tokenPreview = cleanToken.length > 20 
+    ? `${cleanToken.substring(0, 10)}...${cleanToken.substring(cleanToken.length - 10)}`
     : '[token muito curto]';
 
   console.log('[iniflex-sandbox] ========== INICIO DO TESTE ==========');
   console.log('[iniflex-sandbox] Token preview:', tokenPreview);
   console.log('[iniflex-sandbox] Payload (sem chave):', JSON.stringify(payloadObj, null, 2));
+  
+  // LOG DE DIAGNÓSTICO DO HEADER (sem expor o token real)
+  console.log('[iniflex-sandbox] Auth header format: Authorization: Bearer <TOKEN>');
 
   // Request com timeout
   const controller = new AbortController();
@@ -97,9 +100,8 @@ export async function sendToInflexSandbox(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${cleanToken}`,
         'Accept': 'application/json',
-        // TESTE DEFINITIVO: Iniflex usa token CRU sem prefixo
-        'Authorization': token,
       },
       body: JSON.stringify(payloadObj),
       signal: controller.signal,
@@ -130,7 +132,7 @@ export async function sendToInflexSandbox(
         url: baseUrl,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: token.length,
+        tokenLength: cleanToken.length,
         tokenPreview,
       },
       response: {
@@ -161,7 +163,7 @@ export async function sendToInflexSandbox(
           url: baseUrl,
           payload: payloadObj,
           hasToken: true,
-          tokenLength: token.length,
+          tokenLength: cleanToken.length,
           tokenPreview,
         },
         response: { raw: null },
@@ -181,7 +183,7 @@ export async function sendToInflexSandbox(
         url: baseUrl,
         payload: payloadObj,
         hasToken: true,
-        tokenLength: token.length,
+        tokenLength: cleanToken.length,
         tokenPreview,
       },
       response: { raw: null },

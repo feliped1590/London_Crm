@@ -64,13 +64,16 @@ interface SandboxLog {
   created_at: string;
 }
 
+// Gera data de hoje no formato DD/MM/YYYY
+const getTodayFormatted = () => new Date().toLocaleDateString('pt-BR');
+
 const DEFAULT_PAYLOAD = {
-  tipoComando: "ASDCOMANDO",
-  grupoComando: "EXP_CLIENTE",
-  "#out#p_retorno": "T",
-  json: {
-    cnpj_cpf: 14649675000170
-  }
+  tipoComando: "ASDCOMANDOJSONTMP",
+  grupoComando: "EXP_AP_PRODUCAO_V1",
+  empresa: 1,
+  data_inicio: getTodayFormatted(),
+  data_fim: getTodayFormatted(),
+  exibir_lotes: "S"
 };
 
 export function InflexSandboxTab() {
@@ -99,10 +102,14 @@ export function InflexSandboxTab() {
   // Mutation para testar conexão (validação rápida)
   const connectionTestMutation = useMutation({
     mutationFn: async () => {
-      // Payload mínimo para testar autenticação
+      // Payload real igual ao projeto que funciona (datas dinâmicas)
+      const today = new Date().toLocaleDateString('pt-BR');
       const testPayload = {
-        tipoComando: "CONSULTA",
-        grupoComando: "PING",
+        tipoComando: "ASDCOMANDOJSONTMP",
+        grupoComando: "EXP_AP_PRODUCAO_V1",
+        empresa: 1,
+        data_inicio: today,
+        data_fim: today,
       };
       const { data, error } = await supabase.functions.invoke('iniflex-sandbox-test', {
         body: { 
