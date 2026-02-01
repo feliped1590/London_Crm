@@ -102,19 +102,25 @@ export function InflexTab() {
     enabled: isConfigured,
   });
 
-  // Buscar contatos e empresas já importados
+  // Buscar contatos já importados (por iniflex_id e CPF)
   const { data: existingContacts } = useQuery({
     queryKey: ['contacts-iniflex-ids'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('contacts')
-        .select('iniflex_id, cpf')
-        .not('iniflex_id', 'is', null);
+        .select('iniflex_id, cpf');
       if (error) throw error;
-      return new Set(data.map(c => c.iniflex_id));
+      // Criar Set com ambos: iniflex_id e cpf (limpos)
+      const ids = new Set<string>();
+      data.forEach(c => {
+        if (c.iniflex_id) ids.add(String(c.iniflex_id));
+        if (c.cpf) ids.add(c.cpf.replace(/\D/g, ''));
+      });
+      return ids;
     },
   });
 
+  // Buscar empresas já importadas (por iniflex_id e CNPJ)
   const { data: existingCompanies } = useQuery({
     queryKey: ['companies-iniflex-ids'],
     queryFn: async () => {
@@ -122,7 +128,13 @@ export function InflexTab() {
         .from('companies')
         .select('iniflex_id, cnpj');
       if (error) throw error;
-      return new Set(data.filter(c => c.iniflex_id).map(c => c.iniflex_id));
+      // Criar Set com ambos: iniflex_id e cnpj (limpos)
+      const ids = new Set<string>();
+      data.forEach(c => {
+        if (c.iniflex_id) ids.add(String(c.iniflex_id));
+        if (c.cnpj) ids.add(c.cnpj.replace(/\D/g, ''));
+      });
+      return ids;
     },
   });
 
@@ -205,15 +217,19 @@ export function InflexTab() {
   };
 
   const isImported = (correntista: Correntista) => {
-    // Prioridade: verificar se foi sincronizado via crm_clients
+    // Prioridade: verificar se foi sincronizado via crm_clients (por codigo_erp)
     if (syncedClients?.has(correntista.id)) return true;
     
-    // Fallback: verificar importação manual (companies/contacts)
-    const isPJ = correntista.pfpj === 'PJ' || correntista.cnpj_cpf?.length > 11;
+    // Fallback: verificar importação manual (companies/contacts por CNPJ/CPF)
+    const cleanDoc = correntista.cnpj_cpf?.replace(/\D/g, '') || '';
+    const isPJ = correntista.pfpj === 'PJ' || cleanDoc.length > 11;
+    
     if (isPJ) {
-      return existingCompanies?.has(correntista.id);
+      // Verificar por iniflex_id ou cnpj
+      return existingCompanies?.has(correntista.id) || existingCompanies?.has(cleanDoc);
     }
-    return existingContacts?.has(correntista.id);
+    // Verificar por iniflex_id ou cpf
+    return existingContacts?.has(correntista.id) || existingContacts?.has(cleanDoc);
   };
 
   const formatDocument = (doc: string, pfpj: string) => {
