@@ -77,16 +77,22 @@ export function InflexTab() {
 
   // Buscar correntistas do Iniflex
   const { data: inflexData, isLoading: isLoadingIniflex, refetch: refetchIniflex } = useQuery({
-    queryKey: ['iniflex-correntistas', search],
+    queryKey: ['iniflex-correntistas', search, config.baseUrl],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('iniflex-list-correntistas', {
-        body: { search, page: 1, limit: 100 },
+        body: { 
+          baseUrl: config.baseUrl,
+          token: config.token,
+          search, 
+          page: 1, 
+          limit: 100 
+        },
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error || 'Erro ao buscar correntistas');
       return data as { correntistas: Correntista[]; total: number };
     },
-    enabled: true,
+    enabled: isConfigured,
   });
 
   // Buscar contatos e empresas já importados
