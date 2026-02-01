@@ -1,187 +1,94 @@
 
-# Plano: Exibir Todos os Clientes + Busca Automática em Tempo Real
+# Plano: Paginação para Lista de Clientes
 
-## Resumo do Problema
+## Problema
 
-Existem dois problemas identificados:
-
-| Problema | Situação Atual | Resultado |
-|----------|----------------|-----------|
-| **Dados faltantes** | A página busca apenas de `companies` (11 registros) | 192 clientes de `crm_clients` não aparecem |
-| **Busca não funciona** | Filtro client-side não inclui todos os campos | Pesquisar "thel" não retorna resultados |
+A lista de clientes carrega e renderiza todos os ~200+ registros de uma vez, o que pode causar:
+- Lentidão na renderização
+- Consumo excessivo de memória
+- Experiência ruim para o usuário
 
 ---
 
-## Solução Proposta
+## Solução
 
-### 1. Unificar Fonte de Dados
-
-Combinar dados de ambas as tabelas (`companies` + `crm_clients`) em uma única lista:
-
-```text
-┌────────────────────────────────────────────────────────────────┐
-│                    FONTE DE DADOS UNIFICADA                    │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   companies (11)  +  crm_clients (192)  =  Lista Unificada     │
-│                                                                │
-│   - Evitar duplicatas por CNPJ/CPF                             │
-│   - companies tem prioridade (dados manuais)                   │
-│   - crm_clients complementa (dados do ERP)                     │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### 2. Busca Automática em Tempo Real
-
-Implementar busca com debounce que executa automaticamente:
-
-- **Delay de 300ms** após o usuário parar de digitar
-- **Busca em múltiplos campos**: nome, fantasia, CNPJ/CPF, endereço, cidade, estado, telefone, email
-- **Sem necessidade de pressionar Enter ou botão**
+Implementar paginação client-side com controles de navegação, exibindo **25 clientes por página**.
 
 ---
 
 ## Alterações Detalhadas
 
-### Arquivo 1: `src/pages/Customers.tsx`
+### Arquivo: `src/pages/Customers.tsx`
 
-#### Alteração A: Adicionar Query para `crm_clients`
+#### 1. Adicionar Estados de Paginação
 
 ```typescript
-// Nova query para buscar clientes do ERP
-const { data: crmClients } = useQuery({
-  queryKey: ['crm-clients-list'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('crm_clients')
-      .select(`
-        id,
-        razao_social,
-        nome_fantasia,
-        cnpj_cpf,
-        telefone,
-        celular,
-        emails,
-        regiao,
-        raw_data,
-        tipo_pessoa,
-        insc_estadual
-      `);
-    if (error) throw error;
-    return data;
-  },
-});
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 25;
 ```
 
-#### Alteração B: Combinar os Dados
+#### 2. Reset de Página ao Filtrar
+
+Quando o usuário faz uma busca, voltar para a primeira página:
 
 ```typescript
-// Combinar companies + crm_clients, evitando duplicatas
-const allCustomers = useMemo(() => {
-  const companiesSet = new Set(
-    customers?.map(c => c.cnpj?.replace(/\D/g, ''))
-  );
-  
-  const companiesList = customers || [];
-  
-  // Adicionar clientes do ERP que não existem em companies
-  const erpClients = (crmClients || [])
-    .filter(c => !companiesSet.has(c.cnpj_cpf?.replace(/\D/g, '')))
-    .map(c => ({
-      id: c.id,
-      name: c.nome_fantasia || c.razao_social || '',
-      // ... mapear demais campos
-    }));
-
-  return [...companiesList, ...erpClients];
-}, [customers, crmClients]);
-```
-
-#### Alteração C: Implementar Debounce para Busca
-
-```typescript
-import { useCallback, useEffect, useState } from 'react';
-
-// Estado para debounce
-const [debouncedSearch, setDebouncedSearch] = useState('');
-
-// Debounce effect
 useEffect(() => {
-  const timer = setTimeout(() => {
-    setDebouncedSearch(search);
-  }, 300);
-  return () => clearTimeout(timer);
-}, [search]);
+  setCurrentPage(1);
+}, [debouncedSearch]);
 ```
 
-#### Alteração D: Expandir Campos de Busca
+#### 3. Cálculo de Dados Paginados
 
 ```typescript
-const filteredCustomers = allCustomers?.filter(customer => {
-  if (!debouncedSearch) return true;
-  
-  const searchLower = debouncedSearch.toLowerCase();
-  const searchDigits = debouncedSearch.replace(/\D/g, '');
-  
-  return (
-    customer.name?.toLowerCase().includes(searchLower) ||
-    customer.fantasia?.toLowerCase().includes(searchLower) ||
-    customer.cnpj?.includes(searchDigits) ||
-    customer.address?.toLowerCase().includes(searchLower) ||
-    customer.city?.toLowerCase().includes(searchLower) ||
-    customer.state?.toLowerCase().includes(searchLower) ||
-    customer.phone?.includes(searchDigits) ||
-    customer.email?.toLowerCase().includes(searchLower) ||
-    customer.primary_contact?.name.toLowerCase().includes(searchLower)
-  );
-});
+const paginatedCustomers = useMemo(() => {
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return filteredCustomers?.slice(startIndex, endIndex) || [];
+}, [filteredCustomers, currentPage]);
+
+const totalPages = Math.ceil((filteredCustomers?.length || 0) / itemsPerPage);
 ```
+
+#### 4. Adicionar Controles de Paginação
+
+Utilizar os componentes já existentes em `src/components/ui/pagination.tsx`:
+
+```typescript
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
+```
+
+#### 5. Renderizar Paginação
+
+Após a tabela, exibir:
+- Contador de registros: "Exibindo 1-25 de 203 clientes"
+- Controles: Anterior / Números / Próximo
 
 ---
 
-## Interface Atualizada
-
-O tipo `CustomerListItem` será expandido para incluir:
-
-```typescript
-interface CustomerListItem {
-  // Campos existentes...
-  
-  // Novos campos do ERP:
-  address?: string;       // Endereço
-  neighborhood?: string;  // Bairro
-  cep?: string;           // CEP
-  insc_estadual?: string; // Inscrição Estadual
-  source: 'crm' | 'erp';  // Origem do dado
-}
-```
-
----
-
-## Fluxo de Busca
+## Layout da Paginação
 
 ```text
-Usuário digita "thel"
-        │
-        ▼ (aguarda 300ms)
-┌────────────────────────────────────────┐
-│         BUSCA AUTOMÁTICA               │
-├────────────────────────────────────────┤
-│                                        │
-│  Campos pesquisados:                   │
-│  ✓ Nome / Nome Fantasia                │
-│  ✓ CNPJ / CPF                          │
-│  ✓ Endereço                            │
-│  ✓ Cidade / Estado                     │
-│  ✓ Telefone / Celular                  │
-│  ✓ E-mail                              │
-│  ✓ Nome do contato principal           │
-│                                        │
-└────────────────────────────────────────┘
-        │
-        ▼
-Lista filtrada exibida automaticamente
+┌─────────────────────────────────────────────────────────────────┐
+│  Tabela de Clientes (25 por página)                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  [Lista com 25 clientes]                                        │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Exibindo 1-25 de 203 clientes                                  │
+│                                                                 │
+│  ← Anterior  [1] [2] [3] ... [9]  Próximo →                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -190,16 +97,30 @@ Lista filtrada exibida automaticamente
 
 | Arquivo | Alterações |
 |---------|------------|
-| `src/pages/Customers.tsx` | Adicionar query `crm_clients`, combinar dados, implementar debounce, expandir filtro de busca |
+| `src/pages/Customers.tsx` | Adicionar estados de paginação, lógica de slice, controles de navegação |
+
+---
+
+## Detalhes Técnicos
+
+### Estados Adicionados
+- `currentPage` - Página atual (inicia em 1)
+- `itemsPerPage = 25` - Constante para itens por página
+
+### Lógica de Paginação
+- `totalPages` - Total de páginas calculado
+- `paginatedCustomers` - Slice do array filtrado
+- Reset para página 1 ao mudar busca
+
+### Componentes Utilizados
+Reutilização dos componentes de paginação já existentes no projeto (`PaginationPrevious`, `PaginationNext`, `PaginationLink`, `PaginationEllipsis`)
 
 ---
 
 ## Resultado Esperado
 
-Após a implementação:
-
-1. **Todos os 192+ clientes** serão exibidos na lista
-2. **Busca automática** enquanto o usuário digita
-3. **Busca por qualquer campo**: nome, CNPJ, endereço, cidade, telefone, etc.
-4. **Sem duplicatas**: clientes do ERP que já existem em `companies` não serão repetidos
-5. **Performance otimizada** com debounce de 300ms
+1. **25 clientes por página** - Interface leve e responsiva
+2. **Navegação intuitiva** - Botões anterior/próximo e números de página
+3. **Contador informativo** - "Exibindo X-Y de Z clientes"
+4. **Reset automático** - Voltar para página 1 ao pesquisar
+5. **Performance melhorada** - Renderização de apenas 25 itens por vez
