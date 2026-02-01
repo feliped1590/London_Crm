@@ -17,10 +17,12 @@ import {
   CheckCircle2, 
   AlertCircle,
   Loader2,
-  ArrowDownToLine
+  ArrowDownToLine,
+  Database
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCPF, formatCNPJ } from '@/lib/cpfCnpjMask';
+import { useInflexConfig } from '@/hooks/useInflexConfig';
 
 interface Correntista {
   id: string;
@@ -34,11 +36,44 @@ interface Correntista {
   estado?: string;
 }
 
+interface SyncResult {
+  success: boolean;
+  entity: string;
+  processed: number;
+  created: number;
+  updated: number;
+  last_sync_at: string;
+}
+
 export function InflexTab() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
+  const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
+  const { config, isConfigured } = useInflexConfig();
+
+  // Mutation para sincronização incremental de clientes
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-iniflex-clients', {
+        body: {
+          baseUrl: config.baseUrl,
+          token: config.token,
+        },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error || 'Erro na sincronização');
+      return data as SyncResult;
+    },
+    onSuccess: (data) => {
+      toast.success(`Sincronização concluída: ${data.processed} clientes processados`);
+      setLastSyncResult(data);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro na sincronização: ${error.message}`);
+    },
+  });
 
   // Buscar correntistas do Iniflex
   const { data: inflexData, isLoading: isLoadingIniflex, refetch: refetchIniflex } = useQuery({
@@ -172,10 +207,65 @@ export function InflexTab() {
 
   return (
     <div className="space-y-6">
+      {/* Seção de Sincronização Incremental */}
+      <Card className="bg-muted/30 border-primary/20">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Database className="h-5 w-5" />
+                Sincronização de Clientes
+              </CardTitle>
+              <CardDescription>
+                Busca incremental de clientes alterados no ERP Iniflex
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending || !isConfigured}
+              className="gap-2"
+            >
+              {syncMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Sincronizar
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!isConfigured ? (
+            <p className="text-sm text-muted-foreground">
+              Configure URL e Token na aba <strong>Sandbox</strong> para habilitar a sincronização.
+            </p>
+          ) : lastSyncResult ? (
+            <div className="flex flex-wrap gap-3">
+              <Badge variant="outline" className="gap-1">
+                <Database className="h-3 w-3" />
+                Processados: {lastSyncResult.processed}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-green-600">
+                <CheckCircle2 className="h-3 w-3" />
+                Criados: {lastSyncResult.created}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 text-blue-600">
+                <RefreshCw className="h-3 w-3" />
+                Atualizados: {lastSyncResult.updated}
+              </Badge>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma sincronização realizada nesta sessão.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Integração Iniflex</h2>
-          <p className="text-sm text-muted-foreground">Importe correntistas do ERP Iniflex para o CRM</p>
+          <h2 className="text-xl font-semibold">Importação Manual</h2>
+          <p className="text-sm text-muted-foreground">Importe correntistas individualmente do ERP Iniflex</p>
         </div>
         <div className="flex gap-2">
           {selectedIds.size > 0 && (
