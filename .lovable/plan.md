@@ -1,123 +1,205 @@
 
-# Plano: Correção da Verificação de Status com IDs Distintos
+# Plano: Exibir Todos os Clientes + Busca Automática em Tempo Real
 
-## Problema Identificado
+## Resumo do Problema
 
-Existe uma **incompatibilidade de IDs** entre os dois fluxos de importação:
+Existem dois problemas identificados:
 
-| Tabela | Campo | Valor Exemplo | Fonte do ID |
-|--------|-------|---------------|-------------|
-| `crm_clients` | `external_id` | `"451"` | `codigo_erp` |
-| `companies` | `iniflex_id` | `"5378317000180"` | CNPJ |
-
-A última alteração fez o mapeamento da listagem usar `codigo_erp` como `id`, o que funciona para `crm_clients`, mas quebra a verificação de `companies` (que usa CNPJ).
-
-**Dados atuais:**
-- `crm_clients`: 192 registros (sincronização - potencialmente indesejada)
-- `companies` com `iniflex_id`: 4 registros (importação manual - **os reais importados**)
+| Problema | Situação Atual | Resultado |
+|----------|----------------|-----------|
+| **Dados faltantes** | A página busca apenas de `companies` (11 registros) | 192 clientes de `crm_clients` não aparecem |
+| **Busca não funciona** | Filtro client-side não inclui todos os campos | Pesquisar "thel" não retorna resultados |
 
 ---
 
-## Solução
+## Solução Proposta
 
-Manter a listagem retornando `codigo_erp` como `id`, e ajustar a verificação de status para considerar ambos os cenários:
+### 1. Unificar Fonte de Dados
 
-1. **Para `crm_clients`**: comparar com `external_id` (codigo_erp)
-2. **Para `companies`/`contacts`**: comparar com CNPJ/CPF do correntista
+Combinar dados de ambas as tabelas (`companies` + `crm_clients`) em uma única lista:
 
----
-
-## Alterações Necessárias
-
-### 1. InflexTab.tsx - Verificação de Status
-
-**Arquivo**: `src/components/integrations/InflexTab.tsx`
-
-Modificar a função `isImported()` para verificar `companies` e `contacts` usando o **CNPJ/CPF** (não o `id`):
-
-```typescript
-// Buscar empresas já importadas com seu CNPJ
-const { data: existingCompanies } = useQuery({
-  queryKey: ['companies-iniflex-ids'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('companies')
-      .select('iniflex_id, cnpj');
-    if (error) throw error;
-    // Criar Set com ambos: iniflex_id e cnpj (limpos)
-    const ids = new Set<string>();
-    data.forEach(c => {
-      if (c.iniflex_id) ids.add(String(c.iniflex_id));
-      if (c.cnpj) ids.add(c.cnpj.replace(/\D/g, ''));
-    });
-    return ids;
-  },
-});
-
-// Função isImported atualizada
-const isImported = (correntista: Correntista) => {
-  // Verificar crm_clients por codigo_erp
-  if (syncedClients?.has(correntista.id)) return true;
-  
-  // Verificar companies/contacts por CNPJ/CPF
-  const cleanDoc = correntista.cnpj_cpf?.replace(/\D/g, '') || '';
-  const isPJ = correntista.pfpj === 'PJ' || cleanDoc.length > 11;
-  
-  if (isPJ) {
-    return existingCompanies?.has(cleanDoc) || existingCompanies?.has(correntista.id);
-  }
-  return existingContacts?.has(cleanDoc) || existingContacts?.has(correntista.id);
-};
+```text
+┌────────────────────────────────────────────────────────────────┐
+│                    FONTE DE DADOS UNIFICADA                    │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│   companies (11)  +  crm_clients (192)  =  Lista Unificada     │
+│                                                                │
+│   - Evitar duplicatas por CNPJ/CPF                             │
+│   - companies tem prioridade (dados manuais)                   │
+│   - crm_clients complementa (dados do ERP)                     │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-### 2. Limpar Dados Errados (Opcional)
+### 2. Busca Automática em Tempo Real
 
-Os 192 registros em `crm_clients` foram importados pela sincronização anterior. Se esses não deveriam estar lá, você pode:
+Implementar busca com debounce que executa automaticamente:
 
-**Opção A**: Manter os dados (a sincronização funciona corretamente)
+- **Delay de 300ms** após o usuário parar de digitar
+- **Busca em múltiplos campos**: nome, fantasia, CNPJ/CPF, endereço, cidade, estado, telefone, email
+- **Sem necessidade de pressionar Enter ou botão**
 
-**Opção B**: Limpar a tabela `crm_clients` e re-sincronizar apenas os desejados
+---
+
+## Alterações Detalhadas
+
+### Arquivo 1: `src/pages/Customers.tsx`
+
+#### Alteração A: Adicionar Query para `crm_clients`
+
+```typescript
+// Nova query para buscar clientes do ERP
+const { data: crmClients } = useQuery({
+  queryKey: ['crm-clients-list'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('crm_clients')
+      .select(`
+        id,
+        razao_social,
+        nome_fantasia,
+        cnpj_cpf,
+        telefone,
+        celular,
+        emails,
+        regiao,
+        raw_data,
+        tipo_pessoa,
+        insc_estadual
+      `);
+    if (error) throw error;
+    return data;
+  },
+});
+```
+
+#### Alteração B: Combinar os Dados
+
+```typescript
+// Combinar companies + crm_clients, evitando duplicatas
+const allCustomers = useMemo(() => {
+  const companiesSet = new Set(
+    customers?.map(c => c.cnpj?.replace(/\D/g, ''))
+  );
+  
+  const companiesList = customers || [];
+  
+  // Adicionar clientes do ERP que não existem em companies
+  const erpClients = (crmClients || [])
+    .filter(c => !companiesSet.has(c.cnpj_cpf?.replace(/\D/g, '')))
+    .map(c => ({
+      id: c.id,
+      name: c.nome_fantasia || c.razao_social || '',
+      // ... mapear demais campos
+    }));
+
+  return [...companiesList, ...erpClients];
+}, [customers, crmClients]);
+```
+
+#### Alteração C: Implementar Debounce para Busca
+
+```typescript
+import { useCallback, useEffect, useState } from 'react';
+
+// Estado para debounce
+const [debouncedSearch, setDebouncedSearch] = useState('');
+
+// Debounce effect
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(search);
+  }, 300);
+  return () => clearTimeout(timer);
+}, [search]);
+```
+
+#### Alteração D: Expandir Campos de Busca
+
+```typescript
+const filteredCustomers = allCustomers?.filter(customer => {
+  if (!debouncedSearch) return true;
+  
+  const searchLower = debouncedSearch.toLowerCase();
+  const searchDigits = debouncedSearch.replace(/\D/g, '');
+  
+  return (
+    customer.name?.toLowerCase().includes(searchLower) ||
+    customer.fantasia?.toLowerCase().includes(searchLower) ||
+    customer.cnpj?.includes(searchDigits) ||
+    customer.address?.toLowerCase().includes(searchLower) ||
+    customer.city?.toLowerCase().includes(searchLower) ||
+    customer.state?.toLowerCase().includes(searchLower) ||
+    customer.phone?.includes(searchDigits) ||
+    customer.email?.toLowerCase().includes(searchLower) ||
+    customer.primary_contact?.name.toLowerCase().includes(searchLower)
+  );
+});
+```
+
+---
+
+## Interface Atualizada
+
+O tipo `CustomerListItem` será expandido para incluir:
+
+```typescript
+interface CustomerListItem {
+  // Campos existentes...
+  
+  // Novos campos do ERP:
+  address?: string;       // Endereço
+  neighborhood?: string;  // Bairro
+  cep?: string;           // CEP
+  insc_estadual?: string; // Inscrição Estadual
+  source: 'crm' | 'erp';  // Origem do dado
+}
+```
+
+---
+
+## Fluxo de Busca
+
+```text
+Usuário digita "thel"
+        │
+        ▼ (aguarda 300ms)
+┌────────────────────────────────────────┐
+│         BUSCA AUTOMÁTICA               │
+├────────────────────────────────────────┤
+│                                        │
+│  Campos pesquisados:                   │
+│  ✓ Nome / Nome Fantasia                │
+│  ✓ CNPJ / CPF                          │
+│  ✓ Endereço                            │
+│  ✓ Cidade / Estado                     │
+│  ✓ Telefone / Celular                  │
+│  ✓ E-mail                              │
+│  ✓ Nome do contato principal           │
+│                                        │
+└────────────────────────────────────────┘
+        │
+        ▼
+Lista filtrada exibida automaticamente
+```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/integrations/InflexTab.tsx` | Atualizar queries para incluir CNPJ/CPF nos Sets e ajustar `isImported()` |
-
----
-
-## Fluxo Corrigido
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│              VERIFICAÇÃO DE STATUS                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Correntista do ERP:                                        │
-│    id: "451" (codigo_erp)                                   │
-│    cnpj_cpf: "05378317000180"                               │
-│                                                             │
-│  Verificação:                                               │
-│    1. crm_clients.external_id = "451" ?                     │
-│       → Sim = Importado (sincronização)                     │
-│                                                             │
-│    2. companies.iniflex_id = "5378317000180" ?              │
-│       ou companies.cnpj = "5378317000180" ?                 │
-│       → Sim = Importado (manual)                            │
-│                                                             │
-│    3. Nenhum → Pendente                                     │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+| Arquivo | Alterações |
+|---------|------------|
+| `src/pages/Customers.tsx` | Adicionar query `crm_clients`, combinar dados, implementar debounce, expandir filtro de busca |
 
 ---
 
 ## Resultado Esperado
 
-Após a correção:
+Após a implementação:
 
-1. **4 registros** serão marcados como "Importado" (os que estão em `companies`)
-2. Registros sincronizados em `crm_clients` também serão identificados
-3. Contadores refletirão a realidade: ~4 importados, ~4368 pendentes
+1. **Todos os 192+ clientes** serão exibidos na lista
+2. **Busca automática** enquanto o usuário digita
+3. **Busca por qualquer campo**: nome, CNPJ, endereço, cidade, telefone, etc.
+4. **Sem duplicatas**: clientes do ERP que já existem em `companies` não serão repetidos
+5. **Performance otimizada** com debounce de 300ms
