@@ -25,10 +25,23 @@ const DEFAULT_CONFIG: InflexConfig = {
  * Tokens válidos são alfanuméricos com alguns caracteres especiais permitidos
  */
 function isTokenCorrupted(token: string): boolean {
-  if (!token) return false;
-  // Padrão de token corrompido: números negativos separados por $
-  const corruptedPattern = /^-?\d+\$-?\d+\$/;
-  return corruptedPattern.test(token);
+  if (!token || token.length < 10) return false;
+  
+  // Padrão de token corrompido: contém números negativos separados por $
+  // Ex: "-79$-36$-9$45$..." ou "123$-45$67$..."
+  const corruptedPattern = /\$-?\d+\$/;
+  if (corruptedPattern.test(token)) {
+    return true;
+  }
+  
+  // Tokens válidos geralmente são base64 ou alfanuméricos
+  // Tokens corrompidos têm muitos $ e números negativos
+  const dollarCount = (token.match(/\$/g) || []).length;
+  if (dollarCount > 10) {
+    return true;
+  }
+  
+  return false;
 }
 
 export function useInflexConfig() {
@@ -42,6 +55,7 @@ export function useInflexConfig() {
         // Se o token está corrompido, limpar e avisar
         if (isTokenCorrupted(token)) {
           console.warn('[useInflexConfig] Token corrompido detectado! Limpando configuração.');
+          console.warn('[useInflexConfig] Token preview:', token.substring(0, 30) + '...');
           localStorage.removeItem(STORAGE_KEY);
           return DEFAULT_CONFIG;
         }
@@ -60,6 +74,11 @@ export function useInflexConfig() {
   // Sincroniza com localStorage sempre que config mudar
   useEffect(() => {
     try {
+      // Não salvar se o token está corrompido
+      if (isTokenCorrupted(config.token)) {
+        console.warn('[useInflexConfig] Tentativa de salvar token corrompido bloqueada');
+        return;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     } catch (error) {
       console.error('[useInflexConfig] Erro ao salvar localStorage:', error);
@@ -67,6 +86,12 @@ export function useInflexConfig() {
   }, [config]);
 
   const updateConfig = useCallback((newConfig: Partial<InflexConfig>) => {
+    // Validar token antes de salvar
+    if (newConfig.token && isTokenCorrupted(newConfig.token)) {
+      console.error('[useInflexConfig] Token corrompido rejeitado:', newConfig.token.substring(0, 30) + '...');
+      return; // Não atualizar com token corrompido
+    }
+    
     setConfig(prev => ({
       ...prev,
       ...newConfig,
@@ -82,11 +107,17 @@ export function useInflexConfig() {
     }
   }, []);
 
-  // Verifica se a configuração está completa
-  const isConfigured = config.baseUrl.trim() !== '' && config.token.trim() !== '';
+  // Verifica se a configuração está completa e válida
+  const isConfigured = 
+    config.baseUrl.trim() !== '' && 
+    config.token.trim() !== '' && 
+    !isTokenCorrupted(config.token);
 
   // Verifica se pelo menos um campo está preenchido
   const hasPartialConfig = config.baseUrl.trim() !== '' || config.token.trim() !== '';
+  
+  // Flag para indicar se o token atual está corrompido
+  const isTokenInvalid = isTokenCorrupted(config.token);
 
   return {
     config,
@@ -94,5 +125,6 @@ export function useInflexConfig() {
     clearConfig,
     isConfigured,
     hasPartialConfig,
+    isTokenInvalid,
   };
 }
