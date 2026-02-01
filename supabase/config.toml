@@ -74,3 +74,6 @@ verify_jwt = false
 
 [functions.iniflex-sandbox-test]
 verify_jwt = false
+
+[functions.sync-iniflex-clients]
+verify_jwt = false
