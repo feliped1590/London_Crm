@@ -34,6 +34,10 @@ interface Correntista {
   pfpj: string;
   cidade?: string;
   estado?: string;
+  insc_estadual?: string;
+  endereco?: string;
+  bairro?: string;
+  cep?: string;
 }
 
 interface SyncResult {
@@ -69,6 +73,9 @@ export function InflexTab() {
     onSuccess: (data) => {
       toast.success(`Sincronização concluída: ${data.processed} clientes processados`);
       setLastSyncResult(data);
+      // Invalidar cache para atualizar contadores
+      queryClient.invalidateQueries({ queryKey: ['crm-clients-external-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['iniflex-correntistas'] });
     },
     onError: (error: Error) => {
       toast.error(`Erro na sincronização: ${error.message}`);
@@ -116,6 +123,18 @@ export function InflexTab() {
         .select('iniflex_id, cnpj');
       if (error) throw error;
       return new Set(data.filter(c => c.iniflex_id).map(c => c.iniflex_id));
+    },
+  });
+
+  // Buscar clientes sincronizados (crm_clients)
+  const { data: syncedClients } = useQuery({
+    queryKey: ['crm-clients-external-ids'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_clients')
+        .select('external_id');
+      if (error) throw error;
+      return new Set(data.map(c => c.external_id));
     },
   });
 
@@ -186,6 +205,10 @@ export function InflexTab() {
   };
 
   const isImported = (correntista: Correntista) => {
+    // Prioridade: verificar se foi sincronizado via crm_clients
+    if (syncedClients?.has(correntista.id)) return true;
+    
+    // Fallback: verificar importação manual (companies/contacts)
     const isPJ = correntista.pfpj === 'PJ' || correntista.cnpj_cpf?.length > 11;
     if (isPJ) {
       return existingCompanies?.has(correntista.id);

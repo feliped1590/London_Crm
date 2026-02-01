@@ -89,13 +89,17 @@ Deno.serve(async (req) => {
     const mappedCorrentistas = correntistas.map((c: any) => ({
       id: c.codigo || c.id || c.cnpj_cpf,
       cnpj_cpf: c.cnpj_cpf?.toString() || '',
-      nome: c.nome || '',
-      fantasia: c.fantasia || '',
-      email: c.email || '',
-      fone: c.fone || c.telefone || '',
-      pfpj: c.pfpj || (c.cnpj_cpf?.toString().length > 11 ? 'PJ' : 'PF'),
-      cidade: c.cidade || '',
-      estado: c.estado || '',
+      nome: c.nome || c.razao_social || '',
+      fantasia: c.fantasia || c.nome_fantasia || '',
+      email: c.e_mail || c.email || '',
+      fone: c.fone || c.telefone || c.celular || '',
+      pfpj: c.pfpj || c.tipo_pessoa || (c.cnpj_cpf?.toString().length > 11 ? 'PJ' : 'PF'),
+      cidade: c.desc_loc_cidade || c.cidade || '',
+      estado: c.loc_uf || c.estado || '',
+      insc_estadual: c.insc_estadual || '',
+      endereco: c.loc_endereco || '',
+      bairro: c.loc_bairro || '',
+      cep: c.loc_cep || '',
     }));
 
     console.log(`[iniflex-list-correntistas] Retornando ${mappedCorrentistas.length} correntistas`);
