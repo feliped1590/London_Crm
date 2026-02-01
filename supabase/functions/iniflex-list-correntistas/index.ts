@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
 
     // Mapear para formato padronizado
     const mappedCorrentistas = correntistas.map((c: any) => ({
-      id: c.codigo || c.id || c.cnpj_cpf,
+      id: String(c.codigo_erp || c.codigo || c.id || c.cnpj_cpf),
       cnpj_cpf: c.cnpj_cpf?.toString() || '',
       nome: c.nome || c.razao_social || '',
       fantasia: c.fantasia || c.nome_fantasia || '',
