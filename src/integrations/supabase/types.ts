@@ -490,6 +490,155 @@ export type Database = {
           },
         ]
       }
+      crm_client_addresses: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          client_id: string
+          codigo_cidade: string | null
+          complemento: string | null
+          created_at: string
+          endereco: string | null
+          id: string
+          numero: string | null
+          tipo: string
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          client_id: string
+          codigo_cidade?: string | null
+          complemento?: string | null
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          numero?: string | null
+          tipo: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          client_id?: string
+          codigo_cidade?: string | null
+          complemento?: string | null
+          created_at?: string
+          endereco?: string | null
+          id?: string
+          numero?: string | null
+          tipo?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_client_addresses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "crm_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_clients: {
+        Row: {
+          celular: string | null
+          cnpj_cpf: string | null
+          contribui_icms: boolean | null
+          created_at: string
+          data_alteracao_erp: string | null
+          destino_mercadoria: string | null
+          emails: string[] | null
+          external_id: string
+          id: string
+          insc_estadual: string | null
+          nome_fantasia: string | null
+          possui_titulos: boolean | null
+          raw_data: Json | null
+          razao_social: string | null
+          regiao: string | null
+          rg: string | null
+          segmento: string | null
+          subregiao: string | null
+          subsegmento: string | null
+          synced_at: string
+          telefone: string | null
+          tipo_cliente: string | null
+          tipo_fornecedor: string | null
+          tipo_pessoa: string | null
+          tipo_representante: string | null
+          tipo_transportador: string | null
+          updated_at: string
+          usuario_alteracao_erp: string | null
+        }
+        Insert: {
+          celular?: string | null
+          cnpj_cpf?: string | null
+          contribui_icms?: boolean | null
+          created_at?: string
+          data_alteracao_erp?: string | null
+          destino_mercadoria?: string | null
+          emails?: string[] | null
+          external_id: string
+          id?: string
+          insc_estadual?: string | null
+          nome_fantasia?: string | null
+          possui_titulos?: boolean | null
+          raw_data?: Json | null
+          razao_social?: string | null
+          regiao?: string | null
+          rg?: string | null
+          segmento?: string | null
+          subregiao?: string | null
+          subsegmento?: string | null
+          synced_at?: string
+          telefone?: string | null
+          tipo_cliente?: string | null
+          tipo_fornecedor?: string | null
+          tipo_pessoa?: string | null
+          tipo_representante?: string | null
+          tipo_transportador?: string | null
+          updated_at?: string
+          usuario_alteracao_erp?: string | null
+        }
+        Update: {
+          celular?: string | null
+          cnpj_cpf?: string | null
+          contribui_icms?: boolean | null
+          created_at?: string
+          data_alteracao_erp?: string | null
+          destino_mercadoria?: string | null
+          emails?: string[] | null
+          external_id?: string
+          id?: string
+          insc_estadual?: string | null
+          nome_fantasia?: string | null
+          possui_titulos?: boolean | null
+          raw_data?: Json | null
+          razao_social?: string | null
+          regiao?: string | null
+          rg?: string | null
+          segmento?: string | null
+          subregiao?: string | null
+          subsegmento?: string | null
+          synced_at?: string
+          telefone?: string | null
+          tipo_cliente?: string | null
+          tipo_fornecedor?: string | null
+          tipo_pessoa?: string | null
+          tipo_representante?: string | null
+          tipo_transportador?: string | null
+          updated_at?: string
+          usuario_alteracao_erp?: string | null
+        }
+        Relationships: []
+      }
       custom_fields: {
         Row: {
           created_at: string
@@ -903,6 +1052,33 @@ export type Database = {
           entity_id?: string
           entity_type?: string
           id?: string
+        }
+        Relationships: []
+      }
+      erp_sync_control: {
+        Row: {
+          created_at: string
+          entity: string
+          id: string
+          last_sync_at: string
+          last_sync_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entity: string
+          id?: string
+          last_sync_at?: string
+          last_sync_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entity?: string
+          id?: string
+          last_sync_at?: string
+          last_sync_count?: number | null
+          updated_at?: string
         }
         Relationships: []
       }
