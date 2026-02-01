@@ -75,7 +75,7 @@ const DEFAULT_PAYLOAD = {
 
 export function InflexSandboxTab() {
   const queryClient = useQueryClient();
-  const { config, updateConfig, clearConfig, isConfigured, isTokenInvalid } = useInflexConfig();
+  const { config, updateConfig, clearConfig, isConfigured } = useInflexConfig();
   
   const [payloadJson, setPayloadJson] = useState(JSON.stringify(DEFAULT_PAYLOAD, null, 2));
   const [timeoutMs, setTimeoutMs] = useState(15000);
@@ -220,25 +220,8 @@ export function InflexSandboxTab() {
         </div>
       </div>
 
-      {/* Alerta se token corrompido */}
-      {isTokenInvalid && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              <strong>Token corrompido detectado!</strong> O token armazenado está em formato inválido (bytes). 
-              Clique em "Limpar" e insira o token novamente.
-            </span>
-            <Button variant="destructive" size="sm" onClick={clearConfig} className="ml-4">
-              <Trash2 className="h-3 w-3 mr-1" />
-              Limpar Agora
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Alerta se não configurado */}
-      {!isConfigured && !isTokenInvalid && (
+      {!isConfigured && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
