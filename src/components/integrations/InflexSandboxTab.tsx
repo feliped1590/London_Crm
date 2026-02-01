@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useInflexConfig } from '@/hooks/useInflexConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Play, 
   RefreshCw, 
@@ -23,7 +25,8 @@ import {
   Terminal,
   Settings2,
   Info,
-  Trash2
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -72,14 +75,12 @@ const DEFAULT_PAYLOAD = {
 
 export function InflexSandboxTab() {
   const queryClient = useQueryClient();
+  const { config, updateConfig, clearConfig, isConfigured } = useInflexConfig();
+  
   const [payloadJson, setPayloadJson] = useState(JSON.stringify(DEFAULT_PAYLOAD, null, 2));
   const [timeoutMs, setTimeoutMs] = useState(15000);
   const [lastResult, setLastResult] = useState<SandboxTestResult | null>(null);
   const [jsonError, setJsonError] = useState<string | null>(null);
-  
-  // Estados para URL e Token manuais
-  const [apiUrl, setApiUrl] = useState('');
-  const [apiToken, setApiToken] = useState('');
 
   // Buscar logs anteriores
   const { data: logs, isLoading: isLoadingLogs, refetch: refetchLogs } = useQuery({
@@ -108,8 +109,8 @@ export function InflexSandboxTab() {
           payload: testPayload, 
           timeout_ms: 10000, 
           save_log: false,
-          api_url: apiUrl || undefined,
-          api_token: apiToken || undefined,
+          api_url: config.baseUrl,
+          api_token: config.token,
         },
       });
       if (error) throw error;
@@ -139,8 +140,8 @@ export function InflexSandboxTab() {
           payload, 
           timeout_ms: timeoutMs, 
           save_log: true,
-          api_url: apiUrl || undefined,
-          api_token: apiToken || undefined,
+          api_url: config.baseUrl,
+          api_token: config.token,
         },
       });
       if (error) throw error;
@@ -161,6 +162,10 @@ export function InflexSandboxTab() {
   });
 
   const handleExecuteTest = () => {
+    if (!isConfigured) {
+      toast.error('Preencha a URL e o Token antes de executar');
+      return;
+    }
     try {
       const payload = JSON.parse(payloadJson);
       setJsonError(null);
@@ -181,16 +186,13 @@ export function InflexSandboxTab() {
     setJsonError(null);
   };
 
-  const handleClearManualConfig = () => {
-    setApiUrl('');
-    setApiToken('');
-  };
-
   const handleTestConnection = () => {
+    if (!isConfigured) {
+      toast.error('Preencha a URL e o Token antes de testar');
+      return;
+    }
     connectionTestMutation.mutate();
   };
-
-  const isUsingManualConfig = apiUrl.trim() !== '' || apiToken.trim() !== '';
 
   const validateJson = (value: string) => {
     try {
@@ -218,6 +220,17 @@ export function InflexSandboxTab() {
         </div>
       </div>
 
+      {/* Alerta se não configurado */}
+      {!isConfigured && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Configuração obrigatória:</strong> Preencha a URL da API e o Token para usar o Sandbox.
+            As credenciais são salvas localmente no seu navegador.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Configuration & Execute */}
         <div className="space-y-6">
@@ -229,69 +242,69 @@ export function InflexSandboxTab() {
                   <Settings2 className="h-5 w-5" />
                   <CardTitle className="text-base">Configuração Sandbox</CardTitle>
                 </div>
-              {lastResult?.test_result.request.hasToken ? (
+                {isConfigured ? (
                   <Badge className="bg-emerald-600 hover:bg-emerald-700">
-                    <CheckCircle2 className="h-3 w-3 mr-1" /> Conectado
+                    <CheckCircle2 className="h-3 w-3 mr-1" /> Configurado
                   </Badge>
                 ) : (
-                  <Badge variant="secondary">
-                    <AlertCircle className="h-3 w-3 mr-1" /> Não testado
+                  <Badge variant="destructive">
+                    <AlertCircle className="h-3 w-3 mr-1" /> Pendente
                   </Badge>
                 )}
               </div>
+              <CardDescription>
+                As credenciais são salvas no localStorage do navegador (não no servidor)
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <TooltipProvider>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label>URL da API (Sandbox)</Label>
+                    <Label className="text-destructive">URL da API *</Label>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs text-xs">
-                          Deixe vazio para usar INIFLEX_SANDBOX_API_URL do Vault
+                          URL completa do endpoint Iniflex (ex: https://iniflex.novafix.ind.br/api/v1/...)
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                    {apiUrl && (
-                      <Badge variant="secondary" className="text-xs">Manual</Badge>
-                    )}
                   </div>
                   <Input 
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
+                    value={config.baseUrl}
+                    onChange={(e) => updateConfig({ baseUrl: e.target.value })}
                     placeholder="https://iniflex.novafix.ind.br/api/v1/runtime/endpoint/integracao/iniflex/json"
-                    className="font-mono text-xs"
+                    className={`font-mono text-xs ${!config.baseUrl.trim() ? 'border-destructive' : ''}`}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <Label>Token de Autenticação</Label>
+                    <Label className="text-destructive">Token de Autenticação *</Label>
                     <Tooltip>
                       <TooltipTrigger>
                         <Info className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p className="max-w-xs text-xs">
-                          Deixe vazio para usar INIFLEX_SANDBOX_API_TOKEN do Vault
+                          Token de autenticação da API Iniflex (será enviado no campo "chave" do payload)
                         </p>
                       </TooltipContent>
                     </Tooltip>
-                    {apiToken && (
+                    {config.token && (
                       <Badge variant="secondary" className="text-xs">
-                        Manual ({apiToken.length} chars)
+                        {config.token.length} caracteres
                       </Badge>
                     )}
                   </div>
                   <Input 
                     type="password"
-                    value={apiToken}
-                    onChange={(e) => setApiToken(e.target.value)}
+                    value={config.token}
+                    onChange={(e) => updateConfig({ token: e.target.value })}
                     placeholder="Cole o token aqui..."
-                    className="font-mono text-xs"
+                    className={`font-mono text-xs ${!config.token.trim() ? 'border-destructive' : ''}`}
                   />
                 </div>
               </TooltipProvider>
@@ -301,7 +314,7 @@ export function InflexSandboxTab() {
                   variant="outline" 
                   size="sm" 
                   onClick={handleTestConnection}
-                  disabled={connectionTestMutation.isPending}
+                  disabled={connectionTestMutation.isPending || !isConfigured}
                   className="gap-1"
                 >
                   {connectionTestMutation.isPending ? (
@@ -311,12 +324,12 @@ export function InflexSandboxTab() {
                   )}
                   Testar Conexão
                 </Button>
-                {isUsingManualConfig && (
+                {isConfigured && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={handleClearManualConfig}
-                    className="gap-1 text-xs"
+                    onClick={clearConfig}
+                    className="gap-1 text-xs text-destructive hover:text-destructive"
                   >
                     <Trash2 className="h-3 w-3" />
                     Limpar
@@ -377,7 +390,7 @@ export function InflexSandboxTab() {
 
               <Button 
                 onClick={handleExecuteTest}
-                disabled={testMutation.isPending || !!jsonError}
+                disabled={testMutation.isPending || !!jsonError || !isConfigured}
                 className="w-full gap-2"
               >
                 {testMutation.isPending ? (
@@ -477,50 +490,55 @@ export function InflexSandboxTab() {
                   Nenhum teste executado ainda
                 </p>
               ) : (
-                <ScrollArea className="h-[200px]">
+                <ScrollArea className="h-[250px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead>Quando</TableHead>
+                        <TableHead>Comando</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Latência</TableHead>
-                        <TableHead>Comando</TableHead>
-                        <TableHead>Quando</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {logs.map((log) => (
                         <TableRow key={log.id}>
-                          <TableCell>
-                            {log.http_status && log.http_status < 400 ? (
-                              <Badge className="bg-emerald-600 hover:bg-emerald-700 text-xs">
-                                {log.http_status}
-                              </Badge>
-                            ) : (
-                              <Badge variant="destructive" className="text-xs">
-                                {log.http_status || 'ERR'}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs font-mono">
-                            {log.latency_ms}ms
-                          </TableCell>
-                          <TableCell className="text-xs font-mono max-w-[150px] truncate">
-                            {(log.request_payload as any)?.grupoComando || 'N/A'}
-                          </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(log.created_at), { 
                               addSuffix: true, 
                               locale: ptBR 
                             })}
                           </TableCell>
+                          <TableCell className="text-xs font-mono">
+                            {String((log.request_payload as Record<string, unknown>)?.grupoComando || 'N/A')}
+                          </TableCell>
+                          <TableCell>
+                            {log.http_status && log.http_status < 400 ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {log.http_status}
+                              </Badge>
+                            ) : log.http_status ? (
+                              <Badge variant="destructive" className="text-xs">
+                                {log.http_status}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                Erro
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {log.latency_ms ? `${log.latency_ms}ms` : '-'}
+                          </TableCell>
                           <TableCell>
                             <Button 
                               variant="ghost" 
-                              size="sm"
+                              size="sm" 
                               onClick={() => handleLoadFromLog(log)}
+                              className="h-7 px-2"
                             >
-                              Usar
+                              <RotateCcw className="h-3 w-3" />
                             </Button>
                           </TableCell>
                         </TableRow>

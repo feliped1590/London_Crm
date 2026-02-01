@@ -2,6 +2,10 @@
  * Edge Function: erp-sync
  * Fundação v1 - Ponto único de entrada para integração ERP Iniflex
  * 
+ * ARQUITETURA SEM VARIÁVEIS DE AMBIENTE:
+ * - URL e Token são recebidos explicitamente no body da requisição
+ * - Não existe fallback para Deno.env.get() para credenciais Iniflex
+ * 
  * Responsabilidades:
  * - Receber requisições de sincronização
  * - Validar dados antes de enviar ao ERP
@@ -19,7 +23,7 @@ import {
   CRMCompany,
   CRMContact,
 } from '../_shared/iniflex/types.ts';
-import { sendToIniflex } from '../_shared/iniflex/adapter.ts';
+import { sendToIniflex, InflexConfig } from '../_shared/iniflex/adapter.ts';
 import { mapCompanyToIniflex, mapContactToIniflex } from '../_shared/iniflex/mapper.ts';
 import { validateCompany, validateContact } from '../_shared/iniflex/validator.ts';
 
@@ -27,6 +31,12 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Extende SyncRequest para incluir credenciais
+interface SyncRequestWithCredentials extends SyncRequest {
+  baseUrl: string;
+  token: string;
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -40,8 +50,15 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const body = await req.json() as SyncRequest;
-    const { entity_type, entity_id, ensure_dependencies } = body;
+    const body = await req.json() as SyncRequestWithCredentials;
+    const { entity_type, entity_id, ensure_dependencies, baseUrl, token } = body;
+
+    // VALIDAÇÃO ESTRITA DE CREDENCIAIS
+    if (!baseUrl?.trim() || !token?.trim()) {
+      return errorResponse(400, 'baseUrl e token são obrigatórios. Configure os campos na interface.');
+    }
+
+    const config: InflexConfig = { baseUrl: baseUrl.trim(), token: token.trim() };
 
     // Validar request
     if (!entity_type || !entity_id) {
@@ -74,18 +91,18 @@ Deno.serve(async (req) => {
 
     // Processar conforme tipo de entidade
     if (entity_type === ENTITY_TYPE.COMPANY) {
-      return await syncCompany(supabase, entity_id, logId);
+      return await syncCompany(supabase, entity_id, logId, config);
     }
 
     if (entity_type === ENTITY_TYPE.CONTACT) {
       // Orquestração mínima: garantir que empresa existe no ERP
       if (ensure_dependencies) {
-        const dependencyResult = await ensureCompanyDependency(supabase, entity_id, logId);
+        const dependencyResult = await ensureCompanyDependency(supabase, entity_id, logId, config);
         if (!dependencyResult.success) {
           return errorResponse(400, dependencyResult.error!);
         }
       }
-      return await syncContact(supabase, entity_id, logId);
+      return await syncContact(supabase, entity_id, logId, config);
     }
 
     return errorResponse(400, `Tipo não implementado: ${entity_type}`);
@@ -103,7 +120,8 @@ Deno.serve(async (req) => {
 async function ensureCompanyDependency(
   supabase: SupabaseClient,
   contactId: string,
-  logId?: string
+  logId: string | undefined,
+  config: InflexConfig
 ): Promise<{ success: boolean; error?: string }> {
   const { data: contact, error } = await supabase
     .from('contacts')
@@ -124,7 +142,7 @@ async function ensureCompanyDependency(
   if (contact.company_id && !companyIniflex) {
     console.log(`[erp-sync] Sincronizando empresa dependente: ${contact.company_id}`);
     
-    const companyResult = await syncCompanyInternal(supabase, contact.company_id);
+    const companyResult = await syncCompanyInternal(supabase, contact.company_id, undefined, config);
     
     if (!companyResult.success) {
       // Registrar falha de dependência no log do contato
@@ -148,9 +166,10 @@ async function ensureCompanyDependency(
 async function syncCompany(
   supabase: SupabaseClient,
   companyId: string,
-  logId?: string
+  logId: string | undefined,
+  config: InflexConfig
 ): Promise<Response> {
-  const result = await syncCompanyInternal(supabase, companyId, logId);
+  const result = await syncCompanyInternal(supabase, companyId, logId, config);
 
   if (!result.success) {
     return errorResponse(400, result.error!);
@@ -173,7 +192,8 @@ async function syncCompany(
 async function syncCompanyInternal(
   supabase: SupabaseClient,
   companyId: string,
-  logId?: string
+  logId: string | undefined,
+  config: InflexConfig
 ): Promise<{ success: boolean; externalId?: string; error?: string }> {
   // Buscar empresa
   const { data: company, error } = await supabase
@@ -209,8 +229,8 @@ async function syncCompanyInternal(
     })
     .eq('id', logId);
 
-  // Chamar ERP
-  const result = await sendToIniflex(payload);
+  // Chamar ERP com credenciais explícitas
+  const result = await sendToIniflex(payload, config);
 
   if (!result.success) {
     await updateLog(supabase, logId, SYNC_STATUS.FAILED, null, result.error, result.rawResponse);
@@ -239,7 +259,8 @@ async function syncCompanyInternal(
 async function syncContact(
   supabase: SupabaseClient,
   contactId: string,
-  logId?: string
+  logId: string | undefined,
+  config: InflexConfig
 ): Promise<Response> {
   // Buscar contato
   const { data: contact, error } = await supabase
@@ -275,8 +296,8 @@ async function syncContact(
     })
     .eq('id', logId);
 
-  // Chamar ERP
-  const result = await sendToIniflex(payload);
+  // Chamar ERP com credenciais explícitas
+  const result = await sendToIniflex(payload, config);
 
   if (!result.success) {
     await updateLog(supabase, logId, SYNC_STATUS.FAILED, null, result.error, result.rawResponse);
