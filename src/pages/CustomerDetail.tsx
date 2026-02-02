@@ -28,7 +28,9 @@ import {
   TrendingUp,
   Clock,
   FileText,
-  Users
+  Users,
+  Database,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -69,6 +71,34 @@ interface Contact {
   cpf: string | null;
   notes: string | null;
   custom_fields: Json | null;
+}
+
+// Interface unificada para cliente (CRM ou ERP)
+interface UnifiedCustomer {
+  id: string;
+  name: string;
+  fantasia: string | null;
+  cnpj: string | null;
+  inscricao_estadual: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  industry: string | null;
+  employee_count: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  notes: string | null;
+  custom_fields: Json | null;
+  // Campos específicos ERP
+  regiao?: string | null;
+  segmento?: string | null;
+  tipo_pessoa?: string | null;
+  // Metadados
+  source: 'crm' | 'erp';
+  contacts?: Contact[];
+  deals?: any[];
 }
 
 export default function CustomerDetail() {
@@ -114,11 +144,14 @@ export default function CustomerDetail() {
   });
   const [contactCustomFields, setContactCustomFields] = useState<Record<string, unknown>>({});
 
-  // Fetch company with contacts and deals
+  // Fetch customer with dual-source fallback (CRM → ERP)
   const { data: customer, isLoading } = useQuery({
     queryKey: ['customer', id],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<UnifiedCustomer | null> => {
+      if (!id) return null;
+
+      // 1. Tentar buscar em companies (CRM)
+      const { data: crmData, error: crmError } = await supabase
         .from('companies')
         .select(`
           *,
@@ -126,15 +159,78 @@ export default function CustomerDetail() {
           deals(id, name, stage, value, expected_close_date, owner_id)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      return data;
+      if (crmData) {
+        return {
+          ...crmData,
+          source: 'crm' as const,
+        };
+      }
+
+      // 2. Se não encontrar, buscar em crm_clients (ERP)
+      const { data: erpData, error: erpError } = await supabase
+        .from('crm_clients')
+        .select(`
+          *,
+          crm_client_addresses(*)
+        `)
+        .eq('id', id)
+        .maybeSingle();
+
+      if (erpError) throw erpError;
+
+      if (erpData) {
+        // Transformar dados do ERP para formato unificado
+        const addresses = erpData.crm_client_addresses || [];
+        const localAddress = addresses.find((a: any) => a.tipo === 'LOCAL') || addresses[0];
+
+        // Montar endereço completo
+        let fullAddress = '';
+        if (localAddress) {
+          const parts = [
+            localAddress.endereco,
+            localAddress.numero,
+            localAddress.bairro
+          ].filter(Boolean);
+          fullAddress = parts.join(', ');
+          if (localAddress.complemento) {
+            fullAddress += ` - ${localAddress.complemento}`;
+          }
+        }
+
+        return {
+          id: erpData.id,
+          name: erpData.razao_social || 'Sem nome',
+          fantasia: erpData.nome_fantasia,
+          cnpj: erpData.cnpj_cpf,
+          inscricao_estadual: erpData.insc_estadual,
+          phone: erpData.telefone || erpData.celular,
+          email: erpData.emails?.[0] || null,
+          website: null,
+          industry: erpData.segmento,
+          employee_count: null,
+          address: fullAddress || null,
+          city: localAddress?.cidade || null,
+          state: localAddress?.uf || null,
+          country: 'Brasil',
+          notes: null,
+          custom_fields: null,
+          regiao: erpData.regiao,
+          segmento: erpData.segmento,
+          tipo_pessoa: erpData.tipo_pessoa,
+          source: 'erp' as const,
+          contacts: [],
+          deals: [],
+        };
+      }
+
+      return null;
     },
     enabled: !!id,
   });
 
-  // Fetch proposals for this company
+  // Fetch proposals for this company (only for CRM customers)
   const { data: proposals } = useQuery({
     queryKey: ['customer-proposals', id],
     queryFn: async () => {
@@ -147,10 +243,10 @@ export default function CustomerDetail() {
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && customer?.source === 'crm',
   });
 
-  // Update company mutation
+  // Update company mutation (only for CRM customers)
   const updateCompanyMutation = useMutation({
     mutationFn: async (data: any) => {
       const { error } = await supabase
@@ -168,7 +264,7 @@ export default function CustomerDetail() {
     onError: () => toast.error('Erro ao atualizar cliente'),
   });
 
-  // Create/update contact mutation
+  // Create/update contact mutation (only for CRM customers)
   const saveContactMutation = useMutation({
     mutationFn: async (data: any) => {
       if (editingContact) {
@@ -313,6 +409,7 @@ export default function CustomerDetail() {
     );
   }
 
+  const isErpCustomer = customer.source === 'erp';
   const contacts = customer.contacts || [];
   const deals = customer.deals || [];
   const displayName = customer.fantasia || customer.name;
@@ -333,34 +430,67 @@ export default function CustomerDetail() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
+                {isErpCustomer ? (
+                  <Badge variant="secondary" className="gap-1">
+                    <Database className="h-3 w-3" />
+                    ERP
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="gap-1">
+                    <Building2 className="h-3 w-3" />
+                    CRM
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {customer.cnpj && <span>{formatCNPJ(customer.cnpj)}</span>}
                 {customer.industry && <span>• {customer.industry}</span>}
                 {customer.city && customer.state && (
                   <span>• {customer.city}/{customer.state}</span>
                 )}
+                {isErpCustomer && customer.regiao && (
+                  <span>• {customer.regiao}</span>
+                )}
               </div>
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
-              <Button onClick={handleSaveCompany} disabled={updateCompanyMutation.isPending}>
-                <Save className="h-4 w-4 mr-2" />
-                Salvar
+          {!isErpCustomer && (
+            isEditing ? (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
+                <Button onClick={handleSaveCompany} disabled={updateCompanyMutation.isPending}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
               </Button>
-            </>
-          ) : (
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            )
           )}
         </div>
       </div>
+
+      {/* ERP Read-only Notice */}
+      {isErpCustomer && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-warning/30 bg-warning/10">
+          <AlertCircle className="h-5 w-5 text-warning" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Cliente sincronizado do ERP
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Os dados deste cliente são gerenciados pelo ERP Iniflex e não podem ser editados aqui.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
@@ -395,7 +525,12 @@ export default function CustomerDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Informações do Cliente</CardTitle>
-              <CardDescription>Dados cadastrais e informações de contato</CardDescription>
+              <CardDescription>
+                {isErpCustomer 
+                  ? 'Dados sincronizados do ERP Iniflex (somente leitura)' 
+                  : 'Dados cadastrais e informações de contato'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
@@ -405,7 +540,7 @@ export default function CustomerDetail() {
                     id="name"
                     value={companyForm.name}
                     onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
@@ -414,16 +549,16 @@ export default function CustomerDetail() {
                     id="fantasia"
                     value={companyForm.fantasia}
                     onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Label htmlFor="cnpj">CNPJ/CPF</Label>
                   <Input
                     id="cnpj"
                     value={companyForm.cnpj}
                     onChange={(e) => setCompanyForm({ ...companyForm, cnpj: formatCNPJ(e.target.value) })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                     maxLength={18}
                   />
                 </div>
@@ -433,50 +568,72 @@ export default function CustomerDetail() {
                     id="inscricao_estadual"
                     value={companyForm.inscricao_estadual}
                     onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="industry">Setor</Label>
-                  <Select 
-                    value={companyForm.industry} 
-                    onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {industries.map((i) => (
-                        <SelectItem key={i} value={i}>{i}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="industry">{isErpCustomer ? 'Segmento' : 'Setor'}</Label>
+                  {isErpCustomer ? (
+                    <Input
+                      id="industry"
+                      value={companyForm.industry}
+                      disabled
+                    />
+                  ) : (
+                    <Select 
+                      value={companyForm.industry} 
+                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {industries.map((i) => (
+                          <SelectItem key={i} value={i}>{i}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
-                <div>
-                  <Label htmlFor="employee_count">Funcionários</Label>
-                  <Select 
-                    value={companyForm.employee_count} 
-                    onValueChange={(v) => setCompanyForm({ ...companyForm, employee_count: v })}
-                    disabled={!isEditing}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employeeCounts.map((e) => (
-                        <SelectItem key={e} value={e}>{e}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {!isErpCustomer && (
+                  <div>
+                    <Label htmlFor="employee_count">Funcionários</Label>
+                    <Select 
+                      value={companyForm.employee_count} 
+                      onValueChange={(v) => setCompanyForm({ ...companyForm, employee_count: v })}
+                      disabled={!isEditing}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employeeCounts.map((e) => (
+                          <SelectItem key={e} value={e}>{e}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {isErpCustomer && customer.regiao && (
+                  <div>
+                    <Label>Região</Label>
+                    <Input value={customer.regiao} disabled />
+                  </div>
+                )}
+                {isErpCustomer && customer.tipo_pessoa && (
+                  <div>
+                    <Label>Tipo de Pessoa</Label>
+                    <Input value={customer.tipo_pessoa === 'J' ? 'Jurídica' : 'Física'} disabled />
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="phone">Telefone</Label>
                   <Input
                     id="phone"
                     value={companyForm.phone}
                     onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
@@ -486,25 +643,27 @@ export default function CustomerDetail() {
                     type="email"
                     value={companyForm.email}
                     onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={companyForm.website}
-                    onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
-                    disabled={!isEditing}
-                  />
-                </div>
+                {!isErpCustomer && (
+                  <div>
+                    <Label htmlFor="website">Website</Label>
+                    <Input
+                      id="website"
+                      value={companyForm.website}
+                      onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                )}
                 <div className="col-span-2">
                   <Label htmlFor="address">Endereço</Label>
                   <Input
                     id="address"
                     value={companyForm.address}
                     onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
@@ -513,7 +672,7 @@ export default function CustomerDetail() {
                     id="city"
                     value={companyForm.city}
                     onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
                 <div>
@@ -522,20 +681,22 @@ export default function CustomerDetail() {
                     id="state"
                     value={companyForm.state}
                     onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isErpCustomer}
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label htmlFor="notes">Observações</Label>
-                  <Textarea
-                    id="notes"
-                    value={companyForm.notes}
-                    onChange={(e) => setCompanyForm({ ...companyForm, notes: e.target.value })}
-                    disabled={!isEditing}
-                    rows={3}
-                  />
-                </div>
-                {isEditing && (
+                {!isErpCustomer && (
+                  <div className="col-span-2">
+                    <Label htmlFor="notes">Observações</Label>
+                    <Textarea
+                      id="notes"
+                      value={companyForm.notes}
+                      onChange={(e) => setCompanyForm({ ...companyForm, notes: e.target.value })}
+                      disabled={!isEditing}
+                      rows={3}
+                    />
+                  </div>
+                )}
+                {isEditing && !isErpCustomer && (
                   <CustomFieldsRenderer
                     entity="company"
                     values={customFieldsData}
@@ -554,130 +715,145 @@ export default function CustomerDetail() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Contatos</CardTitle>
-                  <CardDescription>Pessoas de contato vinculadas a este cliente</CardDescription>
+                  <CardDescription>
+                    {isErpCustomer 
+                      ? 'Contatos não disponíveis para clientes sincronizados do ERP' 
+                      : 'Pessoas de contato vinculadas a este cliente'
+                    }
+                  </CardDescription>
                 </div>
-                <Dialog open={isContactDialogOpen} onOpenChange={(open) => { 
-                  setIsContactDialogOpen(open); 
-                  if (!open) resetContactForm(); 
-                }}>
-                  <DialogTrigger asChild>
-                    <Button size="sm" className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Novo Contato
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>{editingContact ? 'Editar Contato' : 'Novo Contato'}</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleSaveContact} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="contact_first_name">Nome *</Label>
-                          <Input
-                            id="contact_first_name"
-                            value={contactForm.first_name}
-                            onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
-                            required
+                {!isErpCustomer && (
+                  <Dialog open={isContactDialogOpen} onOpenChange={(open) => { 
+                    setIsContactDialogOpen(open); 
+                    if (!open) resetContactForm(); 
+                  }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Novo Contato
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle>{editingContact ? 'Editar Contato' : 'Novo Contato'}</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleSaveContact} className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="contact_first_name">Nome *</Label>
+                            <Input
+                              id="contact_first_name"
+                              value={contactForm.first_name}
+                              onChange={(e) => setContactForm({ ...contactForm, first_name: e.target.value })}
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_last_name">Sobrenome</Label>
+                            <Input
+                              id="contact_last_name"
+                              value={contactForm.last_name}
+                              onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_cpf">CPF</Label>
+                            <Input
+                              id="contact_cpf"
+                              value={contactForm.cpf}
+                              onChange={(e) => setContactForm({ ...contactForm, cpf: formatCPF(e.target.value) })}
+                              maxLength={14}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_job_title">Cargo</Label>
+                            <Input
+                              id="contact_job_title"
+                              value={contactForm.job_title}
+                              onChange={(e) => setContactForm({ ...contactForm, job_title: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_email">Email</Label>
+                            <Input
+                              id="contact_email"
+                              type="email"
+                              value={contactForm.email}
+                              onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_mobile">Celular</Label>
+                            <Input
+                              id="contact_mobile"
+                              value={contactForm.mobile}
+                              onChange={(e) => setContactForm({ ...contactForm, mobile: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_phone">Telefone</Label>
+                            <Input
+                              id="contact_phone"
+                              value={contactForm.phone}
+                              onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="contact_department">Departamento</Label>
+                            <Input
+                              id="contact_department"
+                              value={contactForm.department}
+                              onChange={(e) => setContactForm({ ...contactForm, department: e.target.value })}
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Label htmlFor="contact_linkedin">LinkedIn</Label>
+                            <Input
+                              id="contact_linkedin"
+                              value={contactForm.linkedin_url}
+                              onChange={(e) => setContactForm({ ...contactForm, linkedin_url: e.target.value })}
+                              placeholder="https://linkedin.com/in/..."
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <Label htmlFor="contact_notes">Observações</Label>
+                            <Textarea
+                              id="contact_notes"
+                              value={contactForm.notes}
+                              onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
+                              rows={2}
+                            />
+                          </div>
+                          <CustomFieldsRenderer
+                            entity="contact"
+                            values={contactCustomFields}
+                            onChange={setContactCustomFields}
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="contact_last_name">Sobrenome</Label>
-                          <Input
-                            id="contact_last_name"
-                            value={contactForm.last_name}
-                            onChange={(e) => setContactForm({ ...contactForm, last_name: e.target.value })}
-                          />
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" variant="outline" onClick={resetContactForm}>
+                            Cancelar
+                          </Button>
+                          <Button type="submit" disabled={saveContactMutation.isPending}>
+                            {editingContact ? 'Atualizar' : 'Adicionar'}
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="contact_cpf">CPF</Label>
-                          <Input
-                            id="contact_cpf"
-                            value={contactForm.cpf}
-                            onChange={(e) => setContactForm({ ...contactForm, cpf: formatCPF(e.target.value) })}
-                            maxLength={14}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_job_title">Cargo</Label>
-                          <Input
-                            id="contact_job_title"
-                            value={contactForm.job_title}
-                            onChange={(e) => setContactForm({ ...contactForm, job_title: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_email">Email</Label>
-                          <Input
-                            id="contact_email"
-                            type="email"
-                            value={contactForm.email}
-                            onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_mobile">Celular</Label>
-                          <Input
-                            id="contact_mobile"
-                            value={contactForm.mobile}
-                            onChange={(e) => setContactForm({ ...contactForm, mobile: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_phone">Telefone</Label>
-                          <Input
-                            id="contact_phone"
-                            value={contactForm.phone}
-                            onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="contact_department">Departamento</Label>
-                          <Input
-                            id="contact_department"
-                            value={contactForm.department}
-                            onChange={(e) => setContactForm({ ...contactForm, department: e.target.value })}
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Label htmlFor="contact_linkedin">LinkedIn</Label>
-                          <Input
-                            id="contact_linkedin"
-                            value={contactForm.linkedin_url}
-                            onChange={(e) => setContactForm({ ...contactForm, linkedin_url: e.target.value })}
-                            placeholder="https://linkedin.com/in/..."
-                          />
-                        </div>
-                        <div className="col-span-2">
-                          <Label htmlFor="contact_notes">Observações</Label>
-                          <Textarea
-                            id="contact_notes"
-                            value={contactForm.notes}
-                            onChange={(e) => setContactForm({ ...contactForm, notes: e.target.value })}
-                            rows={2}
-                          />
-                        </div>
-                        <CustomFieldsRenderer
-                          entity="contact"
-                          values={contactCustomFields}
-                          onChange={setContactCustomFields}
-                        />
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button type="button" variant="outline" onClick={resetContactForm}>
-                          Cancelar
-                        </Button>
-                        <Button type="submit" disabled={saveContactMutation.isPending}>
-                          {editingContact ? 'Atualizar' : 'Adicionar'}
-                        </Button>
-                      </div>
-                    </form>
-                  </DialogContent>
-                </Dialog>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              {contacts.length === 0 ? (
+              {isErpCustomer ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Database className="h-12 w-12 text-muted-foreground/50" />
+                  <h3 className="mt-4 text-lg font-semibold">Contatos não disponíveis</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Os contatos de clientes sincronizados do ERP são gerenciados diretamente no sistema de origem.
+                  </p>
+                </div>
+              ) : contacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <Users className="h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhum contato</h3>
@@ -780,16 +956,31 @@ export default function CustomerDetail() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Negócios</CardTitle>
-                  <CardDescription>Oportunidades e negociações com este cliente</CardDescription>
+                  <CardDescription>
+                    {isErpCustomer 
+                      ? 'Para criar negócios com este cliente, primeiro importe-o para o CRM' 
+                      : 'Oportunidades e negociações com este cliente'
+                    }
+                  </CardDescription>
                 </div>
-                <Button size="sm" className="gap-2" onClick={() => navigate(`/pipeline?company=${id}`)}>
-                  <Plus className="h-4 w-4" />
-                  Novo Negócio
-                </Button>
+                {!isErpCustomer && (
+                  <Button size="sm" className="gap-2" onClick={() => navigate(`/pipeline?company=${id}`)}>
+                    <Plus className="h-4 w-4" />
+                    Novo Negócio
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              {deals.length === 0 ? (
+              {isErpCustomer ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Database className="h-12 w-12 text-muted-foreground/50" />
+                  <h3 className="mt-4 text-lg font-semibold">Negócios não disponíveis</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Este cliente é sincronizado do ERP. Para criar negócios, primeiro importe-o para o CRM na tela de Integrações.
+                  </p>
+                </div>
+              ) : deals.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <TrendingUp className="h-12 w-12 text-muted-foreground/50" />
                   <h3 className="mt-4 text-lg font-semibold">Nenhum negócio</h3>
@@ -843,10 +1034,25 @@ export default function CustomerDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Timeline</CardTitle>
-              <CardDescription>Histórico de atividades e interações</CardDescription>
+              <CardDescription>
+                {isErpCustomer 
+                  ? 'Histórico de atividades não disponível para clientes do ERP' 
+                  : 'Histórico de atividades e interações'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ActivityTimeline entityType="company" entityId={id!} />
+              {isErpCustomer ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Clock className="h-12 w-12 text-muted-foreground/50" />
+                  <h3 className="mt-4 text-lg font-semibold">Timeline não disponível</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    O histórico de atividades não está disponível para clientes sincronizados do ERP.
+                  </p>
+                </div>
+              ) : (
+                <ActivityTimeline entityType="company" entityId={id!} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -856,10 +1062,25 @@ export default function CustomerDetail() {
           <Card>
             <CardHeader>
               <CardTitle>Notas</CardTitle>
-              <CardDescription>Anotações e observações sobre este cliente</CardDescription>
+              <CardDescription>
+                {isErpCustomer 
+                  ? 'Notas não disponíveis para clientes do ERP' 
+                  : 'Anotações e observações sobre este cliente'
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <QuickNotes entityType="company" entityId={id!} />
+              {isErpCustomer ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <FileText className="h-12 w-12 text-muted-foreground/50" />
+                  <h3 className="mt-4 text-lg font-semibold">Notas não disponíveis</h3>
+                  <p className="text-muted-foreground max-w-md">
+                    As notas não estão disponíveis para clientes sincronizados do ERP.
+                  </p>
+                </div>
+              ) : (
+                <QuickNotes entityType="company" entityId={id!} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
