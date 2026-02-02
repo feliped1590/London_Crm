@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,10 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff } from 'lucide-react';
 import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -48,6 +51,7 @@ interface CustomerListItem {
   address: string | null;
   tipo_cliente: 'PJ' | 'PF';
   source: 'crm' | 'erp';
+  active: boolean;
   // Primary contact info
   primary_contact: {
     id: string;
@@ -62,11 +66,17 @@ interface CustomerListItem {
   contacts_count: number;
 }
 
+type StatusFilter = 'active' | 'inactive' | 'all';
+
 export default function Customers() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<CustomerListItem | null>(null);
 
   // Debounce search - 300ms delay
   useEffect(() => {
@@ -99,6 +109,7 @@ export default function Customers() {
           city,
           state,
           address,
+          active,
           custom_fields,
           contacts(id, first_name, last_name, job_title, mobile, email),
           deals(id, name, stage, value),
@@ -137,6 +148,7 @@ export default function Customers() {
           address: company.address,
           tipo_cliente: tipoCliente,
           source: 'crm' as const,
+          active: company.active !== false, // Default to true if null
           primary_contact: primaryContact ? {
             id: primaryContact.id,
             name: `${primaryContact.first_name}${primaryContact.last_name ? ' ' + primaryContact.last_name : ''}`,
@@ -219,6 +231,7 @@ export default function Customers() {
           address,
           tipo_cliente: (c.tipo_pessoa === 'PF' ? 'PF' : 'PJ') as 'PJ' | 'PF',
           source: 'erp' as const,
+          active: true, // ERP clients are always considered active
           primary_contact: null,
           deals: [],
           last_activity_at: null,
@@ -231,9 +244,71 @@ export default function Customers() {
 
   const isLoading = loadingCompanies || loadingErp;
 
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (customerId: string) => {
+      const { error } = await supabase
+        .from('companies')
+        .delete()
+        .eq('id', customerId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Cliente excluído com sucesso!');
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    },
+    onError: (error: any) => {
+      console.error('Error deleting customer:', error);
+      toast.error('Erro ao excluir cliente: ' + (error.message || 'Erro desconhecido'));
+    },
+  });
+
+  // Toggle active mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ customerId, active }: { customerId: string; active: boolean }) => {
+      const { error } = await supabase
+        .from('companies')
+        .update({ active })
+        .eq('id', customerId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success(variables.active ? 'Cliente ativado!' : 'Cliente desativado!');
+    },
+    onError: (error: any) => {
+      console.error('Error toggling customer status:', error);
+      toast.error('Erro ao alterar status: ' + (error.message || 'Erro desconhecido'));
+    },
+  });
+
   const handleRefresh = async () => {
     await refetch();
     toast.success('Dados atualizados!');
+  };
+
+  const handleDeleteClick = (customer: CustomerListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCustomerToDelete(customer);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (customerToDelete) {
+      deleteMutation.mutate(customerToDelete.id);
+    }
+  };
+
+  const handleToggleActive = (customer: CustomerListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active });
+  };
+
+  const handleEditClick = (customerId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/customers/${customerId}`);
   };
 
   const handleOpenCustomer = (customerId: string) => {
@@ -253,24 +328,36 @@ export default function Customers() {
 
   // Enhanced search with debounce - searches multiple fields
   const filteredCustomers = useMemo(() => {
-    if (!debouncedSearch) return allCustomers;
+    let result = allCustomers || [];
     
-    const searchLower = debouncedSearch.toLowerCase();
-    const searchDigits = debouncedSearch.replace(/\D/g, '');
+    // Apply status filter
+    if (statusFilter === 'active') {
+      result = result.filter(c => c.active);
+    } else if (statusFilter === 'inactive') {
+      result = result.filter(c => !c.active);
+    }
     
-    return allCustomers?.filter(customer => 
-      customer.name?.toLowerCase().includes(searchLower) ||
-      customer.fantasia?.toLowerCase().includes(searchLower) ||
-      (searchDigits && customer.cnpj?.replace(/\D/g, '').includes(searchDigits)) ||
-      customer.address?.toLowerCase().includes(searchLower) ||
-      customer.city?.toLowerCase().includes(searchLower) ||
-      customer.state?.toLowerCase().includes(searchLower) ||
-      (searchDigits && customer.phone?.replace(/\D/g, '').includes(searchDigits)) ||
-      customer.email?.toLowerCase().includes(searchLower) ||
-      customer.primary_contact?.name?.toLowerCase().includes(searchLower) ||
-      customer.industry?.toLowerCase().includes(searchLower)
-    );
-  }, [allCustomers, debouncedSearch]);
+    // Apply search filter
+    if (debouncedSearch) {
+      const searchLower = debouncedSearch.toLowerCase();
+      const searchDigits = debouncedSearch.replace(/\D/g, '');
+      
+      result = result.filter(customer => 
+        customer.name?.toLowerCase().includes(searchLower) ||
+        customer.fantasia?.toLowerCase().includes(searchLower) ||
+        (searchDigits && customer.cnpj?.replace(/\D/g, '').includes(searchDigits)) ||
+        customer.address?.toLowerCase().includes(searchLower) ||
+        customer.city?.toLowerCase().includes(searchLower) ||
+        customer.state?.toLowerCase().includes(searchLower) ||
+        (searchDigits && customer.phone?.replace(/\D/g, '').includes(searchDigits)) ||
+        customer.email?.toLowerCase().includes(searchLower) ||
+        customer.primary_contact?.name?.toLowerCase().includes(searchLower) ||
+        customer.industry?.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    return result;
+  }, [allCustomers, debouncedSearch, statusFilter]);
 
   // Pagination
   const totalItems = filteredCustomers?.length || 0;
@@ -338,6 +425,16 @@ export default function Customers() {
                 className="pl-10"
               />
             </div>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Ativos</SelectItem>
+                <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               size="sm"
@@ -390,6 +487,7 @@ export default function Customers() {
                         Negócios
                       </div>
                     </TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -460,16 +558,99 @@ export default function Customers() {
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {customer.active ? (
+                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0">
+                              Ativo
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                              Inativo
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => handleOpenWhatsApp(customer, e)}
-                            disabled={!phone}
-                            title={phone ? 'Abrir WhatsApp' : 'Sem telefone'}
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
+                          <TooltipProvider>
+                            <div className="flex items-center justify-end gap-1">
+                              {/* Edit button */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleEditClick(customer.id, e)}
+                                    disabled={customer.source === 'erp'}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Editar'}
+                                </TooltipContent>
+                              </Tooltip>
+
+                              {/* WhatsApp button */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleOpenWhatsApp(customer, e)}
+                                    disabled={!phone}
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {phone ? 'Abrir WhatsApp' : 'Sem telefone'}
+                                </TooltipContent>
+                              </Tooltip>
+
+                              {/* Toggle active button */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleToggleActive(customer, e)}
+                                    disabled={customer.source === 'erp' || toggleActiveMutation.isPending}
+                                  >
+                                    {customer.active ? (
+                                      <PowerOff className="h-4 w-4 text-destructive" />
+                                    ) : (
+                                      <Power className="h-4 w-4 text-primary" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {customer.source === 'erp' 
+                                    ? 'Dados gerenciados pelo ERP' 
+                                    : customer.active 
+                                      ? 'Desativar cliente' 
+                                      : 'Ativar cliente'
+                                  }
+                                </TooltipContent>
+                              </Tooltip>
+
+                              {/* Delete button */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => handleDeleteClick(customer, e)}
+                                    disabled={customer.source === 'erp'}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Excluir cliente'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     );
@@ -522,6 +703,29 @@ export default function Customers() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o cliente <strong>{customerToDelete?.name}</strong>?
+              <br />
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
