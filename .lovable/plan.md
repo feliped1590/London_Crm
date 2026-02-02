@@ -1,102 +1,130 @@
 
-# Plano: Ajustar Colunas e Adicionar Importação de Produtos
+# Plano: Corrigir "Cliente não encontrado" para Clientes ERP
 
-## Resumo
+## Contexto do Problema
 
-Duas alterações são necessárias:
-1. **Inverter as colunas** "Versão" e "Descrição" na tabela de produtos do Iniflex
-2. **Adicionar funcionalidade de importação** para salvar produtos do ERP na tabela `products` (padrão do CRM)
+A listagem de clientes unifica dados de duas tabelas:
+- **companies** → clientes criados manualmente no CRM
+- **crm_clients** → clientes sincronizados do ERP Iniflex
 
----
+Quando você clica em um cliente do ERP, a página de detalhes busca apenas na tabela `companies`, que não encontra o registro.
 
-## 1. Inversão das Colunas
+## Solução Proposta
 
-### Arquivo: `src/components/integrations/InflexProductsTab.tsx`
-
-**Alteração no cabeçalho da tabela (linhas 310-312):**
-
-| Antes | Depois |
-|-------|--------|
-| Produto → Versão → Descrição | Produto → Descrição → Versão |
-
-**Alteração nas células da tabela (linhas 324-340):**
-
-Mover a célula de Descrição para antes da célula de Versão.
+Modificar a página `CustomerDetail.tsx` para:
+1. Tentar buscar primeiro na tabela `companies`
+2. Se não encontrar, buscar na tabela `crm_clients`
+3. Exibir os dados do cliente ERP de forma adequada
 
 ---
 
-## 2. Funcionalidade de Importação
+## Alterações Técnicas
 
-### Lógica de Importação
+### Arquivo: `src/pages/CustomerDetail.tsx`
 
-Similar ao que foi feito com clientes:
-- Adicionar checkbox para seleção múltipla
-- Botão "Importar Selecionados"
-- Importar produtos individuais
-- Badge "Importado" para produtos já existentes na tabela `products`
+**1. Modificar a query principal para suportar duas fontes**
 
-### Mapeamento de Campos (crm_products → products)
-
-| Campo crm_products | Campo products |
-|--------------------|----------------|
-| external_id-versao | sku |
-| descricao_completa ou descricao | name |
-| descricao_simples | description |
-| grupo | category (mapeado) |
-| unidade | unit_measure |
-| preco_venda | unit_price |
-| ativo | active |
-
-### Alterações no Componente
-
-**Novos estados:**
-- `selectedIds: Set<string>` - IDs selecionados para importação
-- `importingIds: Set<string>` - IDs em processo de importação
-
-**Novas queries:**
-- Query para buscar `products.sku` existentes (para detectar já importados)
-
-**Nova mutation:**
-- `importMutation` - insere/atualiza produto na tabela `products`
-
-**Novos elementos de UI:**
-- Checkbox no cabeçalho e em cada linha
-- Botão "Importar Selecionados" 
-- Badge "Importado" nas linhas já existentes
-- Coluna de ações com botão de importação individual
-
----
-
-## Fluxo Visual Atualizado
-
+Implementar lógica de fallback:
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ [Card Sincronização ERP]                                        │
-│   - Busca incremental do Iniflex                                │
-│   - Salva em crm_products (staging)                             │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ [Tabela de Produtos - Iniflex]                                  │
-│ ☐ | Produto | Descrição | Versão | Grupo | ... | Status | Ação │
-│ ☐ | 200119/1| MONOCAMADA...| 220X10| LISO | ...| Importar      │
-│ ☑ | 800349/1| (I) CALOPS...| VERSAO| IMPR | ...| ✓ Importado   │
-│                                                                 │
-│ [Importar Selecionados (2)]                                     │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ [Tabela products - CRM Principal]                               │
-│ Visualização na página /products                                │
-└─────────────────────────────────────────────────────────────────┘
+1º - Buscar em companies
+2º - Se não encontrar, buscar em crm_clients + crm_client_addresses
+```
+
+**2. Transformar dados do ERP para o formato esperado**
+
+Mapear campos do ERP → formato do CRM:
+- `razao_social` → `name`
+- `nome_fantasia` → `fantasia`
+- `cnpj_cpf` → `cnpj`
+- `telefone` / `celular` → `phone`
+- `emails[0]` → `email`
+- `insc_estadual` → `inscricao_estadual`
+- Endereço LOCAL → `address`, `city`, `state`
+
+**3. Adicionar indicador visual de origem**
+
+- Badge "ERP" para clientes sincronizados
+- Badge "CRM" para clientes manuais
+
+**4. Modo somente leitura para clientes ERP**
+
+- Desabilitar edição para registros do ERP (dados são gerenciados pelo sistema de origem)
+- Mostrar botão "Importar para CRM" se quisermos permitir edição futura
+
+**5. Tratar tabs que dependem de dados CRM**
+
+Para clientes ERP:
+- **Contatos**: Mostrar mensagem "Contatos não disponíveis para clientes do ERP"
+- **Negócios**: Permitir criar negócios vinculados
+- **Timeline/Notas**: Funcionalidade futura (requer adaptação)
+
+---
+
+## Fluxo de Dados
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                      CustomerDetail                         │
+├─────────────────────────────────────────────────────────────┤
+│  1. Buscar em companies WHERE id = :id                      │
+│     ├─ Encontrou? → Exibir dados normalmente                │
+│     └─ Não encontrou? → Continua...                         │
+│                                                             │
+│  2. Buscar em crm_clients WHERE id = :id                    │
+│     + JOIN crm_client_addresses                             │
+│     ├─ Encontrou? → Transformar e exibir (modo leitura)     │
+│     └─ Não encontrou? → "Cliente não encontrado"            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Arquivos a Modificar
+## Campos Exibidos para Cliente ERP
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/integrations/InflexProductsTab.tsx` | Inversão de colunas + lógica de importação |
+| Campo | Origem ERP |
+|-------|------------|
+| Razão Social | `razao_social` |
+| Nome Fantasia | `nome_fantasia` |
+| CNPJ/CPF | `cnpj_cpf` |
+| Inscrição Estadual | `insc_estadual` |
+| Telefone | `telefone` ou `celular` |
+| Email | `emails[0]` |
+| Endereço | `crm_client_addresses` (tipo LOCAL) |
+| Região | `regiao` |
+| Segmento | `segmento` |
+| Tipo Pessoa | `tipo_pessoa` (PJ/PF) |
 
-Nenhuma nova Edge Function é necessária - a importação será feita diretamente via Supabase client, similar ao padrão já existente para clientes.
+---
+
+## Comportamento das Tabs
+
+| Tab | Cliente CRM | Cliente ERP |
+|-----|-------------|-------------|
+| **Dados** | Editável | Somente leitura com badge "Dados do ERP" |
+| **Contatos** | Lista de contatos | Mensagem informativa |
+| **Negócios** | Lista de deals | Permitir criar deals (futuro) |
+| **Timeline** | Histórico de atividades | Não disponível |
+| **Notas** | Notas do cliente | Não disponível |
+
+---
+
+## Benefícios
+
+1. **Elimina o erro** - Todos os clientes listados terão página de detalhes funcional
+2. **Clareza visual** - Badges indicam origem do dado (ERP vs CRM)
+3. **Integridade** - Dados do ERP permanecem somente leitura (gerenciados na origem)
+4. **Experiência unificada** - Mesma interface para ambos os tipos de cliente
+
+---
+
+## Arquivos Modificados
+
+1. `src/pages/CustomerDetail.tsx` - Lógica de busca dual + transformação de dados
+
+---
+
+## Estimativa
+
+- **Complexidade**: Média
+- **Tempo estimado**: 1 sessão de desenvolvimento
+- **Risco**: Baixo (não altera dados existentes)
