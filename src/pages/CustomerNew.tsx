@@ -136,6 +136,59 @@ export default function CustomerNew() {
     }
   };
 
+  // Check for duplicate document in database
+  const checkDuplicateDocument = async (documentClean: string, type: CustomerType): Promise<{ exists: boolean; source?: string; name?: string }> => {
+    if (!documentClean) return { exists: false };
+    
+    if (type === 'PJ') {
+      // Check in companies table (CRM)
+      const { data: crmCompany } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('cnpj', documentClean)
+        .maybeSingle();
+      
+      if (crmCompany) {
+        return { exists: true, source: 'CRM', name: crmCompany.name };
+      }
+      
+      // Check in crm_clients table (ERP)
+      const { data: erpClient } = await supabase
+        .from('crm_clients')
+        .select('id, razao_social, cnpj_cpf')
+        .eq('cnpj_cpf', documentClean)
+        .maybeSingle();
+      
+      if (erpClient) {
+        return { exists: true, source: 'ERP', name: erpClient.razao_social || '' };
+      }
+    } else {
+      // CPF: Check in contacts table
+      const { data: crmContact } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name')
+        .eq('cpf', documentClean)
+        .maybeSingle();
+      
+      if (crmContact) {
+        return { exists: true, source: 'CRM', name: `${crmContact.first_name} ${crmContact.last_name || ''}`.trim() };
+      }
+      
+      // Check in crm_clients table (ERP) - PF
+      const { data: erpClient } = await supabase
+        .from('crm_clients')
+        .select('id, razao_social, cnpj_cpf')
+        .eq('cnpj_cpf', documentClean)
+        .maybeSingle();
+      
+      if (erpClient) {
+        return { exists: true, source: 'ERP', name: erpClient.razao_social || '' };
+      }
+    }
+    
+    return { exists: false };
+  };
+
   const createCustomerMutation = useMutation({
     mutationFn: async () => {
       setIsSubmitting(true);
@@ -149,6 +202,18 @@ export default function CustomerNew() {
         }
         if (!isValidCNPJ(documentClean)) {
           throw new Error('CNPJ inválido');
+        }
+      }
+      
+      // *** DUPLICATE CHECK - Database validation before insert ***
+      if (documentClean) {
+        const duplicate = await checkDuplicateDocument(documentClean, customerType);
+        if (duplicate.exists) {
+          const docType = customerType === 'PJ' ? 'CNPJ' : 'CPF';
+          throw new Error(
+            `${docType} já cadastrado! Cliente "${duplicate.name}" encontrado no ${duplicate.source}. ` +
+            `Acesse o cliente existente ou use outro ${docType}.`
+          );
         }
       }
       
