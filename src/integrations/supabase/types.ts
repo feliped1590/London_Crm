@@ -334,6 +334,7 @@ export type Database = {
       }
       companies: {
         Row: {
+          active: boolean | null
           address: string | null
           annual_revenue: string | null
           city: string | null
@@ -360,6 +361,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          active?: boolean | null
           address?: string | null
           annual_revenue?: string | null
           city?: string | null
@@ -386,6 +388,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          active?: boolean | null
           address?: string | null
           annual_revenue?: string | null
           city?: string | null
