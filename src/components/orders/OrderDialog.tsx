@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
@@ -22,6 +23,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
 import { Order, OrderItem, OrderStatus, orderStatusConfig } from '@/types/products';
+import { OrderApprovalActions } from './OrderApprovalActions';
+import { OrderApprovalTimeline } from './OrderApprovalTimeline';
+import { OrderHistoryTab } from './OrderHistoryTab';
 
 interface OrderDialogProps {
   open: boolean;
@@ -665,6 +669,235 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
 
   const isPending = createOrderMutation.isPending || updateOrderMutation.isPending;
 
+  // Render the order form (extracted for use in tabs)
+  const renderOrderForm = () => (
+    <>
+      {/* Client Selection */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Empresa</Label>
+          <Select 
+            value={companyId} 
+            onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}
+            disabled={!canEdit}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione uma empresa" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Nenhuma</SelectItem>
+              {companies?.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Contato</Label>
+          <Select 
+            value={contactId} 
+            onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}
+            disabled={!canEdit}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um contato" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Nenhum</SelectItem>
+              {contacts?.map((contact) => (
+                <SelectItem key={contact.id} value={contact.id}>
+                  {contact.first_name} {contact.last_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Pricing Table Indicator */}
+      {linkedPricingTable && (
+        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1">
+            <span className="text-sm text-amber-700 dark:text-amber-300">
+              Tabela de preços vinculada: <strong>{linkedPricingTable.name}</strong>
+            </span>
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+              {isAdmin 
+                ? 'Você pode editar preços. Alterações fora da tabela requerem justificativa.'
+                : 'Preços são ajustados automaticamente conforme a tabela.'
+              }
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Delivery Date */}
+      <div className="space-y-2">
+        <Label>Data de Entrega</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'w-full justify-start text-left font-normal',
+                !deliveryDate && 'text-muted-foreground'
+              )}
+              disabled={!canEdit}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {deliveryDate ? format(deliveryDate, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={deliveryDate}
+              onSelect={setDeliveryDate}
+              locale={ptBR}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Add Product */}
+      {canEdit && (
+        <div className="space-y-2">
+          <Label>Adicionar Produto</Label>
+          <div className="flex gap-2">
+            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Selecione um produto" />
+              </SelectTrigger>
+              <SelectContent>
+                {products?.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.sku} - {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={addProductToItems} disabled={!selectedProductId}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Items Table */}
+      {items.length > 0 && (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produto</TableHead>
+                <TableHead className="w-24">Qtd</TableHead>
+                <TableHead className="w-32">Preço Unit.</TableHead>
+                <TableHead className="w-24">Desc %</TableHead>
+                <TableHead className="w-32 text-right">Subtotal</TableHead>
+                {canEdit && <TableHead className="w-12"></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((item, index) => {
+                const product = products?.find(p => p.id === item.product_id);
+                
+                return (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{item.description}</p>
+                        <p className="text-sm text-muted-foreground font-mono">
+                          {product?.sku}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                        className="w-20"
+                        disabled={!canEdit}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price}
+                          onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
+                          onBlur={() => handlePriceBlur(index)}
+                          className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
+                          disabled={(hasPricingTable && !isAdmin) || !canEdit}
+                        />
+                        {hasPricingTable && (
+                          <DollarSign className={cn(
+                            'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4',
+                            isAdmin ? 'text-amber-500' : 'text-muted-foreground'
+                          )} />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {item.discount_percent > 0 && (
+                        <span className="text-primary font-medium">
+                          {item.discount_percent}%
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {formatCurrency(item.subtotal)}
+                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Total */}
+      {items.length > 0 && (
+        <div className="flex justify-end">
+          <div className="text-right">
+            <p className="text-muted-foreground">Valor Total</p>
+            <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Observations */}
+      <div className="space-y-2">
+        <Label>Observações</Label>
+        <Textarea
+          value={observations}
+          onChange={(e) => setObservations(e.target.value)}
+          placeholder="Observações do pedido..."
+          rows={3}
+          disabled={!canEdit}
+        />
+      </div>
+    </>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -681,249 +914,70 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Permission warning */}
-          {isEditMode && !canEdit && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                Este pedido está com status <strong>{orderStatusConfig[order?.status as OrderStatus]?.label}</strong> e só pode ser editado por administradores.
-              </p>
-            </div>
-          )}
+        {/* Tabs for Edit Mode */}
+        {isEditMode ? (
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="details">Detalhes</TabsTrigger>
+              <TabsTrigger value="approvals" className="flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4" />
+                Liberações
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center gap-1">
+                <History className="h-4 w-4" />
+                Histórico
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Audit logging notice for non-pending orders */}
-          {isEditMode && order?.status !== 'pendente' && canEdit && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-sm text-blue-700 dark:text-blue-300">
-                Alterações neste pedido serão registradas no histórico de auditoria.
-              </p>
-            </div>
-          )}
+            <TabsContent value="details" className="space-y-6 mt-4">
+              {/* Permission warning */}
+              {!canEdit && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Este pedido está com status <strong>{orderStatusConfig[order?.status as OrderStatus]?.label}</strong> e só pode ser editado por administradores.
+                  </p>
+                </div>
+              )}
 
-          {/* Client Selection */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Empresa</Label>
-              <Select 
-                value={companyId} 
-                onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}
-                disabled={!canEdit}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nenhuma</SelectItem>
-                  {companies?.map((company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Contato</Label>
-              <Select 
-                value={contactId} 
-                onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}
-                disabled={!canEdit}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um contato" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">Nenhum</SelectItem>
-                  {contacts?.map((contact) => (
-                    <SelectItem key={contact.id} value={contact.id}>
-                      {contact.first_name} {contact.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              {/* Audit logging notice for non-pending orders */}
+              {order?.status !== 'pendente' && canEdit && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Alterações neste pedido serão registradas no histórico de auditoria.
+                  </p>
+                </div>
+              )}
 
-          {/* Pricing Table Indicator */}
-          {linkedPricingTable && (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <div className="flex-1">
-                <span className="text-sm text-amber-700 dark:text-amber-300">
-                  Tabela de preços vinculada: <strong>{linkedPricingTable.name}</strong>
-                </span>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                  {isAdmin 
-                    ? 'Você pode editar preços. Alterações fora da tabela requerem justificativa.'
-                    : 'Preços são ajustados automaticamente conforme a tabela.'
-                  }
-                </p>
+              {renderOrderForm()}
+            </TabsContent>
+
+            <TabsContent value="approvals" className="space-y-4 mt-4">
+              {/* Approval Actions */}
+              <OrderApprovalActions 
+                orderId={order!.id} 
+                orderStatus={order!.status} 
+                orderCreatedBy={order!.created_by}
+              />
+              
+              {/* Approval Timeline */}
+              <div className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Histórico de Liberações
+                </h4>
+                <OrderApprovalTimeline orderId={order!.id} orderStatus={order!.status} />
               </div>
-            </div>
-          )}
+            </TabsContent>
 
-          {/* Delivery Date */}
-          <div className="space-y-2">
-            <Label>Data de Entrega</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !deliveryDate && 'text-muted-foreground'
-                  )}
-                  disabled={!canEdit}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {deliveryDate ? format(deliveryDate, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={deliveryDate}
-                  onSelect={setDeliveryDate}
-                  locale={ptBR}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <TabsContent value="history" className="mt-4">
+              <OrderHistoryTab orderId={order!.id} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="space-y-6">
+            {renderOrderForm()}
           </div>
-
-          {/* Add Product */}
-          {canEdit && (
-            <div className="space-y-2">
-              <Label>Adicionar Produto</Label>
-              <div className="flex gap-2">
-                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione um produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products?.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.sku} - {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button onClick={addProductToItems} disabled={!selectedProductId}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Items Table */}
-          {items.length > 0 && (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="w-24">Qtd</TableHead>
-                    <TableHead className="w-32">Preço Unit.</TableHead>
-                    <TableHead className="w-24">Desc %</TableHead>
-                    <TableHead className="w-32 text-right">Subtotal</TableHead>
-                    {canEdit && <TableHead className="w-12"></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item, index) => {
-                    const product = products?.find(p => p.id === item.product_id);
-                    
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{item.description}</p>
-                            <p className="text-sm text-muted-foreground font-mono">
-                              {product?.sku}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                            className="w-20"
-                            disabled={!canEdit}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="relative">
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={item.unit_price}
-                              onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
-                              onBlur={() => handlePriceBlur(index)}
-                              className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
-                              disabled={(hasPricingTable && !isAdmin) || !canEdit}
-                            />
-                            {hasPricingTable && (
-                              <DollarSign className={cn(
-                                'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4',
-                                isAdmin ? 'text-amber-500' : 'text-muted-foreground'
-                              )} />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {item.discount_percent > 0 && (
-                            <span className="text-primary font-medium">
-                              {item.discount_percent}%
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.subtotal)}
-                        </TableCell>
-                        {canEdit && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          {/* Total */}
-          {items.length > 0 && (
-            <div className="flex justify-end">
-              <div className="text-right">
-                <p className="text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Observations */}
-          <div className="space-y-2">
-            <Label>Observações</Label>
-            <Textarea
-              value={observations}
-              onChange={(e) => setObservations(e.target.value)}
-              placeholder="Observações do pedido..."
-              rows={3}
-              disabled={!canEdit}
-            />
-          </div>
-        </div>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

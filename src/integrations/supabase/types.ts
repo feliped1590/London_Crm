@@ -1544,6 +1544,44 @@ export type Database = {
         }
         Relationships: []
       }
+      order_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string | null
+          from_status: Database["public"]["Enums"]["order_status"] | null
+          id: string
+          notes: string | null
+          order_id: string
+          to_status: Database["public"]["Enums"]["order_status"]
+        }
+        Insert: {
+          approved_at?: string
+          approved_by?: string | null
+          from_status?: Database["public"]["Enums"]["order_status"] | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          to_status: Database["public"]["Enums"]["order_status"]
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string | null
+          from_status?: Database["public"]["Enums"]["order_status"] | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          to_status?: Database["public"]["Enums"]["order_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_approvals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_audit_log: {
         Row: {
           changed_at: string
