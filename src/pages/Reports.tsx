@@ -39,6 +39,7 @@ import {
   Download,
   BarChart3,
   TrendingUp,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -48,6 +49,7 @@ import { AddWidgetDialog } from '@/components/reports/AddWidgetDialog';
 import { SalesFunnelChart } from '@/components/reports/SalesFunnelChart';
 import { PipelineVelocityCard } from '@/components/reports/PipelineVelocityCard';
 import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
+import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -229,8 +231,12 @@ export default function Reports() {
       </div>
 
       {/* Tabs for different report sections */}
-      <Tabs defaultValue="funnel" className="space-y-6">
+      <Tabs defaultValue="operacional" className="space-y-6">
         <TabsList>
+          <TabsTrigger value="operacional" className="gap-2">
+            <ClipboardList className="h-4 w-4" />
+            Operacional
+          </TabsTrigger>
           <TabsTrigger value="funnel" className="gap-2">
             <TrendingUp className="h-4 w-4" />
             Funil de Vendas
@@ -240,6 +246,11 @@ export default function Reports() {
             Dashboard Personalizado
           </TabsTrigger>
         </TabsList>
+
+        {/* Operational Reports Tab */}
+        <TabsContent value="operacional" className="space-y-6">
+          <OperationalReportsTab />
+        </TabsContent>
 
         {/* Sales Funnel Tab */}
         <TabsContent value="funnel" className="space-y-6">
