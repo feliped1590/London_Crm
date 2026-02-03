@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_violation_log: {
+        Row: {
+          action: string
+          attempted_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          target_owner_id: string
+          target_owner_name: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          attempted_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          target_owner_id: string
+          target_owner_name?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          attempted_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          target_owner_id?: string
+          target_owner_name?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       activities: {
         Row: {
           company_id: string | null

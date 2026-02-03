@@ -279,8 +279,14 @@ export default function Customers() {
       toast.success(variables.active ? 'Cliente ativado!' : 'Cliente desativado!');
     },
     onError: (error: any) => {
-      console.error('Error toggling customer status:', error);
-      toast.error('Erro ao alterar status: ' + (error.message || 'Erro desconhecido'));
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        console.error('Error toggling customer status:', error);
+        toast.error('Erro ao alterar status: ' + (message || 'Erro desconhecido'));
+      }
     },
   });
 
