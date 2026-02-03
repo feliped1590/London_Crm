@@ -40,6 +40,7 @@ import {
   BarChart3,
   TrendingUp,
   ClipboardList,
+  Brain,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -50,6 +51,7 @@ import { SalesFunnelChart } from '@/components/reports/SalesFunnelChart';
 import { PipelineVelocityCard } from '@/components/reports/PipelineVelocityCard';
 import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
+import { BIAdvancedTab } from '@/components/reports/BIAdvancedTab';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -241,6 +243,10 @@ export default function Reports() {
             <TrendingUp className="h-4 w-4" />
             Funil de Vendas
           </TabsTrigger>
+          <TabsTrigger value="bi" className="gap-2">
+            <Brain className="h-4 w-4" />
+            BI Avançado
+          </TabsTrigger>
           <TabsTrigger value="dashboard" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard Personalizado
@@ -261,6 +267,11 @@ export default function Reports() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <LossReasonsChart />
           </div>
+        </TabsContent>
+
+        {/* BI Advanced Tab */}
+        <TabsContent value="bi" className="space-y-6">
+          <BIAdvancedTab />
         </TabsContent>
 
         {/* Custom Dashboard Tab */}
