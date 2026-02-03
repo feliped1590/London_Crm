@@ -261,7 +261,15 @@ export default function CustomerDetail() {
       toast.success('Cliente atualizado com sucesso!');
       setIsEditing(false);
     },
-    onError: () => toast.error('Erro ao atualizar cliente'),
+    onError: (error: any) => {
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao atualizar cliente');
+      }
+    },
   });
 
   // Create/update contact mutation (only for CRM customers)

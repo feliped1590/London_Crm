@@ -173,7 +173,15 @@ export default function Pipeline() {
       toast.success('Negócio criado com sucesso!');
       resetForm();
     },
-    onError: () => toast.error('Erro ao criar negócio'),
+    onError: (error: any) => {
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao criar negócio');
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -239,7 +247,15 @@ export default function Pipeline() {
       toast.success('Negócio atualizado!');
       resetForm();
     },
-    onError: () => toast.error('Erro ao atualizar negócio'),
+    onError: (error: any) => {
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao atualizar negócio');
+      }
+    },
   });
 
   const sendEmailMutation = useMutation({
