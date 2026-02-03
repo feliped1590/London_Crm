@@ -36,7 +36,7 @@ export function AddWidgetDialog({
   const [selected, setSelected] = useState<MetricType[]>([]);
 
   // WhatsApp category temporarily hidden - under development
-  const categories = ['deals', 'tasks', 'contacts', 'proposals', 'orders', 'products'] as const;
+  const categories = ['deals', 'tasks', 'contacts', 'proposals', 'orders', 'products', 'special'] as const;
 
   const toggleMetric = (type: MetricType) => {
     setSelected((prev) =>
