@@ -34,8 +34,10 @@ import { QuickNotes } from '@/components/notes/QuickNotes';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { ChecklistValidationModal } from '@/components/pipeline/ChecklistValidationModal';
+import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationModal';
 import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { differenceInDays, parseISO, format } from 'date-fns';
 
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
@@ -84,6 +86,8 @@ export default function Pipeline() {
   const [filterOwner, setFilterOwner] = useState('all');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo] = useState('');
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
 
   // Pipelines hook
@@ -99,6 +103,14 @@ export default function Pipeline() {
     deal: { id: string; name: string; stage: DealStage; pipeline_id?: string | null };
     targetStage: DealStage;
     pendingItems: ChecklistItem[];
+  } | null>(null);
+
+  // SLA justification modal state
+  const [slaModalOpen, setSlaModalOpen] = useState(false);
+  const [slaModalData, setSlaModalData] = useState<{
+    deal: { id: string; name: string; updated_at: string; stagnation_reason?: string | null };
+    targetStage: DealStage;
+    daysInStage: number;
   } | null>(null);
 
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
@@ -408,6 +420,26 @@ export default function Pipeline() {
       setLossReasonModalOpen(true);
       return;
     }
+
+    // Check SLA breach - only for non-admin users
+    const SLA_CRITICAL_DAYS = 7;
+    const daysInStage = differenceInDays(new Date(), parseISO(deal.updated_at));
+    
+    // Admin bypass: admins can move without justification
+    if (!isAdmin && daysInStage >= SLA_CRITICAL_DAYS) {
+      setSlaModalData({
+        deal: { 
+          id: deal.id, 
+          name: deal.name, 
+          updated_at: deal.updated_at,
+          stagnation_reason: (deal as any).stagnation_reason,
+        },
+        targetStage: stage,
+        daysInStage,
+      });
+      setSlaModalOpen(true);
+      return;
+    }
     
     // Check for pending checklist items before allowing stage change
     try {
@@ -452,7 +484,7 @@ export default function Pipeline() {
   };
 
   // Filtered deals
-  const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all';
+  const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
   
   // Get current pipeline ID (selected or default)
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
@@ -472,9 +504,23 @@ export default function Pipeline() {
       // Filter by company
       if (filterCompany !== 'all' && deal.company_id !== filterCompany) return false;
       
+      // Filter by date range (created_at BETWEEN)
+      if (filterDateFrom) {
+        const dealDate = new Date(deal.created_at);
+        const fromDate = new Date(filterDateFrom);
+        fromDate.setHours(0, 0, 0, 0);
+        if (dealDate < fromDate) return false;
+      }
+      if (filterDateTo) {
+        const dealDate = new Date(deal.created_at);
+        const toDate = new Date(filterDateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (dealDate > toDate) return false;
+      }
+      
       return true;
     }) || [];
-  }, [deals, filterOwner, filterStage, filterCompany, user?.id, currentPipelineId, defaultPipeline?.id]);
+  }, [deals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, user?.id, currentPipelineId, defaultPipeline?.id]);
 
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
@@ -867,6 +913,10 @@ export default function Pipeline() {
         setFilterStage={setFilterStage}
         filterCompany={filterCompany}
         setFilterCompany={setFilterCompany}
+        filterDateFrom={filterDateFrom}
+        setFilterDateFrom={setFilterDateFrom}
+        filterDateTo={filterDateTo}
+        setFilterDateTo={setFilterDateTo}
         companies={companies}
         hasActiveFilters={hasActiveFilters}
       />
@@ -1088,6 +1138,42 @@ export default function Pipeline() {
             });
           }
         }}
+      />
+
+      {/* SLA Justification Modal */}
+      <SLAJustificationModal
+        open={slaModalOpen}
+        onOpenChange={(open) => {
+          setSlaModalOpen(open);
+          if (!open) setSlaModalData(null);
+        }}
+        dealName={slaModalData?.deal.name || ''}
+        daysInStage={slaModalData?.daysInStage || 0}
+        onConfirm={async (reason) => {
+          if (slaModalData) {
+            // Append-only: format with date and preserve previous reasons
+            const now = new Date();
+            const formattedDate = format(now, 'dd/MM/yyyy HH:mm');
+            const userName = user?.email?.split('@')[0] || 'Usuário';
+            const newEntry = `[${formattedDate} - ${userName}]: ${reason}`;
+            
+            const existingReason = slaModalData.deal.stagnation_reason || '';
+            const updatedReason = existingReason 
+              ? `${existingReason}\n${newEntry}`
+              : newEntry;
+            
+            // Update the deal with the stagnation reason
+            updateMutation.mutate({ 
+              id: slaModalData.deal.id, 
+              stage: slaModalData.targetStage,
+              stagnation_reason: updatedReason,
+            } as any);
+            
+            setSlaModalOpen(false);
+            setSlaModalData(null);
+          }
+        }}
+        isLoading={updateMutation.isPending}
       />
     </div>
   );
