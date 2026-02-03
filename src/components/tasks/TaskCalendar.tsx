@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -28,11 +28,31 @@ interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
 }
 
+const FILTERS_STORAGE_KEY = 'task-calendar-filters';
+
 const priorityColors: Record<string, string> = {
   baixa: '#94a3b8',
   media: '#3b82f6',
   alta: '#f97316',
   urgente: '#ef4444',
+};
+
+// Load persisted filters from localStorage
+const loadPersistedFilters = () => {
+  try {
+    const stored = localStorage.getItem(FILTERS_STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.warn('Failed to load calendar filters from localStorage');
+  }
+  return {
+    companyId: null,
+    dealId: null,
+    assignedTo: null,
+    priority: null,
+  };
 };
 
 export default function TaskCalendar({ onCreateTask }: TaskCalendarProps) {
@@ -41,13 +61,17 @@ export default function TaskCalendar({ onCreateTask }: TaskCalendarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   
-  // Filters state
-  const [filters, setFilters] = useState({
-    companyId: null as string | null,
-    dealId: null as string | null,
-    assignedTo: null as string | null,
-    priority: null as string | null,
-  });
+  // Filters state - load from localStorage
+  const [filters, setFilters] = useState(loadPersistedFilters);
+
+  // Persist filters to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
+    } catch (e) {
+      console.warn('Failed to persist calendar filters');
+    }
+  }, [filters]);
 
   const { tasks, isLoading, rescheduleTask, sellers, isAdmin } = useTaskCalendar(currentDate, filters);
 

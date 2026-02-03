@@ -155,7 +155,7 @@
   --fc-button-hover-border-color: hsl(var(--border));
   --fc-button-active-bg-color: hsl(var(--primary));
   --fc-button-active-border-color: hsl(var(--primary));
-  --fc-today-bg-color: hsl(var(--accent) / 0.5);
+  --fc-today-bg-color: hsl(var(--primary) / 0.08);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: hsl(var(--muted));
   --fc-list-event-hover-bg-color: hsl(var(--accent));
