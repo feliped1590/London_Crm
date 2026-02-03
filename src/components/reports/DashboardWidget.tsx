@@ -33,6 +33,8 @@ import { DashboardWidget as WidgetType, ChartType, CHART_TYPE_LABELS, SIZE_LABEL
 import { MetricData } from '@/hooks/useDashboardData';
 import { cn } from '@/lib/utils';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { SellerPortfolioWidget } from '@/components/dashboard/SellerPortfolioWidget';
+import { InsightsSummary } from '@/components/insights/InsightsSummary';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
@@ -130,13 +132,22 @@ export function DashboardWidget({
   };
 
   const renderChart = () => {
+    // Custom widget types that render their own components
+    if (widget.type === 'seller_portfolio') {
+      return <SellerPortfolioWidget />;
+    }
+    
+    if (widget.type === 'insights_summary') {
+      return <InsightsSummary />;
+    }
+
     if (widget.chartType === 'number') {
       return (
         <div className="flex flex-col items-center justify-center h-full py-4">
           <div className="flex items-center gap-2">
             <span className="text-3xl font-bold">{data.value}</span>
-            {data.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
-            {data.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
+            {data.trend === 'up' && <TrendingUp className="h-5 w-5 text-success" />}
+            {data.trend === 'down' && <TrendingDown className="h-5 w-5 text-destructive" />}
           </div>
           {data.subtitle && (
             <span className="text-sm text-muted-foreground">{data.subtitle}</span>
