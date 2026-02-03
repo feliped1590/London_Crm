@@ -394,9 +394,12 @@ export type Database = {
           iniflex_id: string | null
           iniflex_synced_at: string | null
           inscricao_estadual: string | null
+          is_matriz: boolean | null
+          last_reviewed_at: string | null
           name: string
           notes: string | null
           owner_id: string | null
+          parent_company_id: string | null
           phone: string | null
           state: string | null
           updated_at: string
@@ -421,9 +424,12 @@ export type Database = {
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
+          is_matriz?: boolean | null
+          last_reviewed_at?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
+          parent_company_id?: string | null
           phone?: string | null
           state?: string | null
           updated_at?: string
@@ -448,15 +454,67 @@ export type Database = {
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
+          is_matriz?: boolean | null
+          last_reviewed_at?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
+          parent_company_id?: string | null
           phone?: string | null
           state?: string | null
           updated_at?: string
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          company_id: string
+          field_label: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          company_id: string
+          field_label: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          company_id?: string
+          field_label?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contacts: {
         Row: {
