@@ -6,6 +6,12 @@
 
 @layer base {
   :root {
+    /* Layout System */
+    --sidebar-width: 256px;
+    --sidebar-collapsed-width: 64px;
+    --header-height: 56px;
+    --content-padding: clamp(16px, 2vw, 24px);
+    
     /* Corporate Blue Theme */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
@@ -122,6 +128,7 @@
 }
 
 @layer utilities {
+  /* Scrollbar */
   .scrollbar-thin {
     scrollbar-width: thin;
   }
@@ -142,6 +149,71 @@
   
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Responsive Grid System */
+  .grid-responsive {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .grid-responsive-sm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .grid-responsive-lg {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Card with proper min-width for grid */
+  .card-responsive {
+    min-width: 0;
+    width: 100%;
+  }
+
+  /* Table wrapper for horizontal scroll */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Responsive typography */
+  .text-responsive-h1 {
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+    line-height: 1.2;
+  }
+
+  .text-responsive-h2 {
+    font-size: clamp(1.125rem, 2vw, 1.5rem);
+    line-height: 1.3;
+  }
+
+  .text-responsive-h3 {
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    line-height: 1.4;
+  }
+
+  /* Layout utilities */
+  .app-layout {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    min-height: 100vh;
+    transition: grid-template-columns 0.2s ease;
+  }
+
+  .app-main {
+    min-width: 0;
+    padding: var(--content-padding);
+  }
+
+  /* Smooth transitions for layout changes */
+  .layout-transition {
+    transition: all 0.2s ease;
   }
 }
 

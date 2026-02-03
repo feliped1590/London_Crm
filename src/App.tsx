@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
@@ -85,7 +86,8 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
       <AuthProvider>
-        <TooltipProvider>
+        <SidebarProvider>
+          <TooltipProvider>
           <Toaster />
           <Sonner />
           <Routes>
@@ -121,6 +123,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
+        </SidebarProvider>
       </AuthProvider>
     </QueryClientProvider>
   </BrowserRouter>
