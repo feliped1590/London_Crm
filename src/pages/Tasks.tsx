@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, CheckSquare, Calendar, Clock, Building2, User, Target, RefreshCw } from 'lucide-react';
+import { Plus, Search, CheckSquare, Calendar, Clock, Building2, User, Target, RefreshCw, CalendarDays, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import TaskCalendar from '@/components/tasks/TaskCalendar';
 
 type Task = Tables<'tasks'>;
 type TaskStatus = Task['status'];
@@ -40,8 +41,10 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'tasks'>>>({
     title: '',
     description: '',
@@ -152,7 +155,19 @@ export default function Tasks() {
       deal_id: null,
     });
     setEditingTask(null);
+    setPrefilledDate(null);
     setIsDialogOpen(false);
+  };
+
+  // Handle creating task from calendar click
+  const handleCreateFromCalendar = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    setPrefilledDate(dateStr);
+    setFormData({
+      ...formData,
+      due_date: dateStr,
+    });
+    setIsDialogOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -207,7 +222,30 @@ export default function Tasks() {
           <h1 className="text-3xl font-bold text-foreground">Tarefas</h1>
           <p className="text-muted-foreground">Gerencie suas atividades e lembretes</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center border rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('list')}
+              className="gap-1"
+            >
+              <List className="h-4 w-4" />
+              Lista
+            </Button>
+            <Button
+              variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+              size="sm"
+              onClick={() => setViewMode('calendar')}
+              className="gap-1"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Calendário
+            </Button>
+          </div>
+
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
@@ -345,128 +383,135 @@ export default function Tasks() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Buscar tarefas..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+      {/* Calendar View */}
+      {viewMode === 'calendar' ? (
+        <TaskCalendar onCreateTask={handleCreateFromCalendar} />
+      ) : (
+        /* List View */
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar tarefas..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isFetching}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isFetching}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="all">Todas</TabsTrigger>
-              <TabsTrigger value="pending" className="gap-1">
-                Pendentes
-                {pendingCount > 0 && <Badge variant="secondary" className="ml-1">{pendingCount}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="completed">Concluídas</TabsTrigger>
-              <TabsTrigger value="overdue" className="gap-1">
-                Atrasadas
-                {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
-              </TabsTrigger>
-            </TabsList>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">Todas</TabsTrigger>
+                <TabsTrigger value="pending" className="gap-1">
+                  Pendentes
+                  {pendingCount > 0 && <Badge variant="secondary" className="ml-1">{pendingCount}</Badge>}
+                </TabsTrigger>
+                <TabsTrigger value="completed">Concluídas</TabsTrigger>
+                <TabsTrigger value="overdue" className="gap-1">
+                  Atrasadas
+                  {overdueCount > 0 && <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>}
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value={activeTab} className="mt-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                </div>
-              ) : filteredTasks?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <CheckSquare className="h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mt-4 text-lg font-semibold">Nenhuma tarefa encontrada</h3>
-                  <p className="text-muted-foreground">Comece criando uma nova tarefa.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredTasks?.map((task) => {
-                    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'concluida';
-                    return (
-                      <div
-                        key={task.id}
-                        className="flex items-start gap-3 p-4 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => handleEdit(task)}
-                      >
-                        <Checkbox
-                          checked={task.status === 'concluida'}
-                          onClick={(e) => e.stopPropagation()}
-                          onCheckedChange={(checked) => toggleComplete.mutate({ id: task.id, completed: checked as boolean })}
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className={`font-medium ${task.status === 'concluida' ? 'line-through text-muted-foreground' : ''}`}>
-                              {task.title}
-                            </p>
-                            <Badge className={priorityConfig[task.priority].color + ' text-white'}>
-                              {priorityConfig[task.priority].label}
-                            </Badge>
-                          </div>
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                            {task.due_date && (
-                              <div className={`flex items-center gap-1 ${isOverdue ? 'text-destructive' : ''}`}>
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(task.due_date)}
-                              </div>
+              <TabsContent value={activeTab} className="mt-0">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                ) : filteredTasks?.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <CheckSquare className="h-12 w-12 text-muted-foreground/50" />
+                    <h3 className="mt-4 text-lg font-semibold">Nenhuma tarefa encontrada</h3>
+                    <p className="text-muted-foreground">Comece criando uma nova tarefa.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredTasks?.map((task) => {
+                      const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'concluida';
+                      return (
+                        <div
+                          key={task.id}
+                          className="flex items-start gap-3 p-4 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => handleEdit(task)}
+                        >
+                          <Checkbox
+                            checked={task.status === 'concluida'}
+                            onClick={(e) => e.stopPropagation()}
+                            onCheckedChange={(checked) => toggleComplete.mutate({ id: task.id, completed: checked as boolean })}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-medium ${task.status === 'concluida' ? 'line-through text-muted-foreground' : ''}`}>
+                                {task.title}
+                              </p>
+                              <Badge className={priorityConfig[task.priority].color + ' text-white'}>
+                                {priorityConfig[task.priority].label}
+                              </Badge>
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{task.description}</p>
                             )}
-                            {task.due_time && (
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {task.due_time}
-                              </div>
-                            )}
-                            {(task as any).companies?.name && (
-                              <div className="flex items-center gap-1">
-                                <Building2 className="h-3 w-3" />
-                                {(task as any).companies.name}
-                              </div>
-                            )}
-                            {(task as any).contacts && (
-                              <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                {(task as any).contacts.first_name}
-                              </div>
-                            )}
-                            {(task as any).deals?.name && (
-                              <div className="flex items-center gap-1">
-                                <Target className="h-3 w-3" />
-                                {(task as any).deals.name}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              {task.due_date && (
+                                <div className={`flex items-center gap-1 ${isOverdue ? 'text-destructive' : ''}`}>
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(task.due_date)}
+                                </div>
+                              )}
+                              {task.due_time && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {task.due_time}
+                                </div>
+                              )}
+                              {(task as any).companies?.name && (
+                                <div className="flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {(task as any).companies.name}
+                                </div>
+                              )}
+                              {(task as any).contacts && (
+                                <div className="flex items-center gap-1">
+                                  <User className="h-3 w-3" />
+                                  {(task as any).contacts.first_name}
+                                </div>
+                              )}
+                              {(task as any).deals?.name && (
+                                <div className="flex items-center gap-1">
+                                  <Target className="h-3 w-3" />
+                                  {(task as any).deals.name}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
