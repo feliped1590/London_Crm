@@ -30,7 +30,9 @@ import {
   FileText,
   Users,
   Database,
-  AlertCircle
+  AlertCircle,
+  CheckCircle,
+  CalendarCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,6 +41,7 @@ import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { DealStageBadges } from '@/components/DealStageBadges';
+import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
 import type { Json } from '@/integrations/supabase/types';
 
 const industries = [
@@ -95,6 +98,11 @@ interface UnifiedCustomer {
   regiao?: string | null;
   segmento?: string | null;
   tipo_pessoa?: string | null;
+  // Campos de governança (Sprint 2)
+  parent_company_id?: string | null;
+  is_matriz?: boolean;
+  last_reviewed_at?: string | null;
+  active?: boolean;
   // Metadados
   source: 'crm' | 'erp';
   contacts?: Contact[];
@@ -314,6 +322,40 @@ export default function CustomerDetail() {
     onError: () => toast.error('Erro ao remover contato'),
   });
 
+  // Mark as reviewed mutation
+  const markAsReviewedMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('companies')
+        .update({ last_reviewed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', id] });
+      toast.success('Cadastro marcado como revisado!');
+    },
+    onError: () => toast.error('Erro ao marcar como revisado'),
+  });
+
+  // Helper to check if review is overdue (more than 6 months)
+  const isReviewOverdue = (lastReviewedAt: string | null | undefined): boolean => {
+    if (!lastReviewedAt) return true;
+    const lastReview = new Date(lastReviewedAt);
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    return lastReview < sixMonthsAgo;
+  };
+
+  const formatReviewDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Nunca revisado';
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
   const resetContactForm = () => {
     setContactForm({
       first_name: '',
@@ -465,7 +507,33 @@ export default function CustomerDetail() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {/* Review status badge */}
+          {!isErpCustomer && (
+            <div className="flex items-center gap-2">
+              {isReviewOverdue(customer.last_reviewed_at) ? (
+                <Badge variant="destructive" className="gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Revisão pendente
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="gap-1 border-green-500/50 text-green-700 bg-green-500/10">
+                  <CheckCircle className="h-3 w-3" />
+                  Revisado em {formatReviewDate(customer.last_reviewed_at)}
+                </Badge>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => markAsReviewedMutation.mutate()}
+                disabled={markAsReviewedMutation.isPending}
+                title="Marcar cadastro como revisado"
+              >
+                <CalendarCheck className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          
           {!isErpCustomer && (
             isEditing ? (
               <>
@@ -502,7 +570,7 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -521,6 +589,10 @@ export default function CustomerDetail() {
           <TabsTrigger value="timeline" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Timeline
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Histórico
           </TabsTrigger>
           <TabsTrigger value="notas" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -1063,6 +1135,11 @@ export default function CustomerDetail() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab: Histórico (Auditoria) */}
+        <TabsContent value="historico">
+          <CompanyAuditHistory companyId={id!} isErpCustomer={isErpCustomer} />
         </TabsContent>
 
         {/* Tab: Notas */}
