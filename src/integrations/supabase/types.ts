@@ -144,6 +144,81 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_copilot_suggestions: {
+        Row: {
+          accepted_at: string | null
+          action_payload: Json | null
+          action_type: string | null
+          action_url: string | null
+          completion_tokens: number | null
+          context_data: Json
+          context_entity_id: string | null
+          context_type: string
+          created_at: string
+          description: string
+          dismissed_at: string | null
+          expires_at: string | null
+          id: string
+          model_used: string | null
+          priority: string
+          prompt_tokens: number | null
+          reasoning: string | null
+          status: string
+          suggestion_type: string
+          title: string
+          user_feedback: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          action_payload?: Json | null
+          action_type?: string | null
+          action_url?: string | null
+          completion_tokens?: number | null
+          context_data?: Json
+          context_entity_id?: string | null
+          context_type: string
+          created_at?: string
+          description: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          model_used?: string | null
+          priority?: string
+          prompt_tokens?: number | null
+          reasoning?: string | null
+          status?: string
+          suggestion_type: string
+          title: string
+          user_feedback?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          action_payload?: Json | null
+          action_type?: string | null
+          action_url?: string | null
+          completion_tokens?: number | null
+          context_data?: Json
+          context_entity_id?: string | null
+          context_type?: string
+          created_at?: string
+          description?: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          model_used?: string | null
+          priority?: string
+          prompt_tokens?: number | null
+          reasoning?: string | null
+          status?: string
+          suggestion_type?: string
+          title?: string
+          user_feedback?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bot_flow_edges: {
         Row: {
           created_at: string

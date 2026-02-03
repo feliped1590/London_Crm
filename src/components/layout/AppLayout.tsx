@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
+import { CopilotWidget } from '@/components/copilot/CopilotWidget';
 
 export function AppLayout() {
   const isMobile = useIsMobile();
@@ -65,6 +66,9 @@ export function AppLayout() {
           <Outlet />
         </div>
       </main>
+
+      {/* AI Copilot Widget */}
+      <CopilotWidget />
 
       {/* AI Assistant Widget */}
       <AIChatWidget />
