@@ -1169,6 +1169,7 @@ export type Database = {
           pipeline_id: string | null
           probability: number | null
           stage: Database["public"]["Enums"]["deal_stage"]
+          stagnation_reason: string | null
           updated_at: string
           value: number | null
         }
@@ -1188,6 +1189,7 @@ export type Database = {
           pipeline_id?: string | null
           probability?: number | null
           stage?: Database["public"]["Enums"]["deal_stage"]
+          stagnation_reason?: string | null
           updated_at?: string
           value?: number | null
         }
@@ -1207,6 +1209,7 @@ export type Database = {
           pipeline_id?: string | null
           probability?: number | null
           stage?: Database["public"]["Enums"]["deal_stage"]
+          stagnation_reason?: string | null
           updated_at?: string
           value?: number | null
         }
