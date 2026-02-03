@@ -3142,6 +3142,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_bi_anomalies: {
+        Args: never
+        Returns: {
+          action_label: string
+          affected_count: number
+          affected_value: number
+          anomaly_type: string
+          description: string
+          filter_params: Json
+          severity: string
+          title: string
+        }[]
+      }
+      get_conversion_by_stage: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          conversion_rate: number
+          entered_count: number
+          exited_count: number
+          stage: string
+          stage_order: number
+        }[]
+      }
       get_license_status: {
         Args: never
         Returns: {
@@ -3156,6 +3179,58 @@ export type Database = {
       get_module_access_type: {
         Args: { _module_key: string; _user_id: string }
         Returns: string
+      }
+      get_pipeline_health: {
+        Args: {
+          p_end_date?: string
+          p_pipeline_id?: string
+          p_start_date?: string
+        }
+        Returns: {
+          advancement_rate: number
+          avg_days_in_stage: number
+          deals_over_sla: number
+          sla_hours: number
+          sla_violation_rate: number
+          stage: string
+          stage_order: number
+          total_deals: number
+          total_value: number
+        }[]
+      }
+      get_seller_performance: {
+        Args: {
+          p_compare_previous?: boolean
+          p_end_date?: string
+          p_start_date?: string
+        }
+        Returns: {
+          avg_cycle_days: number
+          conversion_rate: number
+          deals_created: number
+          deals_lost: number
+          deals_stalled: number
+          deals_won: number
+          prev_conversion_rate: number
+          prev_deals_created: number
+          prev_deals_won: number
+          seller_id: string
+          seller_name: string
+          total_value_won: number
+        }[]
+      }
+      get_stalled_deals_by_seller: {
+        Args: { p_min_days?: number; p_seller_id?: string }
+        Returns: {
+          company_name: string
+          days_stalled: number
+          deal_id: string
+          deal_name: string
+          owner_id: string
+          owner_name: string
+          stage: string
+          value: number
+        }[]
       }
       get_user_modules: {
         Args: { _user_id: string }
