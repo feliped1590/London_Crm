@@ -1439,6 +1439,98 @@ export type Database = {
         }
         Relationships: []
       }
+      google_calendar_connections: {
+        Row: {
+          access_token_encrypted: string | null
+          calendar_id: string | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          refresh_token_encrypted: string | null
+          sync_enabled: boolean | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+          webhook_channel_id: string | null
+          webhook_expiration: string | null
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          calendar_id?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token_encrypted?: string | null
+          sync_enabled?: boolean | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+          webhook_channel_id?: string | null
+          webhook_expiration?: string | null
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          calendar_id?: string | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token_encrypted?: string | null
+          sync_enabled?: boolean | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+          webhook_channel_id?: string | null
+          webhook_expiration?: string | null
+        }
+        Relationships: []
+      }
+      google_calendar_sync_logs: {
+        Row: {
+          action: string
+          created_at: string
+          direction: string
+          error_message: string | null
+          google_event_id: string | null
+          id: string
+          metadata: Json | null
+          status: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          direction: string
+          error_message?: string | null
+          google_event_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          google_event_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_sync_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iniflex_sandbox_logs: {
         Row: {
           created_at: string
@@ -2525,6 +2617,7 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          calendar_source: string | null
           company_id: string | null
           completed_at: string | null
           contact_id: string | null
@@ -2534,7 +2627,9 @@ export type Database = {
           description: string | null
           due_date: string | null
           due_time: string | null
+          google_event_id: string | null
           id: string
+          last_synced_at: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           status: Database["public"]["Enums"]["task_status"]
           title: string
@@ -2542,6 +2637,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          calendar_source?: string | null
           company_id?: string | null
           completed_at?: string | null
           contact_id?: string | null
@@ -2551,7 +2647,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          google_event_id?: string | null
           id?: string
+          last_synced_at?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title: string
@@ -2559,6 +2657,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          calendar_source?: string | null
           company_id?: string | null
           completed_at?: string | null
           contact_id?: string | null
@@ -2568,7 +2667,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          google_event_id?: string | null
           id?: string
+          last_synced_at?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
