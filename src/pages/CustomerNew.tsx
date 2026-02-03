@@ -56,6 +56,7 @@ export default function CustomerNew() {
     phone: '',
     email: '',
     industry: '',
+    segment: '', // Segmento obrigatório
     address: '',
     city: '',
     state: '',
@@ -230,7 +231,10 @@ export default function CustomerNew() {
         state: companyForm.state || null,
         created_by: user?.id,
         owner_id: user?.id,
-        custom_fields: { tipo_cliente: customerType } as Json,
+        custom_fields: { 
+          tipo_cliente: customerType,
+          segmento: companyForm.segment, // Segmento obrigatório
+        } as Json,
       };
 
       const { data: company, error: companyError } = await supabase
@@ -306,6 +310,13 @@ export default function CustomerNew() {
         return;
       }
     }
+    
+    // Segmento obrigatório para todos os tipos de cliente
+    if (!companyForm.segment) {
+      toast.error('Informe o segmento do cliente');
+      return;
+    }
+    
     setStep(2);
   };
 
@@ -570,18 +581,62 @@ export default function CustomerNew() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="segment">Segmento *</Label>
+                    <Select 
+                      value={companyForm.segment} 
+                      onValueChange={(v) => setCompanyForm({ ...companyForm, segment: v })}
+                    >
+                      <SelectTrigger className={!companyForm.segment ? 'border-muted-foreground/50' : ''}>
+                        <SelectValue placeholder="Selecione o segmento (obrigatório)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="industria">Indústria</SelectItem>
+                        <SelectItem value="comercio">Comércio</SelectItem>
+                        <SelectItem value="servicos">Serviços</SelectItem>
+                        <SelectItem value="agronegocio">Agronegócio</SelectItem>
+                        <SelectItem value="construcao">Construção Civil</SelectItem>
+                        <SelectItem value="distribuidor">Distribuidor</SelectItem>
+                        <SelectItem value="varejo">Varejo</SelectItem>
+                        <SelectItem value="outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>
               ) : (
-                <div className="col-span-2">
-                  <Label htmlFor="document">CPF</Label>
-                  <Input
-                    id="document"
-                    value={companyForm.document}
-                    onChange={(e) => handleDocumentChange(e.target.value)}
-                    placeholder="000.000.000-00"
-                    maxLength={14}
-                  />
-                </div>
+                <>
+                  <div className="col-span-2">
+                    <Label htmlFor="document">CPF</Label>
+                    <Input
+                      id="document"
+                      value={companyForm.document}
+                      onChange={(e) => handleDocumentChange(e.target.value)}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Label htmlFor="segment_pf">Segmento *</Label>
+                    <Select 
+                      value={companyForm.segment} 
+                      onValueChange={(v) => setCompanyForm({ ...companyForm, segment: v })}
+                    >
+                      <SelectTrigger className={!companyForm.segment ? 'border-muted-foreground/50' : ''}>
+                        <SelectValue placeholder="Selecione o segmento (obrigatório)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="industria">Indústria</SelectItem>
+                        <SelectItem value="comercio">Comércio</SelectItem>
+                        <SelectItem value="servicos">Serviços</SelectItem>
+                        <SelectItem value="agronegocio">Agronegócio</SelectItem>
+                        <SelectItem value="construcao">Construção Civil</SelectItem>
+                        <SelectItem value="distribuidor">Distribuidor</SelectItem>
+                        <SelectItem value="varejo">Varejo</SelectItem>
+                        <SelectItem value="outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
               )}
               
               <div>
