@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
@@ -35,6 +35,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { ChecklistValidationModal } from '@/components/pipeline/ChecklistValidationModal';
 import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationModal';
+import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
 import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
@@ -712,7 +713,25 @@ export default function Pipeline() {
                         />
                       </div>
                     </div>
-                    <div className="flex justify-between gap-2">
+                    {/* Quick Actions */}
+                    <div className="pt-4 border-t">
+                      <Label className="flex items-center gap-2 mb-3">
+                        <Zap className="h-4 w-4" />
+                        Ações Rápidas
+                      </Label>
+                      <DealQuickActions 
+                        deal={editingDeal as any} 
+                        onWhatsAppClick={() => {
+                          // Switch to WhatsApp tab
+                          const tabsTrigger = document.querySelector('[data-state="inactive"][value="whatsapp"]');
+                          if (tabsTrigger instanceof HTMLElement) {
+                            tabsTrigger.click();
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-between gap-2 pt-4">
                       <div>
                         {(editingDeal as any).contacts?.email && (
                           <Button 
