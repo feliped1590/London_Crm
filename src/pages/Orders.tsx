@@ -212,10 +212,11 @@ export default function Orders() {
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : filteredOrders && filteredOrders.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
+           ) : filteredOrders && filteredOrders.length > 0 ? (
+             <div className="table-responsive">
+               <Table className="min-w-[900px]">
+                 <TableHeader>
+                   <TableRow>
                   <TableHead>Número</TableHead>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Contato</TableHead>
@@ -224,11 +225,11 @@ export default function Orders() {
                   <TableHead>Valor Total</TableHead>
                   <TableHead>Data Criação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {filteredOrders.map((order) => (
+                     <TableRow key={order.id}>
                     <TableCell className="font-mono font-medium">{order.number}</TableCell>
                     <TableCell>
                       {order.company && (
@@ -283,10 +284,11 @@ export default function Orders() {
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <ShoppingCart className="h-12 w-12 mb-4" />

@@ -467,9 +467,10 @@ export default function Products() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
+            <div className="table-responsive">
+              <Table className="min-w-[900px]">
+                <TableHeader>
+                  <TableRow>
                   <TableHead>SKU</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Categoria</TableHead>
@@ -479,9 +480,9 @@ export default function Products() {
                   <TableHead>Tabela de Preços</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredProducts.map((product) => {
                   const pricingInfo = getProductPricingInfo(product);
                   return (
@@ -561,8 +562,9 @@ export default function Products() {
                     </TableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Package className="h-12 w-12 mb-4" />
