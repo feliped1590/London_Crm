@@ -1031,18 +1031,24 @@ export default function Pipeline() {
           />
         </div>
       ) : (
-        <div className={cn(
-          "h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)]",
-          isMobile 
-            ? "flex gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2" 
-            : "grid grid-cols-6 gap-4"
-        )}>
+        <div
+          className={cn(
+            "h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)]",
+            // Default: horizontal scroll (works great for tablet/notebook small)
+            "flex gap-3 overflow-x-auto pb-4 -mx-2 px-2",
+            // Keep snap only on mobile for nicer swiping
+            isMobile && "snap-x snap-mandatory",
+            // XL+: switch to full Kanban grid (no horizontal scroll)
+            "xl:grid xl:grid-cols-6 xl:gap-4 xl:overflow-x-visible xl:pb-0 xl:mx-0 xl:px-0"
+          )}
+        >
           {stages.map((stage) => (
             <div
               key={stage}
               className={cn(
-                "flex flex-col bg-muted/30 rounded-lg",
-                isMobile && "min-w-[280px] shrink-0 snap-center"
+                "flex flex-col bg-muted/30 rounded-lg min-w-[280px] shrink-0",
+                isMobile && "snap-center",
+                "xl:min-w-0 xl:shrink"
               )}
               onDrop={(e) => handleDrop(e, stage)}
               onDragOver={handleDragOver}

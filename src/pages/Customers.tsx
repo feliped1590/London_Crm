@@ -470,9 +470,10 @@ export default function Customers() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
+              <div className="table-responsive">
+                <Table className="min-w-[1100px]">
+                  <TableHeader>
+                    <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Contato Principal</TableHead>
                     <TableHead>
@@ -495,9 +496,9 @@ export default function Customers() {
                     </TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {paginatedCustomers.map((customer) => {
                     const CustomerIcon = getCustomerIcon(customer.tipo_cliente);
                     const phone = customer.primary_contact?.mobile || customer.phone;
@@ -661,8 +662,9 @@ export default function Customers() {
                       </TableRow>
                     );
                   })}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
+              </div>
 
               {/* Pagination */}
               {totalPages > 1 && (
