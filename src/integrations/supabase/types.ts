@@ -398,6 +398,7 @@ export type Database = {
           last_reviewed_at: string | null
           name: string
           notes: string | null
+          origin: string | null
           owner_id: string | null
           parent_company_id: string | null
           phone: string | null
@@ -428,6 +429,7 @@ export type Database = {
           last_reviewed_at?: string | null
           name: string
           notes?: string | null
+          origin?: string | null
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
@@ -458,6 +460,7 @@ export type Database = {
           last_reviewed_at?: string | null
           name?: string
           notes?: string | null
+          origin?: string | null
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
@@ -2419,6 +2422,107 @@ export type Database = {
           },
         ]
       }
+      prospecting_results: {
+        Row: {
+          cidade: string | null
+          cnae_descricao: string | null
+          cnae_principal: string | null
+          cnpj: string
+          created_at: string
+          data_abertura: string | null
+          discarded_at: string | null
+          discarded_by: string | null
+          estado: string | null
+          id: string
+          nome_fantasia: string | null
+          porte: string | null
+          raw_data: Json | null
+          razao_social: string | null
+          saved_as_company_id: string | null
+          saved_at: string | null
+          saved_by: string | null
+          search_id: string
+          situacao_cadastral: string | null
+          status: Database["public"]["Enums"]["prospecting_result_status"]
+        }
+        Insert: {
+          cidade?: string | null
+          cnae_descricao?: string | null
+          cnae_principal?: string | null
+          cnpj: string
+          created_at?: string
+          data_abertura?: string | null
+          discarded_at?: string | null
+          discarded_by?: string | null
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          porte?: string | null
+          raw_data?: Json | null
+          razao_social?: string | null
+          saved_as_company_id?: string | null
+          saved_at?: string | null
+          saved_by?: string | null
+          search_id: string
+          situacao_cadastral?: string | null
+          status?: Database["public"]["Enums"]["prospecting_result_status"]
+        }
+        Update: {
+          cidade?: string | null
+          cnae_descricao?: string | null
+          cnae_principal?: string | null
+          cnpj?: string
+          created_at?: string
+          data_abertura?: string | null
+          discarded_at?: string | null
+          discarded_by?: string | null
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          porte?: string | null
+          raw_data?: Json | null
+          razao_social?: string | null
+          saved_as_company_id?: string | null
+          saved_at?: string | null
+          saved_by?: string | null
+          search_id?: string
+          situacao_cadastral?: string | null
+          status?: Database["public"]["Enums"]["prospecting_result_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospecting_results_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "prospecting_searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospecting_searches: {
+        Row: {
+          created_at: string
+          filters: Json
+          id: string
+          results_count: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          results_count?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          filters?: Json
+          id?: string
+          results_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       role_module_permissions: {
         Row: {
           access_type: Database["public"]["Enums"]["access_level"] | null
@@ -3118,6 +3222,7 @@ export type Database = {
         | "aprovada"
         | "recusada"
         | "expirada"
+      prospecting_result_status: "new" | "saved" | "discarded"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_pessoa: "PF" | "PJ"
@@ -3294,6 +3399,7 @@ export const Constants = {
         "recusada",
         "expirada",
       ],
+      prospecting_result_status: ["new", "saved", "discarded"],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
       tipo_pessoa: ["PF", "PJ"],

@@ -30,6 +30,7 @@ import BotBuilder from "./pages/BotBuilder";
 import ProposalPublic from "./pages/ProposalPublic";
 import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
+import Prospecting from "./pages/Prospecting";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/pricing" element={<PricingTables />} />
+                <Route path="/prospecting" element={<Prospecting />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/help" element={<Help />} />
