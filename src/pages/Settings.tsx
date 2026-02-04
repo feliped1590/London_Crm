@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, MessageSquareText, Bell, CheckSquare, Calendar } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
@@ -21,10 +21,8 @@ import { TestDataManager } from '@/components/settings/TestDataManager';
 import { PortfolioManager } from '@/components/settings/PortfolioManager';
 import { PipelinesManager } from '@/components/settings/PipelinesManager';
 import { SalesGoalsManager } from '@/components/settings/SalesGoalsManager';
-import { WhatsAppTemplatesManager } from '@/components/settings/WhatsAppTemplatesManager';
 import { NotificationPreferencesManager } from '@/components/settings/NotificationPreferencesManager';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
-import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -498,17 +496,9 @@ export default function Settings() {
             <FlaskConical className="h-4 w-4" />
             Dados de Teste
           </TabsTrigger>
-          <TabsTrigger value="whatsapp-templates" className="gap-2">
-            <MessageSquareText className="h-4 w-4" />
-            Templates
-          </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notificações
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="gap-2">
-            <Calendar className="h-4 w-4" />
-            Integrações
           </TabsTrigger>
         </TabsList>
 
@@ -1097,20 +1087,12 @@ export default function Settings() {
           <TestDataManager />
         </TabsContent>
 
-        <TabsContent value="whatsapp-templates" className="mt-6 space-y-6">
-          <WhatsAppTemplatesManager />
-        </TabsContent>
-
         <TabsContent value="notifications" className="mt-6 space-y-6">
           <NotificationPreferencesManager />
         </TabsContent>
 
         <TabsContent value="checklists" className="mt-6 space-y-6">
           <StageChecklistManager />
-        </TabsContent>
-
-        <TabsContent value="integrations" className="mt-6 space-y-6">
-          <GoogleCalendarSettings />
         </TabsContent>
       </Tabs>
     </div>

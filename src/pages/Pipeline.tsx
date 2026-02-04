@@ -37,8 +37,11 @@ import { ChecklistValidationModal } from '@/components/pipeline/ChecklistValidat
 import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationModal';
 import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
 import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
+import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
+import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
@@ -134,22 +137,40 @@ export default function Pipeline() {
   };
 
   const { data: companies } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['companies-with-cnpj'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      const { data, error } = await supabase.from('companies').select('id, name, cnpj').order('name');
       if (error) throw error;
       return data;
     },
   });
 
   const { data: contacts } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts-with-cpf'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile').order('first_name');
+      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf').order('first_name');
       if (error) throw error;
       return data;
     },
   });
+
+  // Searchable options for companies
+  const companyOptions: SearchableSelectOption[] = useMemo(() => {
+    return companies?.map(c => ({
+      value: c.id,
+      label: c.name,
+      searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined,
+    })) || [];
+  }, [companies]);
+
+  // Searchable options for contacts
+  const contactOptions: SearchableSelectOption[] = useMemo(() => {
+    return contacts?.map(c => ({
+      value: c.id,
+      label: `${c.first_name} ${c.last_name || ''}`.trim(),
+      searchTerms: c.cpf ? cleanDocument(c.cpf) : undefined,
+    })) || [];
+  }, [contacts]);
 
   // Helper functions to get contact info
   const getContactInfo = (contactId: string | null) => {
@@ -621,12 +642,10 @@ export default function Pipeline() {
                       </div>
                       <div>
                         <Label htmlFor="value">Valor (R$)</Label>
-                        <Input
+                        <CurrencyInput
                           id="value"
-                          type="number"
-                          step="0.01"
                           value={formData.value || 0}
-                          onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                          onChange={(val) => setFormData({ ...formData, value: val })}
                         />
                       </div>
                       <div>
@@ -664,37 +683,25 @@ export default function Pipeline() {
                       </div>
                       <div>
                         <Label htmlFor="company_id">Empresa</Label>
-                        <Select 
-                          value={formData.company_id || 'none'} 
-                          onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhuma</SelectItem>
-                            {companies?.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                          options={companyOptions}
+                          value={formData.company_id}
+                          onChange={(v) => setFormData({ ...formData, company_id: v })}
+                          placeholder="Buscar empresa..."
+                          searchPlaceholder="Nome ou CNPJ..."
+                          emptyMessage="Nenhuma empresa encontrada."
+                        />
                       </div>
                       <div>
                         <Label htmlFor="contact_id">Contato</Label>
-                        <Select 
-                          value={formData.contact_id || 'none'} 
-                          onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Nenhum</SelectItem>
-                            {contacts?.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <SearchableSelect
+                          options={contactOptions}
+                          value={formData.contact_id}
+                          onChange={(v) => setFormData({ ...formData, contact_id: v })}
+                          placeholder="Buscar contato..."
+                          searchPlaceholder="Nome ou CPF..."
+                          emptyMessage="Nenhum contato encontrado."
+                        />
                       </div>
                       <div className="col-span-2">
                         <Label htmlFor="notes">Observações</Label>

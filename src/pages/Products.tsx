@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -24,6 +24,9 @@ import {
   colorOptions,
 } from '@/types/products';
 
+type SortField = 'sku' | 'name' | 'category' | 'unit_price';
+type SortDirection = 'asc' | 'desc';
+
 export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -33,6 +36,8 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -48,6 +53,35 @@ export default function Products() {
     thickness: 0,
     active: true,
   });
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   const { data: products, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['products', filterCategory, filterActive],
@@ -217,10 +251,38 @@ export default function Products() {
     };
   };
 
-  const filteredProducts = products?.filter((p) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products
+    ?.filter((p) =>
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    ?.sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+      
+      switch (sortField) {
+        case 'sku':
+          aVal = a.sku.toLowerCase();
+          bVal = b.sku.toLowerCase();
+          break;
+        case 'name':
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case 'category':
+          aVal = (a.category || '').toLowerCase();
+          bVal = (b.category || '').toLowerCase();
+          break;
+        case 'unit_price':
+          aVal = a.unit_price || 0;
+          bVal = b.unit_price || 0;
+          break;
+      }
+      
+      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   return (
     <div className="space-y-6">
@@ -471,15 +533,15 @@ export default function Products() {
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Material</TableHead>
-                  <TableHead>Medidas (LxCxE)</TableHead>
-                  <TableHead>Preço Base</TableHead>
-                  <TableHead>Tabela de Preços</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                    <SortableHeader field="sku">SKU</SortableHeader>
+                    <SortableHeader field="name">Nome</SortableHeader>
+                    <SortableHeader field="category">Categoria</SortableHeader>
+                    <TableHead>Material</TableHead>
+                    <TableHead>Medidas (LxCxE)</TableHead>
+                    <SortableHeader field="unit_price">Preço Base</SortableHeader>
+                    <TableHead>Tabela de Preços</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

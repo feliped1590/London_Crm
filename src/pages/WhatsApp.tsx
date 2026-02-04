@@ -6,8 +6,9 @@ import { ConversationList } from '@/components/whatsapp/ConversationList';
 import { ChatView } from '@/components/whatsapp/ChatView';
 import { WhatsAppMetrics } from '@/components/whatsapp/WhatsAppMetrics';
 import { ConversationAnalyticsPanel } from '@/components/whatsapp/ConversationAnalyticsPanel';
+import { WhatsAppTemplatesManager } from '@/components/settings/WhatsAppTemplatesManager';
 import { Conversation, useWhatsAppRealtime, useUnreadCount, useWhatsAppConversations } from '@/hooks/useWhatsApp';
-import { MessageSquare, ArrowLeft, Users, BarChart3, BarChart2 } from 'lucide-react';
+import { MessageSquare, ArrowLeft, Users, BarChart3, BarChart2, MessageSquareText } from 'lucide-react';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,10 @@ export default function WhatsApp() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="templates" className="gap-2 flex-1 sm:flex-initial">
+              <MessageSquareText className="h-4 w-4" />
+              <span className="hidden sm:inline">Templates</span>
+            </TabsTrigger>
             <TabsTrigger value="metrics" className="gap-2 flex-1 sm:flex-initial">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Métricas</span>
@@ -303,6 +308,10 @@ export default function WhatsApp() {
               )}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="templates" className="flex-1 m-0 overflow-auto p-4 sm:p-6">
+          <WhatsAppTemplatesManager />
         </TabsContent>
 
         <TabsContent value="metrics" className="flex-1 m-0 overflow-auto">

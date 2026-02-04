@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -372,6 +373,35 @@ export default function Customers() {
     navigate(`/whatsapp?phone=${encodeURIComponent(phone)}&contactName=${encodeURIComponent(contactName)}`);
   };
 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <TableHead 
+      className={cn("cursor-pointer select-none hover:bg-muted/50 transition-colors", className)}
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field ? (
+          sortDirection === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+        )}
+      </div>
+    </TableHead>
+  );
+
   // Enhanced search with debounce - searches multiple fields
   const filteredCustomers = useMemo(() => {
     let result = allCustomers || [];
@@ -402,8 +432,37 @@ export default function Customers() {
       );
     }
     
+    // Apply sorting
+    result = [...result].sort((a, b) => {
+      let aVal: string | number | null = null;
+      let bVal: string | number | null = null;
+      
+      switch (sortField) {
+        case 'name':
+          aVal = a.name?.toLowerCase() || '';
+          bVal = b.name?.toLowerCase() || '';
+          break;
+        case 'owner':
+          aVal = a.owner_name?.toLowerCase() || '';
+          bVal = b.owner_name?.toLowerCase() || '';
+          break;
+        case 'created_at':
+          aVal = a.created_at || '';
+          bVal = b.created_at || '';
+          break;
+        case 'last_activity':
+          aVal = a.last_activity_at || '';
+          bVal = b.last_activity_at || '';
+          break;
+      }
+      
+      if (aVal === null || aVal < bVal!) return sortDirection === 'asc' ? -1 : 1;
+      if (bVal === null || aVal > bVal!) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
     return result;
-  }, [allCustomers, debouncedSearch, statusFilter]);
+  }, [allCustomers, debouncedSearch, statusFilter, sortField, sortDirection]);
 
   // Pagination
   const totalItems = filteredCustomers?.length || 0;
@@ -514,28 +573,29 @@ export default function Customers() {
                 <Table className="min-w-[1100px]">
                   <TableHeader>
                     <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Contato Principal</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5" />
-                        Telefone
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5" />
-                        Última Atividade
-                      </div>
-                    </TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        Negócios
-                      </div>
-                    </TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                      <SortableHeader field="name">Cliente</SortableHeader>
+                      <TableHead>Contato Principal</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5" />
+                          Telefone
+                        </div>
+                      </TableHead>
+                      <SortableHeader field="last_activity">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          Última Atividade
+                        </div>
+                      </SortableHeader>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          Negócios
+                        </div>
+                      </TableHead>
+                      <TableHead>Vendedor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -601,6 +661,13 @@ export default function Customers() {
                         <TableCell>
                           {customer.deals.length > 0 ? (
                             <DealStageBadges deals={customer.deals} />
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {customer.owner_name ? (
+                            <span className="text-sm">{customer.owner_name}</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
