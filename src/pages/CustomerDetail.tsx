@@ -32,7 +32,8 @@ import {
   Database,
   AlertCircle,
   CheckCircle,
-  CalendarCheck
+  CalendarCheck,
+  ShieldCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -45,6 +46,7 @@ import { DealStageBadges } from '@/components/DealStageBadges';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
+import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import type { Json } from '@/integrations/supabase/types';
 
 const industries = [
@@ -650,7 +652,7 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -665,6 +667,10 @@ export default function CustomerDetail() {
             {deals.length > 0 && (
               <Badge variant="secondary" className="h-5 min-w-5">{deals.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="credito" className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Crédito
           </TabsTrigger>
           <TabsTrigger value="timeline" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -1286,6 +1292,15 @@ export default function CustomerDetail() {
             </CardContent>
           </Card>
 
+        </TabsContent>
+
+        {/* Tab: Crédito */}
+        <TabsContent value="credito">
+          <CreditAnalysisTab 
+            companyId={id!} 
+            companyName={customer?.fantasia || customer?.name || 'Cliente'}
+            cnpj={customer?.cnpj || null}
+          />
         </TabsContent>
 
         {/* Tab: Timeline */}
