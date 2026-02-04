@@ -39,6 +39,8 @@ import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
 import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { QuickCreateCompanyModal } from '@/components/pipeline/QuickCreateCompanyModal';
+import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContactModal';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
@@ -116,6 +118,10 @@ export default function Pipeline() {
     targetStage: DealStage;
     daysInStage: number;
   } | null>(null);
+
+  // Quick create modals state
+  const [quickCreateCompanyOpen, setQuickCreateCompanyOpen] = useState(false);
+  const [quickCreateContactOpen, setQuickCreateContactOpen] = useState(false);
 
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
@@ -824,12 +830,10 @@ export default function Pipeline() {
                   </div>
                   <div>
                     <Label htmlFor="value">Valor (R$)</Label>
-                    <Input
+                    <CurrencyInput
                       id="value"
-                      type="number"
-                      step="0.01"
                       value={formData.value || 0}
-                      onChange={(e) => setFormData({ ...formData, value: parseFloat(e.target.value) || 0 })}
+                      onChange={(value) => setFormData({ ...formData, value })}
                     />
                   </div>
                   <div>
@@ -867,37 +871,29 @@ export default function Pipeline() {
                   </div>
                   <div>
                     <Label htmlFor="company_id">Empresa</Label>
-                    <Select 
-                      value={formData.company_id || 'none'} 
-                      onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhuma</SelectItem>
-                        {companies?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={companyOptions}
+                      value={formData.company_id || ''}
+                      onChange={(v) => setFormData({ ...formData, company_id: v || null })}
+                      placeholder="Buscar empresa..."
+                      searchPlaceholder="Nome ou CNPJ..."
+                      emptyMessage="Nenhuma empresa encontrada."
+                      onCreateNew={() => setQuickCreateCompanyOpen(true)}
+                      createNewLabel="Criar nova empresa"
+                    />
                   </div>
                   <div>
                     <Label htmlFor="contact_id">Contato</Label>
-                    <Select 
-                      value={formData.contact_id || 'none'} 
-                      onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {contacts?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={contactOptions}
+                      value={formData.contact_id || ''}
+                      onChange={(v) => setFormData({ ...formData, contact_id: v || null })}
+                      placeholder="Buscar contato..."
+                      searchPlaceholder="Nome ou CPF..."
+                      emptyMessage="Nenhum contato encontrado."
+                      onCreateNew={() => setQuickCreateContactOpen(true)}
+                      createNewLabel="Criar novo contato"
+                    />
                   </div>
                   <div className="col-span-2">
                     <Label htmlFor="notes">Observações</Label>
@@ -1206,6 +1202,25 @@ export default function Pipeline() {
           }
         }}
         isLoading={updateMutation.isPending}
+      />
+
+      {/* Quick Create Company Modal */}
+      <QuickCreateCompanyModal
+        open={quickCreateCompanyOpen}
+        onOpenChange={setQuickCreateCompanyOpen}
+        onCreated={(companyId) => {
+          setFormData({ ...formData, company_id: companyId });
+        }}
+      />
+
+      {/* Quick Create Contact Modal */}
+      <QuickCreateContactModal
+        open={quickCreateContactOpen}
+        onOpenChange={setQuickCreateContactOpen}
+        companyId={formData.company_id}
+        onCreated={(contactId) => {
+          setFormData({ ...formData, contact_id: contactId });
+        }}
       />
     </div>
   );
