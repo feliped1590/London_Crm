@@ -767,6 +767,7 @@ export type Database = {
           id: string
           insc_estadual: string | null
           nome_fantasia: string | null
+          owner_id: string | null
           possui_titulos: boolean | null
           raw_data: Json | null
           razao_social: string | null
@@ -797,6 +798,7 @@ export type Database = {
           id?: string
           insc_estadual?: string | null
           nome_fantasia?: string | null
+          owner_id?: string | null
           possui_titulos?: boolean | null
           raw_data?: Json | null
           razao_social?: string | null
@@ -827,6 +829,7 @@ export type Database = {
           id?: string
           insc_estadual?: string | null
           nome_fantasia?: string | null
+          owner_id?: string | null
           possui_titulos?: boolean | null
           raw_data?: Json | null
           razao_social?: string | null
@@ -845,7 +848,15 @@ export type Database = {
           updated_at?: string
           usuario_alteracao_erp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_clients_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_order_items: {
         Row: {

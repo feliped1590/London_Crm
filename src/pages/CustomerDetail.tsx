@@ -230,6 +230,7 @@ export default function CustomerDetail() {
           regiao: erpData.regiao,
           segmento: erpData.segmento,
           tipo_pessoa: erpData.tipo_pessoa,
+          owner_id: erpData.owner_id,
           source: 'erp' as const,
           contacts: [],
           deals: [],
@@ -278,8 +279,10 @@ export default function CustomerDetail() {
   // Assign owner mutation
   const assignOwnerMutation = useMutation({
     mutationFn: async (ownerId: string | null) => {
+      // Determinar tabela correta baseado na origem do cliente
+      const tableName = customer?.source === 'erp' ? 'crm_clients' : 'companies';
       const { error } = await supabase
-        .from('companies')
+        .from(tableName)
         .update({ owner_id: ownerId })
         .eq('id', id);
       if (error) throw error;
@@ -826,7 +829,7 @@ export default function CustomerDetail() {
           </Card>
 
           {/* Admin: Assign seller */}
-          {isAdmin && !isErpCustomer && (
+          {isAdmin && (
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
