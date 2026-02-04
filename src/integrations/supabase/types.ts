@@ -1741,6 +1741,51 @@ export type Database = {
         }
         Relationships: []
       }
+      order_approval_rules: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          from_status: Database["public"]["Enums"]["order_status"]
+          id: string
+          is_active: boolean | null
+          name: string
+          required_role: string
+          requires_justification: boolean | null
+          sort_order: number | null
+          to_status: Database["public"]["Enums"]["order_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          from_status: Database["public"]["Enums"]["order_status"]
+          id?: string
+          is_active?: boolean | null
+          name: string
+          required_role?: string
+          requires_justification?: boolean | null
+          sort_order?: number | null
+          to_status: Database["public"]["Enums"]["order_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          from_status?: Database["public"]["Enums"]["order_status"]
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          required_role?: string
+          requires_justification?: boolean | null
+          sort_order?: number | null
+          to_status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       order_approvals: {
         Row: {
           approved_at: string
@@ -2041,6 +2086,7 @@ export type Database = {
       }
       pipelines: {
         Row: {
+          allowed_roles: string[] | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -2052,6 +2098,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          allowed_roles?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2063,6 +2110,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          allowed_roles?: string[] | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -2253,6 +2301,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          fator_kg: number | null
+          fator_milheiro: number | null
           id: string
           length: number | null
           material: string | null
@@ -2271,6 +2321,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          fator_kg?: number | null
+          fator_milheiro?: number | null
           id?: string
           length?: number | null
           material?: string | null
@@ -2289,6 +2341,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          fator_kg?: number | null
+          fator_milheiro?: number | null
           id?: string
           length?: number | null
           material?: string | null

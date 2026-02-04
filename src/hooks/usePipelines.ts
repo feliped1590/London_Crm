@@ -31,8 +31,24 @@ export function usePipelines() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Buscar o role do usuário atual
+  const { data: userRole } = useQuery({
+    queryKey: ['user_role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.role || null;
+    },
+    enabled: !!user?.id,
+  });
+
   const { data: pipelines, isLoading, error } = useQuery({
-    queryKey: ['pipelines'],
+    queryKey: ['pipelines', userRole],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pipelines')
@@ -42,7 +58,18 @@ export function usePipelines() {
         .order('name', { ascending: true });
       
       if (error) throw error;
-      return data as Pipeline[];
+      
+      // Filtrar baseado no role do usuário
+      const allPipelines = data as (Pipeline & { allowed_roles?: string[] | null })[];
+      
+      if (!userRole) return allPipelines as Pipeline[];
+      
+      return allPipelines.filter(p => {
+        // Se allowed_roles é null ou vazio, todos podem acessar
+        if (!p.allowed_roles || p.allowed_roles.length === 0) return true;
+        // Senão, verifica se o role do usuário está na lista
+        return p.allowed_roles.includes(userRole);
+      }) as Pipeline[];
     },
     enabled: !!user?.id,
   });

@@ -9,6 +9,8 @@ export interface Product {
   category?: string;
   unit_measure?: string;
   unit_price?: number;
+  fator_kg?: number;
+  fator_milheiro?: number;
   material?: string;
   color?: string;
   width?: number;
@@ -18,6 +20,18 @@ export interface Product {
   created_by?: string;
   created_at: string;
   updated_at: string;
+}
+
+// Função para calcular o Fator Milheiro
+export function calcularFatorMilheiro(
+  fatorKg: number,
+  largura: number, // em mm
+  comprimento: number, // em mm
+  espessura: number // em micras
+): number {
+  // Fórmula: Fator KG × Largura(mm) × Comprimento(mm) × Espessura(micras) / 1.000.000
+  // A divisão por 1.000.000 converte para valor adequado
+  return fatorKg * largura * comprimento * espessura / 1000000;
 }
 
 export interface Proposal {
