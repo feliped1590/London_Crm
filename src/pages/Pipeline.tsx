@@ -41,6 +41,8 @@ import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/s
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { QuickCreateCompanyModal } from '@/components/pipeline/QuickCreateCompanyModal';
 import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContactModal';
+import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
+import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
@@ -122,6 +124,20 @@ export default function Pipeline() {
   // Quick create modals state
   const [quickCreateCompanyOpen, setQuickCreateCompanyOpen] = useState(false);
   const [quickCreateContactOpen, setQuickCreateContactOpen] = useState(false);
+
+  // Admin intervention modal state
+  const [interventionModalOpen, setInterventionModalOpen] = useState(false);
+  const [interventionData, setInterventionData] = useState<{
+    clientName: string;
+    clientOwnerName: string;
+    actionDescription: string;
+    pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: any };
+    clientId: string;
+    clientOwnerId: string;
+  } | null>(null);
+  
+  // Portfolio governance hook
+  const { requiresJustification, logIntervention } = usePortfolioGovernance();
 
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
@@ -340,7 +356,7 @@ export default function Pipeline() {
     setIsEmailDialogOpen(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Clean up empty date strings
     const cleanedFormData = {
@@ -348,6 +364,28 @@ export default function Pipeline() {
       expected_close_date: formData.expected_close_date || null,
     };
     
+    // Check if admin needs to justify action on another user's client
+    if (formData.company_id) {
+      const ownership = await requiresJustification(formData.company_id);
+      if (ownership) {
+        // Admin accessing another user's client - show intervention modal
+        setInterventionData({
+          clientName: ownership.clientName || 'Cliente',
+          clientOwnerName: ownership.ownerName || 'Outro vendedor',
+          actionDescription: editingDeal ? 'Você está prestes a editar um negócio' : 'Você está prestes a criar um negócio',
+          pendingAction: { 
+            type: editingDeal ? 'UPDATE_DEAL' : 'CREATE_DEAL', 
+            data: cleanedFormData 
+          },
+          clientId: formData.company_id,
+          clientOwnerId: ownership.ownerId || '',
+        });
+        setInterventionModalOpen(true);
+        return;
+      }
+    }
+    
+    // Proceed with action
     if (editingDeal) {
       updateMutation.mutate({ 
         id: editingDeal.id, 
@@ -362,6 +400,50 @@ export default function Pipeline() {
         owner_id: user?.id,
         custom_fields: customFieldsData as Json,
       });
+    }
+  };
+
+  // Handle intervention confirmation
+  const handleInterventionConfirm = async (justification: string) => {
+    if (!interventionData) return;
+    
+    try {
+      // Log the intervention
+      await logIntervention({
+        actionType: interventionData.pendingAction.type,
+        entityType: 'deal',
+        entityId: editingDeal?.id || 'new',
+        entityName: formData.name || 'Novo negócio',
+        clientId: interventionData.clientId,
+        clientName: interventionData.clientName,
+        clientOwnerId: interventionData.clientOwnerId,
+        clientOwnerName: interventionData.clientOwnerName,
+        justification,
+        details: { formData: interventionData.pendingAction.data },
+      });
+      
+      // Execute the action
+      if (editingDeal) {
+        updateMutation.mutate({ 
+          id: editingDeal.id, 
+          ...interventionData.pendingAction.data,
+          custom_fields: customFieldsData as Json,
+        });
+      } else {
+        createMutation.mutate({
+          ...interventionData.pendingAction.data,
+          name: formData.name || '',
+          created_by: user?.id,
+          owner_id: user?.id,
+          custom_fields: customFieldsData as Json,
+        });
+      }
+      
+      setInterventionModalOpen(false);
+      setInterventionData(null);
+    } catch (error) {
+      console.error('Failed to log intervention:', error);
+      toast.error('Erro ao registrar intervenção');
     }
   };
 
@@ -1228,6 +1310,21 @@ export default function Pipeline() {
         onCreated={(contactId) => {
           setFormData({ ...formData, contact_id: contactId });
         }}
+      />
+
+      {/* Admin Intervention Modal */}
+      <AdminInterventionModal
+        open={interventionModalOpen}
+        onOpenChange={(open) => {
+          setInterventionModalOpen(open);
+          if (!open) setInterventionData(null);
+        }}
+        clientName={interventionData?.clientName || ''}
+        clientOwnerName={interventionData?.clientOwnerName || ''}
+        actionDescription={interventionData?.actionDescription || ''}
+        onConfirm={handleInterventionConfirm}
+        onCancel={() => setInterventionData(null)}
+        isLoading={createMutation.isPending || updateMutation.isPending}
       />
     </div>
   );

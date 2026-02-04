@@ -125,7 +125,15 @@ export default function Tasks() {
       toast.success('Tarefa criada com sucesso!');
       resetForm();
     },
-    onError: () => toast.error('Erro ao criar tarefa'),
+    onError: (error: any) => {
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao criar tarefa');
+      }
+    },
   });
 
   const updateMutation = useMutation({
@@ -138,7 +146,15 @@ export default function Tasks() {
       toast.success('Tarefa atualizada!');
       resetForm();
     },
-    onError: () => toast.error('Erro ao atualizar tarefa'),
+    onError: (error: any) => {
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error('Erro ao atualizar tarefa');
+      }
+    },
   });
 
   const toggleComplete = useMutation({
