@@ -152,22 +152,21 @@ export function SearchableSelect({
                   </div>
                 </CommandItem>
               ))}
-            </CommandGroup>
-            {onCreateNew && filteredOptions.length > 0 && (
-              <CommandGroup>
+              {/* Botão criar novo - sempre visível quando onCreateNew está definido */}
+              {onCreateNew && (
                 <CommandItem
                   value="__create__"
                   onSelect={() => {
                     onCreateNew();
                     setOpen(false);
                   }}
-                  className="text-primary"
+                  className="text-primary border-t mt-1 pt-2"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {createNewLabel}
                 </CommandItem>
-              </CommandGroup>
-            )}
+              )}
+            </CommandGroup>
           </CommandList>
         </Command>
       </PopoverContent>
