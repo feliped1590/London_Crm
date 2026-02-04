@@ -42,12 +42,23 @@ export function AIChatWidget() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom when new messages arrive or loading state changes
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+          if (scrollContainer) {
+            scrollContainer.scrollTo({
+              top: scrollContainer.scrollHeight,
+              behavior: 'smooth',
+            });
+          }
+        }
+      });
     }
-  }, [messages]);
+  }, [messages, isLoading]);
 
   // Focus input when chat opens
   useEffect(() => {
