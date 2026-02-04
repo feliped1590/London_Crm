@@ -2,13 +2,14 @@ import * as React from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
+interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'onBlur'> {
   value: number | null | undefined;
   onChange: (value: number) => void;
+  onBlur?: () => void;
   className?: string;
 }
 
-export function CurrencyInput({ value, onChange, className, ...props }: CurrencyInputProps) {
+export function CurrencyInput({ value, onChange, onBlur, className, ...props }: CurrencyInputProps) {
   const [displayValue, setDisplayValue] = React.useState('');
 
   // Format number to Brazilian currency display
@@ -52,6 +53,7 @@ export function CurrencyInput({ value, onChange, className, ...props }: Currency
     const numericValue = parseValue(displayValue);
     onChange(numericValue);
     setDisplayValue(formatCurrency(numericValue));
+    onBlur?.();
   };
 
   const handleFocus = () => {

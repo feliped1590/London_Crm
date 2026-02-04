@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -895,12 +896,9 @@ export function ProposalDialog({
                           </TableCell>
                           <TableCell>
                             <div className="relative">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
+                              <CurrencyInput
                                 value={item.unit_price || 0}
-                                onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                onChange={(val) => updateItem(index, 'unit_price', val)}
                                 onBlur={() => handlePriceBlur(index, 'unit_price')}
                                 className={`h-8 ${hasPricingTableLinked && !isAdmin ? 'bg-muted' : ''}`}
                                 disabled={hasPricingTableLinked && !isAdmin}

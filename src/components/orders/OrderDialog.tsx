@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -828,11 +829,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <CurrencyInput
                           value={item.unit_price}
-                          onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
+                          onChange={(val) => updateItem(index, 'unit_price', val)}
                           onBlur={() => handlePriceBlur(index)}
                           className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
                           disabled={(hasPricingTable && !isAdmin) || !canEdit}
