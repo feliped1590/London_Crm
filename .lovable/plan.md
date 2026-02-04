@@ -1,76 +1,59 @@
 
-
-# Plano: Vincular Vendedor a Clientes ERP
+# Plano: Corrigir Vinculacao de Vendedor
 
 ## Problema Identificado
 
-O card "Vendedor Responsável" não aparece para clientes do ERP porque:
-1. Existe uma condição `!isErpCustomer` que oculta o card para clientes sincronizados do ERP
-2. A tabela `crm_clients` (ERP) não possui a coluna `owner_id`, enquanto a tabela `companies` (CRM) possui
+O erro "violates foreign key constraint" ocorre porque:
 
-O cliente atual "A FORMULA" é um cliente ERP, por isso você não vê o card.
+| Tabela | `owner_id` referencia | Valor esperado |
+|--------|----------------------|----------------|
+| `companies` | `auth.users(id)` | `user_id` do profiles |
+| `crm_clients` | `profiles(id)` | `id` do profiles |
 
-## Solução Proposta
+O codigo atual busca `profiles.id` e usa para ambas as tabelas, mas `companies.owner_id` espera um `user_id` (referencia auth.users).
 
-### 1. Migração do Banco de Dados
-Adicionar a coluna `owner_id` à tabela `crm_clients` para permitir vinculação de vendedor:
+## Solucao Proposta
 
-```sql
-ALTER TABLE crm_clients 
-ADD COLUMN owner_id UUID REFERENCES profiles(id);
+### 1. Ajustar a Query de Vendedores
 
-CREATE INDEX idx_crm_clients_owner_id ON crm_clients(owner_id);
+Alterar a query para buscar ambos os IDs:
+
+```typescript
+const { data: sellers } = useQuery({
+  queryKey: ['sellers-for-assignment'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, user_id, full_name')  // Adicionar user_id
+      .order('full_name');
+    if (error) throw error;
+    return data || [];
+  },
+  enabled: isAdmin,
+});
 ```
 
-### 2. Ajuste no Frontend (CustomerDetail.tsx)
+### 2. Corrigir a Mutation de Atribuicao
 
-**Mudanças:**
-- Remover a condição `!isErpCustomer` do card "Vendedor Responsável"
-- Adaptar a mutation `assignOwnerMutation` para atualizar a tabela correta:
-  - Se `source === 'crm'` → atualiza `companies`
-  - Se `source === 'erp'` → atualiza `crm_clients`
-- Incluir `owner_id` no objeto `UnifiedCustomer` retornado para clientes ERP
+Usar o ID correto baseado na origem do cliente:
 
-### 3. Lógica Atualizada
-
-```text
-┌─────────────────────────────────────────────────┐
-│           Página Detalhe do Cliente             │
-├─────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────┐   │
-│  │   Card: Vendedor Responsável             │   │
-│  │   (Visível para Admin em TODOS clientes) │   │
-│  │                                          │   │
-│  │   [Select: Lista de Vendedores]          │   │
-│  │                                          │   │
-│  │   Ao salvar:                             │   │
-│  │   - CRM → UPDATE companies               │   │
-│  │   - ERP → UPDATE crm_clients             │   │
-│  └──────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────┘
-```
-
-## Detalhes Técnicos
-
-### Arquivo: `src/pages/CustomerDetail.tsx`
-
-**Linha ~829**: Alterar condição do card
-```tsx
-// DE:
-{isAdmin && !isErpCustomer && (
-
-// PARA:
-{isAdmin && (
-```
-
-**Linha ~276-288**: Adaptar mutation para dual-source
-```tsx
+```typescript
 const assignOwnerMutation = useMutation({
-  mutationFn: async (ownerId: string | null) => {
-    const tableName = customer?.source === 'erp' ? 'crm_clients' : 'companies';
+  mutationFn: async (profileId: string | null) => {
+    const isErp = customer?.source === 'erp';
+    const tableName = isErp ? 'crm_clients' : 'companies';
+    
+    // Para companies: usar user_id
+    // Para crm_clients: usar profile id
+    let ownerIdToSave = null;
+    if (profileId && profileId !== 'none') {
+      const seller = sellers?.find(s => s.id === profileId);
+      ownerIdToSave = isErp ? profileId : seller?.user_id;
+    }
+    
     const { error } = await supabase
       .from(tableName)
-      .update({ owner_id: ownerId })
+      .update({ owner_id: ownerIdToSave })
       .eq('id', id);
     if (error) throw error;
   },
@@ -78,22 +61,78 @@ const assignOwnerMutation = useMutation({
 });
 ```
 
-**Linha ~213-236**: Incluir `owner_id` no retorno de clientes ERP
-```tsx
-return {
-  ...
-  owner_id: erpData.owner_id, // Adicionar esta linha
-  source: 'erp' as const,
-  ...
-};
+### 3. Corrigir Exibicao do Vendedor Atual
+
+Para clientes CRM (`companies`), o `owner_id` armazenado e um `user_id`, entao precisamos encontrar o seller correspondente:
+
+```typescript
+const currentOwner = React.useMemo(() => {
+  if (!customer?.owner_id || !sellers) return null;
+  
+  if (customer.source === 'erp') {
+    // crm_clients armazena profile.id
+    return sellers.find(s => s.id === customer.owner_id);
+  } else {
+    // companies armazena user_id
+    return sellers.find(s => s.user_id === customer.owner_id);
+  }
+}, [customer?.owner_id, customer?.source, sellers]);
 ```
 
-## Resumo das Alterações
+### 4. Corrigir Valor do Select
 
-| Item | Tipo | Descrição |
-|------|------|-----------|
-| `crm_clients.owner_id` | Banco de Dados | Nova coluna UUID com referência a `profiles` |
-| Card "Vendedor Responsável" | Frontend | Visível para Admin em todos os clientes |
-| `assignOwnerMutation` | Frontend | Atualiza tabela correta baseado na origem |
-| Query de clientes ERP | Frontend | Incluir `owner_id` no retorno |
+O `Select` precisa usar o ID correto para comparacao:
 
+```typescript
+// Determinar o valor atual para o Select baseado no tipo de cliente
+const selectValue = React.useMemo(() => {
+  if (!customer?.owner_id) return 'none';
+  
+  if (customer.source === 'erp') {
+    return customer.owner_id; // crm_clients usa profile.id
+  } else {
+    // companies usa user_id, precisamos encontrar o profile.id correspondente
+    const seller = sellers?.find(s => s.user_id === customer.owner_id);
+    return seller?.id || 'none';
+  }
+}, [customer?.owner_id, customer?.source, sellers]);
+```
+
+## Arquivos a Modificar
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/pages/CustomerDetail.tsx` | Query de sellers + logica de mutation + exibicao |
+
+## Fluxo Corrigido
+
+```text
++---------------------------+
+|   Admin seleciona seller  |
+|   (profile.id no Select)  |
++-------------+-------------+
+              |
+              v
++---------------------------+
+|   Mutation recebe o id    |
++-------------+-------------+
+              |
+    +---------+---------+
+    |                   |
+    v                   v
++-------+          +--------+
+|  ERP  |          |  CRM   |
++-------+          +--------+
+    |                   |
+    v                   v
+crm_clients         companies
+owner_id =          owner_id = 
+profile.id          seller.user_id
+```
+
+## Resumo das Alteracoes
+
+1. Query de sellers: adicionar `user_id` aos campos selecionados
+2. Mutation: usar `user_id` para companies, `id` para crm_clients
+3. Exibicao: comparar com campo correto baseado na origem
+4. Select value: converter corretamente entre os IDs
