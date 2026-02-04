@@ -746,6 +746,112 @@ export type Database = {
           },
         ]
       }
+      credit_analyses: {
+        Row: {
+          analysis_date: string
+          api_provider: string | null
+          cadastral_status: string | null
+          cnpj: string
+          company_id: string
+          consultation_reason: string
+          consulted_by: string | null
+          created_at: string
+          credit_score: number | null
+          id: string
+          raw_response_hash: string | null
+          restrictions_summary: string | null
+          risk_classification: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_date?: string
+          api_provider?: string | null
+          cadastral_status?: string | null
+          cnpj: string
+          company_id: string
+          consultation_reason: string
+          consulted_by?: string | null
+          created_at?: string
+          credit_score?: number | null
+          id?: string
+          raw_response_hash?: string | null
+          restrictions_summary?: string | null
+          risk_classification?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_date?: string
+          api_provider?: string | null
+          cadastral_status?: string | null
+          cnpj?: string
+          company_id?: string
+          consultation_reason?: string
+          consulted_by?: string | null
+          created_at?: string
+          credit_score?: number | null
+          id?: string
+          raw_response_hash?: string | null
+          restrictions_summary?: string | null
+          risk_classification?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_analyses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_analysis_audit: {
+        Row: {
+          action: string
+          cnpj: string
+          company_id: string
+          company_name: string
+          created_at: string
+          id: string
+          reason: string
+          result_summary: Json
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action?: string
+          cnpj: string
+          company_id: string
+          company_name: string
+          created_at?: string
+          id?: string
+          reason: string
+          result_summary: Json
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          action?: string
+          cnpj?: string
+          company_id?: string
+          company_name?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          result_summary?: Json
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_analysis_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_client_addresses: {
         Row: {
           bairro: string | null
@@ -3357,6 +3463,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
       get_bi_anomalies: {
         Args: never
         Returns: {
