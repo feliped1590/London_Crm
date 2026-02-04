@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -264,7 +264,7 @@ export default function CustomerDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name')
+        .select('id, user_id, full_name')
         .order('full_name');
 
       if (error) throw error;
@@ -273,17 +273,49 @@ export default function CustomerDetail() {
     enabled: isAdmin,
   });
 
-  // Get current owner name
-  const currentOwner = sellers?.find(s => s.id === customer?.owner_id);
+  // Get current owner - CRM usa user_id, ERP usa profile.id
+  const currentOwner = React.useMemo(() => {
+    if (!customer?.owner_id || !sellers) return null;
+    
+    if (customer.source === 'erp') {
+      // crm_clients armazena profile.id
+      return sellers.find(s => s.id === customer.owner_id);
+    } else {
+      // companies armazena user_id (auth.users)
+      return sellers.find(s => s.user_id === customer.owner_id);
+    }
+  }, [customer?.owner_id, customer?.source, sellers]);
+
+  // Determinar o valor atual para o Select baseado no tipo de cliente
+  const selectValue = React.useMemo(() => {
+    if (!customer?.owner_id) return 'none';
+    
+    if (customer.source === 'erp') {
+      return customer.owner_id; // crm_clients usa profile.id
+    } else {
+      // companies usa user_id, precisamos encontrar o profile.id correspondente
+      const seller = sellers?.find(s => s.user_id === customer.owner_id);
+      return seller?.id || 'none';
+    }
+  }, [customer?.owner_id, customer?.source, sellers]);
 
   // Assign owner mutation
   const assignOwnerMutation = useMutation({
-    mutationFn: async (ownerId: string | null) => {
-      // Determinar tabela correta baseado na origem do cliente
-      const tableName = customer?.source === 'erp' ? 'crm_clients' : 'companies';
+    mutationFn: async (profileId: string | null) => {
+      const isErp = customer?.source === 'erp';
+      const tableName = isErp ? 'crm_clients' : 'companies';
+      
+      // Para companies: usar user_id (referencia auth.users)
+      // Para crm_clients: usar profile.id
+      let ownerIdToSave: string | null = null;
+      if (profileId && profileId !== 'none') {
+        const seller = sellers?.find(s => s.id === profileId);
+        ownerIdToSave = isErp ? profileId : (seller?.user_id || null);
+      }
+      
       const { error } = await supabase
         .from(tableName)
-        .update({ owner_id: ownerId })
+        .update({ owner_id: ownerIdToSave })
         .eq('id', id);
       if (error) throw error;
     },
@@ -843,7 +875,7 @@ export default function CustomerDetail() {
               <CardContent>
                 <div className="flex items-center gap-4">
                   <Select
-                    value={customer.owner_id || 'none'}
+                    value={selectValue}
                     onValueChange={(value) => assignOwnerMutation.mutate(value === 'none' ? null : value)}
                     disabled={assignOwnerMutation.isPending}
                   >
