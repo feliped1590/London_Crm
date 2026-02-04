@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MetricType } from '@/types/dashboard';
 import { formatCurrency } from '@/lib/formatters';
+import { useAuth } from '@/hooks/useAuth';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 
 const stageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
@@ -52,25 +54,44 @@ export interface MetricData {
 }
 
 export function useDashboardData() {
+  const { user } = useAuth();
+  const { isAdmin } = useModulePermissions();
+
   const { data: deals } = useQuery({
-    queryKey: ['dashboard-deals'],
+    queryKey: ['dashboard-deals', user?.id, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deals')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      // Non-admin users only see their own deals
+      if (!isAdmin && user?.id) {
+        query = query.eq('owner_id', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.id,
   });
 
   const { data: tasks } = useQuery({
-    queryKey: ['dashboard-tasks'],
+    queryKey: ['dashboard-tasks', user?.id, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tasks').select('*');
+      let query = supabase.from('tasks').select('*');
+      
+      // Non-admin users only see their own tasks
+      if (!isAdmin && user?.id) {
+        query = query.eq('assigned_to', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.id,
   });
 
   const { data: companiesCount } = useQuery({
@@ -96,21 +117,37 @@ export function useDashboardData() {
   });
 
   const { data: proposals } = useQuery({
-    queryKey: ['dashboard-proposals'],
+    queryKey: ['dashboard-proposals', user?.id, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase.from('proposals').select('*');
+      let query = supabase.from('proposals').select('*');
+      
+      // Non-admin users only see their own proposals
+      if (!isAdmin && user?.id) {
+        query = query.eq('created_by', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.id,
   });
 
   const { data: orders } = useQuery({
-    queryKey: ['dashboard-orders'],
+    queryKey: ['dashboard-orders', user?.id, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase.from('orders').select('*');
+      let query = supabase.from('orders').select('*');
+      
+      // Non-admin users only see their own orders
+      if (!isAdmin && user?.id) {
+        query = query.eq('created_by', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!user?.id,
   });
 
   const { data: whatsappMessages } = useQuery({

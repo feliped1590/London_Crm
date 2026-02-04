@@ -67,15 +67,18 @@ export default function Emails() {
   });
 
   const { data: emailLogs, isLoading: logsLoading } = useQuery({
-    queryKey: ['email_logs'],
+    queryKey: ['email_logs', user?.id],
     queryFn: async () => {
+      // Users only see their own sent emails
       const { data, error } = await supabase
         .from('email_logs')
         .select('*, contacts(first_name, last_name, email)')
+        .eq('sent_by', user?.id)
         .order('sent_at', { ascending: false });
       if (error) throw error;
       return data as EmailLog[];
     },
+    enabled: !!user?.id,
   });
 
   const { data: contacts } = useQuery({

@@ -34,6 +34,7 @@ import { useUnreadCount } from '@/hooks/useWhatsApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { UserProfileModal } from './UserProfileModal';
 
 interface NavItem {
   to: string;
@@ -181,19 +182,23 @@ export function AppSidebar() {
 
       {/* User section */}
       <div className="border-t border-sidebar-border p-2">
-        <div className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 mb-2",
-          !showLabels && "justify-center px-0"
-        )}>
-          <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-medium shrink-0">
-            {user?.email?.[0].toUpperCase() || 'U'}
-          </div>
-          {showLabels && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.email}</p>
+        <UserProfileModal>
+          <button
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 mb-2 w-full text-left hover:bg-sidebar-accent transition-colors cursor-pointer",
+              !showLabels && "justify-center px-0"
+            )}
+          >
+            <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-medium shrink-0">
+              {user?.email?.[0].toUpperCase() || 'U'}
             </div>
-          )}
-        </div>
+            {showLabels && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.email}</p>
+              </div>
+            )}
+          </button>
+        </UserProfileModal>
         <Button
           variant="ghost"
           onClick={handleSignOut}
