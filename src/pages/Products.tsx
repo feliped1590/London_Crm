@@ -22,6 +22,7 @@ import {
   unitMeasureOptions,
   materialOptions,
   colorOptions,
+  calcularFatorMilheiro,
 } from '@/types/products';
 
 type SortField = 'sku' | 'name' | 'category' | 'unit_price';
@@ -46,6 +47,8 @@ export default function Products() {
     category: '',
     unit_measure: 'un',
     unit_price: 0,
+    fator_kg: 0,
+    fator_milheiro: 0,
     material: '',
     color: '',
     width: 0,
@@ -53,6 +56,14 @@ export default function Products() {
     thickness: 0,
     active: true,
   });
+
+  // Recalcula o fator milheiro quando os valores mudam
+  const recalcularFatorMilheiro = (data: typeof formData) => {
+    if (data.fator_kg && data.width && data.length && data.thickness) {
+      return calcularFatorMilheiro(data.fator_kg, data.width, data.length, data.thickness);
+    }
+    return 0;
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -117,6 +128,12 @@ export default function Products() {
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Product>) => {
+      const fatorMilheiro = calcularFatorMilheiro(
+        data.fator_kg || 0,
+        data.width || 0,
+        data.length || 0,
+        data.thickness || 0
+      );
       const { error } = await supabase.from('products').insert({
         sku: data.sku!,
         name: data.name!,
@@ -124,6 +141,8 @@ export default function Products() {
         category: data.category,
         unit_measure: data.unit_measure,
         unit_price: data.unit_price,
+        fator_kg: data.fator_kg,
+        fator_milheiro: fatorMilheiro,
         material: data.material,
         color: data.color,
         width: data.width,
@@ -149,7 +168,16 @@ export default function Products() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Product> & { id: string }) => {
-      const { error } = await supabase.from('products').update(data).eq('id', id);
+      const fatorMilheiro = calcularFatorMilheiro(
+        data.fator_kg || 0,
+        data.width || 0,
+        data.length || 0,
+        data.thickness || 0
+      );
+      const { error } = await supabase.from('products').update({
+        ...data,
+        fator_milheiro: fatorMilheiro,
+      }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -186,6 +214,8 @@ export default function Products() {
       category: '',
       unit_measure: 'un',
       unit_price: 0,
+      fator_kg: 0,
+      fator_milheiro: 0,
       material: '',
       color: '',
       width: 0,
@@ -220,6 +250,8 @@ export default function Products() {
       category: product.category || '',
       unit_measure: product.unit_measure || 'un',
       unit_price: product.unit_price || 0,
+      fator_kg: product.fator_kg || 0,
+      fator_milheiro: product.fator_milheiro || 0,
       material: product.material || '',
       color: product.color || '',
       width: product.width || 0,
@@ -413,53 +445,121 @@ export default function Products() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="unit_price">Preço Unitário (R$)</Label>
-                  <Input
-                    id="unit_price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.unit_price}
-                    onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })}
-                  />
+                {/* Seção de Precificação */}
+                <div className="col-span-2 pt-2">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Precificação
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="unit_price">Preço Unitário (R$)</Label>
+                      <Input
+                        id="unit_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.unit_price}
+                        onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="fator_kg">Valor do Fator KG (R$/kg)</Label>
+                      <Input
+                        id="fator_kg"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.fator_kg || ''}
+                        onChange={(e) => {
+                          const newFatorKg = parseFloat(e.target.value) || 0;
+                          const newData = { ...formData, fator_kg: newFatorKg };
+                          newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                          setFormData(newData);
+                        }}
+                        placeholder="Valor por KG"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="width">Largura (mm)</Label>
-                  <Input
-                    id="width"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.width || ''}
-                    onChange={(e) => setFormData({ ...formData, width: parseFloat(e.target.value) || 0 })}
-                    placeholder="Em milímetros"
-                  />
+
+                {/* Seção de Dimensões */}
+                <div className="col-span-2 pt-2">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">Dimensões</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="width">Largura (mm)</Label>
+                      <Input
+                        id="width"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.width || ''}
+                        onChange={(e) => {
+                          const newWidth = parseFloat(e.target.value) || 0;
+                          const newData = { ...formData, width: newWidth };
+                          newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                          setFormData(newData);
+                        }}
+                        placeholder="Em milímetros"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="length">Comprimento (mm)</Label>
+                      <Input
+                        id="length"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.length || ''}
+                        onChange={(e) => {
+                          const newLength = parseFloat(e.target.value) || 0;
+                          const newData = { ...formData, length: newLength };
+                          newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                          setFormData(newData);
+                        }}
+                        placeholder="Em milímetros"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="thickness">Espessura (micras)</Label>
+                      <Input
+                        id="thickness"
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={formData.thickness || ''}
+                        onChange={(e) => {
+                          const newThickness = parseFloat(e.target.value) || 0;
+                          const newData = { ...formData, thickness: newThickness };
+                          newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                          setFormData(newData);
+                        }}
+                        placeholder="Em micras"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="length">Comprimento (mm)</Label>
-                  <Input
-                    id="length"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.length || ''}
-                    onChange={(e) => setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })}
-                    placeholder="Em milímetros"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="thickness">Espessura (micras)</Label>
-                  <Input
-                    id="thickness"
-                    type="number"
-                    step="0.001"
-                    min="0"
-                    value={formData.thickness || ''}
-                    onChange={(e) => setFormData({ ...formData, thickness: parseFloat(e.target.value) || 0 })}
-                    placeholder="Em micras"
-                  />
-                </div>
+
+                {/* Fator Milheiro calculado */}
+                {formData.fator_kg > 0 && formData.width > 0 && formData.length > 0 && formData.thickness > 0 && (
+                  <div className="col-span-2 p-3 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-muted-foreground">Fator Milheiro (calculado)</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          = Fator KG × Largura × Comprimento × Espessura / 1.000.000
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-2xl font-bold text-primary">
+                          {formData.fator_milheiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                        <p className="text-xs text-muted-foreground">por milheiro</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <Switch
                     id="active"

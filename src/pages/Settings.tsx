@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
@@ -24,6 +24,8 @@ import { SalesGoalsManager } from '@/components/settings/SalesGoalsManager';
 import { NotificationPreferencesManager } from '@/components/settings/NotificationPreferencesManager';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { AIAssistantConfig } from '@/components/settings/AIAssistantConfig';
+import { OrderApprovalRulesManager } from '@/components/settings/OrderApprovalRulesManager';
+import { PipelineAccessManager } from '@/components/settings/PipelineAccessManager';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -515,6 +517,14 @@ export default function Settings() {
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
             Notificações
+          </TabsTrigger>
+          <TabsTrigger value="order-approval" className="gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            Aprovação Pedidos
+          </TabsTrigger>
+          <TabsTrigger value="pipeline-access" className="gap-2">
+            <Shield className="h-4 w-4" />
+            Acesso Funis
           </TabsTrigger>
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
@@ -1115,6 +1125,14 @@ export default function Settings() {
 
         <TabsContent value="checklists" className="mt-6 space-y-6">
           <StageChecklistManager />
+        </TabsContent>
+
+        <TabsContent value="order-approval" className="mt-6 space-y-6">
+          <OrderApprovalRulesManager />
+        </TabsContent>
+
+        <TabsContent value="pipeline-access" className="mt-6 space-y-6">
+          <PipelineAccessManager />
         </TabsContent>
 
         {isDeveloper && (
