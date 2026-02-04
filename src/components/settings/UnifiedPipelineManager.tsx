@@ -133,11 +133,18 @@ export function UnifiedPipelineManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
       toast.success('Etapa criada com sucesso!');
       resetStageForm();
     },
-    onError: () => toast.error('Erro ao criar etapa'),
+    onError: (error: Error) => {
+      console.error('Create stage error:', error);
+      if (error.message?.includes('row-level security')) {
+        toast.error('Sem permissão. Apenas administradores podem criar etapas.');
+      } else {
+        toast.error('Erro ao criar etapa: ' + error.message);
+      }
+    },
   });
 
   const updateStageMutation = useMutation({
@@ -146,11 +153,18 @@ export function UnifiedPipelineManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
       toast.success('Etapa atualizada!');
       resetStageForm();
     },
-    onError: () => toast.error('Erro ao atualizar etapa'),
+    onError: (error: Error) => {
+      console.error('Update stage error:', error);
+      if (error.message?.includes('row-level security')) {
+        toast.error('Sem permissão. Apenas administradores podem editar etapas.');
+      } else {
+        toast.error('Erro ao atualizar etapa: ' + error.message);
+      }
+    },
   });
 
   const deleteStageMutation = useMutation({
@@ -159,10 +173,17 @@ export function UnifiedPipelineManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
       toast.success('Etapa excluída!');
     },
-    onError: () => toast.error('Erro ao excluir etapa'),
+    onError: (error: Error) => {
+      console.error('Delete stage error:', error);
+      if (error.message?.includes('row-level security')) {
+        toast.error('Sem permissão. Apenas administradores podem excluir etapas.');
+      } else {
+        toast.error('Erro ao excluir etapa: ' + error.message);
+      }
+    },
   });
 
   // Pipeline form handlers
