@@ -117,6 +117,54 @@ export type Database = {
           },
         ]
       }
+      admin_intervention_log: {
+        Row: {
+          action_type: string
+          admin_user_id: string
+          client_id: string | null
+          client_name: string | null
+          client_owner_id: string | null
+          client_owner_name: string | null
+          created_at: string
+          details: Json | null
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          id: string
+          justification: string
+        }
+        Insert: {
+          action_type: string
+          admin_user_id: string
+          client_id?: string | null
+          client_name?: string | null
+          client_owner_id?: string | null
+          client_owner_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          justification: string
+        }
+        Update: {
+          action_type?: string
+          admin_user_id?: string
+          client_id?: string | null
+          client_name?: string | null
+          client_owner_id?: string | null
+          client_owner_name?: string | null
+          created_at?: string
+          details?: Json | null
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          justification?: string
+        }
+        Relationships: []
+      }
       ai_assistant_configs: {
         Row: {
           created_at: string

@@ -569,7 +569,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       onSuccess?.();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Erro ao criar pedido');
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error(message || 'Erro ao criar pedido');
+      }
     },
   });
 
@@ -641,7 +647,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       onSuccess?.();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Erro ao atualizar pedido');
+      // Check if it's a portfolio governance error (trigger block)
+      const message = error?.message || '';
+      if (message.includes('Este cliente pertence ao vendedor')) {
+        toast.error(message, { duration: 6000 });
+      } else {
+        toast.error(message || 'Erro ao atualizar pedido');
+      }
     },
   });
 

@@ -26,6 +26,7 @@ import { AIAssistantConfig } from '@/components/settings/AIAssistantConfig';
 import { OrderApprovalRulesManager } from '@/components/settings/OrderApprovalRulesManager';
 import { UnifiedPipelineManager } from '@/components/settings/UnifiedPipelineManager';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
+import { AdminInterventionsViewer } from '@/components/settings/AdminInterventionsViewer';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -463,6 +464,12 @@ export default function Settings() {
             <Search className="h-4 w-4" />
             API Prospecção
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="interventions" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Intervenções
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -957,6 +964,12 @@ export default function Settings() {
         <TabsContent value="prospecting-api" className="mt-6 space-y-6">
           <ProspectingApiConfig />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="interventions" className="mt-6 space-y-6">
+            <AdminInterventionsViewer />
+          </TabsContent>
+        )}
 
         {isDeveloper && (
           <TabsContent value="ai-assistant" className="mt-6 space-y-6">
