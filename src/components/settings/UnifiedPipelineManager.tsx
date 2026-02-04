@@ -551,14 +551,14 @@ export function UnifiedPipelineManager() {
                   <div>
                     <Label htmlFor="stage-pipeline">Vincular ao Funil</Label>
                     <Select
-                      value={stageFormData.pipeline_id}
-                      onValueChange={(v) => setStageFormData({ ...stageFormData, pipeline_id: v })}
+                      value={stageFormData.pipeline_id || "__GLOBAL__"}
+                      onValueChange={(v) => setStageFormData({ ...stageFormData, pipeline_id: v === "__GLOBAL__" ? "" : v })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione um funil (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem vínculo (global)</SelectItem>
+                        <SelectItem value="__GLOBAL__">Sem vínculo (global)</SelectItem>
                         {allPipelines?.map((p) => (
                           <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                         ))}
