@@ -9,6 +9,8 @@ import { DailySummary } from '@/components/today/DailySummary';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 function getGreeting(): { text: string; icon: typeof Sun } {
   const hour = new Date().getHours();
@@ -21,12 +23,27 @@ export default function Today() {
   const { user } = useAuth();
   const { todayTasks, stagnantDeals, summary, upcomingTasks, isLoading } = useTodayData();
   
+  // Fetch user profile to get the full name
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user?.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+  
   const today = new Date();
   const greeting = getGreeting();
   const GreetingIcon = greeting.icon;
   
-  // Get user's first name from email
-  const userName = user?.email?.split('@')[0] || 'Usuário';
+  // Use full_name from profile, or fallback to email prefix formatted
+  const userName = userProfile?.full_name || user?.email?.split('@')[0] || 'Usuário';
   const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
   return (

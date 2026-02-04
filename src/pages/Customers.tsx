@@ -52,6 +52,9 @@ interface CustomerListItem {
   tipo_cliente: 'PJ' | 'PF';
   source: 'crm' | 'erp';
   active: boolean;
+  // Owner info
+  owner_id: string | null;
+  owner_name: string | null;
   // Primary contact info
   primary_contact: {
     id: string;
@@ -64,9 +67,12 @@ interface CustomerListItem {
   deals: CustomerDeal[];
   last_activity_at: string | null;
   contacts_count: number;
+  created_at: string | null;
 }
 
 type StatusFilter = 'active' | 'inactive' | 'all';
+type SortField = 'name' | 'owner' | 'created_at' | 'last_activity';
+type SortDirection = 'asc' | 'desc';
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -75,6 +81,8 @@ export default function Customers() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<CustomerListItem | null>(null);
 
@@ -90,6 +98,29 @@ export default function Customers() {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearch]);
+
+  // Fetch profiles for owner names
+  const { data: profiles } = useQuery({
+    queryKey: ['profiles-for-customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Create a map of user IDs to names
+  const profilesMap = useMemo(() => {
+    const map = new Map<string, string>();
+    profiles?.forEach(p => {
+      if (p.id && p.full_name) {
+        map.set(p.id, p.full_name);
+      }
+    });
+    return map;
+  }, [profiles]);
 
   // Fetch companies with contacts and deals
   const { data: customers, isLoading: loadingCompanies, refetch, isFetching } = useQuery({
@@ -111,6 +142,8 @@ export default function Customers() {
           address,
           active,
           custom_fields,
+          owner_id,
+          created_at,
           contacts(id, first_name, last_name, job_title, mobile, email),
           deals(id, name, stage, value),
           activities(created_at)
@@ -118,55 +151,60 @@ export default function Customers() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      // Transform to CustomerListItem format
-      const customerList: CustomerListItem[] = companies?.map((company: any) => {
-        const contacts = company.contacts || [];
-        const primaryContact = contacts[0]; // First contact is primary for now
-        
-        // Get the most recent activity
-        const lastActivity = company.activities?.length > 0
-          ? company.activities.sort((a: any, b: any) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )[0]?.created_at
-          : null;
-
-        // Determine tipo_cliente from custom_fields or presence of CNPJ
-        const tipoCliente = (company.custom_fields as any)?.tipo_cliente || 
-          (company.cnpj ? 'PJ' : 'PJ');
-
-        return {
-          id: company.id,
-          name: company.fantasia || company.name,
-          fantasia: company.fantasia,
-          cnpj: company.cnpj,
-          phone: company.phone,
-          email: company.email,
-          industry: company.industry,
-          city: company.city,
-          state: company.state,
-          address: company.address,
-          tipo_cliente: tipoCliente,
-          source: 'crm' as const,
-          active: company.active !== false, // Default to true if null
-          primary_contact: primaryContact ? {
-            id: primaryContact.id,
-            name: `${primaryContact.first_name}${primaryContact.last_name ? ' ' + primaryContact.last_name : ''}`,
-            job_title: primaryContact.job_title,
-            mobile: primaryContact.mobile,
-            email: primaryContact.email,
-          } : null,
-          deals: company.deals || [],
-          last_activity_at: lastActivity,
-          contacts_count: contacts.length,
-        };
-      }) || [];
-
-      return customerList;
+      return companies;
     },
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  // Transform companies to CustomerListItem format
+  const transformedCustomers = useMemo(() => {
+    if (!customers) return [];
+    
+    return customers.map((company: any) => {
+      const contacts = company.contacts || [];
+      const primaryContact = contacts[0];
+      
+      const lastActivity = company.activities?.length > 0
+        ? company.activities.sort((a: any, b: any) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )[0]?.created_at
+        : null;
+
+      const tipoCliente = (company.custom_fields as any)?.tipo_cliente || 
+        (company.cnpj ? 'PJ' : 'PJ');
+
+      return {
+        id: company.id,
+        name: company.fantasia || company.name,
+        fantasia: company.fantasia,
+        cnpj: company.cnpj,
+        phone: company.phone,
+        email: company.email,
+        industry: company.industry,
+        city: company.city,
+        state: company.state,
+        address: company.address,
+        tipo_cliente: tipoCliente,
+        source: 'crm' as const,
+        active: company.active !== false,
+        owner_id: company.owner_id,
+        owner_name: company.owner_id ? profilesMap.get(company.owner_id) || null : null,
+        primary_contact: primaryContact ? {
+          id: primaryContact.id,
+          name: `${primaryContact.first_name}${primaryContact.last_name ? ' ' + primaryContact.last_name : ''}`,
+          job_title: primaryContact.job_title,
+          mobile: primaryContact.mobile,
+          email: primaryContact.email,
+        } : null,
+        deals: company.deals || [],
+        last_activity_at: lastActivity,
+        contacts_count: contacts.length,
+        created_at: company.created_at,
+      } as CustomerListItem;
+    });
+  }, [customers, profilesMap]);
+
 
   // Fetch crm_clients (ERP synced)
   const { data: crmClients, isLoading: loadingErp } = useQuery({
@@ -198,10 +236,10 @@ export default function Customers() {
   const allCustomers = useMemo(() => {
     // Create set of existing company CNPJs to avoid duplicates
     const companyCnpjs = new Set(
-      customers?.map(c => c.cnpj?.replace(/\D/g, '')).filter(Boolean)
+      transformedCustomers?.map(c => c.cnpj?.replace(/\D/g, '')).filter(Boolean)
     );
     
-    const companiesList = customers || [];
+    const companiesList = transformedCustomers || [];
     
     // Map ERP clients that don't exist in companies
     const erpClients: CustomerListItem[] = (crmClients || [])
@@ -210,7 +248,6 @@ export default function Customers() {
         return !companyCnpjs.has(cleanDoc);
       })
       .map(c => {
-        // Extract address from raw_data if available
         const rawData = c.raw_data as any;
         const address = rawData?.loc_endereco 
           ? `${rawData.loc_endereco}${rawData.loc_numero ? ', ' + rawData.loc_numero : ''}`
@@ -231,16 +268,19 @@ export default function Customers() {
           address,
           tipo_cliente: (c.tipo_pessoa === 'PF' ? 'PF' : 'PJ') as 'PJ' | 'PF',
           source: 'erp' as const,
-          active: true, // ERP clients are always considered active
+          active: true,
+          owner_id: null,
+          owner_name: null,
           primary_contact: null,
           deals: [],
           last_activity_at: null,
           contacts_count: 0,
+          created_at: null,
         };
       });
 
     return [...companiesList, ...erpClients];
-  }, [customers, crmClients]);
+  }, [transformedCustomers, crmClients]);
 
   const isLoading = loadingCompanies || loadingErp;
 

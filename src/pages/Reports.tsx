@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { DashboardWidget } from '@/components/reports/DashboardWidget';
 import { AddWidgetDialog } from '@/components/reports/AddWidgetDialog';
@@ -74,8 +75,12 @@ const DEFAULT_WIDGETS: WidgetType[] = [
 
 export default function Reports() {
   const { user } = useAuth();
+  const { isAdmin, canAccess } = useModulePermissions();
   const queryClient = useQueryClient();
   const { getMetricData } = useDashboardData();
+  
+  // Check if user can access BI Advanced (admin only or specific permission)
+  const canAccessBI = isAdmin || canAccess('bi_avancado');
   
   const [widgets, setWidgets] = useState<WidgetType[]>(DEFAULT_WIDGETS);
   const [isEditing, setIsEditing] = useState(false);
@@ -243,10 +248,12 @@ export default function Reports() {
             <TrendingUp className="h-4 w-4" />
             Funil de Vendas
           </TabsTrigger>
-          <TabsTrigger value="bi" className="gap-2">
-            <Brain className="h-4 w-4" />
-            BI Avançado
-          </TabsTrigger>
+          {canAccessBI && (
+            <TabsTrigger value="bi" className="gap-2">
+              <Brain className="h-4 w-4" />
+              BI Avançado
+            </TabsTrigger>
+          )}
           <TabsTrigger value="dashboard" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard Personalizado
@@ -269,10 +276,12 @@ export default function Reports() {
           </div>
         </TabsContent>
 
-        {/* BI Advanced Tab */}
-        <TabsContent value="bi" className="space-y-6">
-          <BIAdvancedTab />
-        </TabsContent>
+        {/* BI Advanced Tab - Only for authorized users */}
+        {canAccessBI && (
+          <TabsContent value="bi" className="space-y-6">
+            <BIAdvancedTab />
+          </TabsContent>
+        )}
 
         {/* Custom Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">

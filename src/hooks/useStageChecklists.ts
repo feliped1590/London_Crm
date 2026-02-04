@@ -171,12 +171,20 @@ export function useChecklistMutations() {
   return { createItem, updateItem, deleteItem, completeItem, uncompleteItem };
 }
 
-export async function getPendingChecklistItems(dealId: string, stage: DealStage, pipelineId?: string | null): Promise<ChecklistItem[]> {
-  // Get checklist items for this stage
+/**
+ * Get pending required checklist items for a deal at a specific stage.
+ * This checks the CURRENT stage (from_stage) to validate if the deal can move OUT of it.
+ * @param dealId - The deal ID
+ * @param fromStage - The stage the deal is LEAVING (current stage)
+ * @param pipelineId - Optional pipeline ID for pipeline-specific checklists
+ */
+export async function getPendingChecklistItems(dealId: string, fromStage: DealStage, pipelineId?: string | null): Promise<ChecklistItem[]> {
+  // Get required checklist items for the stage the deal is LEAVING
+  // These items must be completed before the deal can move to a new stage
   let query = supabase
     .from('stage_checklist_items')
     .select('*')
-    .eq('stage', stage)
+    .eq('stage', fromStage) // Check the FROM stage (current stage being exited)
     .eq('is_required', true)
     .order('sort_order');
 
@@ -200,6 +208,6 @@ export async function getPendingChecklistItems(dealId: string, stage: DealStage,
 
   const completedIds = new Set(completions?.map(c => c.checklist_item_id) || []);
   
-  // Filter out completed items
+  // Filter out completed items - return only pending required items
   return (items as ChecklistItem[]).filter(item => !completedIds.has(item.id));
 }

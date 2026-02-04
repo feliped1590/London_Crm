@@ -15,6 +15,7 @@ import { Plus, Search, CheckSquare, Calendar, Clock, Building2, User, Target, Re
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
 
@@ -57,18 +58,29 @@ export default function Tasks() {
     deal_id: null,
   });
 
+  // Check if user is admin
+  const { isAdmin } = useModulePermissions();
+
   const { data: tasks, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['tasks'],
+    queryKey: ['tasks', user?.id, isAdmin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('tasks')
         .select('*, companies(name), contacts(first_name, last_name), deals(name)')
         .order('due_date', { ascending: true, nullsFirst: false });
+      
+      // Non-admin users only see their own tasks
+      if (!isAdmin && user?.id) {
+        query = query.eq('assigned_to', user.id);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
     staleTime: 0,
     refetchOnMount: 'always',
+    enabled: !!user?.id,
   });
 
   const handleRefresh = async () => {
