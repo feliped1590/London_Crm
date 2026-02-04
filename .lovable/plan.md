@@ -1,82 +1,74 @@
 
-# Plano: Restaurar Botao "Criar nova empresa/contato" no SearchableSelect
+
+# Plano: Corrigir Botoes de Acoes Rapidas Submetendo Formulario do Deal
 
 ## Problema Identificado
 
-O botao "Criar nova empresa" e "Criar novo contato" nao estao visiveis no formulario "Novo Negocio" do Pipeline. Analisando o componente `SearchableSelect`, identifiquei que o botao esta em um `CommandGroup` separado que pode nao estar sendo renderizado corretamente ou esta fora da area visivel do scroll.
+Ao clicar em "Criar Tarefa" ou "Criar Pedido" nas Acoes Rapidas do Pipeline, o sistema:
+1. Abre o dialog correspondente
+2. Imediatamente submete o formulario do Deal (mostrando "Negocio atualizado!")
+3. Fecha tudo via `resetForm()`
 
-## Causa Raiz
+**Causa raiz**: Os botoes no componente `DealQuickActions` nao possuem `type="button"`. Em HTML, botoes sem `type` dentro de um `<form>` assumem `type="submit"` por padrao, o que dispara o submit do formulario pai.
 
-O componente `SearchableSelect` tem o botao "Criar novo" em dois lugares:
+## Localizacao no Codigo
 
-1. **Dentro do `CommandEmpty`** (linhas 92-108) - aparece quando nao ha resultados
-2. **Em um `CommandGroup` separado** (linhas 156-170) - aparece quando ha resultados
+**Arquivo:** `src/components/pipeline/DealQuickActions.tsx`
 
-O problema e que o segundo grupo pode:
-- Estar fora da area de scroll (max-h-[300px])
-- Ter problema de renderizacao com o componente `cmdk`
+O componente `DealQuickActions` e renderizado dentro do `<form>` de edicao do Deal em `Pipeline.tsx` (linha 723-859), especificamente nas linhas 818-834.
 
-## Solucao Proposta
+## Alteracoes Necessarias
 
-Mover o botao "Criar novo" para **dentro do mesmo `CommandGroup`** das opcoes, apos o ultimo item da lista. Isso garante que:
-1. O botao sempre aparece junto com as opcoes
-2. Nao ha problemas de grupos separados
-3. O scroll inclui naturalmente o botao
+Adicionar `type="button"` a todos os botoes do componente `DealQuickActions` para prevenir o comportamento de submit:
 
-## Alteracoes Tecnicas
-
-**Arquivo:** `src/components/ui/searchable-select.tsx`
-
-### Antes (estrutura atual):
+### Botao WhatsApp (linhas 128-138)
 ```tsx
-<CommandList>
-  <CommandEmpty>...</CommandEmpty>
-  <CommandGroup>
-    {/* opcao "Nenhum" */}
-    {/* lista de opcoes */}
-  </CommandGroup>
-  {onCreateNew && filteredOptions.length > 0 && (
-    <CommandGroup>
-      <CommandItem value="__create__">...</CommandItem>
-    </CommandGroup>
-  )}
-</CommandList>
+<Button
+  type="button"  // ADICIONAR
+  variant="outline"
+  size="sm"
+  onClick={handleWhatsAppClick}
+  disabled={!hasWhatsApp}
+  className="gap-2"
+  title={hasWhatsApp ? 'Enviar WhatsApp' : 'Contato sem telefone'}
+>
 ```
 
-### Depois (estrutura corrigida):
+### Botao Criar Tarefa (linhas 141-149)
 ```tsx
-<CommandList>
-  <CommandEmpty>...</CommandEmpty>
-  <CommandGroup>
-    {/* opcao "Nenhum" */}
-    {/* lista de opcoes */}
-    {/* Botao criar novo - DENTRO do mesmo grupo */}
-    {onCreateNew && (
-      <CommandItem value="__create__">...</CommandItem>
-    )}
-  </CommandGroup>
-</CommandList>
+<Button
+  type="button"  // ADICIONAR
+  variant="outline"
+  size="sm"
+  onClick={() => setTaskDialogOpen(true)}
+  className="gap-2"
+>
 ```
 
-## Mudancas Especificas
-
-1. **Remover o segundo `CommandGroup`** (linhas 156-170)
-2. **Mover o `CommandItem` de criacao** para dentro do primeiro `CommandGroup`, apos a lista de opcoes
-3. **Ajustar a condicao**: Remover `filteredOptions.length > 0` pois o botao deve aparecer sempre que `onCreateNew` estiver definido
-4. **Adicionar separador visual**: Usar `border-t` para separar visualmente o botao das opcoes
+### Botao Criar Pedido (linhas 152-162)
+```tsx
+<Button
+  type="button"  // ADICIONAR
+  variant="outline"
+  size="sm"
+  onClick={() => setOrderDialogOpen(true)}
+  disabled={!deal.company_id}
+  className="gap-2"
+  title={deal.company_id ? 'Criar Pedido' : 'Negocio sem empresa vinculada'}
+>
+```
 
 ## Resultado Esperado
 
-| Cenario | Comportamento |
-|---------|---------------|
-| Lista vazia (busca sem resultado) | Botao aparece no `CommandEmpty` |
-| Lista com opcoes | Botao aparece no final da lista, dentro do mesmo grupo |
-| Scroll necessario | Botao faz parte do scroll e sempre pode ser alcancado |
+| Acao | Antes | Depois |
+|------|-------|--------|
+| Clicar "Criar Tarefa" | Abre dialog + fecha tudo | Abre dialog de tarefa normalmente |
+| Clicar "Criar Pedido" | Abre dialog + fecha tudo | Abre dialog de pedido normalmente |
+| Clicar "WhatsApp" | Abre WhatsApp + fecha tudo | Abre WhatsApp ou troca de aba |
 
-## Beneficios
+## Impacto
 
-- Resolve o problema de visibilidade do botao
-- Simplifica a estrutura do componente
-- Mantem a funcionalidade existente
-- Melhora a experiencia do usuario ao criar empresas/contatos rapidamente
+- Correcao simples de 3 linhas
+- Sem efeitos colaterais
+- Restaura o comportamento esperado das acoes rapidas
 
