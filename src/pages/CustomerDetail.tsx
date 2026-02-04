@@ -43,6 +43,8 @@ import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { DealStageBadges } from '@/components/DealStageBadges';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
+import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
+import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import type { Json } from '@/integrations/supabase/types';
 
 const industries = [
@@ -116,10 +118,15 @@ export default function CustomerDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { logIntervention } = usePortfolioGovernance();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  
+  // State for owner change intervention modal
+  const [showOwnerInterventionModal, setShowOwnerInterventionModal] = useState(false);
+  const [pendingOwnerChange, setPendingOwnerChange] = useState<string | null>(null);
   
   // Company form state
   const [companyForm, setCompanyForm] = useState({
@@ -876,7 +883,18 @@ export default function CustomerDetail() {
                 <div className="flex items-center gap-4">
                   <Select
                     value={selectValue}
-                    onValueChange={(value) => assignOwnerMutation.mutate(value === 'none' ? null : value)}
+                    onValueChange={(value) => {
+                      const newProfileId = value === 'none' ? null : value;
+                      
+                      // Se já existe um owner diferente do usuário atual, requer justificativa
+                      if (currentOwner && currentOwner.user_id !== user?.id) {
+                        setPendingOwnerChange(newProfileId);
+                        setShowOwnerInterventionModal(true);
+                      } else {
+                        // Sem owner atual ou é o próprio usuário - prosseguir direto
+                        assignOwnerMutation.mutate(newProfileId);
+                      }
+                    }}
                     disabled={assignOwnerMutation.isPending}
                   >
                     <SelectTrigger className="w-[300px]">
@@ -900,6 +918,53 @@ export default function CustomerDetail() {
               </CardContent>
             </Card>
           )}
+          
+          {/* Modal de justificativa para alteração de vendedor responsável */}
+          <AdminInterventionModal
+            open={showOwnerInterventionModal}
+            onOpenChange={(open) => {
+              setShowOwnerInterventionModal(open);
+              if (!open) setPendingOwnerChange(null);
+            }}
+            clientName={customer?.fantasia || customer?.name || 'Cliente'}
+            clientOwnerName={currentOwner?.full_name || 'Vendedor atual'}
+            actionDescription={`alterar o vendedor responsável de "${currentOwner?.full_name || 'atual'}" para "${
+              pendingOwnerChange 
+                ? sellers?.find(s => s.id === pendingOwnerChange)?.full_name || 'Nenhum' 
+                : 'Nenhum'
+            }"`}
+            onConfirm={async (justification) => {
+              try {
+                // Registrar intervenção administrativa
+                await logIntervention({
+                  actionType: 'CHANGE_OWNER',
+                  entityType: 'company',
+                  entityId: id || '',
+                  entityName: customer?.name,
+                  clientId: id,
+                  clientName: customer?.name,
+                  clientOwnerId: currentOwner?.user_id,
+                  clientOwnerName: currentOwner?.full_name,
+                  justification,
+                  details: {
+                    previousOwnerId: currentOwner?.user_id,
+                    previousOwnerName: currentOwner?.full_name,
+                    newOwnerId: pendingOwnerChange ? sellers?.find(s => s.id === pendingOwnerChange)?.user_id : null,
+                    newOwnerName: pendingOwnerChange ? sellers?.find(s => s.id === pendingOwnerChange)?.full_name : null,
+                    source: customer?.source,
+                  }
+                });
+                
+                // Executar a alteração
+                await assignOwnerMutation.mutateAsync(pendingOwnerChange);
+                setShowOwnerInterventionModal(false);
+                setPendingOwnerChange(null);
+              } catch (error) {
+                toast.error('Erro ao registrar intervenção');
+              }
+            }}
+            isLoading={assignOwnerMutation.isPending}
+          />
         </TabsContent>
 
         {/* Tab: Contatos */}
