@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
@@ -23,6 +23,7 @@ import { PipelinesManager } from '@/components/settings/PipelinesManager';
 import { SalesGoalsManager } from '@/components/settings/SalesGoalsManager';
 import { NotificationPreferencesManager } from '@/components/settings/NotificationPreferencesManager';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
+import { AIAssistantConfig } from '@/components/settings/AIAssistantConfig';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -112,6 +113,21 @@ export default function Settings() {
       const { data, error } = await supabase.rpc('has_role', {
         _user_id: user.id,
         _role: 'admin'
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Check if current user is developer
+  const { data: isDeveloper } = useQuery({
+    queryKey: ['is_developer', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'desenvolvedor' as any
       });
       if (error) throw error;
       return data as boolean;
@@ -500,6 +516,12 @@ export default function Settings() {
             <Bell className="h-4 w-4" />
             Notificações
           </TabsTrigger>
+          {isDeveloper && (
+            <TabsTrigger value="ai-assistant" className="gap-2">
+              <Bot className="h-4 w-4" />
+              Assistente IA
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="custom-fields" className="mt-6 space-y-6">
@@ -1094,6 +1116,12 @@ export default function Settings() {
         <TabsContent value="checklists" className="mt-6 space-y-6">
           <StageChecklistManager />
         </TabsContent>
+
+        {isDeveloper && (
+          <TabsContent value="ai-assistant" className="mt-6 space-y-6">
+            <AIAssistantConfig />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

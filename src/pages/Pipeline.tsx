@@ -470,13 +470,16 @@ export default function Pipeline() {
     }
     
     // Check for pending checklist items before allowing stage change
+    // Use the deal's pipeline_id, or fall back to default pipeline
+    const effectivePipelineId = deal.pipeline_id || defaultPipeline?.id || null;
+    
     try {
-      const pendingItems = await getPendingChecklistItems(dealId, deal.stage, deal.pipeline_id);
+      const pendingItems = await getPendingChecklistItems(dealId, deal.stage, effectivePipelineId);
       
       if (pendingItems.length > 0) {
         // Open checklist validation modal
         setChecklistModalData({
-          deal: { id: deal.id, name: deal.name, stage: deal.stage, pipeline_id: deal.pipeline_id },
+          deal: { id: deal.id, name: deal.name, stage: deal.stage, pipeline_id: effectivePipelineId },
           targetStage: stage,
           pendingItems,
         });
@@ -696,6 +699,8 @@ export default function Pipeline() {
                           placeholder="Buscar empresa..."
                           searchPlaceholder="Nome ou CNPJ..."
                           emptyMessage="Nenhuma empresa encontrada."
+                          onCreateNew={() => setQuickCreateCompanyOpen(true)}
+                          createNewLabel="Criar nova empresa"
                         />
                       </div>
                       <div>
@@ -707,6 +712,8 @@ export default function Pipeline() {
                           placeholder="Buscar contato..."
                           searchPlaceholder="Nome ou CPF..."
                           emptyMessage="Nenhum contato encontrado."
+                          onCreateNew={() => setQuickCreateContactOpen(true)}
+                          createNewLabel="Criar novo contato"
                         />
                       </div>
                       <div className="col-span-2">

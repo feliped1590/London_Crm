@@ -106,7 +106,7 @@ export default function Customers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name');
+        .select('user_id, full_name');
       if (error) throw error;
       return data;
     },
@@ -116,8 +116,8 @@ export default function Customers() {
   const profilesMap = useMemo(() => {
     const map = new Map<string, string>();
     profiles?.forEach(p => {
-      if (p.id && p.full_name) {
-        map.set(p.id, p.full_name);
+      if (p.user_id && p.full_name) {
+        map.set(p.user_id, p.full_name);
       }
     });
     return map;

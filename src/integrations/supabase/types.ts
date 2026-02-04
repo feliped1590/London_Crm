@@ -117,6 +117,33 @@ export type Database = {
           },
         ]
       }
+      ai_assistant_configs: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          prompt: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          prompt?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           context: Json
