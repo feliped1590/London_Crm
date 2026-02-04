@@ -126,6 +126,7 @@ export function DealQuickActions({ deal, onWhatsAppClick }: DealQuickActionsProp
       <div className="flex items-center gap-2 flex-wrap">
         {/* WhatsApp Button */}
         <Button
+          type="button"
           variant="outline"
           size="sm"
           onClick={handleWhatsAppClick}
@@ -139,6 +140,7 @@ export function DealQuickActions({ deal, onWhatsAppClick }: DealQuickActionsProp
 
         {/* Create Task Button */}
         <Button
+          type="button"
           variant="outline"
           size="sm"
           onClick={() => setTaskDialogOpen(true)}
@@ -150,6 +152,7 @@ export function DealQuickActions({ deal, onWhatsAppClick }: DealQuickActionsProp
 
         {/* Create Order Button */}
         <Button
+          type="button"
           variant="outline"
           size="sm"
           onClick={() => setOrderDialogOpen(true)}
