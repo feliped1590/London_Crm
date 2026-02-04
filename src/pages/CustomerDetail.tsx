@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
@@ -103,6 +104,7 @@ interface UnifiedCustomer {
   is_matriz?: boolean;
   last_reviewed_at?: string | null;
   active?: boolean;
+  owner_id?: string | null;
   // Metadados
   source: 'crm' | 'erp';
   contacts?: Contact[];
@@ -113,6 +115,7 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useModulePermissions();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
@@ -252,6 +255,41 @@ export default function CustomerDetail() {
       return data;
     },
     enabled: !!id && customer?.source === 'crm',
+  });
+
+  // Fetch sellers for owner assignment (admin only)
+  const { data: sellers } = useQuery({
+    queryKey: ['sellers-for-assignment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .order('full_name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isAdmin,
+  });
+
+  // Get current owner name
+  const currentOwner = sellers?.find(s => s.id === customer?.owner_id);
+
+  // Assign owner mutation
+  const assignOwnerMutation = useMutation({
+    mutationFn: async (ownerId: string | null) => {
+      const { error } = await supabase
+        .from('companies')
+        .update({ owner_id: ownerId })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', id] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Vendedor responsável atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar vendedor'),
   });
 
   // Update company mutation (only for CRM customers)
@@ -786,6 +824,47 @@ export default function CustomerDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Admin: Assign seller */}
+          {isAdmin && !isErpCustomer && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Vendedor Responsável
+                </CardTitle>
+                <CardDescription>
+                  Vincule este cliente a um vendedor da equipe
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <Select
+                    value={customer.owner_id || 'none'}
+                    onValueChange={(value) => assignOwnerMutation.mutate(value === 'none' ? null : value)}
+                    disabled={assignOwnerMutation.isPending}
+                  >
+                    <SelectTrigger className="w-[300px]">
+                      <SelectValue placeholder="Selecione um vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum vendedor</SelectItem>
+                      {sellers?.map((seller) => (
+                        <SelectItem key={seller.id} value={seller.id}>
+                          {seller.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {currentOwner && (
+                    <span className="text-sm text-muted-foreground">
+                      Responsável atual: <span className="font-medium">{currentOwner.full_name}</span>
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab: Contatos */}
