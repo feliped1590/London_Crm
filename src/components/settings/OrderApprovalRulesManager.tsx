@@ -1,16 +1,18 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, ArrowRight, Shield, AlertCircle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Pencil, ArrowRight, Shield, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { orderStatusConfig } from '@/types/products';
 
@@ -35,13 +37,26 @@ const ROLE_OPTIONS = [
   { value: 'atendente', label: 'Atendente' },
 ];
 
+const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
+  { value: 'pendente', label: 'Pendente' },
+  { value: 'em_producao', label: 'Em Produção' },
+  { value: 'produzido', label: 'Produzido' },
+  { value: 'faturado', label: 'Faturado' },
+  { value: 'entregue', label: 'Entregue' },
+  { value: 'cancelado', label: 'Cancelado' },
+];
+
 export function OrderApprovalRulesManager() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<ApprovalRule | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    from_status: 'pendente' as OrderStatus,
+    to_status: 'em_producao' as OrderStatus,
     required_role: 'admin',
     requires_justification: false,
     is_active: true,
@@ -57,6 +72,26 @@ export function OrderApprovalRulesManager() {
       if (error) throw error;
       return data as ApprovalRule[];
     },
+  });
+
+  const createRuleMutation = useMutation({
+    mutationFn: async (data: Omit<ApprovalRule, 'id' | 'created_at' | 'sort_order'>) => {
+      const maxSortOrder = rules?.reduce((max, r) => Math.max(max, r.sort_order), 0) || 0;
+      const { error } = await supabase
+        .from('order_approval_rules')
+        .insert({
+          ...data,
+          sort_order: maxSortOrder + 1,
+          created_by: user?.id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order_approval_rules'] });
+      toast.success('Regra criada com sucesso!');
+      resetForm();
+    },
+    onError: () => toast.error('Erro ao criar regra'),
   });
 
   const updateRuleMutation = useMutation({
@@ -75,23 +110,44 @@ export function OrderApprovalRulesManager() {
     onError: () => toast.error('Erro ao atualizar regra'),
   });
 
+  const deleteRuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('order_approval_rules')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['order_approval_rules'] });
+      toast.success('Regra excluída!');
+    },
+    onError: () => toast.error('Erro ao excluir regra'),
+  });
+
   const resetForm = () => {
     setFormData({
       name: '',
       description: '',
+      from_status: 'pendente',
+      to_status: 'em_producao',
       required_role: 'admin',
       requires_justification: false,
       is_active: true,
     });
     setEditingRule(null);
+    setIsCreating(false);
     setIsDialogOpen(false);
   };
 
   const handleEdit = (rule: ApprovalRule) => {
     setEditingRule(rule);
+    setIsCreating(false);
     setFormData({
       name: rule.name,
       description: rule.description || '',
+      from_status: rule.from_status,
+      to_status: rule.to_status,
       required_role: rule.required_role,
       requires_justification: rule.requires_justification,
       is_active: rule.is_active,
@@ -99,9 +155,34 @@ export function OrderApprovalRulesManager() {
     setIsDialogOpen(true);
   };
 
+  const handleCreate = () => {
+    setEditingRule(null);
+    setIsCreating(true);
+    setFormData({
+      name: '',
+      description: '',
+      from_status: 'pendente',
+      to_status: 'em_producao',
+      required_role: 'admin',
+      requires_justification: false,
+      is_active: true,
+    });
+    setIsDialogOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingRule) {
+    if (isCreating) {
+      createRuleMutation.mutate({
+        name: formData.name,
+        description: formData.description || null,
+        from_status: formData.from_status,
+        to_status: formData.to_status,
+        required_role: formData.required_role,
+        requires_justification: formData.requires_justification,
+        is_active: formData.is_active,
+      });
+    } else if (editingRule) {
       updateRuleMutation.mutate({ id: editingRule.id, ...formData });
     }
   };
@@ -126,19 +207,27 @@ export function OrderApprovalRulesManager() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="h-5 w-5" />
-          Regras de Aprovação de Pedidos
-        </CardTitle>
-        <CardDescription>
-          Configure quais perfis podem realizar cada transição de status nos pedidos
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Regras de Aprovação de Pedidos
+            </CardTitle>
+            <CardDescription>
+              Configure quais perfis podem realizar cada transição de status nos pedidos
+            </CardDescription>
+          </div>
+          <Button className="gap-2" onClick={handleCreate}>
+            <Plus className="h-4 w-4" />
+            Nova Regra
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg mb-4">
           <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           <p className="text-sm text-muted-foreground">
-            As transições de status são pré-definidas. Você pode configurar qual perfil tem permissão para cada transição 
+            Configure qual perfil tem permissão para cada transição de status
             e se é necessário justificativa para executá-la.
           </p>
         </div>
@@ -150,7 +239,7 @@ export function OrderApprovalRulesManager() {
               <TableHead>Perfil Necessário</TableHead>
               <TableHead>Justificativa</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[80px]">Ações</TableHead>
+              <TableHead className="w-[100px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,12 +247,12 @@ export function OrderApprovalRulesManager() {
               <TableRow key={rule.id} className={!rule.is_active ? 'opacity-50' : ''}>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={orderStatusConfig[rule.from_status]?.color.replace('bg-', 'border-')}>
-                      {orderStatusConfig[rule.from_status]?.label}
+                    <Badge variant="outline">
+                      {orderStatusConfig[rule.from_status]?.label || rule.from_status}
                     </Badge>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <Badge variant="outline" className={orderStatusConfig[rule.to_status]?.color.replace('bg-', 'border-')}>
-                      {orderStatusConfig[rule.to_status]?.label}
+                    <Badge variant="outline">
+                      {orderStatusConfig[rule.to_status]?.label || rule.to_status}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{rule.name}</p>
@@ -175,7 +264,7 @@ export function OrderApprovalRulesManager() {
                 </TableCell>
                 <TableCell>
                   {rule.requires_justification ? (
-                    <Badge variant="outline" className="text-amber-600 border-amber-300">
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-600 dark:text-amber-400">
                       Obrigatória
                     </Badge>
                   ) : (
@@ -190,13 +279,44 @@ export function OrderApprovalRulesManager() {
                   />
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEdit(rule)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleEdit(rule)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir regra?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta ação não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteRuleMutation.mutate(rule.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -206,10 +326,72 @@ export function OrderApprovalRulesManager() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Editar Regra de Aprovação</DialogTitle>
+              <DialogTitle>{isCreating ? 'Nova Regra de Aprovação' : 'Editar Regra de Aprovação'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {editingRule && (
+              <div>
+                <Label htmlFor="rule-name">Nome da Regra *</Label>
+                <Input
+                  id="rule-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Ex: Liberar para Produção"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="rule-description">Descrição (opcional)</Label>
+                <Input
+                  id="rule-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Descrição da regra..."
+                />
+              </div>
+
+              {isCreating && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="from-status">De Status *</Label>
+                    <Select
+                      value={formData.from_status}
+                      onValueChange={(v) => setFormData({ ...formData, from_status: v as OrderStatus })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="to-status">Para Status *</Label>
+                    <Select
+                      value={formData.to_status}
+                      onValueChange={(v) => setFormData({ ...formData, to_status: v as OrderStatus })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {!isCreating && editingRule && (
                 <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
                   <Badge variant="outline">
                     {orderStatusConfig[editingRule.from_status]?.label}
@@ -222,27 +404,7 @@ export function OrderApprovalRulesManager() {
               )}
 
               <div>
-                <Label htmlFor="name">Nome da Regra</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Liberar para Produção"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="description">Descrição (opcional)</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descrição da regra..."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="required_role">Perfil Necessário</Label>
+                <Label htmlFor="required_role">Perfil Necessário *</Label>
                 <Select
                   value={formData.required_role}
                   onValueChange={(v) => setFormData({ ...formData, required_role: v })}
@@ -278,14 +440,14 @@ export function OrderApprovalRulesManager() {
                 <Label htmlFor="is_active">Regra ativa</Label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
+              <DialogFooter>
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={updateRuleMutation.isPending}>
-                  Salvar
+                <Button type="submit" disabled={createRuleMutation.isPending || updateRuleMutation.isPending}>
+                  {isCreating ? 'Criar' : 'Salvar'}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>

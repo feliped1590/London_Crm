@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
@@ -19,13 +19,13 @@ import { PermissionsManager } from '@/components/settings/PermissionsManager';
 import { LicenseCard } from '@/components/settings/LicenseCard';
 import { TestDataManager } from '@/components/settings/TestDataManager';
 import { PortfolioManager } from '@/components/settings/PortfolioManager';
-import { PipelinesManager } from '@/components/settings/PipelinesManager';
 import { SalesGoalsManager } from '@/components/settings/SalesGoalsManager';
-import { NotificationPreferencesManager } from '@/components/settings/NotificationPreferencesManager';
+import { CustomNotificationsManager } from '@/components/settings/CustomNotificationsManager';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { AIAssistantConfig } from '@/components/settings/AIAssistantConfig';
 import { OrderApprovalRulesManager } from '@/components/settings/OrderApprovalRulesManager';
-import { PipelineAccessManager } from '@/components/settings/PipelineAccessManager';
+import { UnifiedPipelineManager } from '@/components/settings/UnifiedPipelineManager';
+import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -74,16 +74,6 @@ export default function Settings() {
     options: null,
   });
   const [optionsInput, setOptionsInput] = useState('');
-
-  // Pipeline stage editing states
-  const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
-  const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
-  const [stageFormData, setStageFormData] = useState({
-    name: '',
-    color: '#6366f1',
-    probability: 10,
-    sort_order: 1,
-  });
 
   // User management states
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
@@ -147,18 +137,6 @@ export default function Settings() {
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return data as CustomField[];
-    },
-  });
-
-  const { data: pipelineStages, isLoading: stagesLoading } = useQuery({
-    queryKey: ['pipeline_stages'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pipeline_stages')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      if (error) throw error;
-      return data as PipelineStage[];
     },
   });
 
@@ -237,19 +215,6 @@ export default function Settings() {
       toast.success('Campo excluído!');
     },
     onError: () => toast.error('Erro ao excluir campo'),
-  });
-
-  const updateStageMutation = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }) => {
-      const { error } = await supabase.from('pipeline_stages').update(data).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
-      toast.success('Etapa atualizada!');
-      resetStageForm();
-    },
-    onError: () => toast.error('Erro ao atualizar etapa'),
   });
 
   // User management mutations
@@ -369,30 +334,6 @@ export default function Settings() {
     setIsFieldDialogOpen(true);
   };
 
-  const resetStageForm = () => {
-    setStageFormData({ name: '', color: '#6366f1', probability: 10, sort_order: 1 });
-    setEditingStage(null);
-    setIsStageDialogOpen(false);
-  };
-
-  const handleEditStage = (stage: PipelineStage) => {
-    setEditingStage(stage);
-    setStageFormData({
-      name: stage.name,
-      color: stage.color || '#6366f1',
-      probability: stage.probability || 10,
-      sort_order: stage.sort_order,
-    });
-    setIsStageDialogOpen(true);
-  };
-
-  const handleStageSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingStage) {
-      updateStageMutation.mutate({ id: editingStage.id, ...stageFormData });
-    }
-  };
-
   const resetUserForm = () => {
     setUserFormData({ email: '', password: '', full_name: '', role: 'vendedor' });
     setIsUserDialogOpen(false);
@@ -480,11 +421,7 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="pipelines" className="gap-2">
             <Target className="h-4 w-4" />
-            Funis
-          </TabsTrigger>
-          <TabsTrigger value="pipeline" className="gap-2">
-            <Palette className="h-4 w-4" />
-            Etapas
+            Funis & Etapas
           </TabsTrigger>
           <TabsTrigger value="checklists" className="gap-2">
             <CheckSquare className="h-4 w-4" />
@@ -522,9 +459,9 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Aprovação Pedidos
           </TabsTrigger>
-          <TabsTrigger value="pipeline-access" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Acesso Funis
+          <TabsTrigger value="prospecting-api" className="gap-2">
+            <Search className="h-4 w-4" />
+            API Prospecção
           </TabsTrigger>
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
@@ -693,124 +630,10 @@ export default function Settings() {
           )}
         </TabsContent>
 
-        <TabsContent value="pipeline" className="mt-6 space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold">Etapas do Pipeline</h2>
-            <p className="text-sm text-muted-foreground">Configure as etapas do seu funil de vendas</p>
-          </div>
-
-          {stagesLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  {pipelineStages?.map((stage) => (
-                    <div
-                      key={stage.id}
-                      className="flex items-center justify-between p-3 rounded-lg border"
-                    >
-                      <div className="flex items-center gap-3">
-                        <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                        <div
-                          className="h-4 w-4 rounded-full border"
-                          style={{ backgroundColor: stage.color || '#6366f1' }}
-                        />
-                        <div>
-                          <p className="font-medium">{stage.name}</p>
-                          <p className="text-xs text-muted-foreground">Probabilidade: {stage.probability}%</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{stage.stage}</Badge>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => handleEditStage(stage)}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Dialog de edição de etapa */}
-          <Dialog open={isStageDialogOpen} onOpenChange={(open) => { setIsStageDialogOpen(open); if (!open) resetStageForm(); }}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Etapa</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleStageSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="stage-name">Nome da Etapa *</Label>
-                  <Input
-                    id="stage-name"
-                    value={stageFormData.name}
-                    onChange={(e) => setStageFormData({ ...stageFormData, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stage-color">Cor</Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      id="stage-color"
-                      value={stageFormData.color}
-                      onChange={(e) => setStageFormData({ ...stageFormData, color: e.target.value })}
-                      className="h-10 w-14 rounded border cursor-pointer"
-                    />
-                    <Input
-                      value={stageFormData.color}
-                      onChange={(e) => setStageFormData({ ...stageFormData, color: e.target.value })}
-                      placeholder="#6366f1"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="stage-probability">Probabilidade (%)</Label>
-                  <Input
-                    type="number"
-                    id="stage-probability"
-                    min={0}
-                    max={100}
-                    value={stageFormData.probability}
-                    onChange={(e) => setStageFormData({ ...stageFormData, probability: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stage-order">Posição</Label>
-                  <Input
-                    type="number"
-                    id="stage-order"
-                    min={1}
-                    value={stageFormData.sort_order}
-                    onChange={(e) => setStageFormData({ ...stageFormData, sort_order: parseInt(e.target.value) || 1 })}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={resetStageForm}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={updateStageMutation.isPending}>
-                    Atualizar
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
+        {/* Tab "pipeline" foi unificada em "pipelines" via UnifiedPipelineManager */}
 
         <TabsContent value="pipelines" className="mt-6">
-          <PipelinesManager />
+          <UnifiedPipelineManager />
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
@@ -1120,7 +943,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6 space-y-6">
-          <NotificationPreferencesManager />
+          <CustomNotificationsManager />
         </TabsContent>
 
         <TabsContent value="checklists" className="mt-6 space-y-6">
@@ -1131,8 +954,8 @@ export default function Settings() {
           <OrderApprovalRulesManager />
         </TabsContent>
 
-        <TabsContent value="pipeline-access" className="mt-6 space-y-6">
-          <PipelineAccessManager />
+        <TabsContent value="prospecting-api" className="mt-6 space-y-6">
+          <ProspectingApiConfig />
         </TabsContent>
 
         {isDeveloper && (
