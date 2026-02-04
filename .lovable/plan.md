@@ -1,101 +1,82 @@
 
+# Plano: Restaurar Botao "Criar nova empresa/contato" no SearchableSelect
 
-# Plano: Restringir Botoes de Ativar/Desativar e Excluir a Administradores
+## Problema Identificado
 
-## Problema Atual
+O botao "Criar nova empresa" e "Criar novo contato" nao estao visiveis no formulario "Novo Negocio" do Pipeline. Analisando o componente `SearchableSelect`, identifiquei que o botao esta em um `CommandGroup` separado que pode nao estar sendo renderizado corretamente ou esta fora da area visivel do scroll.
 
-A tela de Clientes exibe os botoes de ativar/desativar e excluir para todos os usuarios. Quando um usuario nao-admin tenta usar essas acoes, recebe uma mensagem generica de erro vinda do banco.
+## Causa Raiz
+
+O componente `SearchableSelect` tem o botao "Criar novo" em dois lugares:
+
+1. **Dentro do `CommandEmpty`** (linhas 92-108) - aparece quando nao ha resultados
+2. **Em um `CommandGroup` separado** (linhas 156-170) - aparece quando ha resultados
+
+O problema e que o segundo grupo pode:
+- Estar fora da area de scroll (max-h-[300px])
+- Ter problema de renderizacao com o componente `cmdk`
 
 ## Solucao Proposta
 
-Esconder completamente os botoes para usuarios nao-admin, seguindo o principio de "nao mostrar o que nao pode usar".
+Mover o botao "Criar novo" para **dentro do mesmo `CommandGroup`** das opcoes, apos o ultimo item da lista. Isso garante que:
+1. O botao sempre aparece junto com as opcoes
+2. Nao ha problemas de grupos separados
+3. O scroll inclui naturalmente o botao
 
-## Alteracoes no Arquivo
+## Alteracoes Tecnicas
 
-**Arquivo:** `src/pages/Customers.tsx`
+**Arquivo:** `src/components/ui/searchable-select.tsx`
 
-### 1. Adicionar Import do Hook de Permissoes
-
-```typescript
-import { useModulePermissions } from '@/hooks/useModulePermissions';
-```
-
-### 2. Obter Status de Admin
-
-```typescript
-const { isAdmin } = useModulePermissions();
-```
-
-### 3. Condicionar Exibicao dos Botoes
-
-Envolver os botoes de ativar/desativar e excluir com condicional `{isAdmin && ...}`:
-
-**Botao Toggle Ativo (linhas 723-747):**
+### Antes (estrutura atual):
 ```tsx
-{/* Toggle active button - apenas admin */}
-{isAdmin && (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => handleToggleActive(customer, e)}
-        disabled={customer.source === 'erp' || toggleActiveMutation.isPending}
-      >
-        {customer.active ? (
-          <PowerOff className="h-4 w-4 text-destructive" />
-        ) : (
-          <Power className="h-4 w-4 text-primary" />
-        )}
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>
-      {customer.source === 'erp' 
-        ? 'Dados gerenciados pelo ERP' 
-        : customer.active 
-          ? 'Desativar cliente' 
-          : 'Ativar cliente'
-      }
-    </TooltipContent>
-  </Tooltip>
-)}
+<CommandList>
+  <CommandEmpty>...</CommandEmpty>
+  <CommandGroup>
+    {/* opcao "Nenhum" */}
+    {/* lista de opcoes */}
+  </CommandGroup>
+  {onCreateNew && filteredOptions.length > 0 && (
+    <CommandGroup>
+      <CommandItem value="__create__">...</CommandItem>
+    </CommandGroup>
+  )}
+</CommandList>
 ```
 
-**Botao Excluir (linhas 749-765):**
+### Depois (estrutura corrigida):
 ```tsx
-{/* Delete button - apenas admin */}
-{isAdmin && (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={(e) => handleDeleteClick(customer, e)}
-        disabled={customer.source === 'erp'}
-        className="text-destructive hover:text-destructive"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent>
-      {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Excluir cliente'}
-    </TooltipContent>
-  </Tooltip>
-)}
+<CommandList>
+  <CommandEmpty>...</CommandEmpty>
+  <CommandGroup>
+    {/* opcao "Nenhum" */}
+    {/* lista de opcoes */}
+    {/* Botao criar novo - DENTRO do mesmo grupo */}
+    {onCreateNew && (
+      <CommandItem value="__create__">...</CommandItem>
+    )}
+  </CommandGroup>
+</CommandList>
 ```
+
+## Mudancas Especificas
+
+1. **Remover o segundo `CommandGroup`** (linhas 156-170)
+2. **Mover o `CommandItem` de criacao** para dentro do primeiro `CommandGroup`, apos a lista de opcoes
+3. **Ajustar a condicao**: Remover `filteredOptions.length > 0` pois o botao deve aparecer sempre que `onCreateNew` estiver definido
+4. **Adicionar separador visual**: Usar `border-t` para separar visualmente o botao das opcoes
 
 ## Resultado Esperado
 
-| Perfil | Editar | WhatsApp | Ativar/Desativar | Excluir |
-|--------|--------|----------|------------------|---------|
-| Admin | Visivel | Visivel | Visivel | Visivel |
-| Vendedor | Visivel | Visivel | Oculto | Oculto |
-| Atendente | Visivel | Visivel | Oculto | Oculto |
+| Cenario | Comportamento |
+|---------|---------------|
+| Lista vazia (busca sem resultado) | Botao aparece no `CommandEmpty` |
+| Lista com opcoes | Botao aparece no final da lista, dentro do mesmo grupo |
+| Scroll necessario | Botao faz parte do scroll e sempre pode ser alcancado |
 
 ## Beneficios
 
-- Interface mais limpa para usuarios comuns
-- Evita confusao e tentativas frustradas
-- Segue as boas praticas de UX para controle de acesso
-- Triggers no banco continuam como ultima barreira de seguranca
+- Resolve o problema de visibilidade do botao
+- Simplifica a estrutura do componente
+- Mantem a funcionalidade existente
+- Melhora a experiencia do usuario ao criar empresas/contatos rapidamente
 
