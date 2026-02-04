@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +79,7 @@ type SortDirection = 'asc' | 'desc';
 export default function Customers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { isAdmin } = useModulePermissions();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -720,49 +722,53 @@ export default function Customers() {
                                 </TooltipContent>
                               </Tooltip>
 
-                              {/* Toggle active button */}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => handleToggleActive(customer, e)}
-                                    disabled={customer.source === 'erp' || toggleActiveMutation.isPending}
-                                  >
-                                    {customer.active ? (
-                                      <PowerOff className="h-4 w-4 text-destructive" />
-                                    ) : (
-                                      <Power className="h-4 w-4 text-primary" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {customer.source === 'erp' 
-                                    ? 'Dados gerenciados pelo ERP' 
-                                    : customer.active 
-                                      ? 'Desativar cliente' 
-                                      : 'Ativar cliente'
-                                  }
-                                </TooltipContent>
-                              </Tooltip>
+                              {/* Toggle active button - apenas admin */}
+                              {isAdmin && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={(e) => handleToggleActive(customer, e)}
+                                      disabled={customer.source === 'erp' || toggleActiveMutation.isPending}
+                                    >
+                                      {customer.active ? (
+                                        <PowerOff className="h-4 w-4 text-destructive" />
+                                      ) : (
+                                        <Power className="h-4 w-4 text-primary" />
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {customer.source === 'erp' 
+                                      ? 'Dados gerenciados pelo ERP' 
+                                      : customer.active 
+                                        ? 'Desativar cliente' 
+                                        : 'Ativar cliente'
+                                    }
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
 
-                              {/* Delete button */}
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={(e) => handleDeleteClick(customer, e)}
-                                    disabled={customer.source === 'erp'}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Excluir cliente'}
-                                </TooltipContent>
-                              </Tooltip>
+                              {/* Delete button - apenas admin */}
+                              {isAdmin && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={(e) => handleDeleteClick(customer, e)}
+                                      disabled={customer.source === 'erp'}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Excluir cliente'}
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                           </TooltipProvider>
                         </TableCell>
