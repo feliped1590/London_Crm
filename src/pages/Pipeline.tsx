@@ -409,17 +409,21 @@ export default function Pipeline() {
     
     try {
       // Log the intervention
+      // For new entities, use client_id as reference since deal doesn't exist yet
       await logIntervention({
         actionType: interventionData.pendingAction.type,
         entityType: 'deal',
-        entityId: editingDeal?.id || 'new',
+        entityId: editingDeal?.id || interventionData.clientId || crypto.randomUUID(),
         entityName: formData.name || 'Novo negócio',
         clientId: interventionData.clientId,
         clientName: interventionData.clientName,
         clientOwnerId: interventionData.clientOwnerId,
         clientOwnerName: interventionData.clientOwnerName,
         justification,
-        details: { formData: interventionData.pendingAction.data },
+        details: { 
+          formData: interventionData.pendingAction.data,
+          isNewEntity: !editingDeal,
+        },
       });
       
       // Execute the action

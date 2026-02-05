@@ -76,9 +76,9 @@ export function AdminInterventionModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <Alert className="border-warning/50 bg-warning/10 text-warning-foreground">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
+          <Alert className="border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100 dark:border-amber-700">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-amber-800 dark:text-amber-200">
               <strong>{actionDescription}</strong> para o cliente{' '}
               <strong>{clientName}</strong>, que pertence ao vendedor{' '}
               <strong>{clientOwnerName}</strong>.
