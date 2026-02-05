@@ -34,14 +34,10 @@ export function usePortfolioGovernance() {
       return { isOwner: false, ownerId: null, ownerName: null, clientName: null };
     }
 
+    // First fetch the company
     const { data: company, error } = await supabase
       .from('companies')
-      .select(`
-        id, 
-        name, 
-        owner_id,
-        profiles:owner_id(full_name)
-      `)
+      .select('id, name, owner_id')
       .eq('id', companyId)
       .maybeSingle();
 
@@ -49,13 +45,22 @@ export function usePortfolioGovernance() {
       return { isOwner: false, ownerId: null, ownerName: null, clientName: null };
     }
 
-    const ownerId = company.owner_id;
-    const ownerName = (company.profiles as any)?.full_name || null;
-    const isOwner = !ownerId || ownerId === user.id;
+    // Then fetch the owner profile if there's an owner
+    let ownerName: string | null = null;
+    if (company.owner_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', company.owner_id)
+        .maybeSingle();
+      ownerName = profile?.full_name || null;
+    }
+
+    const isOwner = !company.owner_id || company.owner_id === user.id;
 
     return {
       isOwner,
-      ownerId,
+      ownerId: company.owner_id,
       ownerName,
       clientName: company.name,
     };
