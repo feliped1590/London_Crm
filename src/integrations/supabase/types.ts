@@ -102,6 +102,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "activities_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -502,6 +509,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bot_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "bot_sessions_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -626,6 +640,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       company_audit_log: {
@@ -666,6 +687,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_audit_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -744,6 +772,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       credit_analyses: {
@@ -803,6 +838,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "credit_analyses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       credit_analysis_audit: {
@@ -849,6 +891,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_analysis_audit_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1490,6 +1539,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "deals_contact_id_fkey"
@@ -2145,6 +2201,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "orders_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -2294,9 +2357,11 @@ export type Database = {
           entity_id: string
           entity_name: string
           entity_type: string
+          filter_context: Json | null
           from_user_id: string | null
           id: string
           notes: string | null
+          reason: string | null
           to_user_id: string
           transferred_at: string | null
           transferred_by: string
@@ -2306,9 +2371,11 @@ export type Database = {
           entity_id: string
           entity_name: string
           entity_type: string
+          filter_context?: Json | null
           from_user_id?: string | null
           id?: string
           notes?: string | null
+          reason?: string | null
           to_user_id: string
           transferred_at?: string | null
           transferred_by: string
@@ -2318,9 +2385,11 @@ export type Database = {
           entity_id?: string
           entity_name?: string
           entity_type?: string
+          filter_context?: Json | null
           from_user_id?: string | null
           id?: string
           notes?: string | null
+          reason?: string | null
           to_user_id?: string
           transferred_at?: string | null
           transferred_by?: string
@@ -2728,6 +2797,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "proposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "proposals_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -3109,6 +3185,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "tasks_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -3357,6 +3440,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whatsapp_messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "whatsapp_messages_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -3460,7 +3550,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      company_activity_summary: {
+        Row: {
+          active: boolean | null
+          city: string | null
+          cnpj: string | null
+          company_created_at: string | null
+          company_id: string | null
+          company_name: string | null
+          last_interaction_at: string | null
+          last_order_at: string | null
+          owner_id: string | null
+          regiao: string | null
+          state: string | null
+          subregiao: string | null
+          total_order_value: number | null
+          total_orders: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
@@ -3477,6 +3585,35 @@ export type Database = {
           title: string
         }[]
       }
+      get_companies_for_reallocation: {
+        Args: {
+          p_limit?: number
+          p_min_days_no_interaction?: number
+          p_min_days_no_order?: number
+          p_offset?: number
+          p_owner_id?: string
+          p_regions?: string[]
+          p_search?: string
+          p_states?: string[]
+        }
+        Returns: {
+          city: string
+          cnpj: string
+          company_id: string
+          company_name: string
+          days_since_interaction: number
+          days_since_order: number
+          last_interaction_at: string
+          last_order_at: string
+          owner_id: string
+          owner_name: string
+          regiao: string
+          state: string
+          subregiao: string
+          total_order_value: number
+          total_orders: number
+        }[]
+      }
       get_conversion_by_stage: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
@@ -3485,6 +3622,18 @@ export type Database = {
           exited_count: number
           stage: string
           stage_order: number
+        }[]
+      }
+      get_distinct_regions_for_reallocation: {
+        Args: never
+        Returns: {
+          regiao: string
+        }[]
+      }
+      get_distinct_states_for_reallocation: {
+        Args: never
+        Returns: {
+          state: string
         }[]
       }
       get_license_status: {
