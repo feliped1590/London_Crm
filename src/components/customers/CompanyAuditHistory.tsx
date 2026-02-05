@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,24 +38,45 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
     enabled: !isErpCustomer && !!companyId,
   });
 
+  // Collect all UUIDs that need profile resolution:
+  // - changed_by (who made the change)
+  // - old_value and new_value when field_name === 'owner_id'
+  const allUserIds = React.useMemo(() => {
+    if (!auditLogs?.length) return [];
+    
+    const ids = new Set<string>();
+    
+    auditLogs.forEach(log => {
+      if (log.changed_by) {
+        ids.add(log.changed_by);
+      }
+      // For owner_id changes, the values are user UUIDs
+      if (log.field_name === 'owner_id') {
+        if (log.old_value) ids.add(log.old_value);
+        if (log.new_value) ids.add(log.new_value);
+      }
+    });
+    
+    return Array.from(ids);
+  }, [auditLogs]);
+
   // Fetch user profiles for display names
   const { data: profiles } = useQuery({
-    queryKey: ['profiles-for-audit', auditLogs?.map(l => l.changed_by).filter(Boolean)],
+    queryKey: ['profiles-for-audit', allUserIds],
     queryFn: async () => {
-      const userIds = auditLogs?.map(l => l.changed_by).filter(Boolean) as string[];
-      if (!userIds.length) return {};
+      if (!allUserIds.length) return {};
 
       const { data } = await supabase
         .from('profiles')
         .select('user_id, full_name')
-        .in('user_id', userIds);
+        .in('user_id', allUserIds);
 
       return (data || []).reduce((acc, p) => {
         acc[p.user_id] = p.full_name;
         return acc;
       }, {} as Record<string, string>);
     },
-    enabled: !!auditLogs?.length,
+    enabled: allUserIds.length > 0,
   });
 
   const formatDate = (dateString: string) => {
@@ -67,8 +89,13 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
     });
   };
 
-  const formatValue = (value: string | null, fieldName: string): string => {
+  const formatValue = (value: string | null, fieldName: string, profilesMap?: Record<string, string>): string => {
     if (value === null || value === '') return '(vazio)';
+    
+    // For owner_id field, resolve the UUID to a name
+    if (fieldName === 'owner_id' && profilesMap) {
+      return profilesMap[value] || value;
+    }
     
     if (fieldName === 'active') {
       return value;
@@ -158,11 +185,11 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-muted-foreground line-through">
-                        {formatValue(log.old_value, log.field_name)}
+                        {formatValue(log.old_value, log.field_name, profiles)}
                       </span>
                       <ArrowRight className="h-3 w-3 text-muted-foreground" />
                       <span className="font-medium">
-                        {formatValue(log.new_value, log.field_name)}
+                        {formatValue(log.new_value, log.field_name, profiles)}
                       </span>
                     </div>
                   </TableCell>
