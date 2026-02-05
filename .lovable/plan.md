@@ -1,74 +1,52 @@
 
-
-# Plano: Corrigir Botoes de Acoes Rapidas Submetendo Formulario do Deal
+# Plano: Exibir Nomes dos Vendedores no Histórico de Alterações
 
 ## Problema Identificado
 
-Ao clicar em "Criar Tarefa" ou "Criar Pedido" nas Acoes Rapidas do Pipeline, o sistema:
-1. Abre o dialog correspondente
-2. Imediatamente submete o formulario do Deal (mostrando "Negocio atualizado!")
-3. Fecha tudo via `resetForm()`
+No componente `CompanyAuditHistory`, quando o campo alterado é "Vendedor Responsável" (`field_name === 'owner_id'`), os valores `old_value` e `new_value` contêm UUIDs de usuários, que são exibidos diretamente na interface ao invés dos nomes legíveis.
 
-**Causa raiz**: Os botoes no componente `DealQuickActions` nao possuem `type="button"`. Em HTML, botoes sem `type` dentro de um `<form>` assumem `type="submit"` por padrao, o que dispara o submit do formulario pai.
+## Solução Proposta
 
-## Localizacao no Codigo
+Modificar o componente para identificar quando o campo é `owner_id` e resolver os UUIDs para nomes de usuários usando a tabela `profiles`.
 
-**Arquivo:** `src/components/pipeline/DealQuickActions.tsx`
+## Alterações Técnicas
 
-O componente `DealQuickActions` e renderizado dentro do `<form>` de edicao do Deal em `Pipeline.tsx` (linha 723-859), especificamente nas linhas 818-834.
+### Arquivo: `src/components/customers/CompanyAuditHistory.tsx`
 
-## Alteracoes Necessarias
+1. **Expandir a query de profiles** para incluir também os UUIDs presentes em `old_value` e `new_value` quando `field_name === 'owner_id'`
 
-Adicionar `type="button"` a todos os botoes do componente `DealQuickActions` para prevenir o comportamento de submit:
+2. **Modificar a função `formatValue`** para receber o mapa de profiles e resolver o nome quando o campo for `owner_id`
 
-### Botao WhatsApp (linhas 128-138)
-```tsx
-<Button
-  type="button"  // ADICIONAR
-  variant="outline"
-  size="sm"
-  onClick={handleWhatsAppClick}
-  disabled={!hasWhatsApp}
-  className="gap-2"
-  title={hasWhatsApp ? 'Enviar WhatsApp' : 'Contato sem telefone'}
->
+### Lógica de Implementação
+
 ```
+1. Coletar todos os UUIDs únicos:
+   - changed_by (quem alterou)
+   - old_value e new_value QUANDO field_name === 'owner_id'
 
-### Botao Criar Tarefa (linhas 141-149)
-```tsx
-<Button
-  type="button"  // ADICIONAR
-  variant="outline"
-  size="sm"
-  onClick={() => setTaskDialogOpen(true)}
-  className="gap-2"
->
-```
+2. Buscar todos os profiles em uma única query
 
-### Botao Criar Pedido (linhas 152-162)
-```tsx
-<Button
-  type="button"  // ADICIONAR
-  variant="outline"
-  size="sm"
-  onClick={() => setOrderDialogOpen(true)}
-  disabled={!deal.company_id}
-  className="gap-2"
-  title={deal.company_id ? 'Criar Pedido' : 'Negocio sem empresa vinculada'}
->
+3. Na exibição, verificar:
+   - Se field_name === 'owner_id':
+     → Exibir profiles[old_value] e profiles[new_value]
+   - Caso contrário:
+     → Exibir valores normalmente
 ```
 
 ## Resultado Esperado
 
-| Acao | Antes | Depois |
-|------|-------|--------|
-| Clicar "Criar Tarefa" | Abre dialog + fecha tudo | Abre dialog de tarefa normalmente |
-| Clicar "Criar Pedido" | Abre dialog + fecha tudo | Abre dialog de pedido normalmente |
-| Clicar "WhatsApp" | Abre WhatsApp + fecha tudo | Abre WhatsApp ou troca de aba |
+Antes:
+```
+8f1cd810-2ae9-4b65-aade-ca1c1493a7f9 → fccbcaa5-2f0f-44d4-93a6-277bf1334a6d
+```
 
-## Impacto
+Depois:
+```
+João Silva → Maria Santos
+```
 
-- Correcao simples de 3 linhas
-- Sem efeitos colaterais
-- Restaura o comportamento esperado das acoes rapidas
+## Arquivos a Modificar
 
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/customers/CompanyAuditHistory.tsx` | Expandir coleta de UUIDs e resolver nomes para campos owner_id |
