@@ -3569,6 +3569,26 @@ export type Database = {
         }
         Relationships: []
       }
+      unified_company_for_reallocation: {
+        Row: {
+          active: boolean | null
+          city: string | null
+          cnpj: string | null
+          cnpj_normalized: string | null
+          company_id: string | null
+          company_name: string | null
+          last_interaction_at: string | null
+          last_order_at: string | null
+          owner_id: string | null
+          regiao: string | null
+          source: string | null
+          state: string | null
+          subregiao: string | null
+          total_order_value: number | null
+          total_orders: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
