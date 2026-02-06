@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+export const ITEMS_PER_PAGE = 25;
 
 export interface ReallocationFilters {
   states?: string[];
@@ -46,6 +48,12 @@ export function usePortfolioReallocation() {
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<ReallocationFilters>({});
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   // Buscar UFs disponíveis
   const { data: availableStates } = useQuery({
@@ -89,10 +97,31 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Buscar empresas com filtros (sempre habilitado para mostrar todos os clientes)
-  const { data: companies, isLoading, refetch } = useQuery({
-    queryKey: ['reallocation-companies', filters],
+  // Buscar contagem total de empresas (para paginação)
+  const { data: totalItems = 0 } = useQuery({
+    queryKey: ['reallocation-companies-count', filters],
     queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_companies_for_reallocation_count', {
+        p_states: filters.states?.length ? filters.states : null,
+        p_regions: filters.regions?.length ? filters.regions : null,
+        p_owner_id: filters.noOwner ? null : (filters.ownerId || null),
+        p_min_days_no_interaction: filters.minDaysNoInteraction || null,
+        p_min_days_no_order: filters.minDaysNoOrder || null,
+        p_search: filters.search || null,
+        p_no_owner: filters.noOwner || null
+      });
+      if (error) throw error;
+      return data as number;
+    }
+  });
+
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+  // Buscar empresas com filtros e paginação
+  const { data: companies, isLoading, refetch } = useQuery({
+    queryKey: ['reallocation-companies', filters, currentPage],
+    queryFn: async () => {
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
       const { data, error } = await supabase.rpc('get_companies_for_reallocation', {
         p_states: filters.states?.length ? filters.states : null,
         p_regions: filters.regions?.length ? filters.regions : null,
@@ -100,8 +129,8 @@ export function usePortfolioReallocation() {
         p_min_days_no_interaction: filters.minDaysNoInteraction || null,
         p_min_days_no_order: filters.minDaysNoOrder || null,
         p_search: filters.search || null,
-        p_limit: 1000,
-        p_offset: 0,
+        p_limit: ITEMS_PER_PAGE,
+        p_offset: offset,
         p_no_owner: filters.noOwner || null
       });
       if (error) throw error;
@@ -266,6 +295,7 @@ export function usePortfolioReallocation() {
       toast.success(`${count} cliente(s) remanejado(s) com sucesso!`);
       setSelectedCompanies(new Set());
       queryClient.invalidateQueries({ queryKey: ['reallocation-companies'] });
+      queryClient.invalidateQueries({ queryKey: ['reallocation-companies-count'] });
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
       queryClient.invalidateQueries({ queryKey: ['portfolio-transfers'] });
     },
@@ -286,19 +316,30 @@ export function usePortfolioReallocation() {
     });
   };
 
-  const toggleSelectAll = () => {
+  // Seleciona/deseleciona apenas os itens da página atual
+  const toggleSelectAllOnPage = () => {
     if (!companies) return;
     
-    if (selectedCompanies.size === companies.length) {
-      setSelectedCompanies(new Set());
-    } else {
-      setSelectedCompanies(new Set(companies.map(c => c.company_id)));
-    }
+    const pageIds = companies.map(c => c.company_id);
+    const allPageSelected = pageIds.every(id => selectedCompanies.has(id));
+
+    setSelectedCompanies(prev => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        // Deseleciona todos da página atual
+        pageIds.forEach(id => next.delete(id));
+      } else {
+        // Seleciona todos da página atual
+        pageIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
   };
 
   const clearFilters = () => {
     setFilters({});
     setSelectedCompanies(new Set());
+    setCurrentPage(1);
   };
 
   return {
@@ -309,6 +350,13 @@ export function usePortfolioReallocation() {
     sellers,
     isLoading,
     
+    // Paginação
+    currentPage,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+    itemsPerPage: ITEMS_PER_PAGE,
+    
     // Filtros
     filters,
     setFilters,
@@ -317,7 +365,7 @@ export function usePortfolioReallocation() {
     // Seleção
     selectedCompanies,
     toggleSelectCompany,
-    toggleSelectAll,
+    toggleSelectAllOnPage,
     
     // Ações
     transferCompanies: transferMutation.mutate,

@@ -22,10 +22,16 @@ export default function PortfolioReallocation() {
     clearFilters,
     selectedCompanies,
     toggleSelectCompany,
-    toggleSelectAll,
+    toggleSelectAllOnPage,
     transferCompanies,
     isTransferring,
-    refetch
+    refetch,
+    // Paginação
+    currentPage,
+    setCurrentPage,
+    totalItems,
+    totalPages,
+    itemsPerPage
   } = usePortfolioReallocation();
 
   const selectedCompanyData = companies?.filter(c => selectedCompanies.has(c.company_id)) || [];
@@ -37,6 +43,7 @@ export default function PortfolioReallocation() {
     reason: string
   ) => {
     // Construir mapa de sources para cada empresa selecionada
+    // Precisamos buscar de todas as páginas, então usamos o cache se disponível
     const companySources: Record<string, 'crm' | 'erp'> = {};
     companies?.forEach(c => {
       if (selectedCompanies.has(c.company_id)) {
@@ -110,8 +117,8 @@ export default function PortfolioReallocation() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            {companies?.length 
-              ? `${companies.length} cliente(s) encontrado(s)` 
+            {totalItems > 0
+              ? `${totalItems} cliente(s) encontrado(s)` 
               : 'Nenhum resultado'}
             {selectedCompanies.size > 0 && (
               <span className="ml-2 text-primary font-medium">
@@ -132,8 +139,13 @@ export default function PortfolioReallocation() {
           companies={companies || []}
           selectedCompanies={selectedCompanies}
           onToggleSelect={toggleSelectCompany}
-          onToggleSelectAll={toggleSelectAll}
+          onToggleSelectAll={toggleSelectAllOnPage}
           isLoading={isLoading}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
         />
       </div>
 
