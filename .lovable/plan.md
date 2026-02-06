@@ -1,96 +1,48 @@
 
 
-# Plano: Incluir Clientes ERP no Remanejamento de Carteira
+# ✅ Plano Implementado: Incluir Clientes ERP no Remanejamento de Carteira
 
-## Diagnóstico
+## Status: CONCLUÍDO
 
-A tela de Remanejamento de Carteira atualmente exibe apenas **11-12 clientes** porque:
-
-1. A view `company_activity_summary` e a função `get_companies_for_reallocation` consultam **apenas a tabela `companies`** (CRM)
-2. A sua base possui **192 clientes no ERP** (`crm_clients`) e apenas **12 no CRM** (`companies`)
-3. A maioria dos 199 clientes que você vê na tela de Clientes vem do ERP, que não está incluído no remanejamento
-
-## Solução
-
-Expandir a função de busca para incluir clientes de ambas as fontes (CRM e ERP), unificando-os em uma única listagem para remanejamento.
+Implementação realizada com sucesso em 06/02/2026.
 
 ---
 
-## Alterações Necessárias
+## O que foi feito
 
-| Componente | Alteração |
-|------------|-----------|
-| Migration SQL | Criar nova view unificada `unified_company_for_reallocation` que combina `companies` + `crm_clients` |
-| Migration SQL | Atualizar função `get_companies_for_reallocation` para usar a nova view unificada |
-| Hook TypeScript | Ajustar `usePortfolioReallocation.ts` para suportar remanejamento em ambas as tabelas |
-| Componente UI | Adicionar indicador visual de origem (CRM/ERP) na tabela de resultados |
+### 1. View SQL Unificada
+Criada a view `unified_company_for_reallocation` que combina:
+- **11 clientes do CRM** (tabela `companies`)
+- **189 clientes do ERP** (tabela `crm_clients`)
+- **Total: 200 clientes disponíveis para remanejamento**
 
----
+A view implementa deduplicação por CNPJ, priorizando registros do CRM.
 
-## Detalhes Técnicos
+### 2. Função RPC Atualizada
+Função `get_companies_for_reallocation` agora:
+- Consulta a view unificada
+- Retorna coluna `source` ('crm' ou 'erp')
+- Mantém todos os filtros funcionando
 
-### 1. Nova View SQL: `unified_company_for_reallocation`
+### 3. Hook de Transferência
+`usePortfolioReallocation.ts` atualizado para:
+- Identificar origem do cliente via `companySources`
+- Atualizar `companies` para clientes CRM
+- Atualizar `crm_clients` para clientes ERP
+- Registrar origem no log de transferência
 
-A view unifica clientes de ambas as fontes com estrutura padronizada:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                unified_company_for_reallocation                 │
-├─────────────────────────────────────────────────────────────────┤
-│ company_id          → UUID (id da empresa/cliente)              │
-│ company_name        → Nome (CRM: name / ERP: razao_social)      │
-│ cnpj                → CNPJ normalizado                          │
-│ state               → UF                                        │
-│ city                → Cidade                                    │
-│ owner_id            → ID do vendedor responsável                │
-│ source              → 'crm' | 'erp'                             │
-│ regiao              → Região comercial (do ERP)                 │
-│ subregiao           → Sub-região                                │
-│ active              → Status ativo (CRM: active / ERP: true)    │
-│ last_interaction_at → Último atendimento (agregado)             │
-│ last_order_at       → Última venda                              │
-│ total_orders        → Quantidade de pedidos                     │
-│ total_order_value   → Valor total de pedidos                    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Lógica de deduplicação**: Clientes com mesmo CNPJ aparecem apenas uma vez, priorizando o registro CRM (que pode ter sido enriquecido manualmente).
-
-### 2. Atualização da Função RPC
-
-A função `get_companies_for_reallocation` será atualizada para:
-- Consultar a nova view unificada
-- Incluir coluna `source` no retorno para identificar a origem
-- Manter todos os filtros existentes funcionando
-
-### 3. Ajuste no Hook de Transferência
-
-O hook `usePortfolioReallocation.ts` será modificado para:
-- Identificar a origem do cliente (`source: 'crm' | 'erp'`)
-- Fazer update na tabela correta: `companies` para CRM, `crm_clients` para ERP
-- Registrar a transferência com a informação de origem
-
-### 4. Indicador Visual na Tabela
-
-A tabela de resultados (`ReallocationResultsTable.tsx`) exibirá um badge indicando a origem:
-- **CRM** → Badge azul
-- **ERP** → Badge laranja
+### 4. Indicador Visual
+`ReallocationResultsTable.tsx` agora exibe badges:
+- **CRM** → Badge azul com ícone Cloud
+- **ERP** → Badge laranja com ícone Database
 
 ---
 
 ## Arquivos Modificados
 
-| Arquivo | Ação |
-|---------|------|
-| Nova migration SQL | Criar view unificada e atualizar função RPC |
-| `src/hooks/usePortfolioReallocation.ts` | Suportar transferência em ambas as tabelas |
-| `src/components/reallocation/ReallocationResultsTable.tsx` | Exibir badge de origem |
-
----
-
-## Considerações de Segurança
-
-- A transferência de clientes ERP atualizará a coluna `owner_id` em `crm_clients`
-- Todas as transferências continuam sendo registradas em `portfolio_transfers` para auditoria
-- A lógica de governança de carteira permanece ativa para ambas as fontes
-
+| Arquivo | Alteração |
+|---------|-----------|
+| Migration SQL | View `unified_company_for_reallocation` + função RPC |
+| `src/hooks/usePortfolioReallocation.ts` | Suporte a transferência em ambas as tabelas |
+| `src/components/reallocation/ReallocationResultsTable.tsx` | Badge de origem CRM/ERP |
+| `src/pages/PortfolioReallocation.tsx` | Passagem de `companySources` para mutation |
