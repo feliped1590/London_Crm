@@ -3639,6 +3639,7 @@ export type Database = {
               owner_id: string
               owner_name: string
               regiao: string
+              source: string
               state: string
               subregiao: string
               total_order_value: number

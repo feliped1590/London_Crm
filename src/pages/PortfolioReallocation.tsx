@@ -36,13 +36,22 @@ export default function PortfolioReallocation() {
     transferDeals: boolean,
     reason: string
   ) => {
+    // Construir mapa de sources para cada empresa selecionada
+    const companySources: Record<string, 'crm' | 'erp'> = {};
+    companies?.forEach(c => {
+      if (selectedCompanies.has(c.company_id)) {
+        companySources[c.company_id] = c.source;
+      }
+    });
+
     transferCompanies({
       companyIds: Array.from(selectedCompanies),
       toUserId,
       transferContacts,
       transferDeals,
       reason,
-      filterContext: filters
+      filterContext: filters,
+      companySources
     });
     setConfirmModalOpen(false);
   };
