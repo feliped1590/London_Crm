@@ -29,6 +29,7 @@ export interface CompanyForReallocation {
   days_since_order: number;
   total_orders: number;
   total_order_value: number;
+  source: 'crm' | 'erp';
 }
 
 export interface ReallocationTransferRequest {
@@ -38,6 +39,7 @@ export interface ReallocationTransferRequest {
   transferDeals: boolean;
   reason: string;
   filterContext: ReallocationFilters;
+  companySources: Record<string, 'crm' | 'erp'>;
 }
 
 export function usePortfolioReallocation() {
@@ -107,7 +109,7 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Mutation para transferir empresas
+  // Mutation para transferir empresas (suporta CRM e ERP)
   const transferMutation = useMutation({
     mutationFn: async (request: ReallocationTransferRequest) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -117,96 +119,135 @@ export function usePortfolioReallocation() {
       let totalTransferred = 0;
 
       for (const companyId of request.companyIds) {
-        // Buscar info da empresa
-        const { data: company } = await supabase
-          .from('companies')
-          .select('id, name, owner_id')
-          .eq('id', companyId)
-          .single();
+        const source = request.companySources[companyId] || 'crm';
+        
+        if (source === 'crm') {
+          // Buscar info da empresa CRM
+          const { data: company } = await supabase
+            .from('companies')
+            .select('id, name, owner_id')
+            .eq('id', companyId)
+            .single();
 
-        if (!company) continue;
+          if (!company) continue;
 
-        const fromUserId = company.owner_id;
+          const fromUserId = company.owner_id;
 
-        // Atualizar owner_id da empresa
-        const { error: updateError } = await supabase
-          .from('companies')
-          .update({ owner_id: request.toUserId })
-          .eq('id', companyId);
+          // Atualizar owner_id da empresa CRM
+          const { error: updateError } = await supabase
+            .from('companies')
+            .update({ owner_id: request.toUserId })
+            .eq('id', companyId);
 
-        if (updateError) throw updateError;
+          if (updateError) throw updateError;
 
-        // Registrar transferência com reason e filter_context
-        transferRecords.push({
-          entity_type: 'company',
-          entity_id: companyId,
-          entity_name: company.name,
-          from_user_id: fromUserId,
-          to_user_id: request.toUserId,
-          transferred_by: user.id,
-          notes: request.reason,
-          reason: request.reason,
-          filter_context: request.filterContext
-        });
+          // Registrar transferência
+          transferRecords.push({
+            entity_type: 'company',
+            entity_id: companyId,
+            entity_name: company.name,
+            from_user_id: fromUserId,
+            to_user_id: request.toUserId,
+            transferred_by: user.id,
+            notes: request.reason,
+            reason: request.reason,
+            filter_context: { ...request.filterContext, source: 'crm' }
+          });
 
-        totalTransferred++;
+          totalTransferred++;
 
-        // Transferir contatos relacionados se solicitado
-        if (request.transferContacts) {
-          const { data: contacts } = await supabase
-            .from('contacts')
-            .select('id, first_name, last_name')
-            .eq('company_id', companyId)
-            .eq('owner_id', fromUserId);
-
-          for (const contact of contacts || []) {
-            await supabase
+          // Transferir contatos relacionados se solicitado
+          if (request.transferContacts) {
+            const { data: contacts } = await supabase
               .from('contacts')
-              .update({ owner_id: request.toUserId })
-              .eq('id', contact.id);
+              .select('id, first_name, last_name')
+              .eq('company_id', companyId)
+              .eq('owner_id', fromUserId);
 
-            const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-            transferRecords.push({
-              entity_type: 'contact',
-              entity_id: contact.id,
-              entity_name: contactName || 'Sem nome',
-              from_user_id: fromUserId,
-              to_user_id: request.toUserId,
-              transferred_by: user.id,
-              notes: request.reason,
-              reason: request.reason,
-              filter_context: request.filterContext
-            });
+            for (const contact of contacts || []) {
+              await supabase
+                .from('contacts')
+                .update({ owner_id: request.toUserId })
+                .eq('id', contact.id);
+
+              const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
+              transferRecords.push({
+                entity_type: 'contact',
+                entity_id: contact.id,
+                entity_name: contactName || 'Sem nome',
+                from_user_id: fromUserId,
+                to_user_id: request.toUserId,
+                transferred_by: user.id,
+                notes: request.reason,
+                reason: request.reason,
+                filter_context: { ...request.filterContext, source: 'crm' }
+              });
+            }
           }
-        }
 
-        // Transferir negócios abertos se solicitado
-        if (request.transferDeals) {
-          const { data: deals } = await supabase
-            .from('deals')
-            .select('id, name')
-            .eq('company_id', companyId)
-            .eq('owner_id', fromUserId)
-            .not('stage', 'in', '("fechado_ganho","fechado_perdido")');
-
-          for (const deal of deals || []) {
-            await supabase
+          // Transferir negócios abertos se solicitado
+          if (request.transferDeals) {
+            const { data: deals } = await supabase
               .from('deals')
-              .update({ owner_id: request.toUserId })
-              .eq('id', deal.id);
+              .select('id, name')
+              .eq('company_id', companyId)
+              .eq('owner_id', fromUserId)
+              .not('stage', 'in', '("fechado_ganho","fechado_perdido")');
 
-            transferRecords.push({
-              entity_type: 'deal',
-              entity_id: deal.id,
-              entity_name: deal.name,
-              from_user_id: fromUserId,
-              to_user_id: request.toUserId,
-              transferred_by: user.id,
-              notes: request.reason,
-              reason: request.reason,
-              filter_context: request.filterContext
-            });
+            for (const deal of deals || []) {
+              await supabase
+                .from('deals')
+                .update({ owner_id: request.toUserId })
+                .eq('id', deal.id);
+
+              transferRecords.push({
+                entity_type: 'deal',
+                entity_id: deal.id,
+                entity_name: deal.name,
+                from_user_id: fromUserId,
+                to_user_id: request.toUserId,
+                transferred_by: user.id,
+                notes: request.reason,
+                reason: request.reason,
+                filter_context: { ...request.filterContext, source: 'crm' }
+              });
+            }
           }
+        } else {
+          // source === 'erp': Atualizar crm_clients
+          const { data: client } = await supabase
+            .from('crm_clients')
+            .select('id, razao_social, nome_fantasia, owner_id')
+            .eq('id', companyId)
+            .single();
+
+          if (!client) continue;
+
+          const fromUserId = client.owner_id;
+          const clientName = client.razao_social || client.nome_fantasia || 'Cliente ERP';
+
+          // Atualizar owner_id do cliente ERP
+          const { error: updateError } = await supabase
+            .from('crm_clients')
+            .update({ owner_id: request.toUserId })
+            .eq('id', companyId);
+
+          if (updateError) throw updateError;
+
+          // Registrar transferência
+          transferRecords.push({
+            entity_type: 'company',
+            entity_id: companyId,
+            entity_name: clientName,
+            from_user_id: fromUserId,
+            to_user_id: request.toUserId,
+            transferred_by: user.id,
+            notes: request.reason,
+            reason: request.reason,
+            filter_context: { ...request.filterContext, source: 'erp' }
+          });
+
+          totalTransferred++;
         }
       }
 

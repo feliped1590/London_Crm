@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Building2, AlertTriangle, Clock, ShoppingCart } from 'lucide-react';
+import { Building2, AlertTriangle, Clock, ShoppingCart, Database, Cloud } from 'lucide-react';
 import { CompanyForReallocation } from '@/hooks/usePortfolioReallocation';
 import { cn } from '@/lib/utils';
 
@@ -122,7 +122,24 @@ export function ReallocationResultsTable({
                   <div className="flex items-center gap-2">
                     <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div>
-                      <p className="font-medium">{company.company_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{company.company_name}</p>
+                        <Badge 
+                          variant={company.source === 'crm' ? 'default' : 'secondary'}
+                          className={cn(
+                            "text-xs px-1.5 py-0",
+                            company.source === 'crm' 
+                              ? "bg-blue-500/10 text-blue-600 border-blue-200" 
+                              : "bg-orange-500/10 text-orange-600 border-orange-200"
+                          )}
+                        >
+                          {company.source === 'crm' ? (
+                            <><Cloud className="h-3 w-3 mr-1" />CRM</>
+                          ) : (
+                            <><Database className="h-3 w-3 mr-1" />ERP</>
+                          )}
+                        </Badge>
+                      </div>
                       {company.cnpj && (
                         <p className="text-xs text-muted-foreground">{company.cnpj}</p>
                       )}
