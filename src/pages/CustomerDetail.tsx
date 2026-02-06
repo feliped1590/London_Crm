@@ -33,7 +33,8 @@ import {
   AlertCircle,
   CheckCircle,
   CalendarCheck,
-  ShieldCheck
+  ShieldCheck,
+  Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,6 +48,7 @@ import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory'
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
+import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import type { Json } from '@/integrations/supabase/types';
 
 const industries = [
@@ -652,7 +654,7 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
@@ -667,6 +669,10 @@ export default function CustomerDetail() {
             {deals.length > 0 && (
               <Badge variant="secondary" className="h-5 min-w-5">{deals.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="pedidos" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Pedidos
           </TabsTrigger>
           <TabsTrigger value="credito" className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
@@ -1292,6 +1298,15 @@ export default function CustomerDetail() {
             </CardContent>
           </Card>
 
+        </TabsContent>
+
+        {/* Tab: Pedidos */}
+        <TabsContent value="pedidos">
+          <CustomerOrdersTab 
+            companyId={id!}
+            source={customer?.source || 'crm'}
+            cnpj={customer?.cnpj || null}
+          />
         </TabsContent>
 
         {/* Tab: Crédito */}

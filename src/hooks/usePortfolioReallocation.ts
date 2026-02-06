@@ -7,6 +7,7 @@ export interface ReallocationFilters {
   states?: string[];
   regions?: string[];
   ownerId?: string;
+  noOwner?: boolean;
   minDaysNoInteraction?: number;
   minDaysNoOrder?: number;
   search?: string;
@@ -86,28 +87,24 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Buscar empresas com filtros
+  // Buscar empresas com filtros (sempre habilitado para mostrar todos os clientes)
   const { data: companies, isLoading, refetch } = useQuery({
     queryKey: ['reallocation-companies', filters],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_companies_for_reallocation', {
         p_states: filters.states?.length ? filters.states : null,
         p_regions: filters.regions?.length ? filters.regions : null,
-        p_owner_id: filters.ownerId || null,
+        p_owner_id: filters.noOwner ? null : (filters.ownerId || null),
         p_min_days_no_interaction: filters.minDaysNoInteraction || null,
         p_min_days_no_order: filters.minDaysNoOrder || null,
         p_search: filters.search || null,
-        p_limit: 200,
-        p_offset: 0
+        p_limit: 1000,
+        p_offset: 0,
+        p_no_owner: filters.noOwner || null
       });
       if (error) throw error;
       return data as CompanyForReallocation[];
-    },
-    enabled: Object.keys(filters).some(k => {
-      const val = filters[k as keyof ReallocationFilters];
-      if (Array.isArray(val)) return val.length > 0;
-      return val !== undefined && val !== null && val !== '';
-    })
+    }
   });
 
   // Mutation para transferir empresas
