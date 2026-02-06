@@ -110,14 +110,25 @@ export function ReallocationFilters({
         <div className="space-y-2">
           <Label>Vendedor Atual</Label>
           <Select
-            value={filters.ownerId || 'all'}
-            onValueChange={(value) => updateFilter('ownerId', value === 'all' ? undefined : value)}
+            value={filters.noOwner ? '__none__' : (filters.ownerId || 'all')}
+            onValueChange={(value) => {
+              if (value === '__none__') {
+                onFiltersChange({ ...filters, noOwner: true, ownerId: undefined });
+              } else if (value === 'all') {
+                onFiltersChange({ ...filters, noOwner: undefined, ownerId: undefined });
+              } else {
+                onFiltersChange({ ...filters, noOwner: undefined, ownerId: value });
+              }
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Todos os vendedores" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os vendedores</SelectItem>
+              <SelectItem value="__none__" className="text-warning font-medium">
+                Sem vendedor (não atribuído)
+              </SelectItem>
               {sellers?.map(seller => (
                 <SelectItem key={seller.id} value={seller.id}>
                   {seller.name} ({seller.role})
@@ -165,7 +176,11 @@ export function ReallocationFilters({
               Região: {filters.regions.join(', ')}
             </span>
           ) : null}
-          {filters.ownerId ? (
+          {filters.noOwner ? (
+            <span className="bg-warning/10 text-warning px-2 py-0.5 rounded">
+              Sem vendedor
+            </span>
+          ) : filters.ownerId ? (
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
               Vendedor: {sellers?.find(s => s.id === filters.ownerId)?.name}
             </span>
