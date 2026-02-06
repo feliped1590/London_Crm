@@ -1,115 +1,103 @@
 
+# Correcao: Funcao de Contagem para Paginacao
 
-# Plano: Paginacao Server-Side para Remanejamento de Carteira
+## Problema Identificado
+A funcao `get_companies_for_reallocation_count` esta falhando com erro 400:
+```
+column c.days_since_interaction does not exist
+```
 
-## Objetivo
-Implementar paginacao server-side na tela de Remanejamento para evitar sobrecarga de memoria ao carregar todos os clientes de uma vez.
+**Causa raiz**: A view `unified_company_for_reallocation` nao possui as colunas `days_since_interaction` e `days_since_order`. Essas colunas sao calculadas dinamicamente na funcao principal `get_companies_for_reallocation`, mas a funcao de contagem tenta acessar diretamente como se fossem colunas da view.
 
-## Contexto Atual
-- A funcao RPC `get_companies_for_reallocation` ja suporta `p_limit` e `p_offset`
-- Atualmente carrega ate 1000 registros de uma vez
-- Existem ~200 clientes na base unificada (CRM + ERP)
-- O componente de paginacao ja existe em `src/components/ui/pagination.tsx`
-- A pagina Customers usa paginacao client-side como referencia
-
-## Estrategia
-Implementar paginacao **server-side** para garantir escalabilidade futura, carregando apenas 25 clientes por pagina.
+## Solucao
+Atualizar a funcao `get_companies_for_reallocation_count` para calcular os dias de inatividade da mesma forma que a funcao principal.
 
 ---
 
-## Etapas de Implementacao
+## Alteracao Necessaria
 
-### 1. Criar funcao RPC de contagem
+### Migration SQL Corrigida
 
-Adicionar funcao no banco para retornar o total de registros com os mesmos filtros:
+A funcao de contagem deve usar:
+```sql
+-- Em vez de:
+c.days_since_interaction >= p_min_days_no_interaction
 
-```text
-+------------------------------------------+
-|  get_companies_for_reallocation_count    |
-+------------------------------------------+
-| Parametros: mesmos filtros da funcao     |
-| principal (states, regions, owner_id,    |
-| min_days, search, no_owner)              |
-| Retorno: integer (total de registros)    |
-+------------------------------------------+
+-- Usar:
+(c.last_interaction_at IS NULL 
+ OR EXTRACT(DAY FROM (now() - c.last_interaction_at)) >= p_min_days_no_interaction)
 ```
 
-### 2. Atualizar Hook usePortfolioReallocation
-
-Modificacoes no hook:
-- Adicionar estado `currentPage` (numero da pagina atual)
-- Adicionar constante `ITEMS_PER_PAGE = 25`
-- Criar query separada para buscar contagem total
-- Atualizar query principal para usar `p_limit` e `p_offset` dinamicos
-- Resetar pagina para 1 quando filtros mudarem
-- Expor funcoes `setPage`, `totalItems`, `totalPages`
-
-### 3. Atualizar ReallocationResultsTable
-
-Adicionar controles de paginacao ao componente:
-- Exibir contador "X-Y de Z clientes"
-- Botoes Anterior/Proximo
-- Numeros de pagina com ellipsis para navegacao rapida
-
-### 4. Atualizar Pagina PortfolioReallocation
-
-- Receber props de paginacao do hook
-- Passar para o componente de tabela
-- Ajustar logica de "selecionar todos" para considerar apenas pagina atual
+Mesma logica para `days_since_order`.
 
 ---
 
 ## Detalhes Tecnicos
 
-### Migracao SQL
+### Comparativo das Abordagens
+
+| Aspecto | Versao com Erro | Versao Corrigida |
+|---------|-----------------|------------------|
+| Acesso coluna | `c.days_since_interaction` | `EXTRACT(DAY FROM (now() - c.last_interaction_at))` |
+| NULL handling | Falha | Tratado com `IS NULL OR ...` |
+| Compatibilidade | Incompativel com view | Compativel |
+
+### Codigo SQL Corrigido
+
 ```sql
-CREATE OR REPLACE FUNCTION get_companies_for_reallocation_count(
-  p_states text[] DEFAULT NULL,
-  p_regions text[] DEFAULT NULL,
-  p_owner_id uuid DEFAULT NULL,
-  p_min_days_no_interaction integer DEFAULT NULL,
-  p_min_days_no_order integer DEFAULT NULL,
-  p_search text DEFAULT NULL,
-  p_no_owner boolean DEFAULT NULL
-)
+CREATE OR REPLACE FUNCTION get_companies_for_reallocation_count(...)
 RETURNS integer
--- Aplica mesmos filtros e retorna COUNT(*)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  result integer;
+BEGIN
+  SELECT COUNT(*)::integer INTO result
+  FROM unified_company_for_reallocation c
+  WHERE
+    (p_states IS NULL OR c.state = ANY(p_states))
+    AND (p_regions IS NULL OR c.regiao = ANY(p_regions))
+    AND (
+      CASE
+        WHEN p_no_owner = true THEN c.owner_id IS NULL
+        WHEN p_owner_id IS NOT NULL THEN c.owner_id = p_owner_id
+        ELSE true
+      END
+    )
+    AND (
+      p_min_days_no_interaction IS NULL 
+      OR c.last_interaction_at IS NULL 
+      OR EXTRACT(DAY FROM (now() - c.last_interaction_at)) >= p_min_days_no_interaction
+    )
+    AND (
+      p_min_days_no_order IS NULL 
+      OR c.last_order_at IS NULL 
+      OR EXTRACT(DAY FROM (now() - c.last_order_at)) >= p_min_days_no_order
+    )
+    AND (
+      p_search IS NULL 
+      OR p_search = ''
+      OR c.company_name ILIKE '%' || p_search || '%'
+      OR c.cnpj ILIKE '%' || p_search || '%'
+    );
+  
+  RETURN result;
+END;
+$$;
 ```
-
-### Interface do Hook (apos alteracao)
-```text
-usePortfolioReallocation retorna:
-  - companies (pagina atual)
-  - totalItems (total geral)
-  - totalPages
-  - currentPage
-  - setCurrentPage
-  - itemsPerPage
-  - (demais campos existentes)
-```
-
-### Comportamento de Selecao
-- "Selecionar todos" seleciona apenas os itens da pagina atual
-- Itens selecionados em paginas anteriores sao mantidos ao navegar
-- Contador de selecionados permanece visivel no topo
 
 ---
 
-## Resumo de Arquivos Afetados
+## Resumo de Arquivos
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| Nova migracao SQL | Criar funcao de contagem |
-| `src/hooks/usePortfolioReallocation.ts` | Estado de paginacao, queries atualizadas |
-| `src/components/reallocation/ReallocationResultsTable.tsx` | Controles de paginacao |
-| `src/pages/PortfolioReallocation.tsx` | Passar props de paginacao |
+| Arquivo | Acao |
+|---------|------|
+| Nova migracao SQL | Substituir funcao `get_companies_for_reallocation_count` |
 
 ---
 
 ## Resultado Esperado
-- Carregamento inicial rapido (25 itens)
-- Navegacao fluida entre paginas
-- Memoria do navegador otimizada
-- Selecao funcional entre paginas
-- Escalavel para milhares de clientes
-
+- Funcao de contagem retorna o total correto de registros
+- Paginacao exibe "Exibindo 1-25 de 200"
+- Filtros funcionam normalmente
+- Navegacao entre paginas opera sem erros
