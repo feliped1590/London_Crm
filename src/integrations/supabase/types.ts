@@ -3666,6 +3666,18 @@ export type Database = {
               total_orders: number
             }[]
           }
+      get_companies_for_reallocation_count: {
+        Args: {
+          p_min_days_no_interaction?: number
+          p_min_days_no_order?: number
+          p_no_owner?: boolean
+          p_owner_id?: string
+          p_regions?: string[]
+          p_search?: string
+          p_states?: string[]
+        }
+        Returns: number
+      }
       get_conversion_by_stage: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
