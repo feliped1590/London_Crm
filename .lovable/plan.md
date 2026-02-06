@@ -1,103 +1,96 @@
 
-# Plano: Correções no Remanejamento de Carteira e Histórico de Pedidos
 
-## Visão Geral
+# Plano: Incluir Clientes ERP no Remanejamento de Carteira
 
-Este plano aborda duas correções importantes solicitadas:
+## Diagnóstico
 
-1. **Remanejamento de Carteira** - Não exibe todos os clientes da base, especialmente aqueles sem vendedor vinculado
-2. **Histórico de Pedidos** - Falta uma aba na tela de detalhes do cliente mostrando os pedidos relacionados
+A tela de Remanejamento de Carteira atualmente exibe apenas **11-12 clientes** porque:
 
----
+1. A view `company_activity_summary` e a função `get_companies_for_reallocation` consultam **apenas a tabela `companies`** (CRM)
+2. A sua base possui **192 clientes no ERP** (`crm_clients`) e apenas **12 no CRM** (`companies`)
+3. A maioria dos 199 clientes que você vê na tela de Clientes vem do ERP, que não está incluído no remanejamento
 
-## Problema 1: Remanejamento Não Mostra Todos os Clientes
+## Solução
 
-### Diagnóstico
-
-Após análise do código, foram identificados **dois problemas**:
-
-1. **Query desabilitada por padrão**: A busca de empresas só é executada quando pelo menos um filtro está preenchido:
-   ```typescript
-   enabled: Object.keys(filters).some(k => {
-     const val = filters[k as keyof ReallocationFilters];
-     if (Array.isArray(val)) return val.length > 0;
-     return val !== undefined && val !== null && val !== '';
-   })
-   ```
-
-2. **Falta opção "Sem vendedor"**: O filtro de vendedor atual não permite selecionar explicitamente clientes sem responsável vinculado
-
-### Solução Proposta
-
-| Alteração | Arquivo |
-|-----------|---------|
-| Remover condição `enabled` que bloqueia a query inicial | `src/hooks/usePortfolioReallocation.ts` |
-| Adicionar opção "Sem vendedor" no filtro | `src/components/reallocation/ReallocationFilters.tsx` |
-| Ajustar RPC para suportar filtro `owner_id IS NULL` | Nova migration SQL |
-| Remover ou aumentar limite de paginação (de 200 para 1000) | `src/hooks/usePortfolioReallocation.ts` |
-
-### Detalhes Técnicos
-
-**Hook `usePortfolioReallocation.ts`**:
-- Remover a propriedade `enabled` para permitir busca inicial sem filtros
-- Aumentar `p_limit` de 200 para 1000 (ou remover limite para paginação completa)
-- Adicionar flag `noOwner: boolean` para filtrar clientes sem vendedor
-
-**Componente `ReallocationFilters.tsx`**:
-- Adicionar opção "Sem vendedor" no Select de vendedor atual com valor especial `'__none__'`
-
-**Migration SQL**:
-- Modificar a função `get_companies_for_reallocation` para aceitar parâmetro `p_no_owner boolean` e filtrar por `owner_id IS NULL`
+Expandir a função de busca para incluir clientes de ambas as fontes (CRM e ERP), unificando-os em uma única listagem para remanejamento.
 
 ---
 
-## Problema 2: Histórico de Pedidos no Detalhe do Cliente
+## Alterações Necessárias
 
-### Diagnóstico
-
-- A tabela `orders` possui coluna `company_id` que referencia `companies`
-- Existem pedidos vinculados a empresas no banco de dados
-- Atualmente a página `CustomerDetail.tsx` possui 7 abas, mas nenhuma exibe pedidos
-- A tabela `crm_orders` (ERP) está vinculada via `crm_clients` e não diretamente a `companies`
-
-### Solução Proposta
-
-Criar uma nova aba **"Pedidos"** na página de detalhes do cliente que exiba:
-- Pedidos da tabela `orders` (CRM) para clientes CRM
-- Pedidos da tabela `crm_orders` (ERP) para clientes ERP (via join com `crm_clients` por CNPJ)
-
-| Alteração | Arquivo |
-|-----------|---------|
-| Criar componente de listagem de pedidos do cliente | `src/components/customers/CustomerOrdersTab.tsx` (novo) |
-| Adicionar nova aba na página de detalhes | `src/pages/CustomerDetail.tsx` |
-
-### Detalhes Técnicos
-
-**Novo componente `CustomerOrdersTab.tsx`**:
-- Props: `companyId: string`, `source: 'crm' | 'erp'`, `cnpj?: string`
-- Para fonte CRM: buscar em `orders` filtrado por `company_id`
-- Para fonte ERP: buscar em `crm_orders` via join com `crm_clients` por CNPJ
-- Exibir tabela com colunas: Número, Data, Valor, Status
-- Incluir totalizadores (quantidade e valor total)
-
-**Alteração em `CustomerDetail.tsx`**:
-- Adicionar nova aba "Pedidos" no TabsList (entre "Crédito" e "Timeline")
-- Renderizar o componente `CustomerOrdersTab` passando os dados adequados
+| Componente | Alteração |
+|------------|-----------|
+| Migration SQL | Criar nova view unificada `unified_company_for_reallocation` que combina `companies` + `crm_clients` |
+| Migration SQL | Atualizar função `get_companies_for_reallocation` para usar a nova view unificada |
+| Hook TypeScript | Ajustar `usePortfolioReallocation.ts` para suportar remanejamento em ambas as tabelas |
+| Componente UI | Adicionar indicador visual de origem (CRM/ERP) na tabela de resultados |
 
 ---
 
-## Resumo das Alterações
+## Detalhes Técnicos
+
+### 1. Nova View SQL: `unified_company_for_reallocation`
+
+A view unifica clientes de ambas as fontes com estrutura padronizada:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                unified_company_for_reallocation                 │
+├─────────────────────────────────────────────────────────────────┤
+│ company_id          → UUID (id da empresa/cliente)              │
+│ company_name        → Nome (CRM: name / ERP: razao_social)      │
+│ cnpj                → CNPJ normalizado                          │
+│ state               → UF                                        │
+│ city                → Cidade                                    │
+│ owner_id            → ID do vendedor responsável                │
+│ source              → 'crm' | 'erp'                             │
+│ regiao              → Região comercial (do ERP)                 │
+│ subregiao           → Sub-região                                │
+│ active              → Status ativo (CRM: active / ERP: true)    │
+│ last_interaction_at → Último atendimento (agregado)             │
+│ last_order_at       → Última venda                              │
+│ total_orders        → Quantidade de pedidos                     │
+│ total_order_value   → Valor total de pedidos                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Lógica de deduplicação**: Clientes com mesmo CNPJ aparecem apenas uma vez, priorizando o registro CRM (que pode ter sido enriquecido manualmente).
+
+### 2. Atualização da Função RPC
+
+A função `get_companies_for_reallocation` será atualizada para:
+- Consultar a nova view unificada
+- Incluir coluna `source` no retorno para identificar a origem
+- Manter todos os filtros existentes funcionando
+
+### 3. Ajuste no Hook de Transferência
+
+O hook `usePortfolioReallocation.ts` será modificado para:
+- Identificar a origem do cliente (`source: 'crm' | 'erp'`)
+- Fazer update na tabela correta: `companies` para CRM, `crm_clients` para ERP
+- Registrar a transferência com a informação de origem
+
+### 4. Indicador Visual na Tabela
+
+A tabela de resultados (`ReallocationResultsTable.tsx`) exibirá um badge indicando a origem:
+- **CRM** → Badge azul
+- **ERP** → Badge laranja
+
+---
+
+## Arquivos Modificados
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/usePortfolioReallocation.ts` | Modificar: remover `enabled`, aumentar limite, adicionar flag `noOwner` |
-| `src/components/reallocation/ReallocationFilters.tsx` | Modificar: adicionar opção "Sem vendedor" |
-| Nova migration SQL | Criar: atualizar RPC para suportar `p_no_owner` |
-| `src/components/customers/CustomerOrdersTab.tsx` | Criar: novo componente para listar pedidos |
-| `src/pages/CustomerDetail.tsx` | Modificar: adicionar aba "Pedidos" |
+| Nova migration SQL | Criar view unificada e atualizar função RPC |
+| `src/hooks/usePortfolioReallocation.ts` | Suportar transferência em ambas as tabelas |
+| `src/components/reallocation/ReallocationResultsTable.tsx` | Exibir badge de origem |
 
-## Estimativa de Esforço
+---
 
-- Correção do Remanejamento: ~1-2 horas
-- Aba de Histórico de Pedidos: ~2-3 horas
-- **Total**: 3-5 horas
+## Considerações de Segurança
+
+- A transferência de clientes ERP atualizará a coluna `owner_id` em `crm_clients`
+- Todas as transferências continuam sendo registradas em `portfolio_transfers` para auditoria
+- A lógica de governança de carteira permanece ativa para ambas as fontes
+
