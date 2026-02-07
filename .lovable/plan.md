@@ -1,103 +1,155 @@
 
-# Correcao: Funcao de Contagem para Paginacao
 
-## Problema Identificado
-A funcao `get_companies_for_reallocation_count` esta falhando com erro 400:
-```
-column c.days_since_interaction does not exist
-```
+# Fase 3: Limpeza Completa da Base de Dados
 
-**Causa raiz**: A view `unified_company_for_reallocation` nao possui as colunas `days_since_interaction` e `days_since_order`. Essas colunas sao calculadas dinamicamente na funcao principal `get_companies_for_reallocation`, mas a funcao de contagem tenta acessar diretamente como se fossem colunas da view.
+## Status Atual
 
-## Solucao
-Atualizar a funcao `get_companies_for_reallocation_count` para calcular os dias de inatividade da mesma forma que a funcao principal.
+| Etapa | Status |
+|-------|--------|
+| 1. Licenciamento (25 usuarios) | ✅ Concluido |
+| 2. Auditoria de usuarios | ✅ Concluido |
+| 3. Ocultar pagina Integracoes | ✅ Concluido |
+| 4. Backup pre_go_live | ✅ Confirmado |
+| **5. Limpeza completa** | 🔄 Em execucao |
+| 6. Exclusao usuarios teste | ⏳ Pendente |
+| 7. Validacao final | ⏳ Pendente |
 
 ---
 
-## Alteracao Necessaria
+## Script de Limpeza Completa
 
-### Migration SQL Corrigida
+A limpeza sera executada via migration SQL respeitando a ordem de foreign keys para evitar erros de integridade referencial.
 
-A funcao de contagem deve usar:
+### Ordem de Exclusao
+
+```text
+1. Tabelas dependentes (filhas)
+   ├── proposal_items
+   ├── order_items
+   ├── deal_participants
+   ├── stage_checklist_completions
+   └── whatsapp_messages
+
+2. Tabelas intermediarias
+   ├── proposals
+   ├── orders
+   ├── tasks
+   ├── activities
+   ├── email_logs
+   └── ai_conversations
+
+3. Tabelas principais
+   ├── deals (+ deal_audit_log)
+   ├── contacts
+   └── companies
+
+4. Dados ERP (TODOS serao removidos conforme solicitado)
+   ├── crm_order_items
+   ├── crm_orders
+   ├── crm_products
+   └── crm_clients
+
+5. Logs e controles
+   ├── order_audit_log
+   ├── erp_sync_log
+   └── ai_copilot_suggestions
+```
+
+---
+
+## Migration SQL Completa
+
 ```sql
--- Em vez de:
-c.days_since_interaction >= p_min_days_no_interaction
+-- ==============================================
+-- GO-LIVE Migration 2: Limpeza Completa da Base
+-- Backup confirmado: pre_go_live_20260207
+-- ==============================================
 
--- Usar:
-(c.last_interaction_at IS NULL 
- OR EXTRACT(DAY FROM (now() - c.last_interaction_at)) >= p_min_days_no_interaction)
-```
+-- FASE 1: Tabelas dependentes
+DELETE FROM public.proposal_items;
+DELETE FROM public.order_items;
+DELETE FROM public.deal_participants;
+DELETE FROM public.stage_checklist_completions;
+DELETE FROM public.whatsapp_messages;
 
-Mesma logica para `days_since_order`.
+-- FASE 2: Tabelas intermediarias
+DELETE FROM public.proposals;
+DELETE FROM public.orders;
+DELETE FROM public.tasks;
+DELETE FROM public.activities;
+DELETE FROM public.email_logs;
+DELETE FROM public.ai_conversations;
+DELETE FROM public.ai_copilot_suggestions;
 
----
+-- FASE 3: Tabelas principais de negocios
+DELETE FROM public.deal_audit_log;
+DELETE FROM public.deals;
+DELETE FROM public.contacts;
+DELETE FROM public.companies;
 
-## Detalhes Tecnicos
+-- FASE 4: Dados do ERP (todos sao de teste)
+DELETE FROM public.crm_order_items;
+DELETE FROM public.crm_orders;
+DELETE FROM public.crm_products;
+DELETE FROM public.crm_clients;
 
-### Comparativo das Abordagens
+-- FASE 5: Logs e controles
+DELETE FROM public.order_audit_log;
+DELETE FROM public.erp_sync_log;
 
-| Aspecto | Versao com Erro | Versao Corrigida |
-|---------|-----------------|------------------|
-| Acesso coluna | `c.days_since_interaction` | `EXTRACT(DAY FROM (now() - c.last_interaction_at))` |
-| NULL handling | Falha | Tratado com `IS NULL OR ...` |
-| Compatibilidade | Incompativel com view | Compativel |
+-- FASE 6: Resetar controles de sincronizacao
+UPDATE public.erp_sync_control 
+SET last_sync_at = NULL, 
+    last_record_count = 0,
+    updated_at = now();
 
-### Codigo SQL Corrigido
-
-```sql
-CREATE OR REPLACE FUNCTION get_companies_for_reallocation_count(...)
-RETURNS integer
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  result integer;
-BEGIN
-  SELECT COUNT(*)::integer INTO result
-  FROM unified_company_for_reallocation c
-  WHERE
-    (p_states IS NULL OR c.state = ANY(p_states))
-    AND (p_regions IS NULL OR c.regiao = ANY(p_regions))
-    AND (
-      CASE
-        WHEN p_no_owner = true THEN c.owner_id IS NULL
-        WHEN p_owner_id IS NOT NULL THEN c.owner_id = p_owner_id
-        ELSE true
-      END
-    )
-    AND (
-      p_min_days_no_interaction IS NULL 
-      OR c.last_interaction_at IS NULL 
-      OR EXTRACT(DAY FROM (now() - c.last_interaction_at)) >= p_min_days_no_interaction
-    )
-    AND (
-      p_min_days_no_order IS NULL 
-      OR c.last_order_at IS NULL 
-      OR EXTRACT(DAY FROM (now() - c.last_order_at)) >= p_min_days_no_order
-    )
-    AND (
-      p_search IS NULL 
-      OR p_search = ''
-      OR c.company_name ILIKE '%' || p_search || '%'
-      OR c.cnpj ILIKE '%' || p_search || '%'
-    );
-  
-  RETURN result;
-END;
-$$;
+-- Manter intactos:
+-- ✓ Estrutura do banco (72 tabelas)
+-- ✓ Configuracoes (custom_fields, automations, pipelines)
+-- ✓ Perfis e permissoes (user_roles, module_permissions)
+-- ✓ Tabelas de preco (pricing_tables)
+-- ✓ Licenciamento (license_settings)
+-- ✓ Auditoria de usuarios (user_audit_log)
 ```
 
 ---
 
-## Resumo de Arquivos
+## Proximos Passos Apos Limpeza
 
-| Arquivo | Acao |
+### Exclusao de Usuarios de Teste
+
+Apos a limpeza da base, executar a exclusao dos usuarios:
+- Usuario Teste - Vendedor
+- Jonatan
+- Jose
+
+Isso sera feito via Edge Function `delete-user`.
+
+### Validacao Final
+
+- [ ] Login da administradora Bianca
+- [ ] Criar primeira empresa em producao
+- [ ] Criar primeiro negocio no pipeline
+- [ ] Verificar integracao ERP (em background)
+- [ ] Testar IA Assistant
+- [ ] Confirmar GO-LIVE
+
+---
+
+## Resumo de Alteracoes
+
+| Recurso | Acao |
 |---------|------|
-| Nova migracao SQL | Substituir funcao `get_companies_for_reallocation_count` |
+| Nova Migration SQL | Limpeza completa de 20+ tabelas |
+| Edge Function delete-user | Excluir 3 usuarios de teste |
 
 ---
 
 ## Resultado Esperado
-- Funcao de contagem retorna o total correto de registros
-- Paginacao exibe "Exibindo 1-25 de 200"
-- Filtros funcionam normalmente
-- Navegacao entre paginas opera sem erros
+
+Apos execucao:
+- Base 100% limpa (0 registros operacionais)
+- Apenas usuario Bianca ativo
+- Sistema pronto para primeiro registro real
+- Configuracoes e estrutura preservadas
+
