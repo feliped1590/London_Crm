@@ -35,6 +35,8 @@ import { useUnreadCount } from '@/hooks/useWhatsApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { UserProfileModal } from './UserProfileModal';
 
 interface NavItem {
@@ -42,6 +44,7 @@ interface NavItem {
   icon: LucideIcon;
   label: string;
   moduleKey: string;
+  devOnly?: boolean;
 }
 
 const allNavItems: NavItem[] = [
@@ -59,8 +62,7 @@ const allNavItems: NavItem[] = [
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   { to: '/reallocation', icon: ArrowLeftRight, label: 'Remanejamento', moduleKey: 'settings' },
-  // Integrações ocultas na entrega - mantido para uso futuro
-  // { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations' },
+  { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations', devOnly: true },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
 ];
@@ -74,11 +76,31 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const { canAccess, isAdmin, isLoading: permissionsLoading } = useModulePermissions();
 
+  // Check if user is developer
+  const { data: isDeveloper } = useQuery({
+    queryKey: ['is_developer', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'desenvolvedor')
+        .maybeSingle();
+      return !!data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Filter nav items based on user permissions
   const navItems = useMemo(() => {
     if (permissionsLoading) return [];
-    return allNavItems.filter(item => canAccess(item.moduleKey));
-  }, [canAccess, permissionsLoading]);
+    return allNavItems.filter(item => {
+      // Dev-only items require developer role
+      if (item.devOnly && !isDeveloper) return false;
+      return canAccess(item.moduleKey);
+    });
+  }, [canAccess, permissionsLoading, isDeveloper]);
 
   const handleNavClick = () => {
     if (isMobile) {
