@@ -3641,10 +3641,8 @@ export type Database = {
       }
       unified_company_for_reallocation: {
         Row: {
-          active: boolean | null
           city: string | null
           cnpj: string | null
-          cnpj_normalized: string | null
           company_id: string | null
           company_name: string | null
           last_interaction_at: string | null
