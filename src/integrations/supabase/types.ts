@@ -545,6 +545,8 @@ export type Database = {
           annual_revenue: string | null
           city: string | null
           cnpj: string | null
+          contribuinte_icms: boolean | null
+          contribuinte_ipi: boolean | null
           country: string | null
           created_at: string
           created_by: string | null
@@ -566,6 +568,9 @@ export type Database = {
           owner_id: string | null
           parent_company_id: string | null
           phone: string | null
+          regime_tributario:
+            | Database["public"]["Enums"]["regime_tributario"]
+            | null
           state: string | null
           updated_at: string
           website: string | null
@@ -576,6 +581,8 @@ export type Database = {
           annual_revenue?: string | null
           city?: string | null
           cnpj?: string | null
+          contribuinte_icms?: boolean | null
+          contribuinte_ipi?: boolean | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -597,6 +604,9 @@ export type Database = {
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
+          regime_tributario?:
+            | Database["public"]["Enums"]["regime_tributario"]
+            | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -607,6 +617,8 @@ export type Database = {
           annual_revenue?: string | null
           city?: string | null
           cnpj?: string | null
+          contribuinte_icms?: boolean | null
+          contribuinte_ipi?: boolean | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -628,6 +640,9 @@ export type Database = {
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
+          regime_tributario?:
+            | Database["public"]["Enums"]["regime_tributario"]
+            | null
           state?: string | null
           updated_at?: string
           website?: string | null
@@ -1927,6 +1942,128 @@ export type Database = {
         }
         Relationships: []
       }
+      ncm_codes: {
+        Row: {
+          aliquota_ipi_oficial: number | null
+          codigo: string
+          created_at: string | null
+          data_fim_vigencia: string | null
+          data_vigencia: string
+          descricao: string
+          ex_tipi: string[] | null
+          id: string
+          status: string
+          unidade_tributaria: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aliquota_ipi_oficial?: number | null
+          codigo: string
+          created_at?: string | null
+          data_fim_vigencia?: string | null
+          data_vigencia?: string
+          descricao: string
+          ex_tipi?: string[] | null
+          id?: string
+          status?: string
+          unidade_tributaria?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aliquota_ipi_oficial?: number | null
+          codigo?: string
+          created_at?: string | null
+          data_fim_vigencia?: string | null
+          data_vigencia?: string
+          descricao?: string
+          ex_tipi?: string[] | null
+          id?: string
+          status?: string
+          unidade_tributaria?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ncm_fiscal_rules: {
+        Row: {
+          aliquota_cofins: number | null
+          aliquota_icms: number | null
+          aliquota_ipi: number | null
+          aliquota_pis: number | null
+          created_at: string | null
+          csosn: string | null
+          cst_icms: string | null
+          cst_pis_cofins: string | null
+          id: string
+          is_active: boolean | null
+          ncm_id: string
+          regime_tributario: Database["public"]["Enums"]["regime_tributario"]
+          tem_icms_st: boolean | null
+          tipo_produto:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
+          uf_destino: string | null
+          uf_origem: string | null
+          updated_at: string | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
+          created_at?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
+          cst_pis_cofins?: string | null
+          id?: string
+          is_active?: boolean | null
+          ncm_id: string
+          regime_tributario: Database["public"]["Enums"]["regime_tributario"]
+          tem_icms_st?: boolean | null
+          tipo_produto?:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
+          uf_destino?: string | null
+          uf_origem?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
+          created_at?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
+          cst_pis_cofins?: string | null
+          id?: string
+          is_active?: boolean | null
+          ncm_id?: string
+          regime_tributario?: Database["public"]["Enums"]["regime_tributario"]
+          tem_icms_st?: boolean | null
+          tipo_produto?:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
+          uf_destino?: string | null
+          uf_origem?: string | null
+          updated_at?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ncm_fiscal_rules_ncm_id_fkey"
+            columns: ["ncm_id"]
+            isOneToOne: false
+            referencedRelation: "ncm_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string
@@ -2534,13 +2671,73 @@ export type Database = {
         }
         Relationships: []
       }
+      product_ncm_audit: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          has_billing_history: boolean | null
+          id: string
+          ip_address: unknown
+          new_fiscal_state: Json | null
+          new_ncm: string | null
+          old_fiscal_state: Json | null
+          old_ncm: string | null
+          product_id: string
+          reason: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          has_billing_history?: boolean | null
+          id?: string
+          ip_address?: unknown
+          new_fiscal_state?: Json | null
+          new_ncm?: string | null
+          old_fiscal_state?: Json | null
+          old_ncm?: string | null
+          product_id: string
+          reason?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          has_billing_history?: boolean | null
+          id?: string
+          ip_address?: unknown
+          new_fiscal_state?: Json | null
+          new_ncm?: string | null
+          old_fiscal_state?: Json | null
+          old_ncm?: string | null
+          product_id?: string
+          reason?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ncm_audit_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
+          aliquota_cofins: number | null
+          aliquota_icms: number | null
+          aliquota_ipi: number | null
+          aliquota_pis: number | null
           category: string | null
           color: string | null
           created_at: string
           created_by: string | null
+          csosn: string | null
+          cst_icms: string | null
+          cst_pis_cofins: string | null
           description: string | null
           fator_kg: number | null
           fator_milheiro: number | null
@@ -2548,8 +2745,15 @@ export type Database = {
           length: number | null
           material: string | null
           name: string
+          ncm_code: string | null
+          ncm_id: string | null
+          ncm_validated_at: string | null
           sku: string
+          tem_icms_st: boolean | null
           thickness: number | null
+          tipo_produto_fiscal:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
           unit_measure: string | null
           unit_price: number | null
           updated_at: string
@@ -2557,10 +2761,17 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
           category?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
+          cst_pis_cofins?: string | null
           description?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
@@ -2568,8 +2779,15 @@ export type Database = {
           length?: number | null
           material?: string | null
           name: string
+          ncm_code?: string | null
+          ncm_id?: string | null
+          ncm_validated_at?: string | null
           sku: string
+          tem_icms_st?: boolean | null
           thickness?: number | null
+          tipo_produto_fiscal?:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
           unit_measure?: string | null
           unit_price?: number | null
           updated_at?: string
@@ -2577,10 +2795,17 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
           category?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
+          cst_pis_cofins?: string | null
           description?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
@@ -2588,14 +2813,29 @@ export type Database = {
           length?: number | null
           material?: string | null
           name?: string
+          ncm_code?: string | null
+          ncm_id?: string | null
+          ncm_validated_at?: string | null
           sku?: string
+          tem_icms_st?: boolean | null
           thickness?: number | null
+          tipo_produto_fiscal?:
+            | Database["public"]["Enums"]["tipo_produto_fiscal"]
+            | null
           unit_measure?: string | null
           unit_price?: number | null
           updated_at?: string
           width?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "products_ncm_id_fkey"
+            columns: ["ncm_id"]
+            isOneToOne: false
+            referencedRelation: "ncm_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -3857,6 +4097,16 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      search_ncm: {
+        Args: { limit_rows?: number; search_term: string }
+        Returns: {
+          aliquota_ipi_oficial: number
+          codigo: string
+          descricao: string
+          id: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       access_level: "restrito" | "total"
@@ -3901,9 +4151,19 @@ export type Database = {
         | "recusada"
         | "expirada"
       prospecting_result_status: "new" | "saved" | "discarded"
+      regime_tributario:
+        | "simples_nacional"
+        | "lucro_presumido"
+        | "lucro_real"
+        | "mei"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_pessoa: "PF" | "PJ"
+      tipo_produto_fiscal:
+        | "revenda"
+        | "consumo"
+        | "industrializacao"
+        | "ativo_imobilizado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4078,9 +4338,21 @@ export const Constants = {
         "expirada",
       ],
       prospecting_result_status: ["new", "saved", "discarded"],
+      regime_tributario: [
+        "simples_nacional",
+        "lucro_presumido",
+        "lucro_real",
+        "mei",
+      ],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
       tipo_pessoa: ["PF", "PJ"],
+      tipo_produto_fiscal: [
+        "revenda",
+        "consumo",
+        "industrializacao",
+        "ativo_imobilizado",
+      ],
     },
   },
 } as const
