@@ -1,3 +1,5 @@
+import { TipoProdutoFiscal } from './fiscal';
+
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
 export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
 
@@ -20,6 +22,19 @@ export interface Product {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  // Campos NCM e Fiscais
+  ncm_code?: string;
+  ncm_id?: string;
+  cst_icms?: string;
+  csosn?: string;
+  aliquota_icms?: number;
+  tem_icms_st?: boolean;
+  aliquota_ipi?: number;
+  cst_pis_cofins?: string;
+  aliquota_pis?: number;
+  aliquota_cofins?: number;
+  tipo_produto_fiscal?: TipoProdutoFiscal;
+  ncm_validated_at?: string;
 }
 
 // Função para calcular o Fator Milheiro
