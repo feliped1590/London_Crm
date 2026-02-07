@@ -59,7 +59,8 @@ const allNavItems: NavItem[] = [
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   { to: '/reallocation', icon: ArrowLeftRight, label: 'Remanejamento', moduleKey: 'settings' },
-  { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations' },
+  // Integrações ocultas na entrega - mantido para uso futuro
+  // { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations' },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
 ];

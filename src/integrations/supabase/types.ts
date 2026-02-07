@@ -3207,6 +3207,39 @@ export type Database = {
           },
         ]
       }
+      user_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          performed_by: string | null
+          target_user_email: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_by?: string | null
+          target_user_email?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          performed_by?: string | null
+          target_user_email?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       user_dashboard_configs: {
         Row: {
           created_at: string
