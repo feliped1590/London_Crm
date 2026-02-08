@@ -1,86 +1,118 @@
+# Plano: Adequação à Reforma Tributária EC 132/2023
 
+## Status: ✅ FASE 1 CONCLUÍDA
 
-# Plano: Corrigir Visibilidade da Aba Fiscal para Perfil Desenvolvedor
+## Visão Geral
 
-## Problema Identificado
+Implementação do suporte ao novo modelo tributário brasileiro (IVA Dual) com coexistência híbrida durante o período de transição 2026-2033.
 
-A aba "Fiscal" em Configurações (`Settings.tsx`) está implementada **sem controle de acesso**, diferentemente das abas "Intervenções" e "Assistente IA" que usam verificações `isAdmin` e `isDeveloper`.
-
-**Localização do problema:**
-- Arquivo: `src/pages/Settings.tsx`
-- Linhas 468-471: TabsTrigger sem condição
-- Linhas 973-975: TabsContent sem condição
-
-## Análise das RLS Policies
+## Modelo Conceitual Revisado
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│           TABELAS FISCAIS - POLÍTICAS DE ACESSO                │
-├────────────────────────────────────────────────────────────────┤
-│ regras_tributacao:                                             │
-│   ✓ SELECT: Todos autenticados (para cálculo fiscal)          │
-│   ✓ INSERT/UPDATE/DELETE: Apenas has_role(..., 'admin')       │
-├────────────────────────────────────────────────────────────────┤
-│ beneficios_fiscais:                                            │
-│   ✓ SELECT: Todos autenticados                                 │
-│   ✓ INSERT/UPDATE/DELETE: Apenas has_role(..., 'admin')       │
-└────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    REFORMA TRIBUTÁRIA - MODELO CONCEITUAL                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONCEITOS-CHAVE (NÃO USAR CST COMO BASE CONCEITUAL):                       │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ REGIME DE INCIDÊNCIA                                                │   │
+│  │ normal | aliquota_zero | monofasico | isento | imune | suspensao   │   │
+│  │ diferimento | cashback | nao_incidencia                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ TIPO DE GERAÇÃO DE CRÉDITO                                          │   │
+│  │ integral | parcial | vedado | presumido                             │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │ IBS COMO IMPOSTO ÚNICO                                              │   │
+│  │ - Alíquota única                                                    │   │
+│  │ - Repartição interna (65% estadual / 35% municipal)                 │   │
+│  │ - Exibição separada apenas para transparência                       │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Como a função `has_role` trata `desenvolvedor` como `admin`, seu perfil **deveria ter acesso total**.
+## Cronograma de Transição (Parametrizado)
 
-## Solução Proposta
+| Ano  | Modelo          | ICMS/ISS | IBS | PIS/COFINS | CBS  | Descrição                    |
+|------|-----------------|----------|-----|------------|------|------------------------------|
+| 2025 | legado          | 100%     | 0%  | 100%       | 0%   | Sistema atual                |
+| 2026 | dual_teste      | 100%     | 0%  | 100%       | 0%   | CBS 0.9% + IBS 0.1% (teste)  |
+| 2027 | dual_transicao  | 100%     | 0%  | 0%         | 100% | CBS substitui PIS/COFINS     |
+| 2028 | dual_transicao  | 100%     | 0%  | 0%         | 100% | Continuidade                 |
+| 2029 | dual_transicao  | 90%      | 10% | 0%         | 100% | Início redução ICMS/ISS      |
+| 2030 | dual_transicao  | 80%      | 20% | 0%         | 100% | Redução gradual              |
+| 2031 | dual_transicao  | 70%      | 30% | 0%         | 100% | Redução gradual              |
+| 2032 | dual_transicao  | 60%      | 40% | 0%         | 100% | Redução gradual              |
+| 2033 | novo            | 0%       | 100%| 0%         | 100% | Extinção ICMS/ISS            |
 
-Adicionar verificação `isAdmin` tanto no `TabsTrigger` quanto no `TabsContent` da aba Fiscal, seguindo o mesmo padrão das outras abas restritas.
+## Estrutura Implementada
 
-### Modificações no `Settings.tsx`
+### 1. Novos ENUMs
 
-**1. TabsTrigger (linha 468-471):**
-```tsx
-// DE:
-<TabsTrigger value="fiscal" className="gap-2">
-  <Calculator className="h-4 w-4" />
-  Fiscal
-</TabsTrigger>
+- `regime_incidencia_cbs_ibs`: Regime de incidência (substitui conceito de CST)
+- `tipo_geracao_credito`: Tipo de geração de crédito
+- `modelo_tributario`: Fase da transição
+- `classificacao_tributaria_nfe`: Campo técnico NF-e (cClassTrib)
+- `split_payment_status`: Status operacional do split payment
+- `categoria_imposto_seletivo`: Categorias do IS (não depende de NCM)
 
-// PARA:
-{(isAdmin || isDeveloper) && (
-  <TabsTrigger value="fiscal" className="gap-2">
-    <Calculator className="h-4 w-4" />
-    Fiscal
-  </TabsTrigger>
-)}
-```
+### 2. Novas Tabelas
 
-**2. TabsContent (linhas 973-975):**
-```tsx
-// DE:
-<TabsContent value="fiscal" className="mt-6 space-y-6">
-  <FiscalSettingsTab />
-</TabsContent>
+| Tabela | Propósito |
+|--------|-----------|
+| `transicao_tributaria_parametros` | Percentuais de transição versionados por ano |
+| `credito_presumido_regras` | Crédito presumido condicional |
+| `split_payment_registros` | Registro operacional de retenções |
+| `cadastro_imposto_seletivo` | Cadastro do IS com categorias e exceções |
 
-// PARA:
-{(isAdmin || isDeveloper) && (
-  <TabsContent value="fiscal" className="mt-6 space-y-6">
-    <FiscalSettingsTab />
-  </TabsContent>
-)}
-```
+### 3. Extensão de `regras_tributacao`
 
-## Arquivos a Modificar
+Novos campos para CBS, IBS e IS usando regime de incidência e tipo de crédito.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/Settings.tsx` | Adicionar condição `(isAdmin \|\| isDeveloper)` na aba Fiscal |
+### 4. Funções de Banco
 
-## Resultado Esperado
+- `get_parametros_transicao(ano)`: Retorna parâmetros de transição do ano
+- `get_credito_presumido_aplicavel(...)`: Retorna crédito presumido aplicável
 
-Após a implementação:
-- Desenvolvedores e Administradores verão a aba "Fiscal"
-- Vendedores e Atendentes não terão acesso ao gerenciamento fiscal
-- O acesso permanece consistente com as RLS policies do banco
+### 5. Tipos TypeScript
 
-## Observação Técnica
+- `src/types/fiscal-reforma.ts`: Tipos completos para o novo modelo
+- `src/types/fiscal-extended.ts`: Extensão com CBS/IBS/IS
 
-A verificação `(isAdmin || isDeveloper)` é redundante porque a função `has_role` no banco já trata desenvolvedor como admin. Porém, como a query `isDeveloper` no frontend é feita separadamente (linha 118-130), precisamos incluir ambas as verificações para garantir que a aba apareça corretamente.
+## Próximas Fases
 
+### Fase 2: Motor de Cálculo Híbrido
+- [ ] Atualizar `calcular-tributacao` Edge Function
+- [ ] Implementar lógica de seleção de modelo por data
+- [ ] Calcular CBS com crédito presumido condicional
+- [ ] Calcular IBS como imposto único com repartição
+- [ ] Calcular IS por categoria (não apenas NCM)
+- [ ] Gerar estrutura Split Payment
+
+### Fase 3: Interface de Gestão
+- [ ] Tab IVA Dual no formulário de regras
+- [ ] Painel de transição tributária
+- [ ] Gestão de Imposto Seletivo
+- [ ] Gestão de Crédito Presumido
+
+### Fase 4: Integração
+- [ ] Snapshot fiscal incluindo novos tributos
+- [ ] Simulador de tributação
+- [ ] Relatórios de conformidade
+
+## Ajustes Conceituais Implementados
+
+| Ajuste | Status |
+|--------|--------|
+| CBS/IBS sem dependência de CST | ✅ Implementado |
+| Regime de incidência + tipo de crédito | ✅ Implementado |
+| Crédito presumido condicional | ✅ Implementado |
+| IBS como imposto único | ✅ Implementado |
+| Split Payment com estados operacionais | ✅ Implementado |
+| Percentuais de transição parametrizáveis | ✅ Implementado |
+| IS por categoria + exceções legais | ✅ Implementado |

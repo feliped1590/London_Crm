@@ -700,6 +700,72 @@ export type Database = {
         }
         Relationships: []
       }
+      cadastro_imposto_seletivo: {
+        Row: {
+          aliquota_maxima: number | null
+          aliquota_padrao: number
+          base_legal: string | null
+          categoria: Database["public"]["Enums"]["categoria_imposto_seletivo"]
+          codigo: string
+          created_at: string | null
+          created_by: string | null
+          criterios_adicionais: Json | null
+          descricao: string
+          excecoes_legais: string[] | null
+          id: string
+          incide_importacao: boolean | null
+          incide_produto_final: boolean | null
+          is_active: boolean | null
+          ncms_aplicaveis: string[] | null
+          produtos_especificos: string[] | null
+          updated_at: string | null
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          aliquota_maxima?: number | null
+          aliquota_padrao: number
+          base_legal?: string | null
+          categoria: Database["public"]["Enums"]["categoria_imposto_seletivo"]
+          codigo: string
+          created_at?: string | null
+          created_by?: string | null
+          criterios_adicionais?: Json | null
+          descricao: string
+          excecoes_legais?: string[] | null
+          id?: string
+          incide_importacao?: boolean | null
+          incide_produto_final?: boolean | null
+          is_active?: boolean | null
+          ncms_aplicaveis?: string[] | null
+          produtos_especificos?: string[] | null
+          updated_at?: string | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          aliquota_maxima?: number | null
+          aliquota_padrao?: number
+          base_legal?: string | null
+          categoria?: Database["public"]["Enums"]["categoria_imposto_seletivo"]
+          codigo?: string
+          created_at?: string | null
+          created_by?: string | null
+          criterios_adicionais?: Json | null
+          descricao?: string
+          excecoes_legais?: string[] | null
+          id?: string
+          incide_importacao?: boolean | null
+          incide_produto_final?: boolean | null
+          is_active?: boolean | null
+          ncms_aplicaveis?: string[] | null
+          produtos_especificos?: string[] | null
+          updated_at?: string | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       cliente_beneficios_fiscais: {
         Row: {
           beneficio_id: string
@@ -1147,6 +1213,78 @@ export type Database = {
             referencedColumns: ["company_id"]
           },
         ]
+      }
+      credito_presumido_regras: {
+        Row: {
+          aplica_por_adquirente: boolean | null
+          aplica_por_ncm: boolean | null
+          aplica_por_operacao: boolean | null
+          aplica_por_regiao: boolean | null
+          base_legal: string | null
+          codigo: string
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          ncms_aplicaveis: string[] | null
+          nome: string
+          percentual_credito: number
+          tipos_adquirente: string[] | null
+          tipos_operacao: string[] | null
+          tributo: string
+          ufs_aplicaveis: string[] | null
+          updated_at: string | null
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          aplica_por_adquirente?: boolean | null
+          aplica_por_ncm?: boolean | null
+          aplica_por_operacao?: boolean | null
+          aplica_por_regiao?: boolean | null
+          base_legal?: string | null
+          codigo: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          ncms_aplicaveis?: string[] | null
+          nome: string
+          percentual_credito: number
+          tipos_adquirente?: string[] | null
+          tipos_operacao?: string[] | null
+          tributo: string
+          ufs_aplicaveis?: string[] | null
+          updated_at?: string | null
+          valid_from: string
+          valid_until?: string | null
+        }
+        Update: {
+          aplica_por_adquirente?: boolean | null
+          aplica_por_ncm?: boolean | null
+          aplica_por_operacao?: boolean | null
+          aplica_por_regiao?: boolean | null
+          base_legal?: string | null
+          codigo?: string
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          ncms_aplicaveis?: string[] | null
+          nome?: string
+          percentual_credito?: number
+          tipos_adquirente?: string[] | null
+          tipos_operacao?: string[] | null
+          tributo?: string
+          ufs_aplicaveis?: string[] | null
+          updated_at?: string | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       crm_client_addresses: {
         Row: {
@@ -3457,6 +3595,20 @@ export type Database = {
       }
       regras_tributacao: {
         Row: {
+          ano_vigencia_fim: number | null
+          ano_vigencia_inicio: number | null
+          c_class_trib:
+            | Database["public"]["Enums"]["classificacao_tributaria_nfe"]
+            | null
+          cbs_aliquota: number | null
+          cbs_aliquota_efetiva: number | null
+          cbs_reducao_base: number | null
+          cbs_regime_incidencia:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          cbs_tipo_credito:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           cfop: string | null
           cfop_resultante: string
           codigo_interno: string | null
@@ -3464,10 +3616,22 @@ export type Database = {
           cofins_cst: string | null
           created_at: string | null
           created_by: string | null
+          cst_nfe: string | null
           descricao: string | null
           difal_aliquota_destino: number | null
           difal_aliquota_origem: number | null
           fcp_aliquota: number | null
+          ibs_aliquota: number | null
+          ibs_aliquota_efetiva: number | null
+          ibs_reducao_base: number | null
+          ibs_regime_incidencia:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          ibs_reparticao_estadual: number | null
+          ibs_reparticao_municipal: number | null
+          ibs_tipo_credito:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           icms_aliquota: number | null
           icms_csosn: string | null
           icms_cst: string | null
@@ -3480,10 +3644,20 @@ export type Database = {
           ipi_cst: string | null
           ipi_enquadramento: string | null
           is_active: boolean | null
+          is_aliquota: number | null
+          is_aplicavel: boolean | null
+          is_categoria:
+            | Database["public"]["Enums"]["categoria_imposto_seletivo"]
+            | null
+          is_excecao_legal: string | null
           is_fallback: boolean | null
+          is_produto_final: boolean | null
           iss_aliquota: number | null
           locked_at: string | null
           locked_by_document_id: string | null
+          modelo_tributario:
+            | Database["public"]["Enums"]["modelo_tributario"]
+            | null
           ncm_code: string | null
           nome: string
           origem_mercadoria:
@@ -3508,6 +3682,20 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          ano_vigencia_fim?: number | null
+          ano_vigencia_inicio?: number | null
+          c_class_trib?:
+            | Database["public"]["Enums"]["classificacao_tributaria_nfe"]
+            | null
+          cbs_aliquota?: number | null
+          cbs_aliquota_efetiva?: number | null
+          cbs_reducao_base?: number | null
+          cbs_regime_incidencia?:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          cbs_tipo_credito?:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           cfop?: string | null
           cfop_resultante: string
           codigo_interno?: string | null
@@ -3515,10 +3703,22 @@ export type Database = {
           cofins_cst?: string | null
           created_at?: string | null
           created_by?: string | null
+          cst_nfe?: string | null
           descricao?: string | null
           difal_aliquota_destino?: number | null
           difal_aliquota_origem?: number | null
           fcp_aliquota?: number | null
+          ibs_aliquota?: number | null
+          ibs_aliquota_efetiva?: number | null
+          ibs_reducao_base?: number | null
+          ibs_regime_incidencia?:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          ibs_reparticao_estadual?: number | null
+          ibs_reparticao_municipal?: number | null
+          ibs_tipo_credito?:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           icms_aliquota?: number | null
           icms_csosn?: string | null
           icms_cst?: string | null
@@ -3531,10 +3731,20 @@ export type Database = {
           ipi_cst?: string | null
           ipi_enquadramento?: string | null
           is_active?: boolean | null
+          is_aliquota?: number | null
+          is_aplicavel?: boolean | null
+          is_categoria?:
+            | Database["public"]["Enums"]["categoria_imposto_seletivo"]
+            | null
+          is_excecao_legal?: string | null
           is_fallback?: boolean | null
+          is_produto_final?: boolean | null
           iss_aliquota?: number | null
           locked_at?: string | null
           locked_by_document_id?: string | null
+          modelo_tributario?:
+            | Database["public"]["Enums"]["modelo_tributario"]
+            | null
           ncm_code?: string | null
           nome: string
           origem_mercadoria?:
@@ -3559,6 +3769,20 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          ano_vigencia_fim?: number | null
+          ano_vigencia_inicio?: number | null
+          c_class_trib?:
+            | Database["public"]["Enums"]["classificacao_tributaria_nfe"]
+            | null
+          cbs_aliquota?: number | null
+          cbs_aliquota_efetiva?: number | null
+          cbs_reducao_base?: number | null
+          cbs_regime_incidencia?:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          cbs_tipo_credito?:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           cfop?: string | null
           cfop_resultante?: string
           codigo_interno?: string | null
@@ -3566,10 +3790,22 @@ export type Database = {
           cofins_cst?: string | null
           created_at?: string | null
           created_by?: string | null
+          cst_nfe?: string | null
           descricao?: string | null
           difal_aliquota_destino?: number | null
           difal_aliquota_origem?: number | null
           fcp_aliquota?: number | null
+          ibs_aliquota?: number | null
+          ibs_aliquota_efetiva?: number | null
+          ibs_reducao_base?: number | null
+          ibs_regime_incidencia?:
+            | Database["public"]["Enums"]["regime_incidencia_cbs_ibs"]
+            | null
+          ibs_reparticao_estadual?: number | null
+          ibs_reparticao_municipal?: number | null
+          ibs_tipo_credito?:
+            | Database["public"]["Enums"]["tipo_geracao_credito"]
+            | null
           icms_aliquota?: number | null
           icms_csosn?: string | null
           icms_cst?: string | null
@@ -3582,10 +3818,20 @@ export type Database = {
           ipi_cst?: string | null
           ipi_enquadramento?: string | null
           is_active?: boolean | null
+          is_aliquota?: number | null
+          is_aplicavel?: boolean | null
+          is_categoria?:
+            | Database["public"]["Enums"]["categoria_imposto_seletivo"]
+            | null
+          is_excecao_legal?: string | null
           is_fallback?: boolean | null
+          is_produto_final?: boolean | null
           iss_aliquota?: number | null
           locked_at?: string | null
           locked_by_document_id?: string | null
+          modelo_tributario?:
+            | Database["public"]["Enums"]["modelo_tributario"]
+            | null
           ncm_code?: string | null
           nome?: string
           origem_mercadoria?:
@@ -3685,6 +3931,113 @@ export type Database = {
           target_value?: number | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      split_payment_registros: {
+        Row: {
+          cbs_aliquota: number | null
+          cbs_base_calculo: number | null
+          cbs_status: Database["public"]["Enums"]["split_payment_status"] | null
+          cbs_valor: number | null
+          created_at: string | null
+          data_ajuste: string | null
+          data_liquidacao: string | null
+          data_operacao: string
+          data_retencao: string | null
+          documento_id: string
+          documento_tipo: string
+          ibs_aliquota: number | null
+          ibs_base_calculo: number | null
+          ibs_status: Database["public"]["Enums"]["split_payment_status"] | null
+          ibs_valor: number | null
+          ibs_valor_estadual: number | null
+          ibs_valor_municipal: number | null
+          id: string
+          intermediador_cnpj: string | null
+          intermediador_id: string | null
+          intermediador_nome: string | null
+          is_aliquota: number | null
+          is_base_calculo: number | null
+          is_status: Database["public"]["Enums"]["split_payment_status"] | null
+          is_valor: number | null
+          item_id: string | null
+          updated_at: string | null
+          valor_liquido_fornecedor: number
+          valor_operacao: number
+          valor_total_retido: number
+        }
+        Insert: {
+          cbs_aliquota?: number | null
+          cbs_base_calculo?: number | null
+          cbs_status?:
+            | Database["public"]["Enums"]["split_payment_status"]
+            | null
+          cbs_valor?: number | null
+          created_at?: string | null
+          data_ajuste?: string | null
+          data_liquidacao?: string | null
+          data_operacao?: string
+          data_retencao?: string | null
+          documento_id: string
+          documento_tipo: string
+          ibs_aliquota?: number | null
+          ibs_base_calculo?: number | null
+          ibs_status?:
+            | Database["public"]["Enums"]["split_payment_status"]
+            | null
+          ibs_valor?: number | null
+          ibs_valor_estadual?: number | null
+          ibs_valor_municipal?: number | null
+          id?: string
+          intermediador_cnpj?: string | null
+          intermediador_id?: string | null
+          intermediador_nome?: string | null
+          is_aliquota?: number | null
+          is_base_calculo?: number | null
+          is_status?: Database["public"]["Enums"]["split_payment_status"] | null
+          is_valor?: number | null
+          item_id?: string | null
+          updated_at?: string | null
+          valor_liquido_fornecedor: number
+          valor_operacao: number
+          valor_total_retido: number
+        }
+        Update: {
+          cbs_aliquota?: number | null
+          cbs_base_calculo?: number | null
+          cbs_status?:
+            | Database["public"]["Enums"]["split_payment_status"]
+            | null
+          cbs_valor?: number | null
+          created_at?: string | null
+          data_ajuste?: string | null
+          data_liquidacao?: string | null
+          data_operacao?: string
+          data_retencao?: string | null
+          documento_id?: string
+          documento_tipo?: string
+          ibs_aliquota?: number | null
+          ibs_base_calculo?: number | null
+          ibs_status?:
+            | Database["public"]["Enums"]["split_payment_status"]
+            | null
+          ibs_valor?: number | null
+          ibs_valor_estadual?: number | null
+          ibs_valor_municipal?: number | null
+          id?: string
+          intermediador_cnpj?: string | null
+          intermediador_id?: string | null
+          intermediador_nome?: string | null
+          is_aliquota?: number | null
+          is_base_calculo?: number | null
+          is_status?: Database["public"]["Enums"]["split_payment_status"] | null
+          is_valor?: number | null
+          item_id?: string | null
+          updated_at?: string | null
+          valor_liquido_fornecedor?: number
+          valor_operacao?: number
+          valor_total_retido?: number
         }
         Relationships: []
       }
@@ -3897,6 +4250,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      transicao_tributaria_parametros: {
+        Row: {
+          aliquota_cbs_referencia: number | null
+          aliquota_ibs_estadual: number | null
+          aliquota_ibs_municipal: number | null
+          aliquota_ibs_referencia: number | null
+          ano_referencia: number
+          base_legal: string | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          modelo_tributario: Database["public"]["Enums"]["modelo_tributario"]
+          percentual_cbs: number
+          percentual_ibs: number
+          percentual_icms_iss: number
+          percentual_pis_cofins: number
+          updated_at: string | null
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          aliquota_cbs_referencia?: number | null
+          aliquota_ibs_estadual?: number | null
+          aliquota_ibs_municipal?: number | null
+          aliquota_ibs_referencia?: number | null
+          ano_referencia: number
+          base_legal?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          modelo_tributario: Database["public"]["Enums"]["modelo_tributario"]
+          percentual_cbs?: number
+          percentual_ibs?: number
+          percentual_icms_iss?: number
+          percentual_pis_cofins?: number
+          updated_at?: string | null
+          valid_from: string
+          valid_until?: string | null
+        }
+        Update: {
+          aliquota_cbs_referencia?: number | null
+          aliquota_ibs_estadual?: number | null
+          aliquota_ibs_municipal?: number | null
+          aliquota_ibs_referencia?: number | null
+          ano_referencia?: number
+          base_legal?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          modelo_tributario?: Database["public"]["Enums"]["modelo_tributario"]
+          percentual_cbs?: number
+          percentual_ibs?: number
+          percentual_icms_iss?: number
+          percentual_pis_cofins?: number
+          updated_at?: string | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
       }
       user_audit_log: {
         Row: {
@@ -4440,6 +4856,21 @@ export type Database = {
           stage_order: number
         }[]
       }
+      get_credito_presumido_aplicavel: {
+        Args: {
+          p_ncm?: string
+          p_tipo_adquirente?: string
+          p_tipo_operacao?: string
+          p_tributo: string
+          p_uf?: string
+        }
+        Returns: {
+          codigo: string
+          id: string
+          nome: string
+          percentual_credito: number
+        }[]
+      }
       get_distinct_regions_for_reallocation: {
         Args: never
         Returns: {
@@ -4466,6 +4897,35 @@ export type Database = {
       get_module_access_type: {
         Args: { _module_key: string; _user_id: string }
         Returns: string
+      }
+      get_parametros_transicao: {
+        Args: { p_ano: number }
+        Returns: {
+          aliquota_cbs_referencia: number | null
+          aliquota_ibs_estadual: number | null
+          aliquota_ibs_municipal: number | null
+          aliquota_ibs_referencia: number | null
+          ano_referencia: number
+          base_legal: string | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          modelo_tributario: Database["public"]["Enums"]["modelo_tributario"]
+          percentual_cbs: number
+          percentual_ibs: number
+          percentual_icms_iss: number
+          percentual_pis_cofins: number
+          updated_at: string | null
+          valid_from: string
+          valid_until: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "transicao_tributaria_parametros"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       get_pipeline_health: {
         Args: {
@@ -4561,6 +5021,25 @@ export type Database = {
         | "add_tag"
         | "send_email"
       automation_trigger: "stage_enter" | "stage_exit"
+      categoria_imposto_seletivo:
+        | "bebidas_alcoolicas"
+        | "bebidas_acucaradas"
+        | "tabaco"
+        | "veiculos"
+        | "embarcacoes_aeronaves"
+        | "extracao_mineral"
+        | "concursos_prognosticos"
+        | "nao_aplicavel"
+      classificacao_tributaria_nfe:
+        | "00"
+        | "10"
+        | "20"
+        | "30"
+        | "40"
+        | "50"
+        | "60"
+        | "70"
+        | "90"
       custom_field_entity: "company" | "contact" | "deal"
       custom_field_type:
         | "text"
@@ -4580,6 +5059,7 @@ export type Database = {
         | "negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+      modelo_tributario: "legado" | "dual_teste" | "dual_transicao" | "novo"
       order_status:
         | "pendente"
         | "em_producao"
@@ -4596,11 +5076,27 @@ export type Database = {
         | "recusada"
         | "expirada"
       prospecting_result_status: "new" | "saved" | "discarded"
+      regime_incidencia_cbs_ibs:
+        | "normal"
+        | "aliquota_zero"
+        | "monofasico"
+        | "isento"
+        | "imune"
+        | "suspensao"
+        | "diferimento"
+        | "cashback"
+        | "nao_incidencia"
       regime_tributario:
         | "simples_nacional"
         | "lucro_presumido"
         | "lucro_real"
         | "mei"
+      split_payment_status:
+        | "estimado"
+        | "retido"
+        | "liquidado"
+        | "ajustado"
+        | "estornado"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_beneficio_fiscal:
@@ -4611,6 +5107,7 @@ export type Database = {
         | "nao_tributado"
         | "aliquota_zero"
         | "credito_presumido"
+      tipo_geracao_credito: "integral" | "parcial" | "vedado" | "presumido"
       tipo_operacao_fiscal:
         | "venda"
         | "venda_interestadual"
@@ -4640,6 +5137,9 @@ export type Database = {
         | "cofins"
         | "iss"
         | "todos"
+        | "cbs"
+        | "ibs"
+        | "is"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4776,6 +5276,27 @@ export const Constants = {
         "send_email",
       ],
       automation_trigger: ["stage_enter", "stage_exit"],
+      categoria_imposto_seletivo: [
+        "bebidas_alcoolicas",
+        "bebidas_acucaradas",
+        "tabaco",
+        "veiculos",
+        "embarcacoes_aeronaves",
+        "extracao_mineral",
+        "concursos_prognosticos",
+        "nao_aplicavel",
+      ],
+      classificacao_tributaria_nfe: [
+        "00",
+        "10",
+        "20",
+        "30",
+        "40",
+        "50",
+        "60",
+        "70",
+        "90",
+      ],
       custom_field_entity: ["company", "contact", "deal"],
       custom_field_type: [
         "text",
@@ -4797,6 +5318,7 @@ export const Constants = {
         "fechado_ganho",
         "fechado_perdido",
       ],
+      modelo_tributario: ["legado", "dual_teste", "dual_transicao", "novo"],
       order_status: [
         "pendente",
         "em_producao",
@@ -4815,11 +5337,29 @@ export const Constants = {
         "expirada",
       ],
       prospecting_result_status: ["new", "saved", "discarded"],
+      regime_incidencia_cbs_ibs: [
+        "normal",
+        "aliquota_zero",
+        "monofasico",
+        "isento",
+        "imune",
+        "suspensao",
+        "diferimento",
+        "cashback",
+        "nao_incidencia",
+      ],
       regime_tributario: [
         "simples_nacional",
         "lucro_presumido",
         "lucro_real",
         "mei",
+      ],
+      split_payment_status: [
+        "estimado",
+        "retido",
+        "liquidado",
+        "ajustado",
+        "estornado",
       ],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
@@ -4832,6 +5372,7 @@ export const Constants = {
         "aliquota_zero",
         "credito_presumido",
       ],
+      tipo_geracao_credito: ["integral", "parcial", "vedado", "presumido"],
       tipo_operacao_fiscal: [
         "venda",
         "venda_interestadual",
@@ -4863,6 +5404,9 @@ export const Constants = {
         "cofins",
         "iss",
         "todos",
+        "cbs",
+        "ibs",
+        "is",
       ],
     },
   },
