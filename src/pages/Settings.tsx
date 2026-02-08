@@ -465,10 +465,12 @@ export default function Settings() {
             <Search className="h-4 w-4" />
             API Prospecção
           </TabsTrigger>
-          <TabsTrigger value="fiscal" className="gap-2">
-            <Calculator className="h-4 w-4" />
-            Fiscal
-          </TabsTrigger>
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="fiscal" className="gap-2">
+              <Calculator className="h-4 w-4" />
+              Fiscal
+            </TabsTrigger>
+          )}
           {isAdmin && (
             <TabsTrigger value="interventions" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -970,9 +972,11 @@ export default function Settings() {
           <ProspectingApiConfig />
         </TabsContent>
 
-        <TabsContent value="fiscal" className="mt-6 space-y-6">
-          <FiscalSettingsTab />
-        </TabsContent>
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="fiscal" className="mt-6 space-y-6">
+            <FiscalSettingsTab />
+          </TabsContent>
+        )}
 
         {isAdmin && (
           <TabsContent value="interventions" className="mt-6 space-y-6">
