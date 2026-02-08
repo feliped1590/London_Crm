@@ -38,6 +38,9 @@ export type TributoAfetado =
   | 'pis'
   | 'cofins'
   | 'iss'
+  | 'cbs'    // Novo - Reforma Tributária
+  | 'ibs'    // Novo - Reforma Tributária
+  | 'is'     // Novo - Reforma Tributária
   | 'todos';
 
 export type OrigemMercadoria = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8';
@@ -376,6 +379,9 @@ export const tributoAfetadoOptions = [
   { value: 'pis', label: 'PIS' },
   { value: 'cofins', label: 'COFINS' },
   { value: 'iss', label: 'ISS' },
+  { value: 'cbs', label: 'CBS (Reforma)' },
+  { value: 'ibs', label: 'IBS (Reforma)' },
+  { value: 'is', label: 'Imposto Seletivo' },
   { value: 'todos', label: 'Todos os Tributos' },
 ];
 
