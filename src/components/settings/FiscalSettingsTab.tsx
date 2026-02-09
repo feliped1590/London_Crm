@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TransicaoTributariaPanel } from '@/components/fiscal/TransicaoTributariaPanel';
+import { ImpostoSeletivoManager } from '@/components/fiscal/ImpostoSeletivoManager';
+import { CreditoPresumidoManager } from '@/components/fiscal/CreditoPresumidoManager';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -24,7 +27,10 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Info
+  Info,
+  TrendingUp,
+  Landmark,
+  Percent
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRegrasTributacao, useCreateRegraTributacao, useUpdateRegraTributacao, useDeleteRegraTributacao } from '@/hooks/useFiscalRules';
@@ -54,7 +60,7 @@ export function FiscalSettingsTab() {
       </div>
 
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="regras" className="gap-2">
             <Calculator className="h-4 w-4" />
             Regras de Tributação
@@ -62,6 +68,18 @@ export function FiscalSettingsTab() {
           <TabsTrigger value="beneficios" className="gap-2">
             <Gift className="h-4 w-4" />
             Benefícios Fiscais
+          </TabsTrigger>
+          <TabsTrigger value="transicao" className="gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Transição 2026
+          </TabsTrigger>
+          <TabsTrigger value="credito-presumido" className="gap-2">
+            <Percent className="h-4 w-4" />
+            Crédito Presumido
+          </TabsTrigger>
+          <TabsTrigger value="imposto-seletivo" className="gap-2">
+            <Landmark className="h-4 w-4" />
+            Imposto Seletivo
           </TabsTrigger>
           <TabsTrigger value="cadastros" className="gap-2">
             <FileText className="h-4 w-4" />
@@ -75,6 +93,18 @@ export function FiscalSettingsTab() {
 
         <TabsContent value="beneficios" className="mt-6">
           <BeneficiosFiscaisManager />
+        </TabsContent>
+
+        <TabsContent value="transicao" className="mt-6">
+          <TransicaoTributariaPanel />
+        </TabsContent>
+
+        <TabsContent value="credito-presumido" className="mt-6">
+          <CreditoPresumidoManager />
+        </TabsContent>
+
+        <TabsContent value="imposto-seletivo" className="mt-6">
+          <ImpostoSeletivoManager />
         </TabsContent>
 
         <TabsContent value="cadastros" className="mt-6">
