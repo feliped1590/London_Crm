@@ -1281,8 +1281,99 @@ export type Database = {
           },
         ]
       }
+      contact_erp_data: {
+        Row: {
+          contact_id: string
+          created_at: string
+          credential_expiry: string | null
+          erp_modified_at: string | null
+          erp_notes: string | null
+          erp_sequence: number | null
+          erp_updated_at: string | null
+          extra_data: Json | null
+          homepage: string | null
+          id: string
+          notify_sale: boolean | null
+          participates: boolean | null
+          person_code: string | null
+          photo_path: string | null
+          receives_billing_email: boolean | null
+          receives_email: boolean | null
+          receives_payment_email: boolean | null
+          relationship_code: string | null
+          superior_seq: number | null
+          tenant_id: string
+          treatment: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          credential_expiry?: string | null
+          erp_modified_at?: string | null
+          erp_notes?: string | null
+          erp_sequence?: number | null
+          erp_updated_at?: string | null
+          extra_data?: Json | null
+          homepage?: string | null
+          id?: string
+          notify_sale?: boolean | null
+          participates?: boolean | null
+          person_code?: string | null
+          photo_path?: string | null
+          receives_billing_email?: boolean | null
+          receives_email?: boolean | null
+          receives_payment_email?: boolean | null
+          relationship_code?: string | null
+          superior_seq?: number | null
+          tenant_id: string
+          treatment?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          credential_expiry?: string | null
+          erp_modified_at?: string | null
+          erp_notes?: string | null
+          erp_sequence?: number | null
+          erp_updated_at?: string | null
+          extra_data?: Json | null
+          homepage?: string | null
+          id?: string
+          notify_sale?: boolean | null
+          participates?: boolean | null
+          person_code?: string | null
+          photo_path?: string | null
+          receives_billing_email?: boolean | null
+          receives_email?: boolean | null
+          receives_payment_email?: boolean | null
+          relationship_code?: string | null
+          superior_seq?: number | null
+          tenant_id?: string
+          treatment?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_erp_data_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_erp_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
+          birth_date: string | null
           company_id: string | null
           cpf: string | null
           created_at: string
@@ -1290,7 +1381,11 @@ export type Database = {
           custom_fields: Json | null
           department: string | null
           email: string | null
+          erp_contact_code: string | null
+          erp_last_update_date: string | null
+          erp_synced_at: string | null
           first_name: string
+          gender: string | null
           id: string
           iniflex_id: string | null
           iniflex_synced_at: string | null
@@ -1301,11 +1396,13 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           phone: string | null
+          phone_extension: string | null
           tenant_id: string
           tipo_pessoa: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at: string
         }
         Insert: {
+          birth_date?: string | null
           company_id?: string | null
           cpf?: string | null
           created_at?: string
@@ -1313,7 +1410,11 @@ export type Database = {
           custom_fields?: Json | null
           department?: string | null
           email?: string | null
+          erp_contact_code?: string | null
+          erp_last_update_date?: string | null
+          erp_synced_at?: string | null
           first_name: string
+          gender?: string | null
           id?: string
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
@@ -1324,11 +1425,13 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          phone_extension?: string | null
           tenant_id?: string
           tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at?: string
         }
         Update: {
+          birth_date?: string | null
           company_id?: string | null
           cpf?: string | null
           created_at?: string
@@ -1336,7 +1439,11 @@ export type Database = {
           custom_fields?: Json | null
           department?: string | null
           email?: string | null
+          erp_contact_code?: string | null
+          erp_last_update_date?: string | null
+          erp_synced_at?: string | null
           first_name?: string
+          gender?: string | null
           id?: string
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
@@ -1347,6 +1454,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           phone?: string | null
+          phone_extension?: string | null
           tenant_id?: string
           tipo_pessoa?: Database["public"]["Enums"]["tipo_pessoa"] | null
           updated_at?: string
