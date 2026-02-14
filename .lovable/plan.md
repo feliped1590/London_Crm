@@ -1,45 +1,145 @@
 
-# Correcao: Coluna "Ult. Atendimento" mostrando "Nunca" na pagina de Remanejamento
+# Fase 3 -- ETL Inicial (Importacao ERP para CRM)
 
-## Problema Identificado
+## Resumo
 
-A view `unified_company_for_reallocation` (usada pela pagina de Remanejamento) calcula o `last_interaction_at` de forma **muito limitada** comparada a view `company_activity_summary` (usada pela pagina de Clientes).
+Criar a Edge Function `erp-import-companies` que recebe um array de registros do ERP (CIGAM/Iniflex), normaliza os dados, e faz merge inteligente no CRM usando a regra composta `(tenant_id, cnpj)` com fallback `(tenant_id, erp_code)`. Processamento em batches de 100, com registro de conflitos na tabela `import_conflict_log`.
 
-| Fonte de dados | `company_activity_summary` | `unified_company_for_reallocation` |
-|---|---|---|
-| activities | Sim | Sim |
-| tasks (concluidas) | Sim | **Nao** |
-| email_logs (enviados) | Sim | **Nao** |
-| whatsapp_messages (outbound) | Sim | **Nao** |
-| Fallback para created_at | Sim | **Nao** |
+## O que sera feito
 
-Como resultado, empresas que tem interacoes registradas em tasks, emails ou WhatsApp (ou simplesmente foram criadas recentemente) aparecem como "Nunca" no Remanejamento.
+### 1. Edge Function `erp-import-companies`
 
-## Solucao
+Uma nova funcao backend que recebe dados do ERP e importa para o CRM. Fluxo:
 
-Atualizar a CTE `crm_data` dentro da view `unified_company_for_reallocation` para usar a mesma logica abrangente da view `company_activity_summary`:
+1. Recebe array de registros ERP via POST
+2. Processa em batches de 100 registros
+3. Para cada registro:
+   - Normaliza CNPJ (remove pontuacao, valida 14 digitos)
+   - Normaliza CEP (remove pontuacao, valida 8 digitos)
+   - Normaliza datas (converte formatos ERP para ISO)
+   - Normaliza booleanos (S/N, SIM/NAO, 1/0 para true/false)
+   - Normaliza tipo_pessoa (PF/PJ)
+4. Faz merge composto:
+   - Busca por `(tenant_id, cnpj)` -- prioridade
+   - Se nao encontrou, busca por `(tenant_id, erp_code)` -- fallback
+   - Se encontrou: UPDATE (com deteccao de conflitos)
+   - Se nao encontrou: INSERT
+5. Popula `company_erp_fiscal` e `company_erp_financial` quando dados disponiveis
+6. Registra conflitos na `import_conflict_log`
+7. Retorna sumario: total, inseridos, atualizados, erros, conflitos
 
-```sql
-COALESCE(
-  GREATEST(
-    (SELECT max(a.created_at) FROM activities a WHERE a.company_id = c.id),
-    (SELECT max(t.completed_at) FROM tasks t WHERE t.company_id = c.id AND t.status = 'concluida'),
-    (SELECT max(el.sent_at) FROM email_logs el JOIN contacts ct ON el.contact_id = ct.id WHERE ct.company_id = c.id AND el.sent_at IS NOT NULL),
-    (SELECT max(wm.created_at) FROM whatsapp_messages wm WHERE wm.company_id = c.id AND wm.direction = 'outbound')
-  ),
-  c.created_at
-) AS last_interaction_at
+### 2. Normalizacoes implementadas
+
+| Campo | Regra |
+|-------|-------|
+| CNPJ | Remove `./- `, valida 14 digitos |
+| CEP | Remove `- `, valida 8 digitos |
+| Datas | Aceita `DD/MM/YYYY`, `YYYY-MM-DD`, timestamp ERP |
+| Booleanos | `S/SIM/1/TRUE` = true, demais = false |
+| Tipo pessoa | Normaliza para `PF` ou `PJ` |
+| Textos | Trim, null se vazio |
+
+### 3. Deteccao de conflitos
+
+Quando um registro ja existe no CRM e os dados divergem do ERP, os campos conflitantes sao registrados na tabela `import_conflict_log` com:
+- `crm_value`: valor atual no CRM
+- `erp_value`: valor vindo do ERP
+- `resolution`: pendente (para revisao manual) ou auto-resolvida (campos vazios no CRM)
+
+Regra de auto-resolucao: se o campo no CRM esta vazio/null e o ERP tem valor, atualiza automaticamente e marca como `auto_resolved = true`.
+
+### 4. Resposta da funcao
+
+```text
+{
+  "success": true,
+  "summary": {
+    "total_received": 500,
+    "total_processed": 500,
+    "inserted": 320,
+    "updated": 175,
+    "skipped": 5,
+    "conflicts_detected": 42,
+    "conflicts_auto_resolved": 30,
+    "errors": []
+  }
+}
 ```
 
-## Escopo da mudanca
+---
 
-| O que muda | Detalhes |
-|---|---|
-| View `unified_company_for_reallocation` | Substituir subconsulta simples de `activities` pela logica completa com fallback |
-| Arquivos de codigo | Nenhum - a correcao e 100% no banco de dados |
+## Secao Tecnica
 
-## Resultado Esperado
+### Arquivos criados/modificados
 
-- A coluna "Ult. Atendimento" passara a refletir a data mais recente entre atividades, tarefas concluidas, emails enviados e mensagens WhatsApp
-- Empresas sem nenhuma dessas interacoes mostrarao a data de criacao como fallback em vez de "Nunca"
-- A logica fica consistente com a pagina de Clientes
+| Arquivo | Acao |
+|---------|------|
+| `supabase/functions/erp-import-companies/index.ts` | Criar -- Edge Function principal |
+| `supabase/config.toml` | Adicionar `[functions.erp-import-companies]` com `verify_jwt = false` |
+
+### Estrutura do payload de entrada
+
+```text
+POST /erp-import-companies
+{
+  "tenant_id": "uuid",
+  "records": [
+    {
+      "erp_code": "12345",
+      "cnpj_cpf": "12.345.678/0001-90",
+      "tipo_pessoa": "PJ",
+      "nome": "Empresa X Ltda",
+      "fantasia": "Empresa X",
+      "email": "contato@x.com",
+      "fone": "(11) 1234-5678",
+      "endereco": "Rua ABC",
+      "numero": "123",
+      "complemento": "Sala 4",
+      "bairro": "Centro",
+      "cidade": "Sao Paulo",
+      "uf": "SP",
+      "cep": "01234-567",
+      "inscricao_estadual": "123456789",
+      "inscricao_municipal": "987654",
+      "data_cadastro": "15/03/2020",
+      "data_ultima_atualizacao": "10/01/2025",
+      "regime_tributario": "LUCRO_REAL",
+      "contribuinte_icms": "S",
+      "limite_credito": 50000.00,
+      "condicao_pagamento": "30/60/90",
+      "observacoes": "Cliente desde 2020"
+    }
+  ]
+}
+```
+
+### Logica de merge (pseudocodigo)
+
+```text
+Para cada registro:
+  1. normalizar(registro)
+  2. existing = buscar por (tenant_id, cnpj) 
+     || buscar por (tenant_id, erp_code)
+  3. Se existing:
+     - detectar_conflitos(existing, registro)
+     - aplicar auto-resolucao (campos CRM vazios)
+     - UPDATE companies + upsert fiscal/financial
+     - resultado = "updated"
+  4. Se nao existing:
+     - INSERT companies + insert fiscal/financial
+     - resultado = "inserted"
+```
+
+### Batch processing
+
+- Registros sao processados em grupos de 100
+- Cada batch usa transacao implicita (upserts individuais)
+- Erros em um registro nao interrompem o batch
+- Todos os erros sao coletados e retornados no sumario
+
+### Seguranca
+
+- Funcao usa `SUPABASE_SERVICE_ROLE_KEY` para bypass de RLS (importacao administrativa)
+- `verify_jwt = false` no config.toml (chamada interna/administrativa)
+- Valida `tenant_id` obrigatorio no payload
+- Nao aceita SQL arbitrario -- apenas operacoes tipadas via SDK
