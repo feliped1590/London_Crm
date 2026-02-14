@@ -3118,48 +3118,222 @@ export type Database = {
           },
         ]
       }
+      order_erp_data: {
+        Row: {
+          business_unit: string | null
+          carrier_code: string | null
+          commission_pct: number | null
+          created_at: string
+          currency_code: string | null
+          erp_modified_at: string | null
+          erp_order_type: string | null
+          erp_registered_at: string | null
+          extra_data: Json | null
+          id: string
+          invoice_number: string | null
+          market_code: string | null
+          operation_type: string | null
+          order_id: string
+          payment_condition: string | null
+          seller_code: string | null
+          session_id: number | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_unit?: string | null
+          carrier_code?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          currency_code?: string | null
+          erp_modified_at?: string | null
+          erp_order_type?: string | null
+          erp_registered_at?: string | null
+          extra_data?: Json | null
+          id?: string
+          invoice_number?: string | null
+          market_code?: string | null
+          operation_type?: string | null
+          order_id: string
+          payment_condition?: string | null
+          seller_code?: string | null
+          session_id?: number | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_unit?: string | null
+          carrier_code?: string | null
+          commission_pct?: number | null
+          created_at?: string
+          currency_code?: string | null
+          erp_modified_at?: string | null
+          erp_order_type?: string | null
+          erp_registered_at?: string | null
+          extra_data?: Json | null
+          id?: string
+          invoice_number?: string | null
+          market_code?: string | null
+          operation_type?: string | null
+          order_id?: string
+          payment_condition?: string | null
+          seller_code?: string | null
+          session_id?: number | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_erp_data_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_erp_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_erp_data: {
+        Row: {
+          account_code: string | null
+          batch_code: string | null
+          cfop: string | null
+          cost_center: string | null
+          cost_price: number | null
+          created_at: string
+          detail_code: string | null
+          extra_data: Json | null
+          id: string
+          list_price: number | null
+          order_item_id: string
+          packing_list_number: string | null
+          tenant_id: string
+          unit_measure: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_code?: string | null
+          batch_code?: string | null
+          cfop?: string | null
+          cost_center?: string | null
+          cost_price?: number | null
+          created_at?: string
+          detail_code?: string | null
+          extra_data?: Json | null
+          id?: string
+          list_price?: number | null
+          order_item_id: string
+          packing_list_number?: string | null
+          tenant_id: string
+          unit_measure?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string | null
+          batch_code?: string | null
+          cfop?: string | null
+          cost_center?: string | null
+          cost_price?: number | null
+          created_at?: string
+          detail_code?: string | null
+          extra_data?: Json | null
+          id?: string
+          list_price?: number | null
+          order_item_id?: string
+          packing_list_number?: string | null
+          tenant_id?: string
+          unit_measure?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_erp_data_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: true
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_erp_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
+          approved_at: string | null
+          commission_pct: number | null
           created_at: string
+          delivery_date: string | null
           description: string
           discount_percent: number | null
+          erp_item_sequence: number | null
+          erp_status: string | null
+          erp_synced_at: string | null
           id: string
+          item_date: string | null
           length: number | null
           order_id: string
           product_id: string | null
           quantity: number
           sort_order: number | null
           subtotal: number
+          tenant_id: string
           thickness: number | null
           unit_price: number
           width: number | null
         }
         Insert: {
+          approved_at?: string | null
+          commission_pct?: number | null
           created_at?: string
+          delivery_date?: string | null
           description: string
           discount_percent?: number | null
+          erp_item_sequence?: number | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
           id?: string
+          item_date?: string | null
           length?: number | null
           order_id: string
           product_id?: string | null
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          tenant_id?: string
           thickness?: number | null
           unit_price?: number
           width?: number | null
         }
         Update: {
+          approved_at?: string | null
+          commission_pct?: number | null
           created_at?: string
+          delivery_date?: string | null
           description?: string
           discount_percent?: number | null
+          erp_item_sequence?: number | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
           id?: string
+          item_date?: string | null
           length?: number | null
           order_id?: string
           product_id?: string | null
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          tenant_id?: string
           thickness?: number | null
           unit_price?: number
           width?: number | null
@@ -3179,53 +3353,99 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
         Row: {
+          approved_at: string | null
           company_id: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
           delivery_date: string | null
+          erp_last_update_date: string | null
+          erp_order_code: string | null
+          erp_rep_code: string | null
+          erp_status: string | null
+          erp_synced_at: string | null
+          freight_type: string | null
+          freight_value: number | null
           id: string
           number: string
           observations: string | null
+          order_date: string | null
+          origin: string
           proposal_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           tenant_id: string
+          total_discount: number | null
+          total_goods: number | null
           total_value: number | null
           updated_at: string
+          valid_until: string | null
         }
         Insert: {
+          approved_at?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           delivery_date?: string | null
+          erp_last_update_date?: string | null
+          erp_order_code?: string | null
+          erp_rep_code?: string | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
+          freight_type?: string | null
+          freight_value?: number | null
           id?: string
           number: string
           observations?: string | null
+          order_date?: string | null
+          origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           tenant_id?: string
+          total_discount?: number | null
+          total_goods?: number | null
           total_value?: number | null
           updated_at?: string
+          valid_until?: string | null
         }
         Update: {
+          approved_at?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           delivery_date?: string | null
+          erp_last_update_date?: string | null
+          erp_order_code?: string | null
+          erp_rep_code?: string | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
+          freight_type?: string | null
+          freight_value?: number | null
           id?: string
           number?: string
           observations?: string | null
+          order_date?: string | null
+          origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           tenant_id?: string
+          total_discount?: number | null
+          total_goods?: number | null
           total_value?: number | null
           updated_at?: string
+          valid_until?: string | null
         }
         Relationships: [
           {
