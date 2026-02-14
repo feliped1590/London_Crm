@@ -847,9 +847,12 @@ export type Database = {
         Row: {
           active: boolean | null
           address: string | null
+          address_complement: string | null
+          address_number: string | null
           annual_revenue: string | null
           city: string | null
           cnpj: string | null
+          contact_name: string | null
           contribuinte_icms: boolean | null
           contribuinte_ipi: boolean | null
           country: string | null
@@ -859,15 +862,23 @@ export type Database = {
           domain: string | null
           email: string | null
           employee_count: string | null
+          erp_code: string | null
+          erp_last_movement_date: string | null
+          erp_last_update_date: string | null
+          erp_registration_date: string | null
+          erp_synced_at: string | null
           fantasia: string | null
+          fax: string | null
           id: string
           industry: string | null
           iniflex_id: string | null
           iniflex_synced_at: string | null
           inscricao_estadual: string | null
+          inscricao_municipal: string | null
           is_matriz: boolean | null
           last_reviewed_at: string | null
           name: string
+          neighborhood: string | null
           notes: string | null
           origin: string | null
           owner_id: string | null
@@ -879,15 +890,20 @@ export type Database = {
           state: string | null
           suframa: string | null
           tenant_id: string
+          tipo_pessoa: string | null
           updated_at: string
           website: string | null
+          zip_code: string | null
         }
         Insert: {
           active?: boolean | null
           address?: string | null
+          address_complement?: string | null
+          address_number?: string | null
           annual_revenue?: string | null
           city?: string | null
           cnpj?: string | null
+          contact_name?: string | null
           contribuinte_icms?: boolean | null
           contribuinte_ipi?: boolean | null
           country?: string | null
@@ -897,15 +913,23 @@ export type Database = {
           domain?: string | null
           email?: string | null
           employee_count?: string | null
+          erp_code?: string | null
+          erp_last_movement_date?: string | null
+          erp_last_update_date?: string | null
+          erp_registration_date?: string | null
+          erp_synced_at?: string | null
           fantasia?: string | null
+          fax?: string | null
           id?: string
           industry?: string | null
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           name: string
+          neighborhood?: string | null
           notes?: string | null
           origin?: string | null
           owner_id?: string | null
@@ -917,15 +941,20 @@ export type Database = {
           state?: string | null
           suframa?: string | null
           tenant_id?: string
+          tipo_pessoa?: string | null
           updated_at?: string
           website?: string | null
+          zip_code?: string | null
         }
         Update: {
           active?: boolean | null
           address?: string | null
+          address_complement?: string | null
+          address_number?: string | null
           annual_revenue?: string | null
           city?: string | null
           cnpj?: string | null
+          contact_name?: string | null
           contribuinte_icms?: boolean | null
           contribuinte_ipi?: boolean | null
           country?: string | null
@@ -935,15 +964,23 @@ export type Database = {
           domain?: string | null
           email?: string | null
           employee_count?: string | null
+          erp_code?: string | null
+          erp_last_movement_date?: string | null
+          erp_last_update_date?: string | null
+          erp_registration_date?: string | null
+          erp_synced_at?: string | null
           fantasia?: string | null
+          fax?: string | null
           id?: string
           industry?: string | null
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           name?: string
+          neighborhood?: string | null
           notes?: string | null
           origin?: string | null
           owner_id?: string | null
@@ -955,8 +992,10 @@ export type Database = {
           state?: string | null
           suframa?: string | null
           tenant_id?: string
+          tipo_pessoa?: string | null
           updated_at?: string
           website?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {
@@ -1027,6 +1066,218 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_activity_summary"
             referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      company_erp_financial: {
+        Row: {
+          agencia: string | null
+          banco_preferencial: string | null
+          company_id: string
+          condicao_pagamento: string | null
+          conta: string | null
+          created_at: string
+          credit_approved_at: string | null
+          credit_approved_by: string | null
+          credit_risk_level: string | null
+          credit_score: number | null
+          credit_validity_date: string | null
+          data_ultimo_pagamento: string | null
+          erp_financial_data: Json | null
+          forma_pagamento: string | null
+          id: string
+          limite_credito: number | null
+          possui_titulos_abertos: boolean | null
+          possui_titulos_vencidos: boolean | null
+          prazo_medio_pagamento: number | null
+          saldo_devedor: number | null
+          tenant_id: string
+          updated_at: string
+          valor_titulos_abertos: number | null
+          valor_titulos_vencidos: number | null
+        }
+        Insert: {
+          agencia?: string | null
+          banco_preferencial?: string | null
+          company_id: string
+          condicao_pagamento?: string | null
+          conta?: string | null
+          created_at?: string
+          credit_approved_at?: string | null
+          credit_approved_by?: string | null
+          credit_risk_level?: string | null
+          credit_score?: number | null
+          credit_validity_date?: string | null
+          data_ultimo_pagamento?: string | null
+          erp_financial_data?: Json | null
+          forma_pagamento?: string | null
+          id?: string
+          limite_credito?: number | null
+          possui_titulos_abertos?: boolean | null
+          possui_titulos_vencidos?: boolean | null
+          prazo_medio_pagamento?: number | null
+          saldo_devedor?: number | null
+          tenant_id: string
+          updated_at?: string
+          valor_titulos_abertos?: number | null
+          valor_titulos_vencidos?: number | null
+        }
+        Update: {
+          agencia?: string | null
+          banco_preferencial?: string | null
+          company_id?: string
+          condicao_pagamento?: string | null
+          conta?: string | null
+          created_at?: string
+          credit_approved_at?: string | null
+          credit_approved_by?: string | null
+          credit_risk_level?: string | null
+          credit_score?: number | null
+          credit_validity_date?: string | null
+          data_ultimo_pagamento?: string | null
+          erp_financial_data?: Json | null
+          forma_pagamento?: string | null
+          id?: string
+          limite_credito?: number | null
+          possui_titulos_abertos?: boolean | null
+          possui_titulos_vencidos?: boolean | null
+          prazo_medio_pagamento?: number | null
+          saldo_devedor?: number | null
+          tenant_id?: string
+          updated_at?: string
+          valor_titulos_abertos?: number | null
+          valor_titulos_vencidos?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_erp_financial_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_erp_financial_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "company_erp_financial_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_erp_fiscal: {
+        Row: {
+          aliquota_cofins: number | null
+          aliquota_icms: number | null
+          aliquota_ipi: number | null
+          aliquota_pis: number | null
+          cfop_padrao: string | null
+          company_id: string
+          contribuinte_icms: boolean | null
+          contribuinte_ipi: boolean | null
+          created_at: string
+          cst_cofins: string | null
+          cst_icms: string | null
+          cst_ipi: string | null
+          cst_pis: string | null
+          destino_mercadoria: string | null
+          erp_fiscal_data: Json | null
+          finalidade_operacao: string | null
+          id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          optante_simples: boolean | null
+          reducao_base_icms: number | null
+          regime_tributario: string | null
+          suframa: string | null
+          tenant_id: string
+          tipo_contribuinte: string | null
+          updated_at: string
+        }
+        Insert: {
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
+          cfop_padrao?: string | null
+          company_id: string
+          contribuinte_icms?: boolean | null
+          contribuinte_ipi?: boolean | null
+          created_at?: string
+          cst_cofins?: string | null
+          cst_icms?: string | null
+          cst_ipi?: string | null
+          cst_pis?: string | null
+          destino_mercadoria?: string | null
+          erp_fiscal_data?: Json | null
+          finalidade_operacao?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          optante_simples?: boolean | null
+          reducao_base_icms?: number | null
+          regime_tributario?: string | null
+          suframa?: string | null
+          tenant_id: string
+          tipo_contribuinte?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aliquota_cofins?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_pis?: number | null
+          cfop_padrao?: string | null
+          company_id?: string
+          contribuinte_icms?: boolean | null
+          contribuinte_ipi?: boolean | null
+          created_at?: string
+          cst_cofins?: string | null
+          cst_icms?: string | null
+          cst_ipi?: string | null
+          cst_pis?: string | null
+          destino_mercadoria?: string | null
+          erp_fiscal_data?: Json | null
+          finalidade_operacao?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          optante_simples?: boolean | null
+          reducao_base_icms?: number | null
+          regime_tributario?: string | null
+          suframa?: string | null
+          tenant_id?: string
+          tipo_contribuinte?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_erp_fiscal_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_erp_fiscal_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "company_erp_fiscal_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2342,6 +2593,68 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_conflict_log: {
+        Row: {
+          auto_resolved: boolean | null
+          created_at: string
+          crm_value: string | null
+          entity_id: string | null
+          entity_type: string
+          erp_code: string | null
+          erp_value: string | null
+          field_name: string
+          id: string
+          metadata: Json | null
+          resolution: string | null
+          resolution_rule: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          tenant_id: string
+        }
+        Insert: {
+          auto_resolved?: boolean | null
+          created_at?: string
+          crm_value?: string | null
+          entity_id?: string | null
+          entity_type: string
+          erp_code?: string | null
+          erp_value?: string | null
+          field_name: string
+          id?: string
+          metadata?: Json | null
+          resolution?: string | null
+          resolution_rule?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tenant_id: string
+        }
+        Update: {
+          auto_resolved?: boolean | null
+          created_at?: string
+          crm_value?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          erp_code?: string | null
+          erp_value?: string | null
+          field_name?: string
+          id?: string
+          metadata?: Json | null
+          resolution?: string | null
+          resolution_rule?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_conflict_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
