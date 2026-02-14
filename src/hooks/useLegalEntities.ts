@@ -85,6 +85,9 @@ export function useLegalEntities() {
 
   const activeLegalEntityId = profile?.active_legal_entity_id ?? null;
   const activeLegalEntity = allEntities.find(e => e.id === activeLegalEntityId) ?? null;
+  const defaultEntity = allEntities.find(e => (e as any).is_headquarters === true) ?? null;
+  const effectiveEntity = activeLegalEntity ?? defaultEntity ?? allEntities[0] ?? null;
+  const effectiveEntityId = effectiveEntity?.id ?? null;
 
   // Mutation to switch active legal entity
   const switchEntityMutation = useMutation({
@@ -108,6 +111,9 @@ export function useLegalEntities() {
     accessibleEntities,
     activeLegalEntityId,
     activeLegalEntity,
+    defaultEntity,
+    effectiveEntity,
+    effectiveEntityId,
     isLoading: entitiesLoading,
     hasEntities: allEntities.length > 0,
     switchEntity: switchEntityMutation.mutate,
