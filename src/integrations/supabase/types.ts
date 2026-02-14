@@ -3569,6 +3569,120 @@ export type Database = {
         }
         Relationships: []
       }
+      product_erp_data: {
+        Row: {
+          business_unit: string | null
+          center_control: string | null
+          commission_pct: number | null
+          cost_price: number | null
+          created_at: string
+          erp_modified_at: string | null
+          erp_price_table_code: string | null
+          erp_product_type_id: number | null
+          erp_registered_at: string | null
+          extra_data: Json | null
+          factory_code: string | null
+          finance_charges_pct: number | null
+          freight_pct: number | null
+          freight_value: number | null
+          id: string
+          manufacturer_code: string | null
+          packaging_pct: number | null
+          packaging_weight: number | null
+          parent_child_qty: number | null
+          product_id: string
+          purchase_converter: number | null
+          purchase_unit: string | null
+          purchase_warranty: number | null
+          readjust_date: string | null
+          readjust_pct: number | null
+          sale_converter: number | null
+          short_code: number | null
+          tenant_id: string
+          updated_at: string
+          volume: number | null
+        }
+        Insert: {
+          business_unit?: string | null
+          center_control?: string | null
+          commission_pct?: number | null
+          cost_price?: number | null
+          created_at?: string
+          erp_modified_at?: string | null
+          erp_price_table_code?: string | null
+          erp_product_type_id?: number | null
+          erp_registered_at?: string | null
+          extra_data?: Json | null
+          factory_code?: string | null
+          finance_charges_pct?: number | null
+          freight_pct?: number | null
+          freight_value?: number | null
+          id?: string
+          manufacturer_code?: string | null
+          packaging_pct?: number | null
+          packaging_weight?: number | null
+          parent_child_qty?: number | null
+          product_id: string
+          purchase_converter?: number | null
+          purchase_unit?: string | null
+          purchase_warranty?: number | null
+          readjust_date?: string | null
+          readjust_pct?: number | null
+          sale_converter?: number | null
+          short_code?: number | null
+          tenant_id: string
+          updated_at?: string
+          volume?: number | null
+        }
+        Update: {
+          business_unit?: string | null
+          center_control?: string | null
+          commission_pct?: number | null
+          cost_price?: number | null
+          created_at?: string
+          erp_modified_at?: string | null
+          erp_price_table_code?: string | null
+          erp_product_type_id?: number | null
+          erp_registered_at?: string | null
+          extra_data?: Json | null
+          factory_code?: string | null
+          finance_charges_pct?: number | null
+          freight_pct?: number | null
+          freight_value?: number | null
+          id?: string
+          manufacturer_code?: string | null
+          packaging_pct?: number | null
+          packaging_weight?: number | null
+          parent_child_qty?: number | null
+          product_id?: string
+          purchase_converter?: number | null
+          purchase_unit?: string | null
+          purchase_warranty?: number | null
+          readjust_date?: string | null
+          readjust_pct?: number | null
+          sale_converter?: number | null
+          short_code?: number | null
+          tenant_id?: string
+          updated_at?: string
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_erp_data_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_erp_data_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_ncm_audit: {
         Row: {
           changed_at: string | null
@@ -3624,6 +3738,7 @@ export type Database = {
       }
       products: {
         Row: {
+          abc_classification: string | null
           active: boolean | null
           aliquota_cofins: number | null
           aliquota_icms: number | null
@@ -3637,6 +3752,10 @@ export type Database = {
           cst_icms: string | null
           cst_pis_cofins: string | null
           description: string | null
+          erp_last_update_date: string | null
+          erp_product_code: string | null
+          erp_status: string | null
+          erp_synced_at: string | null
           fator_kg: number | null
           fator_milheiro: number | null
           id: string
@@ -3649,7 +3768,11 @@ export type Database = {
           origem_mercadoria:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          price_cash: number | null
+          price_term: number | null
+          reference: string | null
           sku: string
+          subcategory: string | null
           tem_icms_st: boolean | null
           tenant_id: string
           thickness: number | null
@@ -3658,10 +3781,14 @@ export type Database = {
             | null
           unit_measure: string | null
           unit_price: number | null
+          unit_sale: string | null
           updated_at: string
+          warranty_months: number | null
+          weight: number | null
           width: number | null
         }
         Insert: {
+          abc_classification?: string | null
           active?: boolean | null
           aliquota_cofins?: number | null
           aliquota_icms?: number | null
@@ -3675,6 +3802,10 @@ export type Database = {
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_last_update_date?: string | null
+          erp_product_code?: string | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -3687,7 +3818,11 @@ export type Database = {
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          price_cash?: number | null
+          price_term?: number | null
+          reference?: string | null
           sku: string
+          subcategory?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
@@ -3696,10 +3831,14 @@ export type Database = {
             | null
           unit_measure?: string | null
           unit_price?: number | null
+          unit_sale?: string | null
           updated_at?: string
+          warranty_months?: number | null
+          weight?: number | null
           width?: number | null
         }
         Update: {
+          abc_classification?: string | null
           active?: boolean | null
           aliquota_cofins?: number | null
           aliquota_icms?: number | null
@@ -3713,6 +3852,10 @@ export type Database = {
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_last_update_date?: string | null
+          erp_product_code?: string | null
+          erp_status?: string | null
+          erp_synced_at?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -3725,7 +3868,11 @@ export type Database = {
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          price_cash?: number | null
+          price_term?: number | null
+          reference?: string | null
           sku?: string
+          subcategory?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
@@ -3734,7 +3881,10 @@ export type Database = {
             | null
           unit_measure?: string | null
           unit_price?: number | null
+          unit_sale?: string | null
           updated_at?: string
+          warranty_months?: number | null
+          weight?: number | null
           width?: number | null
         }
         Relationships: [
