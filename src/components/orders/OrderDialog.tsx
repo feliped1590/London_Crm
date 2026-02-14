@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { usePricingTables } from '@/hooks/usePricingTables';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
@@ -53,6 +54,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const { getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
+  const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
   
   const isEditMode = !!order;
   
@@ -69,6 +71,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const [observations, setObservations] = useState('');
   const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [legalEntityId, setLegalEntityId] = useState<string>('');
   
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
@@ -183,8 +186,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setContactId(order.contact_id || '');
       setDeliveryDate(order.delivery_date ? new Date(order.delivery_date) : undefined);
       setObservations(order.observations || '');
+      setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
+    } else if (open && !order) {
+      setLegalEntityId(activeLegalEntityId || '');
     }
-  }, [open, order]);
+  }, [open, order, activeLegalEntityId]);
 
   // Set items when existingOrderItems are loaded
   useEffect(() => {
@@ -204,6 +210,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setItems([]);
       setOriginalItems([]);
       setSelectedProductId('');
+      setLegalEntityId('');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
     }
@@ -525,7 +532,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
-          number: '', // Will be auto-generated
+          number: '',
           company_id: companyId || null,
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
@@ -533,6 +540,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           total_value: calculateTotal(),
           status: 'pendente',
           created_by: user?.id,
+          legal_entity_id: legalEntityId || null,
         })
         .select()
         .single();
@@ -599,6 +607,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
           total_value: calculateTotal(),
+          legal_entity_id: legalEntityId || null,
         })
         .eq('id', order.id);
 
@@ -685,6 +694,29 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   // Render the order form (extracted for use in tabs)
   const renderOrderForm = () => (
     <>
+      {/* Legal Entity (CNPJ Emissor) */}
+      {hasLegalEntities && (
+        <div className="space-y-2">
+          <Label>CNPJ Emissor</Label>
+          <Select
+            value={legalEntityId}
+            onValueChange={setLegalEntityId}
+            disabled={!canEdit}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o CNPJ emissor" />
+            </SelectTrigger>
+            <SelectContent>
+              {accessibleEntities.map((entity) => (
+                <SelectItem key={entity.id} value={entity.id}>
+                  {entity.name} — {entity.cnpj}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Client Selection */}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
