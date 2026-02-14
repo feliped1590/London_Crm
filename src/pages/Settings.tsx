@@ -472,13 +472,13 @@ export default function Settings() {
               Fiscal
             </TabsTrigger>
           )}
-          {isAdmin && (
+          {(isAdmin || isDeveloper) && (
             <TabsTrigger value="cnpjs" className="gap-2">
               <Building2 className="h-4 w-4" />
               CNPJs
             </TabsTrigger>
           )}
-          {isAdmin && (
+          {(isAdmin || isDeveloper) && (
             <TabsTrigger value="interventions" className="gap-2">
               <Shield className="h-4 w-4" />
               Intervenções
@@ -985,13 +985,13 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        {isAdmin && (
+        {(isAdmin || isDeveloper) && (
           <TabsContent value="cnpjs" className="mt-6 space-y-6">
             <LegalEntityPermissionsManager />
           </TabsContent>
         )}
 
-        {isAdmin && (
+        {(isAdmin || isDeveloper) && (
           <TabsContent value="interventions" className="mt-6 space-y-6">
             <AdminInterventionsViewer />
           </TabsContent>
