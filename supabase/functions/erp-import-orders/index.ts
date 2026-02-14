@@ -77,6 +77,7 @@ interface ERPOrderRecord {
   cd_pedido?: string;
   dt_pedido?: string;
   cd_cliente?: string;
+  cd_empresa?: unknown;  // ERP company code → legal_entity lookup
   dt_entrega?: string;
   total_pedido?: unknown;
   situacao?: string;
@@ -202,6 +203,29 @@ Deno.serve(async (req) => {
             continue;
           }
 
+          // ── Lookup legal_entity ────────────────────────────────
+          const erpCompanyCode = trimOrNull(raw.cd_empresa);
+          let legalEntityId: string | null = null;
+
+          if (erpCompanyCode) {
+            const { data: legalEntity } = await supabase
+              .from("legal_entities")
+              .select("id")
+              .eq("tenant_id", tenant_id)
+              .eq("erp_company_code", erpCompanyCode)
+              .maybeSingle();
+
+            if (!legalEntity) {
+              summary.skipped++;
+              await logConflict(supabase, tenant_id, "order", null, erpOrderCode, "legal_entity_id", null, erpCompanyCode, "legal_entity_not_found");
+              summary.conflicts_detected++;
+              summary.errors.push({ index: globalIdx, erp_code: erpOrderCode, message: `Legal entity not found for erp_company_code: ${erpCompanyCode}` });
+              continue;
+            }
+            legalEntityId = legalEntity.id;
+          }
+          // If ERP doesn't send cd_empresa, legal_entity_id stays null (acceptable for now)
+
           // ── Normalize order fields ──────────────────────────────
           const orderDate = normalizeDate(raw.dt_pedido);
           const erpModDate = normalizeDatetime(raw.dt_modificacao);
@@ -258,8 +282,8 @@ Deno.serve(async (req) => {
 
             if (origin === "ERP") {
               // ERP origin: can update totals, company, commercial fields
+              if (legalEntityId) fieldsToUpdate.legal_entity_id = legalEntityId;
               fieldsToUpdate.total_value = toNumeric(raw.total_pedido) ?? existing.total_value;
-              fieldsToUpdate.total_goods = toNumeric(raw.total_de_mercad) ?? existing.total_goods;
               fieldsToUpdate.total_discount = toNumeric(raw.vl_total_descon) ?? existing.total_discount;
               fieldsToUpdate.freight_value = toNumeric(raw.vl_frete) ?? existing.freight_value;
               fieldsToUpdate.freight_type = trimOrNull(raw.tipo_frete) ?? existing.freight_type;
@@ -281,11 +305,12 @@ Deno.serve(async (req) => {
             summary.updated++;
           } else {
             // ── INSERT path ─────────────────────────────────────
-            const orderData = {
+            const orderData: Record<string, unknown> = {
               tenant_id,
               number: erpOrderCode,
               origin: "ERP",
               company_id: company.id,
+              legal_entity_id: legalEntityId,
               status: "pendente",
               order_date: orderDate,
               delivery_date: normalizeDate(raw.dt_entrega),

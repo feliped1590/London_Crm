@@ -2800,6 +2800,77 @@ export type Database = {
         }
         Relationships: []
       }
+      legal_entities: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          cnpj: string
+          created_at: string
+          email: string | null
+          erp_company_code: string | null
+          id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
+          is_headquarters: boolean
+          name: string
+          phone: string | null
+          regime_tributario: string | null
+          state: string | null
+          tenant_id: string
+          trade_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          cnpj: string
+          created_at?: string
+          email?: string | null
+          erp_company_code?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_headquarters?: boolean
+          name: string
+          phone?: string | null
+          regime_tributario?: string | null
+          state?: string | null
+          tenant_id: string
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          cnpj?: string
+          created_at?: string
+          email?: string | null
+          erp_company_code?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
+          is_headquarters?: boolean
+          name?: string
+          phone?: string | null
+          regime_tributario?: string | null
+          state?: string | null
+          tenant_id?: string
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_entities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_settings: {
         Row: {
           created_at: string
@@ -3378,6 +3449,7 @@ export type Database = {
           freight_type: string | null
           freight_value: number | null
           id: string
+          legal_entity_id: string | null
           number: string
           observations: string | null
           order_date: string | null
@@ -3406,6 +3478,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
+          legal_entity_id?: string | null
           number: string
           observations?: string | null
           order_date?: string | null
@@ -3434,6 +3507,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
+          legal_entity_id?: string | null
           number?: string
           observations?: string | null
           order_date?: string | null
@@ -3467,6 +3541,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
           },
           {
@@ -4126,6 +4207,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_legal_entity_id: string | null
           active_tenant_id: string | null
           avatar_url: string | null
           created_at: string
@@ -4136,6 +4218,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_legal_entity_id?: string | null
           active_tenant_id?: string | null
           avatar_url?: string | null
           created_at?: string
@@ -4146,6 +4229,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_legal_entity_id?: string | null
           active_tenant_id?: string | null
           avatar_url?: string | null
           created_at?: string
@@ -4156,6 +4240,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_active_legal_entity_id_fkey"
+            columns: ["active_legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_active_tenant_id_fkey"
             columns: ["active_tenant_id"]
@@ -4280,6 +4371,7 @@ export type Database = {
           deal_id: string
           delivery_terms: string | null
           id: string
+          legal_entity_id: string | null
           number: string
           observations: string | null
           payment_terms: string | null
@@ -4303,6 +4395,7 @@ export type Database = {
           deal_id: string
           delivery_terms?: string | null
           id?: string
+          legal_entity_id?: string | null
           number: string
           observations?: string | null
           payment_terms?: string | null
@@ -4326,6 +4419,7 @@ export type Database = {
           deal_id?: string
           delivery_terms?: string | null
           id?: string
+          legal_entity_id?: string | null
           number?: string
           observations?: string | null
           payment_terms?: string | null
@@ -4363,6 +4457,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
           },
           {
