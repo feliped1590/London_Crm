@@ -70,7 +70,7 @@ export function LegalEntityPermissionsManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('id, user_id, full_name')
         .order('full_name');
       if (error) throw error;
       return data;
@@ -92,7 +92,7 @@ export function LegalEntityPermissionsManager() {
   // Build user-centric view
   const usersWithLinks: UserWithLinks[] = profiles.map((p) => {
     const links = allLinks
-      .filter((l) => l.user_id === p.user_id)
+      .filter((l) => l.user_id === p.id)
       .map((l) => {
         const entity = allEntities.find((e) => e.id === l.legal_entity_id);
         return {
@@ -104,7 +104,7 @@ export function LegalEntityPermissionsManager() {
         };
       });
     return {
-      user_id: p.user_id,
+      user_id: p.id,
       full_name: p.full_name || 'Sem nome',
       links,
     };
@@ -115,7 +115,7 @@ export function LegalEntityPermissionsManager() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('active_tenant_id')
-        .eq('user_id', selectedUserId)
+        .eq('id', selectedUserId)
         .single();
       
       const { error } = await supabase.from('user_legal_entities').insert([{
@@ -448,7 +448,7 @@ export function LegalEntityPermissionsManager() {
                 </SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
-                    <SelectItem key={p.user_id} value={p.user_id}>
+                    <SelectItem key={p.id} value={p.id}>
                       {p.full_name || 'Sem nome'}
                     </SelectItem>
                   ))}
