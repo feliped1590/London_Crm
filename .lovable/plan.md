@@ -1,218 +1,165 @@
 
-# Fase 4C -- Integracao de Produtos ERP (Tabela 9 - MATERIAL)
+# Fase 4D -- Integracao de Pedidos ERP (Tabelas 14 PEDIDO + 196 ITEM PEDIDO)
 
 ## Resumo
 
-Expandir a tabela `products` com 12 colunas comerciais/rastreio e criar tabela auxiliar `product_erp_data` para dados operacionais do ERP CIGAM. Criar Edge Function `erp-import-products` para ETL com merge inteligente.
+Expandir tabelas `orders` (12 colunas) e `order_items` (8 colunas, incluindo tenant_id). Criar tabelas auxiliares `order_erp_data` e `order_item_erp_data`. Criar Edge Function `erp-import-orders` para ETL com regras de precedencia por origin.
 
-## Decisoes Arquiteturais Consolidadas
+## Decisoes Estrategicas Consolidadas
 
-### 1. Fonte Oficial de Preco
-- `unit_price` = preco oficial do CRM (usado em propostas/pedidos)
-- `price_cash` / `price_term` = referencia ERP (apenas informativo, nunca usado em calculos)
-- ERP nunca sobrescreve `unit_price`. Na importacao inicial, se `unit_price` for NULL, pode ser populado com `price_cash` como sugestao
+### 1. Campo origin (NOVO - CRITICO)
+- Coluna `origin TEXT NOT NULL CHECK (origin IN ('CRM','ERP'))` em orders
+- Pedidos criados manualmente → origin = 'CRM'
+- Pedidos importados do ERP → origin = 'ERP'
+- Elimina uso fragil de `created_by IS NULL` para definir precedencia
+- DEFAULT 'CRM' para manter retrocompatibilidade
 
-### 2. Controle de Ativo
-- `active` = controlado exclusivamente pelo CRM (nunca alterado por sync ERP)
-- `erp_status` = status vindo do ERP (ATIVO/INATIVO/SERVICO/OBSOLETO/MODELO)
-- Na importacao: INSERT novo produto → `active = true` (default); UPDATE → `active` nao e tocado
-- Dashboard pode alertar divergencias (ex: ativo no CRM mas OBSOLETO no ERP)
+### 2. Regras de Precedencia por Origin
 
-### 3. Tipagem de erp_status
-- TEXT com CHECK constraint (nao ENUM)
-- `CHECK (erp_status IN ('ATIVO','INATIVO','SERVICO','OBSOLETO','MODELO'))`
-- Mais flexivel que ENUM para adicionar valores futuros
+#### Se origin = 'ERP':
+ERP **pode** atualizar:
+- total_value, total_goods, total_discount
+- freight_value, freight_type
+- company_id (reatribuicao de empresa)
+- erp_status, erp_synced_at, erp_last_update_date
+- order_date, approved_at, valid_until
+- observations
 
-### 4. Category/Subcategory
-- Manter como TEXT simples (nao criar tabela product_categories)
-- Grupos/subgrupos ERP sao codigos livres que variam por tenant
-- Migrar para tabela normalizada somente se surgir necessidade de hierarquia navegavel
+ERP **nao pode** alterar:
+- status (ENUM CRM, soberano)
 
-### 5. Peso
-- Sempre em KG (padrao logistico brasileiro e do ERP CIGAM)
-- Nao adicionar weight_unit (simplicidade)
-- Uso: estimativa de frete comercial
+#### Se origin = 'CRM':
+ERP pode **apenas** atualizar:
+- erp_status
+- erp_synced_at
+- erp_last_update_date
+- erp_order_code
 
-### 6. Indices product_erp_data
-- Apenas UNIQUE(product_id), sem indice redundante (tenant_id, product_id)
-- Filtro por tenant ocorre na tabela products via JOIN
+ERP **nao pode** alterar:
+- total_value, company_id, status, observations
+
+### 3. Pedido Orfao (company_id)
+- Se Cd_cliente nao encontra correspondencia em (tenant_id, erp_code) de companies → NAO inserir pedido
+- Registrar conflito em import_conflict_log com tipo 'company_not_found'
+- company_id NULL nao permitido para pedidos ERP
+
+### 4. Protecao contra Regressao de Versao
+- Antes de atualizar: se `erp_last_update_date` atual > `erp_last_update_date` recebido → PULAR
+- Evita sobrescrever com dado mais antigo
+
+### 5. Subtotal sempre calculado pelo CRM
+- `subtotal = quantity * unit_price * (1 - discount_percent/100)`
+- ERP pode enviar valor, mas CRM recalcula sempre
+
+### 6. Regra de number/erp_order_code
+- origin='ERP': number = Cd_pedido, erp_order_code = Cd_pedido
+- origin='CRM': number gerado pelo CRM, erp_order_code preenchido apos sync
+
+### 7. Status ERP (TEXT livre)
+- erp_status TEXT sem CHECK (diferente de products)
+- Situacoes de pedido ERP variam muito entre versoes CIGAM
+- status ENUM CRM permanece soberano e intocado pelo ETL
 
 ---
 
-## O que sera feito
+## Estrutura Final Consolidada (orders)
 
-### 1. Migration SQL
+### Estado atual: 13 colunas
+id, number, proposal_id, company_id, contact_id, status, delivery_date, total_value, observations, created_by, created_at, updated_at, tenant_id
 
-#### ALTER TABLE products — adicionar 12 colunas
+### Colunas novas: 13
 
 | Coluna | Tipo | Nullable | Default | Justificativa |
 |---|---|---|---|---|
-| subcategory | TEXT | SIM | NULL | Sub_Grupo ERP para hierarquia catalogo |
-| reference | TEXT | SIM | NULL | Referencia comercial/fabricante |
-| weight | NUMERIC(15,5) | SIM | NULL | Peso em KG para calculo frete |
-| price_cash | NUMERIC(15,2) | SIM | NULL | Preco a vista ERP (informativo) |
-| price_term | NUMERIC(15,2) | SIM | NULL | Preco a prazo ERP (informativo) |
-| warranty_months | INTEGER | SIM | NULL | Garantia venda em meses |
-| erp_status | TEXT | SIM | NULL | Status ERP com CHECK constraint |
-| unit_sale | TEXT | SIM | NULL | Unidade venda ERP |
-| abc_classification | CHAR(1) | SIM | NULL | Classificacao ABC com CHECK (A/B/C) |
-| erp_product_code | TEXT | SIM | NULL | Codigo material ERP (chave merge) |
-| erp_synced_at | TIMESTAMPTZ | SIM | NULL | Data/hora ultima sincronizacao |
+| origin | TEXT NOT NULL | NAO | 'CRM' | Diferencia origem para regras de precedencia |
+| order_date | DATE | SIM | NULL | Data do pedido ERP (Dt_pedido) |
+| erp_status | TEXT | SIM | NULL | Situacao original ERP (informativo) |
+| erp_rep_code | TEXT | SIM | NULL | Codigo representante ERP |
+| total_goods | NUMERIC(15,2) | SIM | NULL | Total mercadorias antes desconto/frete |
+| total_discount | NUMERIC(15,2) | SIM | NULL | Total desconto concedido |
+| freight_value | NUMERIC(15,2) | SIM | NULL | Valor do frete |
+| freight_type | TEXT | SIM | NULL | Tipo frete (CIF/FOB) |
+| approved_at | TIMESTAMPTZ | SIM | NULL | Data aprovacao do pedido |
+| valid_until | DATE | SIM | NULL | Data validade do pedido |
+| erp_order_code | TEXT | SIM | NULL | Codigo pedido ERP (chave merge) |
+| erp_synced_at | TIMESTAMPTZ | SIM | NULL | Ultima sincronizacao |
 | erp_last_update_date | TIMESTAMPTZ | SIM | NULL | Controle sync incremental |
 
-#### CREATE TABLE product_erp_data
+### Total apos alteracao: 26 colunas
 
-```text
-product_erp_data
-+-- id                   UUID PK DEFAULT gen_random_uuid()
-+-- tenant_id            UUID NOT NULL (FK tenants)
-+-- product_id           UUID NOT NULL UNIQUE (FK products ON DELETE CASCADE)
-+-- center_control       TEXT
-+-- parent_child_qty     NUMERIC(15,6)
-+-- cost_price           NUMERIC(15,5)
-+-- freight_pct          NUMERIC(5,2)
-+-- packaging_pct        NUMERIC(5,2)
-+-- commission_pct       NUMERIC(5,2)
-+-- readjust_pct         NUMERIC(5,2)
-+-- readjust_date        DATE
-+-- erp_product_type_id  INTEGER
-+-- manufacturer_code    TEXT
-+-- factory_code         TEXT
-+-- short_code           INTEGER
-+-- purchase_converter   NUMERIC(15,7)
-+-- sale_converter       NUMERIC(15,7)
-+-- finance_charges_pct  NUMERIC(5,3)
-+-- freight_value        NUMERIC(15,2)
-+-- volume               NUMERIC(15,6)
-+-- purchase_unit        TEXT
-+-- packaging_weight     NUMERIC(15,5)
-+-- purchase_warranty    INTEGER
-+-- business_unit        TEXT
-+-- erp_price_table_code TEXT
-+-- erp_registered_at    DATE
-+-- erp_modified_at      DATE
-+-- extra_data           JSONB DEFAULT '{}'
-+-- created_at           TIMESTAMPTZ DEFAULT now()
-+-- updated_at           TIMESTAMPTZ DEFAULT now()
-```
-
-#### Indices
-
-| Indice | Colunas | Tipo |
-|---|---|---|
-| idx_products_tenant_erp_code | (tenant_id, erp_product_code) WHERE erp_product_code IS NOT NULL | UNIQUE parcial |
-| idx_products_tenant_category | (tenant_id, category) | Btree |
-| idx_products_tenant_active | (tenant_id, active) | Btree |
-
-#### RLS para product_erp_data
-
-- SELECT/INSERT/UPDATE/DELETE isolado por tenant_id via user_tenants
-- Mesmo padrao de company_erp_fiscal e contact_erp_data
-
-#### Trigger updated_at para product_erp_data
-
-- Reutilizar funcao update_updated_at_column() existente
-
-### 2. Edge Function erp-import-products
-
-Fluxo:
-1. Recebe array de materiais ERP com tenant_id
-2. Normaliza: erp_status derivado de Tipo, datas ISO, numericos
-3. Merge em products: prioridade (tenant_id, sku), fallback (tenant_id, erp_product_code)
-4. INSERT: active = true (default), unit_price = price_cash se NULL
-5. UPDATE: active NAO e tocado, unit_price NAO e tocado
-6. Upsert em product_erp_data (campos operacionais)
-7. Conflitos → import_conflict_log
-8. Batches de 100
-
-### 3. Regras de Precedencia Comercial
-
-```text
-Propostas/Pedidos:
-  1. Tabela de Precos do Cliente (pricing_tables)
-  2. Regra por Produto (pricing_table_rules)
-  3. Tabela Padrao (is_default)
-  4. products.unit_price (preco base CRM)
-  
-  price_cash/price_term = NUNCA usados em calculos automaticos
-  Exibidos como "Referencia ERP" para consulta do vendedor
-```
+### Alteracao de constraint:
+- DROP UNIQUE(number) global
+- ADD UNIQUE(tenant_id, number)
 
 ---
 
-## Secao Tecnica
+## Estrutura Final Consolidada (order_items)
 
-### Arquivos criados/modificados
+### Estado atual: 13 colunas (sem tenant_id!)
+id, order_id, product_id, description, quantity, unit_price, width, length, thickness, subtotal, sort_order, created_at, discount_percent
 
-| Arquivo | Acao |
+### Colunas novas: 8
+
+| Coluna | Tipo | Nullable | Default | Justificativa |
+|---|---|---|---|---|
+| tenant_id | UUID NOT NULL | NAO | derivado | CRITICO - multi-tenant RLS |
+| erp_status | TEXT | SIM | NULL | Situacao do item ERP |
+| item_date | DATE | SIM | NULL | Data do item (pode diferir do pedido) |
+| approved_at | TIMESTAMPTZ | SIM | NULL | Data aprovacao do item |
+| commission_pct | NUMERIC(5,2) | SIM | NULL | Percentual comissao item |
+| delivery_date | DATE | SIM | NULL | Prazo entrega especifico |
+| erp_item_sequence | INTEGER | SIM | NULL | Sequencia original ERP |
+| erp_synced_at | TIMESTAMPTZ | SIM | NULL | Ultima sincronizacao |
+
+### Total apos alteracao: 21 colunas
+
+---
+
+## Tabelas ERP Auxiliares
+
+### order_erp_data
+- id, tenant_id, order_id (UNIQUE), operation_type, payment_condition, carrier_code, seller_code, erp_order_type, invoice_number, currency_code, commission_pct, market_code, business_unit, session_id, erp_registered_at, erp_modified_at, extra_data JSONB, created_at, updated_at
+
+### order_item_erp_data
+- id, tenant_id, order_item_id (UNIQUE), unit_measure, cost_price, cost_center, account_code, cfop, list_price, detail_code, batch_code, packing_list_number, extra_data JSONB, created_at, updated_at
+
+---
+
+## Indices
+
+| Indice | Colunas |
 |---|---|
-| Migration SQL | ALTER products + CREATE product_erp_data + indices + RLS + trigger |
-| `supabase/functions/erp-import-products/index.ts` | Nova Edge Function ETL |
+| UNIQUE | (tenant_id, number) -- substitui UNIQUE(number) global |
+| UNIQUE parcial | (tenant_id, erp_order_code) WHERE erp_order_code IS NOT NULL |
+| idx_orders_tenant_order_date | (tenant_id, order_date) |
+| idx_orders_tenant_erp_status | (tenant_id, erp_status) WHERE erp_status IS NOT NULL |
+| idx_order_items_tenant_order_sort | (tenant_id, order_id, sort_order) |
+| idx_order_items_erp_seq | (order_id, erp_item_sequence) WHERE erp_item_sequence IS NOT NULL |
 
-### Payload de entrada (erp-import-products)
+---
 
-```text
-POST /erp-import-products
-{
-  "tenant_id": "uuid",
-  "records": [
-    {
-      "erp_product_code": "MAT-001",
-      "name": "Fita Adesiva Industrial 50mm",
-      "description": "Aplicacao em embalagens industriais",
-      "category": "FITAS",
-      "subcategory": "ADESIVAS",
-      "reference": "REF-FT50",
-      "unit_measure": "RL",
-      "unit_sale": "CX",
-      "weight": 0.350,
-      "price_cash": 25.90,
-      "price_term": 28.50,
-      "warranty_months": 12,
-      "erp_status": "ATIVO",
-      "abc_classification": "A",
-      "ncm_code": "39199090",
-      "center_control": "CC01",
-      "cost_price": 15.30,
-      "commission_pct": 5.00,
-      "freight_pct": 3.50,
-      "manufacturer_code": "3M",
-      "factory_code": "3M-FT50-IND",
-      "purchase_converter": 1.0,
-      "sale_converter": 12.0,
-      "purchase_unit": "RL",
-      "business_unit": "EMBALAGENS",
-      "erp_registered_at": "2020-03-15",
-      "erp_modified_at": "2025-01-10"
-    }
-  ]
-}
-```
+## Estrategia de Merge
 
-### Logica de merge
+### Pedidos
+1. Lookup empresa: (tenant_id, erp_code) em companies → se nao encontrar, REJEITAR + log
+2. Buscar pedido: (tenant_id, number) → fallback (tenant_id, erp_order_code)
+3. Se encontrou e erp_last_update_date atual > recebido → PULAR (regressao)
+4. Se encontrou: aplicar regras de precedencia por origin
+5. Se nao encontrou: INSERT com origin='ERP', status='pendente'
+6. Upsert order_erp_data
 
-```text
-Para cada registro:
-  1. normalizar(registro)
-  2. existing = buscar por (tenant_id, sku) onde sku = erp_product_code
-     || buscar por (tenant_id, erp_product_code)
-  3. Se existing:
-     - detectar_conflitos(existing, registro)
-     - NÃO alterar active
-     - NÃO alterar unit_price
-     - Atualizar demais campos comerciais + erp_status
-     - Upsert product_erp_data
-     - resultado = "updated"
-  4. Se nao existing:
-     - INSERT products com active = true
-     - Se unit_price IS NULL, usar price_cash como sugestao
-     - INSERT product_erp_data
-     - resultado = "inserted"
-```
+### Itens
+1. Lookup product_id: (tenant_id, erp_product_code) em products
+2. Buscar item: (order_id, erp_item_sequence)
+3. Se encontrou: UPDATE campos
+4. Se nao encontrou: INSERT
+5. Recalcular subtotal = quantity * unit_price * (1 - discount_percent/100)
+6. Upsert order_item_erp_data
 
-### Seguranca
+---
 
-- Funcao usa SUPABASE_SERVICE_ROLE_KEY para bypass de RLS
-- verify_jwt = false no config.toml
-- Valida tenant_id obrigatorio
-- Operacoes tipadas via SDK (sem SQL arbitrario)
+## Seguranca
+- RLS multi-tenant em todas as novas tabelas
+- Edge Function com SUPABASE_SERVICE_ROLE_KEY (bypass RLS)
+- verify_jwt = false
+- Batch de 50 pedidos
