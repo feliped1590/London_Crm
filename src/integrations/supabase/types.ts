@@ -5397,6 +5397,62 @@ export type Database = {
         }
         Relationships: []
       }
+      user_legal_entities: {
+        Row: {
+          created_at: string
+          id: string
+          legal_entity_id: string
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          legal_entity_id: string
+          role?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          legal_entity_id?: string
+          role?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_legal_entities_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_legal_entities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_legal_entities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_legal_entities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -5811,6 +5867,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_legal_entity: {
+        Args: { p_legal_entity_id: string; p_user_id: string }
+        Returns: boolean
+      }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
       get_bi_anomalies: {
         Args: never
