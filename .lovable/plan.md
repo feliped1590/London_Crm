@@ -1,119 +1,75 @@
 
-# Fase 4E -- Entidades Juridicas (legal_entities) e Suporte Multi-CNPJ
+# Fase 4F -- Permissoes por CNPJ (Modo Permissivo com Admin Soberano)
 
-## Resumo
-
-Tabela `legal_entities` para representar os CNPJs de um grupo economico dentro de um unico tenant. Pedidos e propostas vinculados a uma entidade juridica emissora. Seletor de CNPJ ativo no perfil do usuario.
-
-## Status: ✅ CONSOLIDADO (Migration + Edge Function aplicados)
+## Status: ✅ CONSOLIDADO (Migration aplicada)
 
 ---
 
-## 1. Modelo
-
-```
-tenants (grupo economico)
-  +-- legal_entities (CNPJs do grupo)
-  +-- orders ──────> legal_entity_id (CNPJ emissor)
-  +-- proposals ───> legal_entity_id (CNPJ emissor, opcional)
-  +-- profiles ────> active_legal_entity_id (CNPJ selecionado)
-```
-
----
-
-## 2. Tabela legal_entities
+## 1. Tabela user_legal_entities
 
 | Coluna | Tipo | Nullable | Default |
 |---|---|---|---|
 | id | UUID PK | NAO | gen_random_uuid() |
 | tenant_id | UUID NOT NULL FK | NAO | -- |
-| name | TEXT NOT NULL | NAO | -- |
-| trade_name | TEXT | SIM | NULL |
-| cnpj | TEXT NOT NULL | NAO | -- |
-| is_headquarters | BOOLEAN | NAO | false |
-| active | BOOLEAN | NAO | true |
-| erp_company_code | TEXT | SIM | NULL |
-| address, city, state, phone, email | TEXT | SIM | NULL |
-| inscricao_estadual | TEXT | SIM | NULL |
-| inscricao_municipal | TEXT | SIM | NULL |
-| regime_tributario | TEXT | SIM | NULL |
-| created_at / updated_at | TIMESTAMPTZ | NAO | now() |
+| user_id | UUID NOT NULL FK | NAO | profiles(id) CASCADE |
+| legal_entity_id | UUID NOT NULL FK | NAO | legal_entities(id) CASCADE |
+| role | TEXT NOT NULL | NAO | 'member' |
+| created_at | TIMESTAMPTZ | NAO | now() |
 
-**Constraints:**
-- UNIQUE(tenant_id, cnpj)
-- UNIQUE(tenant_id, erp_company_code) WHERE erp_company_code IS NOT NULL
+Constraints: UNIQUE(user_id, legal_entity_id)
 
 ---
 
-## 3. Alteracoes em orders
+## 2. Funcao can_access_legal_entity
 
-- `legal_entity_id UUID REFERENCES legal_entities(id)` — nullable Etapa 1
-- Trigger `trg_validate_order_legal_entity`: valida que legal_entity pertence ao mesmo tenant
-
----
-
-## 4. Alteracoes em profiles
-
-- `active_legal_entity_id UUID REFERENCES legal_entities(id)`
-- Trigger `trg_validate_profile_legal_entity`: valida pertinencia ao tenant do usuario
+- SECURITY DEFINER + SET search_path = public
+- Logica: NULL→TRUE, admin→TRUE, sem restricoes→TRUE, explicito→TRUE, senao→FALSE
 
 ---
 
-## 5. Alteracoes em proposals
+## 3. Policies RESTRICTIVE em orders
 
-- `legal_entity_id UUID REFERENCES legal_entities(id)` — opcional
+| Policy | Tipo | Modo |
+|---|---|---|
+| legal_entity_select_orders | SELECT | RESTRICTIVE |
+| legal_entity_insert_orders | INSERT | RESTRICTIVE |
+| legal_entity_update_orders | UPDATE | RESTRICTIVE |
+| tenant_isolation_orders | ALL | PERMISSIVE (existente) |
+| DELETE | - | Apenas admins (inalterada) |
+
+Composicao: tenant_isolation (PERMISSIVE) AND legal_entity_* (RESTRICTIVE) = ambas devem ser satisfeitas.
 
 ---
 
-## 6. RLS (padrao user_tenants)
+## 4. Indices
 
-- SELECT: `tenant_id IN (SELECT tenant_id FROM user_tenants WHERE user_id = auth.uid())`
-- INSERT/UPDATE/DELETE: mesma regra + `has_role(auth.uid(), 'admin')`
+- idx_user_legal_entities_user(user_id)
+- idx_user_legal_entities_legal_entity(legal_entity_id)
+- idx_orders_legal_entity(legal_entity_id) WHERE NOT NULL
 
 ---
 
-## 7. Indices
+## 5. Comportamento Final
 
-| Indice | Colunas |
+| Cenario | Resultado |
 |---|---|
-| UNIQUE | (tenant_id, cnpj) |
-| UNIQUE parcial | (tenant_id, erp_company_code) WHERE NOT NULL |
-| idx_legal_entities_tenant_active | (tenant_id) WHERE active = true |
-| idx_orders_tenant_legal_entity | (tenant_id, legal_entity_id) WHERE legal_entity_id IS NOT NULL |
+| Admin | Ve todos os CNPJs |
+| Usuario sem registros em user_legal_entities | Ve todos (modo permissivo) |
+| Usuario com registros | Ve apenas CNPJs vinculados |
+| Pedido com legal_entity_id = NULL | Acesso permitido |
+| Tenant diferente | Sempre bloqueado |
 
 ---
 
-## 8. Integracao ERP (erp-import-orders)
+## 6. Edge Functions
 
-- Campo `cd_empresa` no payload → lookup `legal_entities(tenant_id, erp_company_code)`
-- Se `cd_empresa` enviado e NAO encontrou → REJEITAR pedido + log `legal_entity_not_found`
-- Se `cd_empresa` nao enviado → legal_entity_id = NULL (aceitavel temporariamente)
-- INSERT e UPDATE passam `legal_entity_id`
+Nenhuma alteracao. Seguranca 100% no banco (RLS + funcao).
 
 ---
 
-## 9. Estrategia de Transicao para NOT NULL
+## 7. Fases Futuras
 
-### Etapa 1 (atual)
-- Coluna nullable para retrocompatibilidade com pedidos legados
-- UI e ERP preenchem quando disponivel
-
-### Etapa 2 (apos UI + migracao manual)
-```sql
--- Executar APOS migrar todos os pedidos legados:
-ALTER TABLE orders ALTER COLUMN legal_entity_id SET NOT NULL;
-```
-
----
-
-## 10. Nota Arquitetural: Comissao
-
-Se regras de comissao variarem por CNPJ emissor, o campo `legal_entity_id` em orders deve ser considerado nas consultas de comissao. NAO implementar agora — apenas documentado.
-
----
-
-## UI Pendente (proximo passo)
-
-- Seletor de CNPJ no header (ao lado do tenant switcher)
-- Seletor de CNPJ no formulario de pedido
-- Filtro por CNPJ nos dashboards
+- Restricao obrigatoria (remover modo permissivo)
+- Permissoes por role (viewer nao cria pedido)
+- Comissao por CNPJ
+- Metas por CNPJ
