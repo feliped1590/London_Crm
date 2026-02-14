@@ -19,6 +19,9 @@ import {
   Loader2,
   ArrowDownToLine,
   Database,
+  AlertTriangle,
+  History,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCPF, formatCNPJ } from '@/lib/cpfCnpjMask';
@@ -46,7 +49,38 @@ interface SyncResult {
   processed: number;
   created: number;
   updated: number;
+  companies_inserted?: number;
+  companies_updated?: number;
+  conflicts_detected?: number;
+  conflicts_auto_resolved?: number;
   last_sync_at: string;
+}
+
+interface SyncLogEntry {
+  id: string;
+  entity_type: string;
+  status: string;
+  created_at: string;
+  response_payload: {
+    created?: number;
+    updated?: number;
+    companies_inserted?: number;
+    companies_updated?: number;
+    conflicts_detected?: number;
+    conflicts_auto_resolved?: number;
+  } | null;
+}
+
+interface ConflictEntry {
+  id: string;
+  entity_type: string;
+  erp_code: string | null;
+  field_name: string;
+  crm_value: string | null;
+  erp_value: string | null;
+  auto_resolved: boolean;
+  resolution: string;
+  created_at: string;
 }
 
 export function InflexClientsTab() {
@@ -84,14 +118,48 @@ export function InflexClientsTab() {
       return data as SyncResult;
     },
     onSuccess: (data) => {
-      toast.success(`Sincronização concluída: ${data.processed} clientes processados`);
+      const parts = [`${data.processed} clientes processados`];
+      if (data.companies_inserted) parts.push(`${data.companies_inserted} empresas criadas`);
+      if (data.companies_updated) parts.push(`${data.companies_updated} empresas atualizadas`);
+      if (data.conflicts_detected) parts.push(`${data.conflicts_detected} conflitos`);
+      toast.success(`Sincronização concluída: ${parts.join(', ')}`);
       setLastSyncResult(data);
       queryClient.invalidateQueries({ queryKey: ['crm-clients-external-ids'] });
       queryClient.invalidateQueries({ queryKey: ['iniflex-correntistas'] });
       queryClient.invalidateQueries({ queryKey: ['erp-sync-control-clientes'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-sync-logs'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-conflicts'] });
     },
     onError: (error: Error) => {
       toast.error(`Erro na sincronização: ${error.message}`);
+    },
+  });
+
+  // Query para histórico de sincronizações
+  const { data: syncLogs } = useQuery({
+    queryKey: ['erp-sync-logs'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('erp_sync_logs')
+        .select('id, entity_type, status, created_at, response_payload')
+        .eq('entity_type', 'sync_clients')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      return (data || []) as unknown as SyncLogEntry[];
+    },
+  });
+
+  // Query para conflitos pendentes
+  const { data: pendingConflicts } = useQuery({
+    queryKey: ['erp-conflicts'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('import_conflict_log')
+        .select('id, entity_type, erp_code, field_name, crm_value, erp_value, auto_resolved, resolution, created_at')
+        .eq('resolution', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return (data || []) as unknown as ConflictEntry[];
     },
   });
 
@@ -275,17 +343,17 @@ export function InflexClientsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Card de Sincronização */}
+      {/* Painel de Monitoramento de Sincronização */}
       <Card className="bg-muted/30 border-primary/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Database className="h-5 w-5" />
-                Sincronização de Clientes
+                Sincronização Contínua
               </CardTitle>
               <CardDescription>
-                Busca incremental de clientes alterados no ERP Iniflex
+                Sincronização incremental via <code className="text-xs">erp_last_update_date</code> — detecta e registra conflitos automaticamente
               </CardDescription>
             </div>
             <Button 
@@ -298,43 +366,155 @@ export function InflexClientsTab() {
               ) : (
                 <RefreshCw className="h-4 w-4" />
               )}
-              Sincronizar
+              Sincronizar Agora
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {!isConfigured ? (
             <p className="text-sm text-muted-foreground">
               Configure URL e Token na aba <strong>Sandbox</strong> para habilitar a sincronização.
             </p>
           ) : (
-            <div className="space-y-2">
+            <>
               {lastSyncResult ? (
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="gap-1">
                     <Database className="h-3 w-3" />
-                    Processados: {lastSyncResult.processed}
+                    CRM: {lastSyncResult.processed} processados
                   </Badge>
-                  <Badge variant="secondary" className="gap-1 text-green-600">
+                  <Badge variant="secondary" className="gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     Criados: {lastSyncResult.created}
                   </Badge>
-                  <Badge variant="secondary" className="gap-1 text-blue-600">
+                  <Badge variant="secondary" className="gap-1">
                     <RefreshCw className="h-3 w-3" />
                     Atualizados: {lastSyncResult.updated}
                   </Badge>
+                  {(lastSyncResult.companies_inserted || 0) > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Empresas +{lastSyncResult.companies_inserted}
+                    </Badge>
+                  )}
+                  {(lastSyncResult.companies_updated || 0) > 0 && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Empresas ↻{lastSyncResult.companies_updated}
+                    </Badge>
+                  )}
+                  {(lastSyncResult.conflicts_detected || 0) > 0 && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {lastSyncResult.conflicts_detected} conflitos ({lastSyncResult.conflicts_auto_resolved} auto)
+                    </Badge>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
                   Nenhuma sincronização realizada nesta sessão.
                 </p>
               )}
+
               {syncControl?.last_sync_at && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
                   Última sincronização: {formatDate(syncControl.last_sync_at)}
+                  {syncControl.last_sync_count != null && ` (${syncControl.last_sync_count} registros)`}
                 </p>
               )}
-            </div>
+
+              {/* Tabs de monitoramento */}
+              <Tabs defaultValue="conflicts" className="mt-4">
+                <TabsList>
+                  <TabsTrigger value="conflicts" className="gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Conflitos ({pendingConflicts?.length || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="history" className="gap-1">
+                    <History className="h-3 w-3" />
+                    Histórico
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="conflicts">
+                  {!pendingConflicts?.length ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">Nenhum conflito pendente.</p>
+                  ) : (
+                    <div className="max-h-64 overflow-auto rounded border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Código ERP</TableHead>
+                            <TableHead>Campo</TableHead>
+                            <TableHead>Valor CRM</TableHead>
+                            <TableHead>Valor ERP</TableHead>
+                            <TableHead>Data</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pendingConflicts.map((c) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="font-mono text-xs">{c.erp_code || '-'}</TableCell>
+                              <TableCell><Badge variant="outline" className="text-xs">{c.field_name}</Badge></TableCell>
+                              <TableCell className="text-xs max-w-[150px] truncate">{c.crm_value || <span className="text-muted-foreground italic">vazio</span>}</TableCell>
+                              <TableCell className="text-xs max-w-[150px] truncate font-medium">{c.erp_value}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{formatDate(c.created_at)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="history">
+                  {!syncLogs?.length ? (
+                    <p className="text-sm text-muted-foreground py-4 text-center">Nenhum registro encontrado.</p>
+                  ) : (
+                    <div className="max-h-64 overflow-auto rounded border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Data</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>CRM +</TableHead>
+                            <TableHead>CRM ↻</TableHead>
+                            <TableHead>Empresas</TableHead>
+                            <TableHead>Conflitos</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {syncLogs.map((log) => {
+                            const rp = log.response_payload;
+                            return (
+                              <TableRow key={log.id}>
+                                <TableCell className="text-xs">{formatDate(log.created_at)}</TableCell>
+                                <TableCell>
+                                  <Badge variant={log.status === 'success' ? 'secondary' : 'destructive'} className="text-xs">
+                                    {log.status === 'success' ? 'OK' : log.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs">{rp?.created ?? '-'}</TableCell>
+                                <TableCell className="text-xs">{rp?.updated ?? '-'}</TableCell>
+                                <TableCell className="text-xs">
+                                  {(rp?.companies_inserted || 0) + (rp?.companies_updated || 0) > 0
+                                    ? `+${rp?.companies_inserted || 0}/↻${rp?.companies_updated || 0}` : '-'}
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  {(rp?.conflicts_detected || 0) > 0
+                                    ? `${rp?.conflicts_detected} (${rp?.conflicts_auto_resolved || 0} auto)` : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </>
           )}
         </CardContent>
       </Card>
