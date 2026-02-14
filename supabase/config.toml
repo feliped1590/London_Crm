@@ -89,6 +89,3 @@ verify_jwt = false
 
 [functions.validate-ncm-semantic]
 verify_jwt = false
-
-[functions.erp-import-companies]
-verify_jwt = false
