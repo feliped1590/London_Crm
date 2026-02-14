@@ -1,63 +1,45 @@
 
-
-# Correcao: Bloqueio de CNPJ Duplicado
+# Correcao: Coluna "Ult. Atendimento" mostrando "Nunca" na pagina de Remanejamento
 
 ## Problema Identificado
 
-O sistema permite cadastrar clientes com o mesmo CNPJ porque existem **duas falhas combinadas**:
+A view `unified_company_for_reallocation` (usada pela pagina de Remanejamento) calcula o `last_interaction_at` de forma **muito limitada** comparada a view `company_activity_summary` (usada pela pagina de Clientes).
 
-1. **Formato inconsistente**: O CNPJ e armazenado **formatado** no banco (ex: `27.751.050/0001-67`), mas a verificacao de duplicidade busca pelo valor **limpo** (ex: `27751050000167`). A query `.eq('cnpj', documentClean)` nunca encontra o registro existente.
+| Fonte de dados | `company_activity_summary` | `unified_company_for_reallocation` |
+|---|---|---|
+| activities | Sim | Sim |
+| tasks (concluidas) | Sim | **Nao** |
+| email_logs (enviados) | Sim | **Nao** |
+| whatsapp_messages (outbound) | Sim | **Nao** |
+| Fallback para created_at | Sim | **Nao** |
 
-2. **Sem restricao no banco**: A coluna `cnpj` na tabela `companies` tem apenas um indice comum, sem constraint UNIQUE. Mesmo corrigindo o frontend, o banco nao impede insercoes duplicadas.
+Como resultado, empresas que tem interacoes registradas em tasks, emails ou WhatsApp (ou simplesmente foram criadas recentemente) aparecem como "Nunca" no Remanejamento.
 
-## Dados Afetados
+## Solucao
 
-Existe 1 duplicata confirmada no banco:
-- `27.751.050/0001-67` - 2 registros (WANDERSON MARCIO... e Wanderson Marcio...)
-
-## Solucao em 3 Passos
-
-### Passo 1: Corrigir a query de verificacao no frontend
-
-No arquivo `src/pages/CustomerNew.tsx`, a funcao `checkDuplicateDocument` precisa buscar pelo CNPJ **no mesmo formato em que esta armazenado** (formatado). Alterar a query para comparar usando o valor formatado em vez do limpo.
-
-### Passo 2: Adicionar UNIQUE constraint no banco
-
-Criar uma migration que:
-- Remove a duplicata existente (manter o registro mais recente ou o que tiver mais dados associados)
-- Cria um UNIQUE INDEX na coluna `cnpj` ignorando nulos (para permitir clientes PF sem CNPJ)
+Atualizar a CTE `crm_data` dentro da view `unified_company_for_reallocation` para usar a mesma logica abrangente da view `company_activity_summary`:
 
 ```sql
--- Unique index parcial (ignora NULLs e vazios)
-CREATE UNIQUE INDEX idx_companies_cnpj_unique 
-  ON public.companies (cnpj) 
-  WHERE cnpj IS NOT NULL AND cnpj != '';
+COALESCE(
+  GREATEST(
+    (SELECT max(a.created_at) FROM activities a WHERE a.company_id = c.id),
+    (SELECT max(t.completed_at) FROM tasks t WHERE t.company_id = c.id AND t.status = 'concluida'),
+    (SELECT max(el.sent_at) FROM email_logs el JOIN contacts ct ON el.contact_id = ct.id WHERE ct.company_id = c.id AND el.sent_at IS NOT NULL),
+    (SELECT max(wm.created_at) FROM whatsapp_messages wm WHERE wm.company_id = c.id AND wm.direction = 'outbound')
+  ),
+  c.created_at
+) AS last_interaction_at
 ```
 
-### Passo 3: Padronizar formato de armazenamento
+## Escopo da mudanca
 
-Ajustar o `INSERT` para armazenar o CNPJ **sempre limpo** (somente digitos) e corrigir a query de duplicidade para usar o mesmo formato. Isso evita problemas futuros de comparacao. Os dados existentes formatados serao normalizados via migration.
-
-```sql
--- Normalizar CNPJs existentes para somente digitos
-UPDATE companies 
-  SET cnpj = regexp_replace(cnpj, '[^0-9]', '', 'g')
-  WHERE cnpj IS NOT NULL AND cnpj ~ '[^0-9]';
-```
-
-## Tratamento da Duplicata Existente
-
-Antes de criar o UNIQUE INDEX, a duplicata sera resolvida. Sera necessario verificar qual dos dois registros possui dados relacionados (contatos, deals, pedidos) para decidir qual manter.
-
-## Arquivos a Modificar
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/CustomerNew.tsx` | Corrigir `checkDuplicateDocument` para usar formato limpo na query, e gravar CNPJ limpo no INSERT |
-| Migration SQL | Normalizar CNPJs existentes, remover duplicata, criar UNIQUE INDEX |
+| O que muda | Detalhes |
+|---|---|
+| View `unified_company_for_reallocation` | Substituir subconsulta simples de `activities` pela logica completa com fallback |
+| Arquivos de codigo | Nenhum - a correcao e 100% no banco de dados |
 
 ## Resultado Esperado
 
-- Validacao no frontend compara corretamente (digitos vs digitos)
-- Banco impede duplicatas mesmo em cenarios de requisicoes simultaneas
-- CNPJ armazenado em formato padrao (somente digitos), formatacao aplicada apenas na exibicao
+- A coluna "Ult. Atendimento" passara a refletir a data mais recente entre atividades, tarefas concluidas, emails enviados e mensagens WhatsApp
+- Empresas sem nenhuma dessas interacoes mostrarao a data de criacao como fallback em vez de "Nunca"
+- A logica fica consistente com a pagina de Clientes
