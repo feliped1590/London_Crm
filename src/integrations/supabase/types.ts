@@ -877,6 +877,7 @@ export type Database = {
           inscricao_municipal: string | null
           is_matriz: boolean | null
           last_reviewed_at: string | null
+          legal_entity_id: string | null
           name: string
           neighborhood: string | null
           notes: string | null
@@ -928,6 +929,7 @@ export type Database = {
           inscricao_municipal?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
+          legal_entity_id?: string | null
           name: string
           neighborhood?: string | null
           notes?: string | null
@@ -979,6 +981,7 @@ export type Database = {
           inscricao_municipal?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
+          legal_entity_id?: string | null
           name?: string
           neighborhood?: string | null
           notes?: string | null
@@ -998,6 +1001,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "companies_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "companies_parent_company_id_fkey"
             columns: ["parent_company_id"]
@@ -2262,6 +2272,7 @@ export type Database = {
           custom_fields: Json | null
           expected_close_date: string | null
           id: string
+          legal_entity_id: string | null
           lost_reason: string | null
           name: string
           notes: string | null
@@ -2283,6 +2294,7 @@ export type Database = {
           custom_fields?: Json | null
           expected_close_date?: string | null
           id?: string
+          legal_entity_id?: string | null
           lost_reason?: string | null
           name: string
           notes?: string | null
@@ -2304,6 +2316,7 @@ export type Database = {
           custom_fields?: Json | null
           expected_close_date?: string | null
           id?: string
+          legal_entity_id?: string | null
           lost_reason?: string | null
           name?: string
           notes?: string | null
@@ -2336,6 +2349,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
           },
           {

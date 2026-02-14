@@ -4,29 +4,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Building2, ShieldCheck, Pencil, Power } from 'lucide-react';
+import { Plus, Building2, Pencil, Power, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { useAuth } from '@/hooks/useAuth';
-
-interface UserWithLinks {
-  user_id: string;
-  full_name: string;
-  links: Array<{
-    id: string;
-    legal_entity_id: string;
-    role: string;
-    entity_name: string;
-    entity_cnpj: string;
-  }>;
-}
 
 interface EntityFormData {
   name: string;
@@ -39,12 +26,7 @@ const emptyForm: EntityFormData = { name: '', cnpj: '', erp_company_code: '', tr
 
 export function LegalEntityPermissionsManager() {
   const queryClient = useQueryClient();
-  const { allEntities } = useLegalEntities();
   const { user } = useAuth();
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [selectedEntityId, setSelectedEntityId] = useState('');
-  const [selectedRole, setSelectedRole] = useState('member');
 
   // Entity CRUD state
   const [isEntityDialogOpen, setIsEntityDialogOpen] = useState(false);
@@ -64,103 +46,12 @@ export function LegalEntityPermissionsManager() {
     },
   });
 
-  // Fetch all profiles in tenant
-  const { data: profiles = [] } = useQuery({
-    queryKey: ['profiles_for_legal_entities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, full_name')
-        .order('full_name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch all user_legal_entities links
-  const { data: allLinks = [] } = useQuery({
-    queryKey: ['all_user_legal_entities'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('user_legal_entities')
-        .select('*');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Build user-centric view
-  const usersWithLinks: UserWithLinks[] = profiles.map((p) => {
-    const links = allLinks
-      .filter((l) => l.user_id === p.id)
-      .map((l) => {
-        const entity = allEntities.find((e) => e.id === l.legal_entity_id);
-        return {
-          id: l.id,
-          legal_entity_id: l.legal_entity_id,
-          role: l.role || 'member',
-          entity_name: entity?.name || '—',
-          entity_cnpj: entity?.cnpj || '',
-        };
-      });
-    return {
-      user_id: p.id,
-      full_name: p.full_name || 'Sem nome',
-      links,
-    };
-  });
-
-  const addLinkMutation = useMutation({
-    mutationFn: async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('active_tenant_id')
-        .eq('id', selectedUserId)
-        .single();
-      
-      const { error } = await supabase.from('user_legal_entities').insert([{
-        user_id: selectedUserId,
-        legal_entity_id: selectedEntityId,
-        role: selectedRole,
-        tenant_id: profile?.active_tenant_id || '',
-      }]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_user_legal_entities'] });
-      queryClient.invalidateQueries({ queryKey: ['user_legal_entities'] });
-      toast.success('Vínculo criado');
-      setIsAddOpen(false);
-      setSelectedUserId('');
-      setSelectedEntityId('');
-      setSelectedRole('member');
-    },
-    onError: (e: Error) => toast.error(e.message || 'Erro ao criar vínculo'),
-  });
-
-  const removeLinkMutation = useMutation({
-    mutationFn: async (linkId: string) => {
-      const { error } = await supabase
-        .from('user_legal_entities')
-        .delete()
-        .eq('id', linkId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['all_user_legal_entities'] });
-      queryClient.invalidateQueries({ queryKey: ['user_legal_entities'] });
-      toast.success('Vínculo removido');
-    },
-    onError: () => toast.error('Erro ao remover vínculo'),
-  });
-
   // --- Entity CRUD mutations ---
   const saveEntityMutation = useMutation({
     mutationFn: async () => {
       const cnpjDigits = entityForm.cnpj.replace(/\D/g, '');
       if (cnpjDigits.length !== 14) throw new Error('CNPJ deve ter 14 dígitos');
 
-      // Get tenant_id
       const { data: profile } = await supabase
         .from('profiles')
         .select('active_tenant_id')
@@ -201,7 +92,6 @@ export function LegalEntityPermissionsManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all_legal_entities_full'] });
       queryClient.invalidateQueries({ queryKey: ['legal_entities'] });
-      queryClient.invalidateQueries({ queryKey: ['user_legal_entities'] });
       toast.success(editingEntityId ? 'Entidade atualizada' : 'Entidade criada');
       setIsEntityDialogOpen(false);
       setEditingEntityId(null);
@@ -226,6 +116,34 @@ export function LegalEntityPermissionsManager() {
     onError: () => toast.error('Erro ao atualizar status'),
   });
 
+  const setDefaultEntityMutation = useMutation({
+    mutationFn: async (entityId: string) => {
+      // Get tenant_id from the entity
+      const entity = allEntitiesFull.find(e => e.id === entityId);
+      if (!entity) throw new Error('Entidade não encontrada');
+
+      // Clear is_headquarters from all entities of this tenant
+      const { error: clearError } = await supabase
+        .from('legal_entities')
+        .update({ is_headquarters: false })
+        .eq('tenant_id', entity.tenant_id);
+      if (clearError) throw clearError;
+
+      // Set the selected entity as headquarters
+      const { error } = await supabase
+        .from('legal_entities')
+        .update({ is_headquarters: true })
+        .eq('id', entityId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all_legal_entities_full'] });
+      queryClient.invalidateQueries({ queryKey: ['legal_entities'] });
+      toast.success('CNPJ padrão definido');
+    },
+    onError: () => toast.error('Erro ao definir CNPJ padrão'),
+  });
+
   const openEditEntity = (entity: typeof allEntitiesFull[0]) => {
     setEditingEntityId(entity.id);
     setEntityForm({
@@ -243,15 +161,8 @@ export function LegalEntityPermissionsManager() {
     setIsEntityDialogOpen(true);
   };
 
-  const roleLabels: Record<string, string> = {
-    admin: 'Admin',
-    member: 'Membro',
-    viewer: 'Visualizador',
-  };
-
   return (
     <div className="space-y-6">
-      {/* Card 1: Cadastro de Entidades Jurídicas */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -260,7 +171,7 @@ export function LegalEntityPermissionsManager() {
               Entidades Jurídicas (CNPJs)
             </CardTitle>
             <CardDescription>
-              Cadastre e gerencie os CNPJs da organização.
+              Cadastre e gerencie os CNPJs da organização. O CNPJ marcado como padrão será pré-selecionado nos formulários.
             </CardDescription>
           </div>
           <Button className="gap-2" onClick={openNewEntity}>
@@ -281,6 +192,7 @@ export function LegalEntityPermissionsManager() {
                   <TableHead>Nome Fantasia</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Código ERP</TableHead>
+                  <TableHead>Padrão</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
@@ -292,6 +204,18 @@ export function LegalEntityPermissionsManager() {
                     <TableCell>{entity.trade_name || '—'}</TableCell>
                     <TableCell className="font-mono text-sm">{formatCNPJ(entity.cnpj)}</TableCell>
                     <TableCell>{entity.erp_company_code || '—'}</TableCell>
+                    <TableCell>
+                      {entity.active && (
+                        <Switch
+                          checked={entity.is_headquarters || false}
+                          onCheckedChange={() => setDefaultEntityMutation.mutate(entity.id)}
+                          disabled={setDefaultEntityMutation.isPending}
+                        />
+                      )}
+                      {entity.is_headquarters && (
+                        <Star className="h-4 w-4 text-yellow-500 inline ml-1" />
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={entity.active ? 'default' : 'secondary'}>
                         {entity.active ? 'Ativo' : 'Inativo'}
@@ -338,162 +262,6 @@ export function LegalEntityPermissionsManager() {
           )}
         </CardContent>
       </Card>
-
-      {/* Card 2: Permissões por CNPJ */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5" />
-              Permissões por CNPJ
-            </CardTitle>
-            <CardDescription>
-              Gerencie quais usuários têm acesso a cada CNPJ. Usuários sem vínculos têm acesso total.
-            </CardDescription>
-          </div>
-          <Button className="gap-2" onClick={() => setIsAddOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Vincular CNPJ
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {allEntities.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Nenhum CNPJ cadastrado. Cadastre entidades jurídicas para gerenciar permissões.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>CNPJs Vinculados</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {usersWithLinks.map((u) => (
-                  <TableRow key={u.user_id}>
-                    <TableCell className="font-medium">{u.full_name}</TableCell>
-                    <TableCell>
-                      {u.links.length === 0 ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <ShieldCheck className="h-3 w-3" />
-                          Acesso total
-                        </Badge>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {u.links.map((link) => (
-                            <div key={link.id} className="flex items-center gap-1">
-                              <Badge variant="outline" className="text-xs">
-                                {link.entity_name} ({roleLabels[link.role] || link.role})
-                              </Badge>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-5 w-5">
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Remover vínculo?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      O usuário {u.full_name} perderá acesso restrito ao CNPJ {link.entity_name}.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => removeLinkMutation.mutate(link.id)}>
-                                      Remover
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedUserId(u.user_id);
-                          setIsAddOpen(true);
-                        }}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Add Link Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Vincular Usuário a CNPJ</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Usuário</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.full_name || 'Sem nome'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>CNPJ</Label>
-              <Select value={selectedEntityId} onValueChange={setSelectedEntityId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o CNPJ" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allEntities.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name} — {formatCNPJ(e.cnpj)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Papel</Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="member">Membro</SelectItem>
-                  <SelectItem value="viewer">Visualizador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={() => addLinkMutation.mutate()}
-              disabled={!selectedUserId || !selectedEntityId || addLinkMutation.isPending}
-            >
-              Vincular
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Entity Create/Edit Dialog */}
       <Dialog open={isEntityDialogOpen} onOpenChange={setIsEntityDialogOpen}>

@@ -46,6 +46,7 @@ import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
@@ -138,7 +139,7 @@ export default function Pipeline() {
   
   // Portfolio governance hook
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
-
+  const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
@@ -343,7 +344,8 @@ export default function Pipeline() {
       company_id: null,
       contact_id: null,
       notes: '',
-    });
+      legal_entity_id: effectiveLegalEntityId,
+    } as any);
     setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
@@ -462,7 +464,8 @@ export default function Pipeline() {
       company_id: deal.company_id,
       contact_id: deal.contact_id,
       notes: deal.notes || '',
-    });
+      legal_entity_id: (deal as any).legal_entity_id || effectiveLegalEntityId,
+    } as any);
     setCustomFieldsData(
       typeof deal.custom_fields === 'object' && deal.custom_fields !== null
         ? (deal.custom_fields as Record<string, unknown>)
@@ -802,6 +805,26 @@ export default function Pipeline() {
                           createNewLabel="Criar novo contato"
                         />
                       </div>
+                      {legalEntities.length > 0 && (
+                        <div>
+                          <Label htmlFor="legal_entity_id">CNPJ Atendimento</Label>
+                          <Select 
+                            value={(formData as any).legal_entity_id || effectiveLegalEntityId || ''} 
+                            onValueChange={(v) => setFormData({ ...formData, legal_entity_id: v } as any)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o CNPJ" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {legalEntities.map((le: any) => (
+                                <SelectItem key={le.id} value={le.id}>
+                                  {le.name} — {formatCNPJ(le.cnpj)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                       <div className="col-span-2">
                         <Label htmlFor="notes">Observações</Label>
                         <Textarea

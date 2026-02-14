@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const industries = [
   'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
@@ -26,6 +27,8 @@ export default function CustomerNew() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { accessibleEntities: legalEntities, effectiveEntityId } = useLegalEntities();
+  const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
   
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
@@ -231,9 +234,10 @@ export default function CustomerNew() {
         state: companyForm.state || null,
         created_by: user?.id,
         owner_id: user?.id,
+        legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
         custom_fields: { 
           tipo_cliente: customerType,
-          segmento: companyForm.segment, // Segmento obrigatório
+          segmento: companyForm.segment,
         } as Json,
       };
 
@@ -639,6 +643,26 @@ export default function CustomerNew() {
                 </>
               )}
               
+              {legalEntities.length > 0 && (
+                <div className="col-span-2">
+                  <Label htmlFor="legal_entity">CNPJ Atendimento</Label>
+                  <Select 
+                    value={selectedLegalEntityId || effectiveEntityId || ''} 
+                    onValueChange={(v) => setSelectedLegalEntityId(v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o CNPJ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {legalEntities.map((le) => (
+                        <SelectItem key={le.id} value={le.id}>
+                          {le.name} — {formatCNPJ(le.cnpj)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label htmlFor="phone">Telefone</Label>
                 <Input

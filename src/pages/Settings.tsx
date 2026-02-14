@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2 } from 'lucide-react';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
@@ -61,6 +63,235 @@ const roleLabels: Record<AppRole, string> = {
   vendedor: 'Vendedor',
   atendente: 'Atendente',
 };
+
+// --- Edit User Form with CNPJ linking ---
+function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSubmit, onCancel, isPending }: {
+  editingUser: { userId: string; currentRole: AppRole; fullName: string; email: string };
+  editUserFormData: { full_name: string; email: string; password: string; role: AppRole };
+  setEditUserFormData: (data: any) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  onCancel: () => void;
+  isPending: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const { accessibleEntities } = useLegalEntities();
+  const [newEntityId, setNewEntityId] = useState('');
+
+  // Fetch user's profile id
+  const { data: userProfile } = useQuery({
+    queryKey: ['profile_for_edit', editingUser.userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, user_id')
+        .eq('user_id', editingUser.userId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch user's CNPJ links
+  const { data: userLinks = [] } = useQuery({
+    queryKey: ['user_legal_entities_edit', userProfile?.id],
+    queryFn: async () => {
+      if (!userProfile?.id) return [];
+      const { data, error } = await supabase
+        .from('user_legal_entities')
+        .select('*')
+        .eq('user_id', userProfile.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userProfile?.id,
+  });
+
+  const addLinkMutation = useMutation({
+    mutationFn: async (entityId: string) => {
+      if (!userProfile) throw new Error('Profile not found');
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('id', userProfile.id)
+        .single();
+      const { error } = await supabase.from('user_legal_entities').insert({
+        user_id: userProfile.id,
+        legal_entity_id: entityId,
+        role: 'member',
+        tenant_id: profile?.active_tenant_id || '',
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_legal_entities_edit'] });
+      queryClient.invalidateQueries({ queryKey: ['user_legal_entities'] });
+      toast.success('CNPJ vinculado');
+      setNewEntityId('');
+    },
+    onError: (e: Error) => toast.error(e.message || 'Erro ao vincular CNPJ'),
+  });
+
+  const removeLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => {
+      const { error } = await supabase.from('user_legal_entities').delete().eq('id', linkId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user_legal_entities_edit'] });
+      queryClient.invalidateQueries({ queryKey: ['user_legal_entities'] });
+      toast.success('Vínculo removido');
+    },
+    onError: () => toast.error('Erro ao remover vínculo'),
+  });
+
+  const linkedEntityIds = new Set(userLinks.map(l => l.legal_entity_id));
+  const availableEntities = accessibleEntities.filter(e => !linkedEntityIds.has(e.id));
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Editando <strong>{editingUser.fullName}</strong>
+      </p>
+      <div>
+        <Label htmlFor="edit-full_name">Nome Completo</Label>
+        <Input
+          id="edit-full_name"
+          value={editUserFormData.full_name}
+          onChange={(e) => setEditUserFormData({ ...editUserFormData, full_name: e.target.value })}
+          placeholder="Nome completo do usuário"
+        />
+      </div>
+      <div>
+        <Label htmlFor="edit-email">Novo Email de Acesso</Label>
+        <Input
+          id="edit-email"
+          type="email"
+          value={editUserFormData.email}
+          onChange={(e) => setEditUserFormData({ ...editUserFormData, email: e.target.value })}
+          placeholder="Deixe em branco para manter o atual"
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Deixe em branco para não alterar o email atual.
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="edit-password">Nova Senha</Label>
+        <Input
+          id="edit-password"
+          type="password"
+          value={editUserFormData.password}
+          onChange={(e) => setEditUserFormData({ ...editUserFormData, password: e.target.value })}
+          placeholder="Deixe em branco para manter a atual"
+          minLength={6}
+        />
+        <p className="text-xs text-muted-foreground mt-1">
+          Mínimo 6 caracteres. Deixe em branco para não alterar.
+        </p>
+      </div>
+      <div>
+        <Label htmlFor="edit-user-role">Nível de Acesso</Label>
+        <Select 
+          value={editUserFormData.role} 
+          onValueChange={(v) => setEditUserFormData({ ...editUserFormData, role: v as AppRole })}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="atendente">
+              <div className="flex items-center gap-2">
+                <Headphones className="h-4 w-4" />
+                Atendente
+              </div>
+            </SelectItem>
+            <SelectItem value="vendedor">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Vendedor
+              </div>
+            </SelectItem>
+            <SelectItem value="admin">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Administrador
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* CNPJ Links Section */}
+      {accessibleEntities.length > 0 && (
+        <div className="space-y-3 pt-2 border-t">
+          <Label className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            CNPJs Vinculados
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Sem vínculos = acesso a todos os CNPJs. Vincule para restringir.
+          </p>
+          
+          {userLinks.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {userLinks.map(link => {
+                const entity = accessibleEntities.find(e => e.id === link.legal_entity_id);
+                return (
+                  <Badge key={link.id} variant="outline" className="gap-1 pr-1">
+                    {entity?.name || 'CNPJ'} — {entity ? formatCNPJ(entity.cnpj) : ''}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4 ml-1 hover:text-destructive"
+                      onClick={() => removeLinkMutation.mutate(link.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+          
+          {availableEntities.length > 0 && (
+            <div className="flex gap-2">
+              <Select value={newEntityId} onValueChange={setNewEntityId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um CNPJ" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableEntities.map(e => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.name} — {formatCNPJ(e.cnpj)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!newEntityId || addLinkMutation.isPending}
+                onClick={() => newEntityId && addLinkMutation.mutate(newEntityId)}
+              >
+                Vincular
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Salvando...' : 'Salvar Alterações'}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 export default function Settings() {
   const { user } = useAuth();
@@ -869,91 +1100,19 @@ export default function Settings() {
 
           {/* Dialog de edição de usuário */}
           <Dialog open={isEditUserDialogOpen} onOpenChange={(open) => { setIsEditUserDialogOpen(open); if (!open) resetEditUserDialog(); }}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Editar Usuário</DialogTitle>
               </DialogHeader>
               {editingUser && (
-                <form onSubmit={handleUserUpdate} className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Editando <strong>{editingUser.fullName}</strong>
-                  </p>
-                  <div>
-                    <Label htmlFor="edit-full_name">Nome Completo</Label>
-                    <Input
-                      id="edit-full_name"
-                      value={editUserFormData.full_name}
-                      onChange={(e) => setEditUserFormData({ ...editUserFormData, full_name: e.target.value })}
-                      placeholder="Nome completo do usuário"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-email">Novo Email de Acesso</Label>
-                    <Input
-                      id="edit-email"
-                      type="email"
-                      value={editUserFormData.email}
-                      onChange={(e) => setEditUserFormData({ ...editUserFormData, email: e.target.value })}
-                      placeholder="Deixe em branco para manter o atual"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Deixe em branco para não alterar o email atual.
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-password">Nova Senha</Label>
-                    <Input
-                      id="edit-password"
-                      type="password"
-                      value={editUserFormData.password}
-                      onChange={(e) => setEditUserFormData({ ...editUserFormData, password: e.target.value })}
-                      placeholder="Deixe em branco para manter a atual"
-                      minLength={6}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Mínimo 6 caracteres. Deixe em branco para não alterar.
-                    </p>
-                  </div>
-                  <div>
-                    <Label htmlFor="edit-user-role">Nível de Acesso</Label>
-                    <Select 
-                      value={editUserFormData.role} 
-                      onValueChange={(v) => setEditUserFormData({ ...editUserFormData, role: v as AppRole })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="atendente">
-                          <div className="flex items-center gap-2">
-                            <Headphones className="h-4 w-4" />
-                            Atendente
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="vendedor">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Vendedor
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="admin">
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-4 w-4" />
-                            Administrador
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={resetEditUserDialog}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={updateUserMutation.isPending}>
-                      {updateUserMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-                    </Button>
-                  </div>
-                </form>
+                <EditUserForm
+                  editingUser={editingUser}
+                  editUserFormData={editUserFormData}
+                  setEditUserFormData={setEditUserFormData}
+                  onSubmit={handleUserUpdate}
+                  onCancel={resetEditUserDialog}
+                  isPending={updateUserMutation.isPending}
+                />
               )}
             </DialogContent>
           </Dialog>
