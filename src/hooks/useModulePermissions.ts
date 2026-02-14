@@ -30,7 +30,7 @@ export function useModulePermissions() {
     enabled: !!user?.id,
   });
 
-  const { data: isAdmin } = useQuery({
+  const { data: hasRoleAdmin } = useQuery({
     queryKey: ['is_admin', user?.id],
     queryFn: async () => {
       if (!user?.id) return false;
@@ -43,6 +43,22 @@ export function useModulePermissions() {
     },
     enabled: !!user?.id,
   });
+
+  const { data: hasRoleDeveloper } = useQuery({
+    queryKey: ['is_developer', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'desenvolvedor'
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    enabled: !!user?.id,
+  });
+
+  const isAdmin = hasRoleAdmin || hasRoleDeveloper || false;
 
   const canAccess = (moduleKey: string): boolean => {
     if (isAdmin) return true;
@@ -69,7 +85,7 @@ export function useModulePermissions() {
     permissions: permissions || [],
     isLoading,
     error,
-    isAdmin: isAdmin || false,
+    isAdmin,
     canAccess,
     getAccessType,
     hasFullAccess,
