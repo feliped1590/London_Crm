@@ -1,69 +1,141 @@
 
-# Fase 3 -- ETL Inicial (Importacao ERP para CRM)
+# Fase 4C -- Integracao de Produtos ERP (Tabela 9 - MATERIAL)
 
 ## Resumo
 
-Criar a Edge Function `erp-import-companies` que recebe um array de registros do ERP (CIGAM/Iniflex), normaliza os dados, e faz merge inteligente no CRM usando a regra composta `(tenant_id, cnpj)` com fallback `(tenant_id, erp_code)`. Processamento em batches de 100, com registro de conflitos na tabela `import_conflict_log`.
+Expandir a tabela `products` com 12 colunas comerciais/rastreio e criar tabela auxiliar `product_erp_data` para dados operacionais do ERP CIGAM. Criar Edge Function `erp-import-products` para ETL com merge inteligente.
+
+## Decisoes Arquiteturais Consolidadas
+
+### 1. Fonte Oficial de Preco
+- `unit_price` = preco oficial do CRM (usado em propostas/pedidos)
+- `price_cash` / `price_term` = referencia ERP (apenas informativo, nunca usado em calculos)
+- ERP nunca sobrescreve `unit_price`. Na importacao inicial, se `unit_price` for NULL, pode ser populado com `price_cash` como sugestao
+
+### 2. Controle de Ativo
+- `active` = controlado exclusivamente pelo CRM (nunca alterado por sync ERP)
+- `erp_status` = status vindo do ERP (ATIVO/INATIVO/SERVICO/OBSOLETO/MODELO)
+- Na importacao: INSERT novo produto → `active = true` (default); UPDATE → `active` nao e tocado
+- Dashboard pode alertar divergencias (ex: ativo no CRM mas OBSOLETO no ERP)
+
+### 3. Tipagem de erp_status
+- TEXT com CHECK constraint (nao ENUM)
+- `CHECK (erp_status IN ('ATIVO','INATIVO','SERVICO','OBSOLETO','MODELO'))`
+- Mais flexivel que ENUM para adicionar valores futuros
+
+### 4. Category/Subcategory
+- Manter como TEXT simples (nao criar tabela product_categories)
+- Grupos/subgrupos ERP sao codigos livres que variam por tenant
+- Migrar para tabela normalizada somente se surgir necessidade de hierarquia navegavel
+
+### 5. Peso
+- Sempre em KG (padrao logistico brasileiro e do ERP CIGAM)
+- Nao adicionar weight_unit (simplicidade)
+- Uso: estimativa de frete comercial
+
+### 6. Indices product_erp_data
+- Apenas UNIQUE(product_id), sem indice redundante (tenant_id, product_id)
+- Filtro por tenant ocorre na tabela products via JOIN
+
+---
 
 ## O que sera feito
 
-### 1. Edge Function `erp-import-companies`
+### 1. Migration SQL
 
-Uma nova funcao backend que recebe dados do ERP e importa para o CRM. Fluxo:
+#### ALTER TABLE products — adicionar 12 colunas
 
-1. Recebe array de registros ERP via POST
-2. Processa em batches de 100 registros
-3. Para cada registro:
-   - Normaliza CNPJ (remove pontuacao, valida 14 digitos)
-   - Normaliza CEP (remove pontuacao, valida 8 digitos)
-   - Normaliza datas (converte formatos ERP para ISO)
-   - Normaliza booleanos (S/N, SIM/NAO, 1/0 para true/false)
-   - Normaliza tipo_pessoa (PF/PJ)
-4. Faz merge composto:
-   - Busca por `(tenant_id, cnpj)` -- prioridade
-   - Se nao encontrou, busca por `(tenant_id, erp_code)` -- fallback
-   - Se encontrou: UPDATE (com deteccao de conflitos)
-   - Se nao encontrou: INSERT
-5. Popula `company_erp_fiscal` e `company_erp_financial` quando dados disponiveis
-6. Registra conflitos na `import_conflict_log`
-7. Retorna sumario: total, inseridos, atualizados, erros, conflitos
+| Coluna | Tipo | Nullable | Default | Justificativa |
+|---|---|---|---|---|
+| subcategory | TEXT | SIM | NULL | Sub_Grupo ERP para hierarquia catalogo |
+| reference | TEXT | SIM | NULL | Referencia comercial/fabricante |
+| weight | NUMERIC(15,5) | SIM | NULL | Peso em KG para calculo frete |
+| price_cash | NUMERIC(15,2) | SIM | NULL | Preco a vista ERP (informativo) |
+| price_term | NUMERIC(15,2) | SIM | NULL | Preco a prazo ERP (informativo) |
+| warranty_months | INTEGER | SIM | NULL | Garantia venda em meses |
+| erp_status | TEXT | SIM | NULL | Status ERP com CHECK constraint |
+| unit_sale | TEXT | SIM | NULL | Unidade venda ERP |
+| abc_classification | CHAR(1) | SIM | NULL | Classificacao ABC com CHECK (A/B/C) |
+| erp_product_code | TEXT | SIM | NULL | Codigo material ERP (chave merge) |
+| erp_synced_at | TIMESTAMPTZ | SIM | NULL | Data/hora ultima sincronizacao |
+| erp_last_update_date | TIMESTAMPTZ | SIM | NULL | Controle sync incremental |
 
-### 2. Normalizacoes implementadas
-
-| Campo | Regra |
-|-------|-------|
-| CNPJ | Remove `./- `, valida 14 digitos |
-| CEP | Remove `- `, valida 8 digitos |
-| Datas | Aceita `DD/MM/YYYY`, `YYYY-MM-DD`, timestamp ERP |
-| Booleanos | `S/SIM/1/TRUE` = true, demais = false |
-| Tipo pessoa | Normaliza para `PF` ou `PJ` |
-| Textos | Trim, null se vazio |
-
-### 3. Deteccao de conflitos
-
-Quando um registro ja existe no CRM e os dados divergem do ERP, os campos conflitantes sao registrados na tabela `import_conflict_log` com:
-- `crm_value`: valor atual no CRM
-- `erp_value`: valor vindo do ERP
-- `resolution`: pendente (para revisao manual) ou auto-resolvida (campos vazios no CRM)
-
-Regra de auto-resolucao: se o campo no CRM esta vazio/null e o ERP tem valor, atualiza automaticamente e marca como `auto_resolved = true`.
-
-### 4. Resposta da funcao
+#### CREATE TABLE product_erp_data
 
 ```text
-{
-  "success": true,
-  "summary": {
-    "total_received": 500,
-    "total_processed": 500,
-    "inserted": 320,
-    "updated": 175,
-    "skipped": 5,
-    "conflicts_detected": 42,
-    "conflicts_auto_resolved": 30,
-    "errors": []
-  }
-}
+product_erp_data
++-- id                   UUID PK DEFAULT gen_random_uuid()
++-- tenant_id            UUID NOT NULL (FK tenants)
++-- product_id           UUID NOT NULL UNIQUE (FK products ON DELETE CASCADE)
++-- center_control       TEXT
++-- parent_child_qty     NUMERIC(15,6)
++-- cost_price           NUMERIC(15,5)
++-- freight_pct          NUMERIC(5,2)
++-- packaging_pct        NUMERIC(5,2)
++-- commission_pct       NUMERIC(5,2)
++-- readjust_pct         NUMERIC(5,2)
++-- readjust_date        DATE
++-- erp_product_type_id  INTEGER
++-- manufacturer_code    TEXT
++-- factory_code         TEXT
++-- short_code           INTEGER
++-- purchase_converter   NUMERIC(15,7)
++-- sale_converter       NUMERIC(15,7)
++-- finance_charges_pct  NUMERIC(5,3)
++-- freight_value        NUMERIC(15,2)
++-- volume               NUMERIC(15,6)
++-- purchase_unit        TEXT
++-- packaging_weight     NUMERIC(15,5)
++-- purchase_warranty    INTEGER
++-- business_unit        TEXT
++-- erp_price_table_code TEXT
++-- erp_registered_at    DATE
++-- erp_modified_at      DATE
++-- extra_data           JSONB DEFAULT '{}'
++-- created_at           TIMESTAMPTZ DEFAULT now()
++-- updated_at           TIMESTAMPTZ DEFAULT now()
+```
+
+#### Indices
+
+| Indice | Colunas | Tipo |
+|---|---|---|
+| idx_products_tenant_erp_code | (tenant_id, erp_product_code) WHERE erp_product_code IS NOT NULL | UNIQUE parcial |
+| idx_products_tenant_category | (tenant_id, category) | Btree |
+| idx_products_tenant_active | (tenant_id, active) | Btree |
+
+#### RLS para product_erp_data
+
+- SELECT/INSERT/UPDATE/DELETE isolado por tenant_id via user_tenants
+- Mesmo padrao de company_erp_fiscal e contact_erp_data
+
+#### Trigger updated_at para product_erp_data
+
+- Reutilizar funcao update_updated_at_column() existente
+
+### 2. Edge Function erp-import-products
+
+Fluxo:
+1. Recebe array de materiais ERP com tenant_id
+2. Normaliza: erp_status derivado de Tipo, datas ISO, numericos
+3. Merge em products: prioridade (tenant_id, sku), fallback (tenant_id, erp_product_code)
+4. INSERT: active = true (default), unit_price = price_cash se NULL
+5. UPDATE: active NAO e tocado, unit_price NAO e tocado
+6. Upsert em product_erp_data (campos operacionais)
+7. Conflitos → import_conflict_log
+8. Batches de 100
+
+### 3. Regras de Precedencia Comercial
+
+```text
+Propostas/Pedidos:
+  1. Tabela de Precos do Cliente (pricing_tables)
+  2. Regra por Produto (pricing_table_rules)
+  3. Tabela Padrao (is_default)
+  4. products.unit_price (preco base CRM)
+  
+  price_cash/price_term = NUNCA usados em calculos automaticos
+  Exibidos como "Referencia ERP" para consulta do vendedor
 ```
 
 ---
@@ -73,73 +145,74 @@ Regra de auto-resolucao: se o campo no CRM esta vazio/null e o ERP tem valor, at
 ### Arquivos criados/modificados
 
 | Arquivo | Acao |
-|---------|------|
-| `supabase/functions/erp-import-companies/index.ts` | Criar -- Edge Function principal |
-| `supabase/config.toml` | Adicionar `[functions.erp-import-companies]` com `verify_jwt = false` |
+|---|---|
+| Migration SQL | ALTER products + CREATE product_erp_data + indices + RLS + trigger |
+| `supabase/functions/erp-import-products/index.ts` | Nova Edge Function ETL |
 
-### Estrutura do payload de entrada
+### Payload de entrada (erp-import-products)
 
 ```text
-POST /erp-import-companies
+POST /erp-import-products
 {
   "tenant_id": "uuid",
   "records": [
     {
-      "erp_code": "12345",
-      "cnpj_cpf": "12.345.678/0001-90",
-      "tipo_pessoa": "PJ",
-      "nome": "Empresa X Ltda",
-      "fantasia": "Empresa X",
-      "email": "contato@x.com",
-      "fone": "(11) 1234-5678",
-      "endereco": "Rua ABC",
-      "numero": "123",
-      "complemento": "Sala 4",
-      "bairro": "Centro",
-      "cidade": "Sao Paulo",
-      "uf": "SP",
-      "cep": "01234-567",
-      "inscricao_estadual": "123456789",
-      "inscricao_municipal": "987654",
-      "data_cadastro": "15/03/2020",
-      "data_ultima_atualizacao": "10/01/2025",
-      "regime_tributario": "LUCRO_REAL",
-      "contribuinte_icms": "S",
-      "limite_credito": 50000.00,
-      "condicao_pagamento": "30/60/90",
-      "observacoes": "Cliente desde 2020"
+      "erp_product_code": "MAT-001",
+      "name": "Fita Adesiva Industrial 50mm",
+      "description": "Aplicacao em embalagens industriais",
+      "category": "FITAS",
+      "subcategory": "ADESIVAS",
+      "reference": "REF-FT50",
+      "unit_measure": "RL",
+      "unit_sale": "CX",
+      "weight": 0.350,
+      "price_cash": 25.90,
+      "price_term": 28.50,
+      "warranty_months": 12,
+      "erp_status": "ATIVO",
+      "abc_classification": "A",
+      "ncm_code": "39199090",
+      "center_control": "CC01",
+      "cost_price": 15.30,
+      "commission_pct": 5.00,
+      "freight_pct": 3.50,
+      "manufacturer_code": "3M",
+      "factory_code": "3M-FT50-IND",
+      "purchase_converter": 1.0,
+      "sale_converter": 12.0,
+      "purchase_unit": "RL",
+      "business_unit": "EMBALAGENS",
+      "erp_registered_at": "2020-03-15",
+      "erp_modified_at": "2025-01-10"
     }
   ]
 }
 ```
 
-### Logica de merge (pseudocodigo)
+### Logica de merge
 
 ```text
 Para cada registro:
   1. normalizar(registro)
-  2. existing = buscar por (tenant_id, cnpj) 
-     || buscar por (tenant_id, erp_code)
+  2. existing = buscar por (tenant_id, sku) onde sku = erp_product_code
+     || buscar por (tenant_id, erp_product_code)
   3. Se existing:
      - detectar_conflitos(existing, registro)
-     - aplicar auto-resolucao (campos CRM vazios)
-     - UPDATE companies + upsert fiscal/financial
+     - NÃO alterar active
+     - NÃO alterar unit_price
+     - Atualizar demais campos comerciais + erp_status
+     - Upsert product_erp_data
      - resultado = "updated"
   4. Se nao existing:
-     - INSERT companies + insert fiscal/financial
+     - INSERT products com active = true
+     - Se unit_price IS NULL, usar price_cash como sugestao
+     - INSERT product_erp_data
      - resultado = "inserted"
 ```
 
-### Batch processing
-
-- Registros sao processados em grupos de 100
-- Cada batch usa transacao implicita (upserts individuais)
-- Erros em um registro nao interrompem o batch
-- Todos os erros sao coletados e retornados no sumario
-
 ### Seguranca
 
-- Funcao usa `SUPABASE_SERVICE_ROLE_KEY` para bypass de RLS (importacao administrativa)
-- `verify_jwt = false` no config.toml (chamada interna/administrativa)
-- Valida `tenant_id` obrigatorio no payload
-- Nao aceita SQL arbitrario -- apenas operacoes tipadas via SDK
+- Funcao usa SUPABASE_SERVICE_ROLE_KEY para bypass de RLS
+- verify_jwt = false no config.toml
+- Valida tenant_id obrigatorio
+- Operacoes tipadas via SDK (sem SQL arbitrario)
