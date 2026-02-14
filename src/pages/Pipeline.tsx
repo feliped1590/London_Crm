@@ -47,6 +47,7 @@ import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { DelegationBadge } from '@/components/pipeline/DelegationBadge';
 
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
@@ -1196,7 +1197,10 @@ export default function Pipeline() {
                         <div className="flex items-start gap-2">
                           <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5 cursor-grab" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{deal.name}</p>
+                            <div className="flex items-center gap-1">
+                              <p className="font-medium text-sm truncate flex-1">{deal.name}</p>
+                              <DelegationBadge ownerId={deal.owner_id} compact />
+                            </div>
                             <div className="flex items-center gap-1 mt-1 text-primary font-semibold text-sm">
                               <DollarSign className="h-3 w-3" />
                               {formatCurrency(deal.value || 0)}

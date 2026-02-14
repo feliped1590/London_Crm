@@ -21,6 +21,7 @@ import { PermissionsManager } from '@/components/settings/PermissionsManager';
 import { LicenseCard } from '@/components/settings/LicenseCard';
 import { TestDataManager } from '@/components/settings/TestDataManager';
 import { PortfolioManager } from '@/components/settings/PortfolioManager';
+import { PortfolioDelegationManager } from '@/components/settings/PortfolioDelegationManager';
 import { SalesGoalsManager } from '@/components/settings/SalesGoalsManager';
 import { CustomNotificationsManager } from '@/components/settings/CustomNotificationsManager';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
@@ -901,7 +902,28 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="portfolio" className="mt-6">
-          <PortfolioManager />
+          <Tabs defaultValue="portfolios-sub">
+            <TabsList>
+              <TabsTrigger value="portfolios-sub" className="gap-2">
+                <FolderOpen className="h-4 w-4" />
+                Carteiras
+              </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="delegations-sub" className="gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Delegações
+                </TabsTrigger>
+              )}
+            </TabsList>
+            <TabsContent value="portfolios-sub" className="mt-4">
+              <PortfolioManager />
+            </TabsContent>
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="delegations-sub" className="mt-4">
+                <PortfolioDelegationManager />
+              </TabsContent>
+            )}
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="users" className="mt-6 space-y-6">
