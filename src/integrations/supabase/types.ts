@@ -5473,6 +5473,101 @@ export type Database = {
           },
         ]
       }
+      user_portfolio_delegations: {
+        Row: {
+          active: boolean
+          can_manage_companies: boolean
+          can_manage_contacts: boolean
+          can_manage_deals: boolean
+          can_manage_orders: boolean
+          can_manage_pipeline: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          manager_user_id: string
+          portfolio_owner_id: string
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          can_manage_companies?: boolean
+          can_manage_contacts?: boolean
+          can_manage_deals?: boolean
+          can_manage_orders?: boolean
+          can_manage_pipeline?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          manager_user_id: string
+          portfolio_owner_id: string
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          can_manage_companies?: boolean
+          can_manage_contacts?: boolean
+          can_manage_deals?: boolean
+          can_manage_orders?: boolean
+          can_manage_pipeline?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          manager_user_id?: string
+          portfolio_owner_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_portfolio_delegations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_manager_user_id_fkey"
+            columns: ["manager_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_manager_user_id_fkey"
+            columns: ["manager_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_portfolio_owner_id_fkey"
+            columns: ["portfolio_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_portfolio_owner_id_fkey"
+            columns: ["portfolio_owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles_safe"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_portfolio_delegations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -5891,6 +5986,10 @@ export type Database = {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean
       }
+      can_manage_portfolio: {
+        Args: { p_entity_type?: string; p_owner_id: string; p_user_id: string }
+        Returns: boolean
+      }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
       get_bi_anomalies: {
         Args: never
@@ -5978,6 +6077,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_company_owner: { Args: { p_company_id: string }; Returns: string }
       get_conversion_by_stage: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: {
