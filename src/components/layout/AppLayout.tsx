@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
 import { CopilotWidget } from '@/components/copilot/CopilotWidget';
+import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { useSidebar } from '@/contexts/SidebarContext';
 
 export function AppLayout() {
@@ -60,8 +61,11 @@ export function AppLayout() {
         {/* Desktop Header with Global Search */}
         {!isMobile && (
           <header className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-6 py-3">
-            <div className="max-w-md">
-              <GlobalSearch />
+            <div className="flex items-center gap-4">
+              <div className="max-w-md flex-1">
+                <GlobalSearch />
+              </div>
+              <LegalEntitySelector />
             </div>
           </header>
         )}
