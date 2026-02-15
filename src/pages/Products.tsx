@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -21,14 +21,10 @@ import { usePricingTables } from '@/hooks/usePricingTables';
 import { NCMSelector } from '@/components/products/NCMSelector';
 import { FiscalSuggestionsCard } from '@/components/products/FiscalSuggestionsCard';
 import { NCMCode, NCMSemanticValidation, TipoProdutoFiscal } from '@/types/fiscal';
-import {
-  Product,
-  categoryOptions,
-  unitMeasureOptions,
-  materialOptions,
-  colorOptions,
-  calcularFatorMilheiro,
-} from '@/types/products';
+import { Product, calcularFatorMilheiro } from '@/types/products';
+import { useProductLookups } from '@/hooks/useProductLookups';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
+import ProductLookupManager from '@/components/products/ProductLookupManager';
 
 type SortField = 'sku' | 'name' | 'category' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -37,6 +33,9 @@ export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
+  const { categories, materials, colors, unitMeasures } = useProductLookups();
+  const { isAdmin } = useModulePermissions();
+  const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -381,6 +380,29 @@ export default function Products() {
           <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
           <p className="text-muted-foreground">Catálogo de itens de embalagem</p>
         </div>
+      </div>
+
+      <Tabs value={pageTab} onValueChange={setPageTab}>
+        <TabsList>
+          <TabsTrigger value="catalogo" className="gap-2">
+            <Package className="h-4 w-4" />
+            Catálogo
+          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="cadastro-basico" className="gap-2">
+              <Settings2 className="h-4 w-4" />
+              Cadastro Básico
+            </TabsTrigger>
+          )}
+        </TabsList>
+
+        <TabsContent value="cadastro-basico">
+          {isAdmin && <ProductLookupManager />}
+        </TabsContent>
+
+        <TabsContent value="catalogo">
+    <div className="space-y-6">
+      <div className="flex items-center justify-end">
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <div className="flex items-center gap-2">
             <Button
@@ -465,7 +487,7 @@ export default function Products() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nenhuma</SelectItem>
-                          {categoryOptions.map((c) => (
+                          {categories.items.map((c) => (
                             <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -482,7 +504,7 @@ export default function Products() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
-                          {materialOptions.map((m) => (
+                          {materials.items.map((m) => (
                             <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -499,7 +521,7 @@ export default function Products() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nenhuma</SelectItem>
-                          {colorOptions.map((c) => (
+                          {colors.items.map((c) => (
                             <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -515,7 +537,7 @@ export default function Products() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {unitMeasureOptions.map((u) => (
+                          {unitMeasures.items.map((u) => (
                             <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -714,7 +736,7 @@ export default function Products() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas Categorias</SelectItem>
-                {categoryOptions.map((c) => (
+                {categories.items.map((c) => (
                   <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -780,14 +802,14 @@ export default function Products() {
                       <TableCell>
                         {product.category && (
                           <Badge variant="secondary">
-                            {categoryOptions.find((c) => c.value === product.category)?.label || product.category}
+                            {categories.items.find((c) => c.value === product.category)?.label || product.category}
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
                         {product.material && (
                           <span className="text-sm text-muted-foreground">
-                            {materialOptions.find((m) => m.value === product.material)?.label || product.material}
+                            {materials.items.find((m) => m.value === product.material)?.label || product.material}
                           </span>
                         )}
                       </TableCell>
@@ -852,6 +874,9 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
+    </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

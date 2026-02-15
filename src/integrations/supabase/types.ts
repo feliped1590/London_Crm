@@ -3890,6 +3890,66 @@ export type Database = {
         }
         Relationships: []
       }
+      product_categories: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
+      product_colors: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
       product_erp_data: {
         Row: {
           business_unit: string | null
@@ -4004,6 +4064,36 @@ export type Database = {
           },
         ]
       }
+      product_materials: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
+      }
       product_ncm_audit: {
         Row: {
           changed_at: string | null
@@ -4056,6 +4146,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_unit_measures: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          value?: string
+        }
+        Relationships: []
       }
       products: {
         Row: {
