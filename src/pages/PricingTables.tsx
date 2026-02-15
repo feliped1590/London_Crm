@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -611,17 +612,14 @@ export default function PricingTables() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fixed_price">Preço fixo (R$)</Label>
-                <Input
+                <CurrencyInput
                   id="fixed_price"
-                  type="number"
-                  min="0"
-                  step="0.01"
                   placeholder="Opcional"
-                  value={ruleFormData.fixed_price ?? ''}
-                  onChange={(e) =>
+                  value={ruleFormData.fixed_price}
+                  onChange={(val) =>
                     setRuleFormData({
                       ...ruleFormData,
-                      fixed_price: e.target.value ? parseFloat(e.target.value) : null,
+                      fixed_price: val || null,
                       discount_percent: 0,
                     })
                   }
@@ -629,17 +627,14 @@ export default function PricingTables() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price_per_unit">Preço por unidade (R$)</Label>
-                <Input
+                <CurrencyInput
                   id="price_per_unit"
-                  type="number"
-                  min="0"
-                  step="0.01"
                   placeholder="Opcional"
-                  value={ruleFormData.price_per_unit ?? ''}
-                  onChange={(e) =>
+                  value={ruleFormData.price_per_unit}
+                  onChange={(val) =>
                     setRuleFormData({
                       ...ruleFormData,
-                      price_per_unit: e.target.value ? parseFloat(e.target.value) : null,
+                      price_per_unit: val || null,
                       discount_percent: 0,
                     })
                   }

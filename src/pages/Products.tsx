@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -530,26 +531,19 @@ export default function Products() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="unit_price">Preço Unitário (R$)</Label>
-                          <Input
+                          <CurrencyInput
                             id="unit_price"
-                            type="number"
-                            step="0.01"
-                            min="0"
                             value={formData.unit_price}
-                            onChange={(e) => setFormData({ ...formData, unit_price: parseFloat(e.target.value) || 0 })}
+                            onChange={(val) => setFormData({ ...formData, unit_price: val })}
                           />
                         </div>
                         <div>
                           <Label htmlFor="fator_kg">Valor do Fator KG (R$/kg)</Label>
-                          <Input
+                          <CurrencyInput
                             id="fator_kg"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formData.fator_kg || ''}
-                            onChange={(e) => {
-                              const newFatorKg = parseFloat(e.target.value) || 0;
-                              const newData = { ...formData, fator_kg: newFatorKg };
+                            value={formData.fator_kg || null}
+                            onChange={(val) => {
+                              const newData = { ...formData, fator_kg: val };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               setFormData(newData);
                             }}
