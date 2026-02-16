@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign } from 'lucide-react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ import { FiscalSettingsTab } from '@/components/settings/FiscalSettingsTab';
 import { LegalEntityPermissionsManager } from '@/components/settings/LegalEntityPermissionsManager';
 import { PortfolioReallocationContent } from '@/components/settings/PortfolioReallocationContent';
 import { BotsManager } from '@/components/settings/BotsManager';
+import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -677,7 +678,7 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="order-approval" className="gap-2">
             <ClipboardCheck className="h-4 w-4" />
-            Aprovação Pedidos
+            Tabelas e Aprovações
           </TabsTrigger>
           <TabsTrigger value="bots" className="gap-2">
             <Bot className="h-4 w-4" />
@@ -1023,8 +1024,27 @@ export default function Settings() {
         </TabsContent>
 
 
-        <TabsContent value="order-approval" className="mt-6 space-y-6">
-          <OrderApprovalRulesManager />
+        <TabsContent value="order-approval" className="mt-6">
+          <Tabs defaultValue="pricing-sub">
+            <TabsList>
+              <TabsTrigger value="pricing-sub" className="gap-2">
+                <DollarSign className="h-4 w-4" />
+                Tabelas de Preços
+              </TabsTrigger>
+              <TabsTrigger value="approval-sub" className="gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                Aprovação Pedidos
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pricing-sub" className="mt-4">
+              <PricingTablesContent />
+            </TabsContent>
+
+            <TabsContent value="approval-sub" className="mt-4">
+              <OrderApprovalRulesManager />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="bots" className="mt-6 space-y-6">

@@ -51,7 +51,7 @@ const allNavItems: NavItem[] = [
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
-  { to: '/pricing', icon: DollarSign, label: 'Tabelas de Preços', moduleKey: 'pricing' },
+  
   { to: '/prospecting', icon: SearchCheck, label: 'Prospecção', moduleKey: 'prospecting' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },

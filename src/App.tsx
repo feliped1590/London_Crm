@@ -114,7 +114,7 @@ const App = () => (
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/insights" element={<Insights />} />
-                <Route path="/pricing" element={<PricingTables />} />
+                <Route path="/pricing" element={<Navigate to="/settings?tab=order-approval" replace />} />
                 <Route path="/prospecting" element={<Prospecting />} />
                 <Route path="/reallocation" element={<Navigate to="/settings?tab=portfolio" replace />} />
                 <Route path="/settings" element={<Settings />} />
