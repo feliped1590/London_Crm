@@ -300,7 +300,7 @@ export default function Settings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get('tab') || 'custom-fields';
+  const initialTab = searchParams.get('tab') || 'pipelines';
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
@@ -654,10 +654,6 @@ export default function Settings() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="custom-fields" className="gap-2">
-            <Settings2 className="h-4 w-4" />
-            Campos
-          </TabsTrigger>
           <TabsTrigger value="pipelines" className="gap-2">
             <Target className="h-4 w-4" />
             Funis & Etapas
@@ -720,164 +716,6 @@ export default function Settings() {
           )}
         </TabsList>
 
-        <TabsContent value="custom-fields" className="mt-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Campos Personalizados</h2>
-              <p className="text-sm text-muted-foreground">Adicione campos extras para empresas, contatos e negócios</p>
-            </div>
-            <Dialog open={isFieldDialogOpen} onOpenChange={(open) => { setIsFieldDialogOpen(open); if (!open) resetFieldForm(); }}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Novo Campo
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editingField ? 'Editar Campo' : 'Novo Campo'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleFieldSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="label">Nome do Campo *</Label>
-                    <Input
-                      id="label"
-                      value={fieldFormData.label}
-                      onChange={(e) => setFieldFormData({ ...fieldFormData, label: e.target.value })}
-                      placeholder="Ex: Faturamento Anual"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="entity">Entidade *</Label>
-                    <Select 
-                      value={fieldFormData.entity} 
-                      onValueChange={(v) => setFieldFormData({ ...fieldFormData, entity: v as CustomFieldEntity })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(entityLabels).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="field_type">Tipo do Campo *</Label>
-                    <Select 
-                      value={fieldFormData.field_type} 
-                      onValueChange={(v) => setFieldFormData({ ...fieldFormData, field_type: v as CustomFieldType })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(fieldTypeLabels).map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {['select', 'multiselect'].includes(fieldFormData.field_type || '') && (
-                    <div>
-                      <Label htmlFor="options">Opções (uma por linha)</Label>
-                      <textarea
-                        id="options"
-                        value={optionsInput}
-                        onChange={(e) => setOptionsInput(e.target.value)}
-                        className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="is_required"
-                      checked={fieldFormData.is_required || false}
-                      onCheckedChange={(checked) => setFieldFormData({ ...fieldFormData, is_required: checked })}
-                    />
-                    <Label htmlFor="is_required" className="font-normal">Campo obrigatório</Label>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={resetFieldForm}>
-                      Cancelar
-                    </Button>
-                    <Button type="submit" disabled={createFieldMutation.isPending || updateFieldMutation.isPending}>
-                      {editingField ? 'Atualizar' : 'Criar'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {fieldsLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : !customFields?.length ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-                <Settings2 className="h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-semibold">Nenhum campo personalizado</h3>
-                <p className="text-muted-foreground">Crie campos personalizados para armazenar informações específicas.</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-3">
-              {Object.entries(entityLabels).map(([entity, label]) => (
-                <Card key={entity}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{label}</CardTitle>
-                    <CardDescription>
-                      {groupedFields?.[entity]?.length || 0} campos personalizados
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {groupedFields?.[entity]?.length ? (
-                      <div className="space-y-2">
-                        {groupedFields[entity].map((field) => (
-                          <div
-                            key={field.id}
-                            className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50"
-                          >
-                            <div className="flex items-center gap-2">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium text-sm">{field.label}</p>
-                                <p className="text-xs text-muted-foreground">{fieldTypeLabels[field.field_type]}</p>
-                              </div>
-                              {field.is_required && (
-                                <Badge variant="secondary" className="text-xs">Obrigatório</Badge>
-                              )}
-                            </div>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditField(field)}>
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                onClick={() => deleteFieldMutation.mutate(field.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum campo</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
 
         {/* Tab "pipeline" foi unificada em "pipelines" via UnifiedPipelineManager */}
 
