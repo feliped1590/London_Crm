@@ -109,7 +109,7 @@ const App = () => (
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/whatsapp" element={<WhatsApp />} />
-                <Route path="/bots" element={<Bots />} />
+                
                 <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />

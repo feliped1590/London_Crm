@@ -34,6 +34,7 @@ import { AdminInterventionsViewer } from '@/components/settings/AdminInterventio
 import { FiscalSettingsTab } from '@/components/settings/FiscalSettingsTab';
 import { LegalEntityPermissionsManager } from '@/components/settings/LegalEntityPermissionsManager';
 import { PortfolioReallocationContent } from '@/components/settings/PortfolioReallocationContent';
+import { BotsManager } from '@/components/settings/BotsManager';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -678,6 +679,10 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Aprovação Pedidos
           </TabsTrigger>
+          <TabsTrigger value="bots" className="gap-2">
+            <Bot className="h-4 w-4" />
+            Bots
+          </TabsTrigger>
           {(isAdmin || isDeveloper) && (
             <TabsTrigger value="fiscal" className="gap-2">
               <Calculator className="h-4 w-4" />
@@ -1014,6 +1019,10 @@ export default function Settings() {
 
         <TabsContent value="order-approval" className="mt-6 space-y-6">
           <OrderApprovalRulesManager />
+        </TabsContent>
+
+        <TabsContent value="bots" className="mt-6 space-y-6">
+          <BotsManager />
         </TabsContent>
 
 
