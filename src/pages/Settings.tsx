@@ -662,10 +662,6 @@ export default function Settings() {
             <TrendingUp className="h-4 w-4" />
             Metas
           </TabsTrigger>
-          <TabsTrigger value="automations" className="gap-2">
-            <Zap className="h-4 w-4" />
-            Automações
-          </TabsTrigger>
           <TabsTrigger value="permissions" className="gap-2">
             <Lock className="h-4 w-4" />
             Usuários e Permissões
@@ -722,6 +718,10 @@ export default function Settings() {
                 <CheckSquare className="h-4 w-4" />
                 Checklists
               </TabsTrigger>
+              <TabsTrigger value="automations-sub" className="gap-2">
+                <Zap className="h-4 w-4" />
+                Automações
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="pipeline-sub" className="mt-4">
@@ -731,6 +731,10 @@ export default function Settings() {
             <TabsContent value="checklists-sub" className="mt-4">
               <StageChecklistManager />
             </TabsContent>
+
+            <TabsContent value="automations-sub" className="mt-4">
+              <AutomationsManager />
+            </TabsContent>
           </Tabs>
         </TabsContent>
 
@@ -738,9 +742,6 @@ export default function Settings() {
           <SalesGoalsManager />
         </TabsContent>
 
-        <TabsContent value="automations" className="mt-6">
-          <AutomationsManager />
-        </TabsContent>
 
         <TabsContent value="permissions" className="mt-6">
           <Tabs defaultValue="users-sub">
