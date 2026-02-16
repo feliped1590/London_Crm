@@ -676,15 +676,11 @@ export default function Settings() {
           </TabsTrigger>
           <TabsTrigger value="permissions" className="gap-2">
             <Lock className="h-4 w-4" />
-            Permissões
+            Usuários e Permissões
           </TabsTrigger>
           <TabsTrigger value="portfolio" className="gap-2">
             <FolderOpen className="h-4 w-4" />
             Carteiras
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="h-4 w-4" />
-            Usuários
           </TabsTrigger>
           <TabsTrigger value="test-data" className="gap-2">
             <FlaskConical className="h-4 w-4" />
@@ -902,261 +898,236 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="permissions" className="mt-6">
-          <PermissionsManager />
-        </TabsContent>
-
-        <TabsContent value="portfolio" className="mt-6">
-          <Tabs defaultValue="portfolios-sub">
+          <Tabs defaultValue="users-sub">
             <TabsList>
-              <TabsTrigger value="portfolios-sub" className="gap-2">
-                <FolderOpen className="h-4 w-4" />
-                Carteiras
+              <TabsTrigger value="users-sub" className="gap-2">
+                <Users className="h-4 w-4" />
+                Usuários
               </TabsTrigger>
-              {(isAdmin || isDeveloper) && (
-                <TabsTrigger value="delegations-sub" className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Delegações
-                </TabsTrigger>
-              )}
-              {(isAdmin || isDeveloper) && (
-                <TabsTrigger value="reallocation-sub" className="gap-2">
-                  <ArrowLeftRight className="h-4 w-4" />
-                  Remanejamento
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="permissions-sub" className="gap-2">
+                <Lock className="h-4 w-4" />
+                Permissões por Módulo
+              </TabsTrigger>
             </TabsList>
-            <TabsContent value="portfolios-sub" className="mt-4">
-              <PortfolioManager />
-            </TabsContent>
-            {(isAdmin || isDeveloper) && (
-              <TabsContent value="delegations-sub" className="mt-4">
-                <PortfolioDelegationManager />
-              </TabsContent>
-            )}
-            {(isAdmin || isDeveloper) && (
-              <TabsContent value="reallocation-sub" className="mt-4">
-                <PortfolioReallocationContent />
-              </TabsContent>
-            )}
-          </Tabs>
-        </TabsContent>
 
-        <TabsContent value="users" className="mt-6 space-y-6">
-          {/* License Card */}
-          <LicenseCard />
+            <TabsContent value="users-sub" className="mt-4 space-y-6">
+              {/* License Card */}
+              <LicenseCard />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Usuários e Permissões</h2>
-              <p className="text-sm text-muted-foreground">Gerencie os membros da equipe</p>
-            </div>
-            {isAdmin && (
-              <Dialog open={isUserDialogOpen} onOpenChange={(open) => { setIsUserDialogOpen(open); if (!open) resetUserForm(); }}>
-                <DialogTrigger asChild>
-                  <Button 
-                    className="gap-2"
-                    disabled={!licenseStatus?.can_add_user}
-                    title={!licenseStatus?.can_add_user ? 'Limite de usuários atingido' : undefined}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Novo Usuário
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Criar Novo Usuário</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleUserSubmit} className="space-y-4">
-                    <div>
-                      <Label htmlFor="full_name">Nome Completo *</Label>
-                      <Input
-                        id="full_name"
-                        value={userFormData.full_name}
-                        onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
-                        placeholder="Ex: João Silva"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={userFormData.email}
-                        onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                        placeholder="joao@empresa.com"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="password">Senha *</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        value={userFormData.password}
-                        onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
-                        minLength={6}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="role">Nível de Acesso *</Label>
-                      <Select 
-                        value={userFormData.role} 
-                        onValueChange={(v) => setUserFormData({ ...userFormData, role: v as AppRole })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="atendente">
-                            <div className="flex items-center gap-2">
-                              <Headphones className="h-4 w-4" />
-                              Atendente
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="vendedor">
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4" />
-                              Vendedor
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="admin">
-                            <div className="flex items-center gap-2">
-                              <Shield className="h-4 w-4" />
-                              Administrador
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Administradores podem gerenciar usuários e configurações.
-                      </p>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={resetUserForm}>
-                        Cancelar
-                      </Button>
-                      <Button type="submit" disabled={createUserMutation.isPending}>
-                        {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            )}
-          </div>
-
-          <Card>
-            <CardContent className="pt-6">
-              {usersLoading ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Usuários</h2>
+                  <p className="text-sm text-muted-foreground">Gerencie os membros da equipe</p>
                 </div>
-              ) : userRoles?.length ? (
-                <div className="space-y-2">
-                  {userRoles.filter(ur => ur.role !== 'desenvolvedor').map((ur) => {
-                    const fullName = ur.profile?.full_name || 'Usuário';
-                    const isCurrentUser = ur.user_id === user?.id;
-                    
-                    return (
-                      <div
-                        key={ur.id}
-                        className="flex items-center justify-between p-3 rounded-lg border"
+                {isAdmin && (
+                  <Dialog open={isUserDialogOpen} onOpenChange={(open) => { setIsUserDialogOpen(open); if (!open) resetUserForm(); }}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        className="gap-2"
+                        disabled={!licenseStatus?.can_add_user}
+                        title={!licenseStatus?.can_add_user ? 'Limite de usuários atingido' : undefined}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                            {fullName[0]?.toUpperCase() || 'U'}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{fullName}</p>
-                              {isCurrentUser && (
-                                <Badge variant="outline" className="text-xs">Você</Badge>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{ur.user_id}</p>
-                          </div>
+                        <UserPlus className="h-4 w-4" />
+                        Novo Usuário
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Criar Novo Usuário</DialogTitle>
+                      </DialogHeader>
+                      <form onSubmit={handleUserSubmit} className="space-y-4">
+                        <div>
+                          <Label htmlFor="full_name">Nome Completo *</Label>
+                          <Input
+                            id="full_name"
+                            value={userFormData.full_name}
+                            onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
+                            placeholder="Ex: João Silva"
+                            required
+                          />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
-                            {roleLabels[ur.role as AppRole] || ur.role}
-                          </Badge>
-                          {isAdmin && !isCurrentUser && (
-                            <>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8"
-                                onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, '')}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
+                        <div>
+                          <Label htmlFor="email">Email *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={userFormData.email}
+                            onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                            placeholder="joao@empresa.com"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="password">Senha *</Label>
+                          <Input
+                            id="password"
+                            type="password"
+                            value={userFormData.password}
+                            onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                            placeholder="Mínimo 6 caracteres"
+                            minLength={6}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="role">Nível de Acesso *</Label>
+                          <Select 
+                            value={userFormData.role} 
+                            onValueChange={(v) => setUserFormData({ ...userFormData, role: v as AppRole })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="atendente">
+                                <div className="flex items-center gap-2">
+                                  <Headphones className="h-4 w-4" />
+                                  Atendente
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="vendedor">
+                                <div className="flex items-center gap-2">
+                                  <Users className="h-4 w-4" />
+                                  Vendedor
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="admin">
+                                <div className="flex items-center gap-2">
+                                  <Shield className="h-4 w-4" />
+                                  Administrador
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Administradores podem gerenciar usuários e configurações.
+                          </p>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" variant="outline" onClick={resetUserForm}>
+                            Cancelar
+                          </Button>
+                          <Button type="submit" disabled={createUserMutation.isPending}>
+                            {createUserMutation.isPending ? 'Criando...' : 'Criar Usuário'}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                )}
+              </div>
+
+              <Card>
+                <CardContent className="pt-6">
+                  {usersLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                    </div>
+                  ) : userRoles?.length ? (
+                    <div className="space-y-2">
+                      {userRoles.filter(ur => ur.role !== 'desenvolvedor').map((ur) => {
+                        const fullName = ur.profile?.full_name || 'Usuário';
+                        const isCurrentUser = ur.user_id === user?.id;
+                        
+                        return (
+                          <div
+                            key={ur.id}
+                            className="flex items-center justify-between p-3 rounded-lg border"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                                {fullName[0]?.toUpperCase() || 'U'}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium">{fullName}</p>
+                                  {isCurrentUser && (
+                                    <Badge variant="outline" className="text-xs">Você</Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">{ur.user_id}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant={ur.role === 'admin' ? 'default' : 'secondary'}>
+                                {roleLabels[ur.role as AppRole] || ur.role}
+                              </Badge>
+                              {isAdmin && !isCurrentUser && (
+                                <>
                                   <Button 
                                     variant="ghost" 
-                                    size="icon"
-                                    className="h-8 w-8 text-destructive hover:text-destructive"
+                                    size="icon" 
+                                    className="h-8 w-8"
+                                    onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, '')}
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <Pencil className="h-3 w-3" />
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Tem certeza que deseja excluir o usuário <strong>{fullName}</strong>? 
-                                      Esta ação não pode ser desfeita e todos os dados associados serão removidos.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => deleteUserMutation.mutate(ur.user_id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir'}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhum usuário encontrado</p>
-              )}
-            </CardContent>
-          </Card>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Tem certeza que deseja excluir o usuário <strong>{fullName}</strong>? 
+                                          Esta ação não pode ser desfeita e todos os dados associados serão removidos.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteUserMutation.mutate(ur.user_id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          {deleteUserMutation.isPending ? 'Excluindo...' : 'Excluir'}
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">Nenhum usuário encontrado</p>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Dialog de edição de usuário */}
-          <Dialog open={isEditUserDialogOpen} onOpenChange={(open) => { setIsEditUserDialogOpen(open); if (!open) resetEditUserDialog(); }}>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Editar Usuário</DialogTitle>
-              </DialogHeader>
-              {editingUser && (
-                <EditUserForm
-                  editingUser={editingUser}
-                  editUserFormData={editUserFormData}
-                  setEditUserFormData={setEditUserFormData}
-                  onSubmit={handleUserUpdate}
-                  onCancel={resetEditUserDialog}
-                  isPending={updateUserMutation.isPending}
-                />
-              )}
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
+              {/* Dialog de edição de usuário */}
+              <Dialog open={isEditUserDialogOpen} onOpenChange={(open) => { setIsEditUserDialogOpen(open); if (!open) resetEditUserDialog(); }}>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Editar Usuário</DialogTitle>
+                  </DialogHeader>
+                  {editingUser && (
+                    <EditUserForm
+                      editingUser={editingUser}
+                      editUserFormData={editUserFormData}
+                      setEditUserFormData={setEditUserFormData}
+                      onSubmit={handleUserUpdate}
+                      onCancel={resetEditUserDialog}
+                      isPending={updateUserMutation.isPending}
+                    />
+                  )}
+                </DialogContent>
+              </Dialog>
+            </TabsContent>
 
-        <TabsContent value="test-data" className="mt-6 space-y-6">
-          <TestDataManager />
+            <TabsContent value="permissions-sub" className="mt-4">
+              <PermissionsManager />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6 space-y-6">
