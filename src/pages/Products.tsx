@@ -775,6 +775,7 @@ export default function Products() {
                     <SortableHeader field="unit_price">Preço Base</SortableHeader>
                     <TableHead>Tabela de Preços</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Sync ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -838,6 +839,20 @@ export default function Products() {
                         <Badge variant={product.active ? 'default' : 'outline'}>
                           {product.active ? 'Ativo' : 'Inativo'}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {product.pendente_envio ? (
+                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 gap-1">
+                            <RefreshCw className="h-3 w-3" />
+                            Pendente
+                          </Badge>
+                        ) : product.erp_last_sync_at ? (
+                          <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-400 gap-1">
+                            Sincronizado
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

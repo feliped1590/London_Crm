@@ -35,6 +35,13 @@ export interface Product {
   aliquota_cofins?: number;
   tipo_produto_fiscal?: TipoProdutoFiscal;
   ncm_validated_at?: string;
+  // Campos de sincronização ERP
+  erp_versao?: string;
+  origem_alteracao?: string;
+  pendente_envio?: boolean;
+  erp_hash?: string;
+  erp_last_sync_at?: string;
+  crm_last_update_at?: string;
 }
 
 // Função para calcular o Fator Milheiro
