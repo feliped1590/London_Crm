@@ -4064,6 +4064,53 @@ export type Database = {
           },
         ]
       }
+      product_erp_sync_log: {
+        Row: {
+          created_at: string | null
+          direction: string
+          erp_product_code: string | null
+          erp_versao: string | null
+          error_details: string | null
+          id: string
+          payload_sent: Json | null
+          product_id: string | null
+          response_received: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          direction: string
+          erp_product_code?: string | null
+          erp_versao?: string | null
+          error_details?: string | null
+          id?: string
+          payload_sent?: Json | null
+          product_id?: string | null
+          response_received?: Json | null
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          direction?: string
+          erp_product_code?: string | null
+          erp_versao?: string | null
+          error_details?: string | null
+          id?: string
+          payload_sent?: Json | null
+          product_id?: string | null
+          response_received?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_erp_sync_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_materials: {
         Row: {
           created_at: string | null
@@ -4147,6 +4194,56 @@ export type Database = {
           },
         ]
       }
+      product_sync_queue: {
+        Row: {
+          attempt_count: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          next_retry_at: string | null
+          payload: Json | null
+          processed_at: string | null
+          product_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sync_queue_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_unit_measures: {
         Row: {
           created_at: string | null
@@ -4189,14 +4286,18 @@ export type Database = {
           color: string | null
           created_at: string
           created_by: string | null
+          crm_last_update_at: string | null
           csosn: string | null
           cst_icms: string | null
           cst_pis_cofins: string | null
           description: string | null
+          erp_hash: string | null
+          erp_last_sync_at: string | null
           erp_last_update_date: string | null
           erp_product_code: string | null
           erp_status: string | null
           erp_synced_at: string | null
+          erp_versao: string | null
           fator_kg: number | null
           fator_milheiro: number | null
           id: string
@@ -4206,9 +4307,11 @@ export type Database = {
           ncm_code: string | null
           ncm_id: string | null
           ncm_validated_at: string | null
+          origem_alteracao: string | null
           origem_mercadoria:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          pendente_envio: boolean | null
           price_cash: number | null
           price_term: number | null
           reference: string | null
@@ -4239,14 +4342,18 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          crm_last_update_at?: string | null
           csosn?: string | null
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_hash?: string | null
+          erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_product_code?: string | null
           erp_status?: string | null
           erp_synced_at?: string | null
+          erp_versao?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -4256,9 +4363,11 @@ export type Database = {
           ncm_code?: string | null
           ncm_id?: string | null
           ncm_validated_at?: string | null
+          origem_alteracao?: string | null
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          pendente_envio?: boolean | null
           price_cash?: number | null
           price_term?: number | null
           reference?: string | null
@@ -4289,14 +4398,18 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          crm_last_update_at?: string | null
           csosn?: string | null
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_hash?: string | null
+          erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_product_code?: string | null
           erp_status?: string | null
           erp_synced_at?: string | null
+          erp_versao?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -4306,9 +4419,11 @@ export type Database = {
           ncm_code?: string | null
           ncm_id?: string | null
           ncm_validated_at?: string | null
+          origem_alteracao?: string | null
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          pendente_envio?: boolean | null
           price_cash?: number | null
           price_term?: number | null
           reference?: string | null
@@ -6111,6 +6226,10 @@ export type Database = {
         Returns: boolean
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
+      compute_product_erp_hash: {
+        Args: { p: Database["public"]["Tables"]["products"]["Row"] }
+        Returns: string
+      }
       get_bi_anomalies: {
         Args: never
         Returns: {
