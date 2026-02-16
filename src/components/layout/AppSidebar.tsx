@@ -23,7 +23,6 @@ import {
   HelpCircle,
   CalendarCheck,
   SearchCheck,
-  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -60,7 +59,7 @@ const allNavItems: NavItem[] = [
   { to: '/bots', icon: Target, label: 'Bots', moduleKey: 'bots' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
-  { to: '/reallocation', icon: ArrowLeftRight, label: 'Remanejamento', moduleKey: 'settings' },
+  
   { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations', devOnly: true },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
