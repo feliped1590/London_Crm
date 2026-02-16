@@ -1,59 +1,52 @@
 /**
  * Tipos para integração ERP Projedata (CIGAM)
  * 
- * REGRAS DO ERP:
- * - O campo "json" do payload é um JSON SERIALIZADO como STRING
- * - codigo deve conter apenas números (sem "/")
- * - versao é obrigatória e separada do codigo
- * - grupo, subgrupo, tipo_item, tipo_ficha são códigos numéricos
+ * FORMATO DO PAYLOAD:
+ * O campo "json" do envelope contém um produto com suas versões aninhadas.
+ * {
+ *   "tipoComando": "ASDCOMANDO",
+ *   "grupoComando": "IMP_ITEM_VERSAO_V1",
+ *   "#out#p_retorno": "T",
+ *   "json": "{\"codigo\":\"...\",\"descricao\":\"...\",\"empresa\":\"1\",\"grupo\":\"...\",\"versoes\":[{\"versao\":\"1\",...}]}"
+ * }
  */
 
-// ─── Produto Base ───────────────────────────────────────────────
+// ─── Versão dentro do produto ───────────────────────────────────
+
+export interface ProjedataVersao {
+  /** Versão do produto (ex: "1") */
+  versao: string;
+  /** Detalhes da versão */
+  detalhes?: string;
+  /** Situação da versão (ex: "A" = ativo) */
+  situacao?: string;
+}
+
+// ─── Produto completo (inclui versões) ──────────────────────────
 
 export interface ProjedataProduto {
   /** Código numérico puro (ex: "800432") — NUNCA com barra */
   codigo: string;
   /** Descrição principal do produto */
   descricao: string;
-  /** Empresa no ERP (numérico) */
+  /** Empresa no ERP (inteiro como string) */
   empresa: string;
-  /** Grupo (código numérico) */
+  /** Grupo (código string) */
   grupo?: string;
-  /** Subgrupo (código numérico) */
+  /** Subgrupo (código string) */
   subgrupo?: string;
-  /** Tipo de item (código numérico) */
+  /** Tipo de item (código string) */
   tipo_item?: string;
-  /** Tipo de ficha (código numérico) */
+  /** Tipo de ficha (inteiro como string) */
   tipo_ficha?: string;
   /** Unidade de medida */
   unidade?: string;
   /** NCM */
   ncm?: string;
-  /** Peso líquido */
-  peso_liquido?: number;
-  /** Peso bruto */
-  peso_bruto?: number;
-  /** Observações */
-  observacao?: string;
-}
-
-// ─── Versão de Produto ──────────────────────────────────────────
-
-export interface ProjedataVersaoProduto {
-  /** Código numérico puro do produto (ex: "800432") */
-  codigo: string;
-  /** Versão do produto (ex: "1") */
-  versao: string;
-  /** Descrição da versão */
-  descricao: string;
-  /** Empresa no ERP */
-  empresa: string;
-  /** Campos adicionais específicos da versão */
-  cor?: string;
-  material?: string;
-  unidade?: string;
-  /** Dados extras opcionais */
-  extras?: Record<string, unknown>;
+  /** Usuário ERP (inteiro como string) */
+  usuario?: string;
+  /** Versões do produto */
+  versoes: ProjedataVersao[];
 }
 
 // ─── Resultado de parse codigo/versao ───────────────────────────
@@ -86,3 +79,6 @@ export interface ProjedataValidationResult {
   valid: boolean;
   errors: ProjedataValidationError[];
 }
+
+// ─── Legado (manter compatibilidade de exportação) ──────────────
+export type ProjedataVersaoProduto = ProjedataProduto;

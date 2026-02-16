@@ -102,10 +102,11 @@ Deno.serve(async (req) => {
           erp_versao_situacao: product.erp_versao_situacao,
         };
 
-        const { versao } = mapCRMProductToProjedata(crmProduct);
-        const payload = buildProductPayload(versao);
+        const produto = mapCRMProductToProjedata(crmProduct);
+        const payload = buildProductPayload(produto);
 
         console.log(`[process-product-sync] Enviando produto ${product.sku} ao ERP`);
+        console.log(`[process-product-sync] Payload: ${payload}`);
 
         // Enviar ao ERP Projedata
         const response = await fetch(apiUrl, {
@@ -118,12 +119,13 @@ Deno.serve(async (req) => {
         });
 
         const responseText = await response.text();
+        console.log(`[process-product-sync] Resposta ERP (${response.status}): ${responseText}`);
 
         if (!response.ok) {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // Parse response
+        // Parse response — ERP pode retornar array ou objeto
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
@@ -131,10 +133,12 @@ Deno.serve(async (req) => {
           responseData = { raw: responseText };
         }
 
-        // Verificar retorno do ERP
-        const retorno = responseData?.['#out#p_retorno'] || responseData?.p_retorno;
-        if (retorno && retorno !== 'OK' && retorno !== 'T') {
-          throw new Error(`ERP retornou erro: ${retorno} - ${JSON.stringify(responseData)}`);
+        // Verificar retorno do ERP — suporta array e objeto
+        const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
+        const retorno = retornoObj?.['#out#p_retorno'] || retornoObj?.p_retorno || retornoObj?.['P_RETORNO'];
+
+        if (retorno && typeof retorno === 'string' && retorno.startsWith('#ERRO#')) {
+          throw new Error(`ERP retornou erro: ${retorno}`);
         }
 
         // Sucesso - atualizar fila e produto

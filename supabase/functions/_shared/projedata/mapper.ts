@@ -1,16 +1,28 @@
 /**
- * Mapeamento CRM → ERP Projedata para Produtos e Versões
+ * Mapeamento CRM → ERP Projedata para IMP_ITEM_VERSAO_V1
  * 
- * Transforma dados do CRM no formato JSON interno que será
- * serializado pelo serializer antes do envio.
+ * Formato final do JSON interno:
+ * {
+ *   "codigo": "<string>",
+ *   "descricao": "<string>",
+ *   "empresa": "<integer>",
+ *   "grupo": "<string>",
+ *   "ncm": "<string>",
+ *   "subgrupo": "<string>",
+ *   "tipo_ficha": "<integer>",
+ *   "tipo_item": "<string>",
+ *   "unidade": "<string>",
+ *   "usuario": "<integer>",
+ *   "versoes": [{ "detalhes": "<string>", "situacao": "<string>", "versao": "<string>" }]
+ * }
  */
 
-import type { ProjedataProduto, ProjedataVersaoProduto } from './types.ts';
+import type { ProjedataProduto, ProjedataVersao } from './types.ts';
 import { parseCodigoVersao } from './parser.ts';
 import { buildEnvelope, serializeEnvelope } from './serializer.ts';
-import { validateProduto, validateVersaoProduto } from './validator.ts';
+import { validateProduto } from './validator.ts';
 
-interface CRMProduct {
+export interface CRMProduct {
   sku?: string | null;
   name: string;
   description?: string | null;
@@ -32,25 +44,41 @@ interface CRMProduct {
   erp_versao_detalhes?: string | null;
   erp_versao_roteiro?: number | null;
   erp_versao_situacao?: string | null;
+  erp_usuario?: number | null;
 }
 
-const DEFAULT_EMPRESA = '1';
-
 /**
- * Mapeia produto do CRM para ProjedataVersaoProduto (IMP_ITEM_VERSAO_V1)
+ * Mapeia produto do CRM para ProjedataProduto (IMP_ITEM_VERSAO_V1)
  * 
- * Recebe SKU no formato "800432/1" e separa automaticamente.
+ * Campos CRM → ERP:
+ * - sku / erp_product_code → codigo (parte numérica) + versao (após "/")
+ * - name → descricao
+ * - erp_empresa → empresa
+ * - erp_grupo / category → grupo
+ * - erp_subgrupo / subcategory → subgrupo
+ * - ncm → ncm
+ * - tipo_item → tipo_item
+ * - tipo_ficha → tipo_ficha
+ * - unit → unidade
+ * - erp_usuario → usuario
+ * - erp_versao → versoes[].versao
+ * - erp_versao_detalhes → versoes[].detalhes
+ * - erp_versao_situacao → versoes[].situacao
  */
-export function mapCRMProductToProjedata(product: CRMProduct): {
-  produto: ProjedataProduto;
-  versao: ProjedataVersaoProduto;
-} {
+export function mapCRMProductToProjedata(product: CRMProduct): ProjedataProduto {
   const codigoFonte = product.erp_product_code || product.sku || '';
   const { codigo, versao: versaoParsed } = parseCodigoVersao(codigoFonte);
   const versaoFinal = product.erp_versao || versaoParsed;
   const empresaFinal = String(product.erp_empresa || 1);
 
-  const produtoBase: ProjedataProduto = {
+  // Montar versão
+  const versaoObj: ProjedataVersao = {
+    versao: versaoFinal,
+  };
+  if (product.erp_versao_detalhes) versaoObj.detalhes = product.erp_versao_detalhes;
+  if (product.erp_versao_situacao) versaoObj.situacao = product.erp_versao_situacao;
+
+  const produto: ProjedataProduto = {
     codigo,
     descricao: product.name,
     empresa: empresaFinal,
@@ -60,25 +88,11 @@ export function mapCRMProductToProjedata(product: CRMProduct): {
     tipo_ficha: product.tipo_ficha != null ? String(product.tipo_ficha) : undefined,
     unidade: product.unit || undefined,
     ncm: product.ncm || undefined,
-    peso_liquido: product.weight ?? undefined,
+    usuario: product.erp_usuario != null ? String(product.erp_usuario) : undefined,
+    versoes: [versaoObj],
   };
 
-  const versaoProduto: ProjedataVersaoProduto = {
-    codigo,
-    versao: versaoFinal,
-    descricao: product.description || product.name,
-    empresa: empresaFinal,
-    cor: product.color || undefined,
-    material: product.material || undefined,
-    unidade: product.unit || undefined,
-    extras: {
-      ...(product.erp_versao_detalhes ? { detalhes: product.erp_versao_detalhes } : {}),
-      ...(product.erp_versao_roteiro != null ? { roteiro: product.erp_versao_roteiro } : {}),
-      ...(product.erp_versao_situacao ? { situacao: product.erp_versao_situacao } : {}),
-    },
-  };
-
-  return { produto: produtoBase, versao: versaoProduto };
+  return produto;
 }
 
 /**
@@ -88,9 +102,9 @@ export function mapCRMProductToProjedata(product: CRMProduct): {
  * @returns String JSON em linha única, pronta para o body do fetch
  * @throws Error com detalhes de validação se houver campos inválidos
  */
-export function buildProductPayload(versao: ProjedataVersaoProduto): string {
+export function buildProductPayload(produto: ProjedataProduto): string {
   // Validar antes de serializar
-  const validation = validateVersaoProduto(versao);
+  const validation = validateProduto(produto);
   if (!validation.valid) {
     const details = validation.errors
       .map(e => `[${e.oracleCode || 'VALIDATION'}] ${e.field}: ${e.message}`)
@@ -100,16 +114,28 @@ export function buildProductPayload(versao: ProjedataVersaoProduto): string {
 
   // Montar o JSON interno (sem campos undefined)
   const innerJson: Record<string, unknown> = {
-    codigo: versao.codigo,
-    descricao: versao.descricao,
-    empresa: versao.empresa,
-    versao: versao.versao,
+    codigo: produto.codigo,
+    descricao: produto.descricao,
+    empresa: produto.empresa,
   };
 
-  if (versao.cor) innerJson.cor = versao.cor;
-  if (versao.material) innerJson.material = versao.material;
-  if (versao.unidade) innerJson.unidade = versao.unidade;
-  if (versao.extras) Object.assign(innerJson, versao.extras);
+  if (produto.grupo) innerJson.grupo = produto.grupo;
+  if (produto.subgrupo) innerJson.subgrupo = produto.subgrupo;
+  if (produto.ncm) innerJson.ncm = produto.ncm;
+  if (produto.tipo_item) innerJson.tipo_item = produto.tipo_item;
+  if (produto.tipo_ficha) innerJson.tipo_ficha = produto.tipo_ficha;
+  if (produto.unidade) innerJson.unidade = produto.unidade;
+  if (produto.usuario) innerJson.usuario = produto.usuario;
+
+  // Versões (array de objetos)
+  if (produto.versoes && produto.versoes.length > 0) {
+    innerJson.versoes = produto.versoes.map(v => {
+      const obj: Record<string, string> = { versao: v.versao };
+      if (v.detalhes) obj.detalhes = v.detalhes;
+      if (v.situacao) obj.situacao = v.situacao;
+      return obj;
+    });
+  }
 
   const envelope = buildEnvelope('IMP_ITEM_VERSAO_V1', innerJson);
   return serializeEnvelope(envelope);
