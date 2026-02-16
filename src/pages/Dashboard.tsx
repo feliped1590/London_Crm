@@ -72,7 +72,7 @@ const DEFAULT_WIDGETS: WidgetType[] = [
   { id: 'dash-6', type: 'deals_by_stage', chartType: 'pie', title: 'Distribuição por Etapa', size: 'md', position: 5 },
 ];
 
-export default function Dashboard() {
+export default function Dashboard({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getMetricData } = useDashboardData();
@@ -387,12 +387,50 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-          <p className="text-muted-foreground">Visão geral do seu funil de vendas</p>
+      {!embedded && (
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
+            <p className="text-muted-foreground">Visão geral do seu funil de vendas</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Adicionar Widget
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetToDefault}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Resetar
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
+                  <X className="mr-2 h-4 w-4" />
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={() => saveConfigMutation.mutate()} disabled={saveConfigMutation.isPending}>
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Personalizar
+                </Button>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+      )}
+
+      {embedded && (
+        <div className="flex items-center justify-end gap-2">
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(true)}>
@@ -425,7 +463,7 @@ export default function Dashboard() {
             </>
           )}
         </div>
-      </div>
+      )}
 
       {isEditing && (
         <p className="text-sm text-muted-foreground">

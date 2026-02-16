@@ -94,11 +94,11 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/proposta/:token" element={<ProposalPublic />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Navigate to="/today" replace />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<AppLayout />}>
                 <Route path="/today" element={<Today />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Navigate to="/today?tab=visao-geral" replace />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/customers/new" element={<CustomerNew />} />
                 <Route path="/customers/:id" element={<CustomerDetail />} />
