@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageCircle, Calendar, RefreshCw } from 'lucide-react';
+import { MessageCircle, Calendar, RefreshCw, Search } from 'lucide-react';
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
+import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 
 export default function Integrations() {
@@ -29,6 +30,10 @@ export default function Integrations() {
             <RefreshCw className="h-4 w-4" />
             ERP
           </TabsTrigger>
+          <TabsTrigger value="prospecting-api" className="gap-2">
+            <Search className="h-4 w-4" />
+            API Prospecção
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="whatsapp" className="mt-6">
@@ -44,6 +49,10 @@ export default function Integrations() {
             title="Integração ERP em Desenvolvimento"
             description="O módulo de integração com o ERP está sendo desenvolvido e será disponibilizado em breve. Funcionalidades como sincronização de clientes, produtos, pedidos e logs estarão disponíveis nesta aba."
           />
+        </TabsContent>
+
+        <TabsContent value="prospecting-api" className="mt-6">
+          <ProspectingApiConfig />
         </TabsContent>
       </Tabs>
     </div>
