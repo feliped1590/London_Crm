@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2 } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FlaskConical, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight } from 'lucide-react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig
 import { AdminInterventionsViewer } from '@/components/settings/AdminInterventionsViewer';
 import { FiscalSettingsTab } from '@/components/settings/FiscalSettingsTab';
 import { LegalEntityPermissionsManager } from '@/components/settings/LegalEntityPermissionsManager';
+import { PortfolioReallocationContent } from '@/components/settings/PortfolioReallocationContent';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type CustomField = Tables<'custom_fields'>;
@@ -297,7 +299,9 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
 export default function Settings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState('custom-fields');
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'custom-fields';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [isFieldDialogOpen, setIsFieldDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
   const [fieldFormData, setFieldFormData] = useState<Partial<TablesInsert<'custom_fields'>>>({
@@ -914,6 +918,12 @@ export default function Settings() {
                   Delegações
                 </TabsTrigger>
               )}
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="reallocation-sub" className="gap-2">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Remanejamento
+                </TabsTrigger>
+              )}
             </TabsList>
             <TabsContent value="portfolios-sub" className="mt-4">
               <PortfolioManager />
@@ -921,6 +931,11 @@ export default function Settings() {
             {(isAdmin || isDeveloper) && (
               <TabsContent value="delegations-sub" className="mt-4">
                 <PortfolioDelegationManager />
+              </TabsContent>
+            )}
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="reallocation-sub" className="mt-4">
+                <PortfolioReallocationContent />
               </TabsContent>
             )}
           </Tabs>

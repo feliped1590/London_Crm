@@ -32,7 +32,7 @@ import ProposalPublic from "./pages/ProposalPublic";
 import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
 import Prospecting from "./pages/Prospecting";
-import PortfolioReallocation from "./pages/PortfolioReallocation";
+
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
@@ -116,7 +116,7 @@ const App = () => (
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/pricing" element={<PricingTables />} />
                 <Route path="/prospecting" element={<Prospecting />} />
-                <Route path="/reallocation" element={<PortfolioReallocation />} />
+                <Route path="/reallocation" element={<Navigate to="/settings?tab=portfolio" replace />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/help" element={<Help />} />
