@@ -51,15 +51,12 @@ const allNavItems: NavItem[] = [
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
-  
-  { to: '/prospecting', icon: SearchCheck, label: 'Prospecção', moduleKey: 'prospecting' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
-  
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
+  { to: '/prospecting', icon: SearchCheck, label: 'Prospecção', moduleKey: 'prospecting' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
-  
   { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations', devOnly: true },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
