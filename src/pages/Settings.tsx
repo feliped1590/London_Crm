@@ -656,11 +656,7 @@ export default function Settings() {
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="pipelines" className="gap-2">
             <Target className="h-4 w-4" />
-            Funis & Etapas
-          </TabsTrigger>
-          <TabsTrigger value="checklists" className="gap-2">
-            <CheckSquare className="h-4 w-4" />
-            Checklists
+            Config. Pipeline
           </TabsTrigger>
           <TabsTrigger value="goals" className="gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -720,7 +716,26 @@ export default function Settings() {
         {/* Tab "pipeline" foi unificada em "pipelines" via UnifiedPipelineManager */}
 
         <TabsContent value="pipelines" className="mt-6">
-          <UnifiedPipelineManager />
+          <Tabs defaultValue="pipeline-sub">
+            <TabsList>
+              <TabsTrigger value="pipeline-sub" className="gap-2">
+                <Target className="h-4 w-4" />
+                Funis & Etapas
+              </TabsTrigger>
+              <TabsTrigger value="checklists-sub" className="gap-2">
+                <CheckSquare className="h-4 w-4" />
+                Checklists
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="pipeline-sub" className="mt-4">
+              <UnifiedPipelineManager />
+            </TabsContent>
+
+            <TabsContent value="checklists-sub" className="mt-4">
+              <StageChecklistManager />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
@@ -968,9 +983,6 @@ export default function Settings() {
           <CustomNotificationsManager />
         </TabsContent>
 
-        <TabsContent value="checklists" className="mt-6 space-y-6">
-          <StageChecklistManager />
-        </TabsContent>
 
         <TabsContent value="order-approval" className="mt-6 space-y-6">
           <OrderApprovalRulesManager />
