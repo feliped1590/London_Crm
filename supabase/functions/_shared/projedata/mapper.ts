@@ -22,6 +22,16 @@ interface CRMProduct {
   color?: string | null;
   material?: string | null;
   erp_product_code?: string | null;
+  // Campos ERP Projedata
+  tipo_item?: string | null;
+  tipo_ficha?: number | null;
+  erp_grupo?: string | null;
+  erp_subgrupo?: string | null;
+  erp_empresa?: number | null;
+  erp_versao?: string | null;
+  erp_versao_detalhes?: string | null;
+  erp_versao_roteiro?: number | null;
+  erp_versao_situacao?: string | null;
 }
 
 const DEFAULT_EMPRESA = '1';
@@ -36,12 +46,18 @@ export function mapCRMProductToProjedata(product: CRMProduct): {
   versao: ProjedataVersaoProduto;
 } {
   const codigoFonte = product.erp_product_code || product.sku || '';
-  const { codigo, versao } = parseCodigoVersao(codigoFonte);
+  const { codigo, versao: versaoParsed } = parseCodigoVersao(codigoFonte);
+  const versaoFinal = product.erp_versao || versaoParsed;
+  const empresaFinal = String(product.erp_empresa || 1);
 
   const produtoBase: ProjedataProduto = {
     codigo,
     descricao: product.name,
-    empresa: DEFAULT_EMPRESA,
+    empresa: empresaFinal,
+    grupo: product.erp_grupo || product.category || undefined,
+    subgrupo: product.erp_subgrupo || product.subcategory || undefined,
+    tipo_item: product.tipo_item || undefined,
+    tipo_ficha: product.tipo_ficha != null ? String(product.tipo_ficha) : undefined,
     unidade: product.unit || undefined,
     ncm: product.ncm || undefined,
     peso_liquido: product.weight ?? undefined,
@@ -49,12 +65,17 @@ export function mapCRMProductToProjedata(product: CRMProduct): {
 
   const versaoProduto: ProjedataVersaoProduto = {
     codigo,
-    versao,
+    versao: versaoFinal,
     descricao: product.description || product.name,
-    empresa: DEFAULT_EMPRESA,
+    empresa: empresaFinal,
     cor: product.color || undefined,
     material: product.material || undefined,
     unidade: product.unit || undefined,
+    extras: {
+      ...(product.erp_versao_detalhes ? { detalhes: product.erp_versao_detalhes } : {}),
+      ...(product.erp_versao_roteiro != null ? { roteiro: product.erp_versao_roteiro } : {}),
+      ...(product.erp_versao_situacao ? { situacao: product.erp_versao_situacao } : {}),
+    },
   };
 
   return { produto: produtoBase, versao: versaoProduto };

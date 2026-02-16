@@ -71,6 +71,16 @@ export default function Products() {
     aliquota_pis: undefined as number | undefined,
     aliquota_cofins: undefined as number | undefined,
     tipo_produto_fiscal: undefined as TipoProdutoFiscal | undefined,
+    // Campos ERP Projedata
+    tipo_item: '',
+    tipo_ficha: undefined as number | undefined,
+    erp_grupo: '',
+    erp_subgrupo: '',
+    erp_empresa: 1,
+    erp_versao: '',
+    erp_versao_detalhes: '',
+    erp_versao_roteiro: undefined as number | undefined,
+    erp_versao_situacao: 'A',
   });
 
   const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
@@ -181,6 +191,16 @@ export default function Products() {
         aliquota_cofins: data.aliquota_cofins || null,
         tipo_produto_fiscal: data.tipo_produto_fiscal || null,
         ncm_validated_at: data.ncm_code ? new Date().toISOString() : null,
+        // Campos ERP Projedata
+        tipo_item: data.tipo_item || null,
+        tipo_ficha: data.tipo_ficha || null,
+        erp_grupo: data.erp_grupo || null,
+        erp_subgrupo: data.erp_subgrupo || null,
+        erp_empresa: data.erp_empresa || 1,
+        erp_versao: data.erp_versao || null,
+        erp_versao_detalhes: data.erp_versao_detalhes || null,
+        erp_versao_roteiro: data.erp_versao_roteiro || null,
+        erp_versao_situacao: data.erp_versao_situacao || 'A',
       });
       if (error) throw error;
     },
@@ -265,6 +285,15 @@ export default function Products() {
       aliquota_pis: undefined,
       aliquota_cofins: undefined,
       tipo_produto_fiscal: undefined,
+      tipo_item: '',
+      tipo_ficha: undefined,
+      erp_grupo: '',
+      erp_subgrupo: '',
+      erp_empresa: 1,
+      erp_versao: '',
+      erp_versao_detalhes: '',
+      erp_versao_roteiro: undefined,
+      erp_versao_situacao: 'A',
     });
     setEditingProduct(null);
     setIsDialogOpen(false);
@@ -314,6 +343,15 @@ export default function Products() {
       aliquota_pis: product.aliquota_pis,
       aliquota_cofins: product.aliquota_cofins,
       tipo_produto_fiscal: product.tipo_produto_fiscal,
+      tipo_item: product.tipo_item || '',
+      tipo_ficha: product.tipo_ficha,
+      erp_grupo: product.erp_grupo || '',
+      erp_subgrupo: product.erp_subgrupo || '',
+      erp_empresa: product.erp_empresa || 1,
+      erp_versao: product.erp_versao || '',
+      erp_versao_detalhes: product.erp_versao_detalhes || '',
+      erp_versao_roteiro: product.erp_versao_roteiro,
+      erp_versao_situacao: product.erp_versao_situacao || 'A',
     });
     setIsDialogOpen(true);
     setFormTab('geral');
@@ -428,10 +466,14 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="erp" className="gap-2">
+                    <RefreshCw className="h-4 w-4" />
+                    ERP Projedata
                   </TabsTrigger>
                   <TabsTrigger value="fiscal" className="gap-2">
                     <FileText className="h-4 w-4" />
@@ -700,6 +742,132 @@ export default function Products() {
                     ncmCode={formData.ncm_code}
                     isSuggestion={!!ncmValidation}
                   />
+                </TabsContent>
+
+                <TabsContent value="erp" className="space-y-4 mt-4">
+                  <div className="rounded-md border p-3 bg-muted/30">
+                    <p className="text-sm text-muted-foreground">
+                      Campos mapeados para o comando <code className="font-mono text-xs bg-muted px-1 rounded">IMP_ITEM_VERSAO_V1</code> do ERP Projedata.
+                    </p>
+                  </div>
+                  
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dados do Item</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="erp_grupo">Grupo ERP</Label>
+                      <Input
+                        id="erp_grupo"
+                        value={formData.erp_grupo}
+                        onChange={(e) => setFormData({ ...formData, erp_grupo: e.target.value })}
+                        placeholder="Ex: 01"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="erp_subgrupo">Subgrupo ERP</Label>
+                      <Input
+                        id="erp_subgrupo"
+                        value={formData.erp_subgrupo}
+                        onChange={(e) => setFormData({ ...formData, erp_subgrupo: e.target.value })}
+                        placeholder="Ex: 001"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="tipo_item">Tipo Item</Label>
+                      <Select
+                        value={formData.tipo_item || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, tipo_item: v === 'none' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          <SelectItem value="MP">MP - Matéria Prima</SelectItem>
+                          <SelectItem value="PA">PA - Produto Acabado</SelectItem>
+                          <SelectItem value="PI">PI - Produto Intermediário</SelectItem>
+                          <SelectItem value="ME">ME - Material de Embalagem</SelectItem>
+                          <SelectItem value="MC">MC - Material de Consumo</SelectItem>
+                          <SelectItem value="SA">SA - Subproduto / Acessório</SelectItem>
+                          <SelectItem value="OU">OU - Outros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="tipo_ficha">Tipo Ficha</Label>
+                      <Input
+                        id="tipo_ficha"
+                        type="number"
+                        value={formData.tipo_ficha ?? ''}
+                        onChange={(e) => setFormData({ ...formData, tipo_ficha: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="Ex: 1"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="erp_empresa">Empresa ERP</Label>
+                      <Input
+                        id="erp_empresa"
+                        type="number"
+                        value={formData.erp_empresa}
+                        onChange={(e) => setFormData({ ...formData, erp_empresa: Number(e.target.value) || 1 })}
+                        placeholder="1"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                  </div>
+
+                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mt-6">Versão do Produto</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="erp_versao">Versão</Label>
+                      <Input
+                        id="erp_versao"
+                        value={formData.erp_versao}
+                        onChange={(e) => setFormData({ ...formData, erp_versao: e.target.value })}
+                        placeholder="Ex: 1"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="erp_versao_situacao">Situação</Label>
+                      <Select
+                        value={formData.erp_versao_situacao || 'A'}
+                        onValueChange={(v) => setFormData({ ...formData, erp_versao_situacao: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">A - Ativo</SelectItem>
+                          <SelectItem value="I">I - Inativo</SelectItem>
+                          <SelectItem value="B">B - Bloqueado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="erp_versao_roteiro">Roteiro</Label>
+                      <Input
+                        id="erp_versao_roteiro"
+                        type="number"
+                        value={formData.erp_versao_roteiro ?? ''}
+                        onChange={(e) => setFormData({ ...formData, erp_versao_roteiro: e.target.value ? Number(e.target.value) : undefined })}
+                        placeholder="Ex: 1"
+                        onFocus={(e) => e.target.select()}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="erp_versao_detalhes">Detalhes da Versão</Label>
+                    <Textarea
+                      id="erp_versao_detalhes"
+                      value={formData.erp_versao_detalhes}
+                      onChange={(e) => setFormData({ ...formData, erp_versao_detalhes: e.target.value })}
+                      rows={2}
+                      placeholder="Detalhes técnicos da versão"
+                    />
+                  </div>
                 </TabsContent>
               </Tabs>
 

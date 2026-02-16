@@ -4291,13 +4291,19 @@ export type Database = {
           cst_icms: string | null
           cst_pis_cofins: string | null
           description: string | null
+          erp_empresa: number | null
+          erp_grupo: string | null
           erp_hash: string | null
           erp_last_sync_at: string | null
           erp_last_update_date: string | null
           erp_product_code: string | null
           erp_status: string | null
+          erp_subgrupo: string | null
           erp_synced_at: string | null
           erp_versao: string | null
+          erp_versao_detalhes: string | null
+          erp_versao_roteiro: number | null
+          erp_versao_situacao: string | null
           fator_kg: number | null
           fator_milheiro: number | null
           id: string
@@ -4320,6 +4326,8 @@ export type Database = {
           tem_icms_st: boolean | null
           tenant_id: string
           thickness: number | null
+          tipo_ficha: number | null
+          tipo_item: string | null
           tipo_produto_fiscal:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
             | null
@@ -4347,13 +4355,19 @@ export type Database = {
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_empresa?: number | null
+          erp_grupo?: string | null
           erp_hash?: string | null
           erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_product_code?: string | null
           erp_status?: string | null
+          erp_subgrupo?: string | null
           erp_synced_at?: string | null
           erp_versao?: string | null
+          erp_versao_detalhes?: string | null
+          erp_versao_roteiro?: number | null
+          erp_versao_situacao?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -4376,6 +4390,8 @@ export type Database = {
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
+          tipo_ficha?: number | null
+          tipo_item?: string | null
           tipo_produto_fiscal?:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
             | null
@@ -4403,13 +4419,19 @@ export type Database = {
           cst_icms?: string | null
           cst_pis_cofins?: string | null
           description?: string | null
+          erp_empresa?: number | null
+          erp_grupo?: string | null
           erp_hash?: string | null
           erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_product_code?: string | null
           erp_status?: string | null
+          erp_subgrupo?: string | null
           erp_synced_at?: string | null
           erp_versao?: string | null
+          erp_versao_detalhes?: string | null
+          erp_versao_roteiro?: number | null
+          erp_versao_situacao?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
           id?: string
@@ -4432,6 +4454,8 @@ export type Database = {
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
+          tipo_ficha?: number | null
+          tipo_item?: string | null
           tipo_produto_fiscal?:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
             | null
