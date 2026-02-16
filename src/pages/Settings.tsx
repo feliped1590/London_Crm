@@ -682,10 +682,6 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Aprovação Pedidos
           </TabsTrigger>
-          <TabsTrigger value="prospecting-api" className="gap-2">
-            <Search className="h-4 w-4" />
-            API Prospecção
-          </TabsTrigger>
           {(isAdmin || isDeveloper) && (
             <TabsTrigger value="fiscal" className="gap-2">
               <Calculator className="h-4 w-4" />
@@ -988,9 +984,6 @@ export default function Settings() {
           <OrderApprovalRulesManager />
         </TabsContent>
 
-        <TabsContent value="prospecting-api" className="mt-6 space-y-6">
-          <ProspectingApiConfig />
-        </TabsContent>
 
         {(isAdmin || isDeveloper) && (
           <TabsContent value="fiscal" className="mt-6 space-y-6">
