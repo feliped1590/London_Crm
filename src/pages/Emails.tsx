@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -344,6 +345,11 @@ export default function Emails() {
           <p className="text-muted-foreground">Envie, agende e gerencie seus emails</p>
         </div>
       </div>
+
+      <UnderDevelopmentBanner 
+        title="Módulo de Emails em Desenvolvimento"
+        description="Este módulo está sendo aprimorado para oferecer uma experiência completa de envio e gestão de emails. Algumas funcionalidades podem estar indisponíveis ou apresentar comportamento inesperado."
+      />
 
       <Card>
         <CardHeader>
