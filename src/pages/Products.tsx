@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2 } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -43,6 +43,26 @@ export default function Products() {
   const [filterActive, setFilterActive] = useState<string>('active');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('process-product-sync');
+      if (error) throw error;
+      const result = data as any;
+      if (result.processed === 0) {
+        toast.info('Nenhum produto pendente na fila de sincronização');
+      } else {
+        toast.success(`Sincronização concluída: ${result.success_count} enviado(s), ${result.error_count} erro(s)`);
+      }
+      await refetch();
+    } catch (err: any) {
+      toast.error('Erro ao sincronizar: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const [formData, setFormData] = useState({
     sku: '',
@@ -442,7 +462,17 @@ export default function Products() {
     <div className="space-y-6">
       <div className="flex items-center justify-end">
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-          <div className="flex items-center gap-2">
+           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncNow}
+              disabled={isSyncing}
+              className="gap-2"
+            >
+              <Upload className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Sincronizando...' : 'Enviar ao ERP'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
