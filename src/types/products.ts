@@ -35,8 +35,18 @@ export interface Product {
   aliquota_cofins?: number;
   tipo_produto_fiscal?: TipoProdutoFiscal;
   ncm_validated_at?: string;
-  // Campos de sincronização ERP
+  // Campos ERP Projedata
+  tipo_item?: string;
+  tipo_ficha?: number;
+  erp_grupo?: string;
+  erp_subgrupo?: string;
+  erp_empresa?: number;
   erp_versao?: string;
+  erp_versao_detalhes?: string;
+  erp_versao_roteiro?: number;
+  erp_versao_situacao?: string;
+  erp_status?: string;
+  // Campos de sincronização ERP
   origem_alteracao?: string;
   pendente_envio?: boolean;
   erp_hash?: string;
