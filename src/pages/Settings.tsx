@@ -695,12 +695,6 @@ export default function Settings() {
               CNPJs
             </TabsTrigger>
           )}
-          {(isAdmin || isDeveloper) && (
-            <TabsTrigger value="interventions" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Intervenções
-            </TabsTrigger>
-          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -759,6 +753,12 @@ export default function Settings() {
                 <Lock className="h-4 w-4" />
                 Permissões por Módulo
               </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="interventions-sub" className="gap-2">
+                  <Shield className="h-4 w-4" />
+                  Intervenções
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="users-sub" className="mt-4 space-y-6">
@@ -978,6 +978,12 @@ export default function Settings() {
             <TabsContent value="permissions-sub" className="mt-4">
               <PermissionsManager />
             </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="interventions-sub" className="mt-4">
+                <AdminInterventionsViewer />
+              </TabsContent>
+            )}
           </Tabs>
         </TabsContent>
 
@@ -1038,11 +1044,6 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        {(isAdmin || isDeveloper) && (
-          <TabsContent value="interventions" className="mt-6 space-y-6">
-            <AdminInterventionsViewer />
-          </TabsContent>
-        )}
 
         {isDeveloper && (
           <TabsContent value="ai-assistant" className="mt-6 space-y-6">
