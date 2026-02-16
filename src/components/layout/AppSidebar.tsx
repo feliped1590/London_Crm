@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
+   
   Building2, 
   Users, 
   Target, 
@@ -49,7 +49,6 @@ interface NavItem {
 
 const allNavItems: NavItem[] = [
   { to: '/today', icon: CalendarCheck, label: 'Meu Dia', moduleKey: 'dashboard' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Visão Geral', moduleKey: 'dashboard' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
   { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
