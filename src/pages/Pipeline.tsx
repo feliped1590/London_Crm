@@ -390,7 +390,7 @@ export default function Pipeline() {
     setFormData({
       name: '',
       value: 0,
-      stage: 'prospeccao',
+      stage: stages[0] || 'prospeccao',
       probability: 10,
       expected_close_date: '',
       company_id: null,
@@ -452,6 +452,7 @@ export default function Pipeline() {
         name: formData.name || '',
         created_by: user?.id,
         owner_id: user?.id,
+        pipeline_id: currentPipelineId,
         custom_fields: customFieldsData as Json,
       });
     }
@@ -493,6 +494,7 @@ export default function Pipeline() {
           name: formData.name || '',
           created_by: user?.id,
           owner_id: user?.id,
+          pipeline_id: currentPipelineId,
           custom_fields: customFieldsData as Json,
         });
       }
