@@ -41,7 +41,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
-import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
+
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { DealStageBadges } from '@/components/DealStageBadges';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
@@ -677,10 +677,6 @@ export default function CustomerDetail() {
           <TabsTrigger value="credito" className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
             Crédito
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Timeline
           </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
@@ -1318,33 +1314,6 @@ export default function CustomerDetail() {
           />
         </TabsContent>
 
-        {/* Tab: Timeline */}
-        <TabsContent value="timeline">
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline</CardTitle>
-              <CardDescription>
-                {isErpCustomer 
-                  ? 'Histórico de atividades não disponível para clientes do ERP' 
-                  : 'Histórico de atividades e interações'
-                }
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isErpCustomer ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <Clock className="h-12 w-12 text-muted-foreground/50" />
-                  <h3 className="mt-4 text-lg font-semibold">Timeline não disponível</h3>
-                  <p className="text-muted-foreground max-w-md">
-                    O histórico de atividades não está disponível para clientes sincronizados do ERP.
-                  </p>
-                </div>
-              ) : (
-                <ActivityTimeline entityType="company" entityId={id!} />
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Tab: Histórico (Auditoria) */}
         <TabsContent value="historico">

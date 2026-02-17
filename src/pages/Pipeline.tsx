@@ -29,7 +29,7 @@ import { ProposalsList } from '@/components/proposals/ProposalsList';
 import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
 import { DealParticipants } from '@/components/pipeline/DealParticipants';
 import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
-import { ActivityTimeline } from '@/components/timeline/ActivityTimeline';
+
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
@@ -750,12 +750,8 @@ export default function Pipeline() {
             {editingDeal ? (
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
                 {/* Sprint 4: 7 tabs - Dados, Timeline, Notas, Propostas, Equipe, Histórico, WhatsApp */}
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="dados">Dados</TabsTrigger>
-                  <TabsTrigger value="atividades" className="flex items-center gap-2">
-                    <Activity className="h-4 w-4" />
-                    <span className="hidden sm:inline">Timeline</span>
-                  </TabsTrigger>
                   <TabsTrigger value="notas" className="flex items-center gap-2">
                     <StickyNote className="h-4 w-4" />
                     <span className="hidden sm:inline">Notas</span>
@@ -938,12 +934,7 @@ export default function Pipeline() {
                   </form>
                 </TabsContent>
                 
-                <TabsContent value="atividades" className="flex-1 overflow-auto mt-4">
-                  <ActivityTimeline
-                    entityType="deal"
-                    entityId={editingDeal.id}
-                  />
-                </TabsContent>
+                
                 
                 <TabsContent value="notas" className="flex-1 overflow-auto mt-4">
                   <QuickNotes
