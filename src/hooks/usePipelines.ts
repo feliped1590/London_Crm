@@ -64,6 +64,11 @@ export function usePipelines() {
       
       if (!userRole) return allPipelines as Pipeline[];
       
+      // Desenvolvedores e admins têm acesso a todos os pipelines
+      if (userRole === 'admin' || userRole === 'desenvolvedor') {
+        return allPipelines as Pipeline[];
+      }
+      
       return allPipelines.filter(p => {
         // Se allowed_roles é null ou vazio, todos podem acessar
         if (!p.allowed_roles || p.allowed_roles.length === 0) return true;
