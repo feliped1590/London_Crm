@@ -52,7 +52,7 @@ import { DelegationBadge } from '@/components/pipeline/DelegationBadge';
 type Deal = Tables<'deals'>;
 type DealStage = Tables<'deals'>['stage'];
 
-const stageConfig: Record<DealStage, { label: string; color: string }> = {
+const defaultStageConfig: Record<DealStage, { label: string; color: string }> = {
   prospeccao: { label: 'Prospecção', color: 'bg-slate-500' },
   qualificacao: { label: 'Qualificação', color: 'bg-blue-500' },
   proposta: { label: 'Proposta', color: 'bg-yellow-500' },
@@ -61,7 +61,16 @@ const stageConfig: Record<DealStage, { label: string; color: string }> = {
   fechado_perdido: { label: 'Fechado (Perdido)', color: 'bg-red-500' },
 };
 
-const stages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao', 'fechado_ganho', 'fechado_perdido'];
+const defaultStages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao', 'fechado_ganho', 'fechado_perdido'];
+
+interface PipelineStageRow {
+  id: string;
+  name: string;
+  stage: DealStage;
+  color: string | null;
+  sort_order: number;
+  pipeline_id: string;
+}
 
 export default function Pipeline() {
   const { user } = useAuth();
@@ -102,6 +111,48 @@ export default function Pipeline() {
 
   // Pipelines hook
   const { pipelines, defaultPipeline } = usePipelines();
+
+  // Get current pipeline ID (selected or default)
+  const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
+
+  // Fetch dynamic stages for the current pipeline
+  const { data: pipelineStagesData } = useQuery({
+    queryKey: ['pipeline_stages', currentPipelineId],
+    queryFn: async () => {
+      if (!currentPipelineId) return null;
+      const { data, error } = await supabase
+        .from('pipeline_stages')
+        .select('*')
+        .eq('pipeline_id', currentPipelineId)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as PipelineStageRow[];
+    },
+    enabled: !!currentPipelineId,
+  });
+
+  // Derive dynamic stages and config from pipeline_stages
+  const stages: DealStage[] = useMemo(() => {
+    if (pipelineStagesData && pipelineStagesData.length > 0) {
+      return pipelineStagesData.map(s => s.stage);
+    }
+    return defaultStages;
+  }, [pipelineStagesData]);
+
+  const stageConfig: Record<string, { label: string; color: string; hexColor?: string }> = useMemo(() => {
+    if (pipelineStagesData && pipelineStagesData.length > 0) {
+      const config: Record<string, { label: string; color: string; hexColor?: string }> = {};
+      pipelineStagesData.forEach(s => {
+        config[s.stage] = {
+          label: s.name,
+          color: defaultStageConfig[s.stage]?.color || 'bg-slate-500',
+          hexColor: s.color || undefined,
+        };
+      });
+      return config;
+    }
+    return defaultStageConfig;
+  }, [pipelineStagesData]);
 
   // Loss reason modal state
   const [lossReasonModalOpen, setLossReasonModalOpen] = useState(false);
@@ -607,8 +658,6 @@ export default function Pipeline() {
   // Filtered deals
   const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
   
-  // Get current pipeline ID (selected or default)
-  const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
   
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
@@ -1159,7 +1208,13 @@ export default function Pipeline() {
             // Keep snap only on mobile for nicer swiping
             isMobile && "snap-x snap-mandatory",
             // XL+: switch to full Kanban grid (no horizontal scroll)
-            "xl:grid xl:grid-cols-6 xl:gap-4 xl:overflow-x-visible xl:pb-0 xl:mx-0 xl:px-0"
+            "xl:grid xl:gap-4 xl:overflow-x-visible xl:pb-0 xl:mx-0 xl:px-0",
+            stages.length === 1 && "xl:grid-cols-1",
+            stages.length === 2 && "xl:grid-cols-2",
+            stages.length === 3 && "xl:grid-cols-3",
+            stages.length === 4 && "xl:grid-cols-4",
+            stages.length === 5 && "xl:grid-cols-5",
+            stages.length >= 6 && "xl:grid-cols-6"
           )}
         >
           {stages.map((stage) => (
@@ -1175,8 +1230,11 @@ export default function Pipeline() {
             >
               <div className="p-3 border-b bg-muted/50 rounded-t-lg">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className={`h-3 w-3 rounded-full ${stageConfig[stage].color}`} />
-                  <h3 className="font-semibold text-sm">{stageConfig[stage].label}</h3>
+                  <div 
+                    className={`h-3 w-3 rounded-full ${stageConfig[stage]?.hexColor ? '' : stageConfig[stage]?.color || 'bg-slate-500'}`}
+                    style={stageConfig[stage]?.hexColor ? { backgroundColor: stageConfig[stage].hexColor } : undefined}
+                  />
+                  <h3 className="font-semibold text-sm">{stageConfig[stage]?.label || stage}</h3>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{getStageDeals(stage).length} negócios</span>
