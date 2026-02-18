@@ -60,6 +60,32 @@ serve(async (req) => {
       console.error("Error fetching items:", itemsError);
     }
 
+    // If no legal_entity on the order, fetch the default (headquarters) one
+    let emitterEntity = order.legal_entity;
+    if (!emitterEntity) {
+      const { data: defaultEntity } = await supabase
+        .from("legal_entities")
+        .select("id, name, trade_name, cnpj, address, city, state, phone, email")
+        .eq("active", true)
+        .eq("is_headquarters", true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (!defaultEntity) {
+        // Fallback: get first active legal entity
+        const { data: firstEntity } = await supabase
+          .from("legal_entities")
+          .select("id, name, trade_name, cnpj, address, city, state, phone, email")
+          .eq("active", true)
+          .order("name")
+          .limit(1)
+          .maybeSingle();
+        emitterEntity = firstEntity;
+      } else {
+        emitterEntity = defaultEntity;
+      }
+    }
+
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat("pt-BR", {
         style: "currency",
@@ -113,16 +139,16 @@ serve(async (req) => {
       )
       .join("");
 
-    // Use legal entity info if available, otherwise fallback
-    const emitter = order.legal_entity
+    // Use legal entity info (from order or default fallback)
+    const emitter = emitterEntity
       ? {
-          name: order.legal_entity.name || order.legal_entity.trade_name,
-          cnpj: order.legal_entity.cnpj,
-          address: order.legal_entity.address,
-          city: order.legal_entity.city,
-          state: order.legal_entity.state,
-          phone: order.legal_entity.phone,
-          email: order.legal_entity.email,
+          name: emitterEntity.name || emitterEntity.trade_name,
+          cnpj: emitterEntity.cnpj,
+          address: emitterEntity.address,
+          city: emitterEntity.city,
+          state: emitterEntity.state,
+          phone: emitterEntity.phone,
+          email: emitterEntity.email,
         }
       : null;
 
@@ -266,7 +292,7 @@ serve(async (req) => {
           </div>
           <div class="order-info">
             <div class="order-number">${order.number}</div>
-            <p style="color: #6b7280; margin: 5px 0;">Data: ${formatDate(order.created_at)}</p>
+            <p style="color: #6b7280; margin: 5px 0;">Data: ${formatDate(new Date().toISOString())}</p>
             <div class="status-badge" style="background-color: ${statusColor};">${statusLabel}</div>
             ${order.delivery_date ? `<div class="delivery-info">Entrega: ${formatDate(order.delivery_date)}</div>` : ""}
           </div>
