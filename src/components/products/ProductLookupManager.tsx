@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Layers, Paintbrush, Box, Ruler } from 'lucide-react';
+import { Plus, Edit, Trash2, Layers, Paintbrush, Box, Ruler, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductLookups, type LookupItem } from '@/hooks/useProductLookups';
 
@@ -22,7 +22,10 @@ interface LookupSectionProps {
   onDelete: (id: string) => Promise<void>;
 }
 
+const ITEMS_PER_PAGE = 5;
+
 function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, onDelete }: LookupSectionProps) {
+  const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LookupItem | null>(null);
   const [formValue, setFormValue] = useState('');
@@ -78,6 +81,10 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(allItems.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedItems = allItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -97,55 +104,72 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
           </div>
         ) : allItems.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Valor</TableHead>
-                <TableHead>Rótulo</TableHead>
-                <TableHead className="w-20">Ordem</TableHead>
-                <TableHead className="w-20">Ativo</TableHead>
-                <TableHead className="w-24 text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allItems.map((item) => (
-                <TableRow key={item.id} className={!item.is_active ? 'opacity-50' : ''}>
-                  <TableCell className="font-mono text-sm">{item.value}</TableCell>
-                  <TableCell>{item.label}</TableCell>
-                  <TableCell>{item.sort_order}</TableCell>
-                  <TableCell>
-                    <Switch checked={item.is_active} onCheckedChange={() => handleToggleActive(item)} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
-                        <Edit className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => {
-                          if (confirm('Excluir este registro?')) {
-                            onDelete(item.id).then(() => toast.success('Excluído!')).catch(() => toast.error('Erro ao excluir'));
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Rótulo</TableHead>
+                  <TableHead className="w-20">Ordem</TableHead>
+                  <TableHead className="w-20">Ativo</TableHead>
+                  <TableHead className="w-24 text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.map((item) => (
+                  <TableRow key={item.id} className={!item.is_active ? 'opacity-50' : ''}>
+                    <TableCell className="font-mono text-sm">{item.value}</TableCell>
+                    <TableCell>{item.label}</TableCell>
+                    <TableCell>{item.sort_order}</TableCell>
+                    <TableCell>
+                      <Switch checked={item.is_active} onCheckedChange={() => handleToggleActive(item)} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            if (confirm('Excluir este registro?')) {
+                              onDelete(item.id).then(() => toast.success('Excluído!')).catch(() => toast.error('Erro ao excluir'));
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-2 border-t">
+                <span className="text-xs text-muted-foreground">
+                  {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, allItems.length)} de {allItems.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={currentPage <= 1} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground px-1">{currentPage}/{totalPages}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={currentPage >= totalPages} onClick={() => setPage(p => p + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center h-24 text-muted-foreground text-sm">
             Nenhum registro cadastrado
           </div>
         )}
       </CardContent>
-
       <Dialog open={isDialogOpen} onOpenChange={(o) => { if (!o) resetForm(); else setIsDialogOpen(true); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
