@@ -59,7 +59,7 @@ export function useTodayData() {
         `)
         .eq('assigned_to', user?.id)
         .in('status', ['pendente', 'em_andamento'])
-        .or(`due_date.eq.${todayStart},due_date.is.null`)
+        .or(`and(due_date.gte.${todayStart}T00:00:00,due_date.lt.${todayStart}T23:59:59),due_date.is.null`)
         .order('due_time', { ascending: true, nullsFirst: false })
         .order('priority', { ascending: false });
 
