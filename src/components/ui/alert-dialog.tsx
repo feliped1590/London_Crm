@@ -6,15 +6,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { useDraggable } from "@/hooks/useDraggable";
 
 const AlertDialog = AlertDialogPrimitive.Root;
-
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
-
 const AlertDialogPortal = AlertDialogPrimitive.Portal;
 
-// Context to pass drag handlers from Content to Header
 interface AlertDragContextValue {
   handleMouseDown: (e: React.MouseEvent) => void;
-  isDragging: boolean;
 }
 const AlertDragContext = React.createContext<AlertDragContextValue | null>(null);
 
@@ -37,34 +33,27 @@ const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
 >(({ className, ...props }, ref) => {
-  const { offset, handleMouseDown, isDragging, resetPosition } = useDraggable();
+  const { handleMouseDown, resetPosition } = useDraggable();
 
   const handleAnimationEnd = React.useCallback(
     (e: React.AnimationEvent) => {
-      const target = e.currentTarget as HTMLElement;
-      if (target.dataset.state === "closed") {
+      if ((e.currentTarget as HTMLElement).dataset.state === "closed") {
         resetPosition();
       }
     },
     [resetPosition]
   );
 
-  const dragStyle: React.CSSProperties =
-    offset.x !== 0 || offset.y !== 0
-      ? { transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px))` }
-      : {};
-
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
-      <AlertDragContext.Provider value={{ handleMouseDown, isDragging }}>
+      <AlertDragContext.Provider value={{ handleMouseDown }}>
         <AlertDialogPrimitive.Content
           ref={ref}
           className={cn(
             "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
             className,
           )}
-          style={dragStyle}
           onAnimationEnd={handleAnimationEnd}
           {...props}
         />
@@ -76,7 +65,6 @@ AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
   const dragCtx = React.useContext(AlertDragContext);
-
   return (
     <div
       className={cn(
