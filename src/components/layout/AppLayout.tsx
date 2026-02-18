@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
-import { CopilotWidget } from '@/components/copilot/CopilotWidget';
 import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { useSidebar } from '@/contexts/SidebarContext';
 
@@ -79,8 +78,6 @@ export function AppLayout() {
         </main>
       </div>
 
-      {/* AI Copilot Widget */}
-      <CopilotWidget />
 
       {/* AI Assistant Widget */}
       <AIChatWidget />
