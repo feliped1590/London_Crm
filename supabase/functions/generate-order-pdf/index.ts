@@ -95,8 +95,10 @@ serve(async (req) => {
 
     const formatDate = (dateStr: string | null) => {
       if (!dateStr) return "-";
-      return new Date(dateStr).toLocaleDateString("pt-BR");
+      return new Date(dateStr).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
     };
+
+    const todayBR = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
     const statusLabels: Record<string, string> = {
       pendente: "Pendente",
@@ -292,7 +294,7 @@ serve(async (req) => {
           </div>
           <div class="order-info">
             <div class="order-number">${order.number}</div>
-            <p style="color: #6b7280; margin: 5px 0;">Data: ${formatDate(new Date().toISOString())}</p>
+            <p style="color: #6b7280; margin: 5px 0;">Data: ${todayBR}</p>
             <div class="status-badge" style="background-color: ${statusColor};">${statusLabel}</div>
             ${order.delivery_date ? `<div class="delivery-info">Entrega: ${formatDate(order.delivery_date)}</div>` : ""}
           </div>
@@ -369,7 +371,7 @@ serve(async (req) => {
           <p><strong>${emitter?.name || "FDK Personalizados"}</strong></p>
           ${emitter?.phone ? `<p>Tel: ${emitter.phone}</p>` : ""}
           ${emitter?.email ? `<p>${emitter.email}</p>` : ""}
-          <p style="margin-top: 10px;">Documento gerado em ${formatDate(new Date().toISOString())}</p>
+          <p style="margin-top: 10px;">Documento gerado em ${todayBR}</p>
         </div>
       </body>
       </html>
