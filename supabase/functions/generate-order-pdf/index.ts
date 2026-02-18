@@ -33,7 +33,7 @@ serve(async (req) => {
         company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
-        legal_entity:legal_entities(id, razao_social, cnpj, endereco, cidade, uf, telefone, email)
+        legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email)
       `)
       .eq("id", order_id)
       .single();
@@ -116,12 +116,12 @@ serve(async (req) => {
     // Use legal entity info if available, otherwise fallback
     const emitter = order.legal_entity
       ? {
-          name: order.legal_entity.razao_social,
+          name: order.legal_entity.name || order.legal_entity.trade_name,
           cnpj: order.legal_entity.cnpj,
-          address: order.legal_entity.endereco,
-          city: order.legal_entity.cidade,
-          state: order.legal_entity.uf,
-          phone: order.legal_entity.telefone,
+          address: order.legal_entity.address,
+          city: order.legal_entity.city,
+          state: order.legal_entity.state,
+          phone: order.legal_entity.phone,
           email: order.legal_entity.email,
         }
       : null;
