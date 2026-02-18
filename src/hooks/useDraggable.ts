@@ -1,16 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-
-interface DragOffset {
-  x: number;
-  y: number;
-}
-
-interface UseDraggableReturn {
-  offset: DragOffset;
-  handleMouseDown: (e: React.MouseEvent) => void;
-  isDragging: boolean;
-  resetPosition: () => void;
-}
+import { useCallback, useRef, useEffect } from "react";
 
 const INTERACTIVE_ELEMENTS = ["BUTTON", "INPUT", "SELECT", "TEXTAREA", "A"];
 
@@ -19,52 +7,51 @@ function isTouchDevice(): boolean {
   return window.matchMedia("(pointer: coarse)").matches;
 }
 
-export function useDraggable(): UseDraggableReturn {
-  const [offset, setOffset] = useState<DragOffset>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef<{ mouseX: number; mouseY: number; offsetX: number; offsetY: number } | null>(null);
-  const contentRef = useRef<HTMLElement | null>(null);
+export function useDraggable() {
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number } | null>(null);
+  const elementRef = useRef<HTMLElement | null>(null);
+  const isDraggingRef = useRef(false);
 
-  const resetPosition = useCallback(() => {
-    setOffset({ x: 0, y: 0 });
+  const applyTransform = useCallback(() => {
+    if (!elementRef.current) return;
+    const { x, y } = offsetRef.current;
+    if (x === 0 && y === 0) {
+      elementRef.current.style.transform = "";
+    } else {
+      elementRef.current.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+    }
   }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragStart.current) return;
+    if (!dragStartRef.current || !elementRef.current) return;
 
-    const deltaX = e.clientX - dragStart.current.mouseX;
-    const deltaY = e.clientY - dragStart.current.mouseY;
+    let newX = dragStartRef.current.startX + (e.clientX - dragStartRef.current.mouseX);
+    let newY = dragStartRef.current.startY + (e.clientY - dragStartRef.current.mouseY);
 
-    let newX = dragStart.current.offsetX + deltaX;
-    let newY = dragStart.current.offsetY + deltaY;
+    // Clamp using actual modal rect
+    const rect = elementRef.current.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const minVisible = 100;
+    const halfW = rect.width / 2;
+    const halfH = rect.height / 2;
+    const maxX = vw / 2 + halfW - minVisible;
+    const minX = -maxX;
+    const maxY = vh / 2 + halfH - minVisible;
+    const minY = -maxY;
 
-    // Clamp using actual modal dimensions and viewport
-    if (contentRef.current) {
-      const rect = contentRef.current.getBoundingClientRect();
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
+    newX = Math.max(minX, Math.min(maxX, newX));
+    newY = Math.max(minY, Math.min(maxY, newY));
 
-      // Modal center position = 50% viewport + offset
-      // Ensure at least 100px of modal remains visible on each edge
-      const minVisible = 100;
-      const halfW = rect.width / 2;
-      const halfH = rect.height / 2;
-
-      const maxX = vw / 2 + halfW - minVisible;
-      const minX = -(vw / 2 + halfW - minVisible);
-      const maxY = vh / 2 + halfH - minVisible;
-      const minY = -(vh / 2 + halfH - minVisible);
-
-      newX = Math.max(minX, Math.min(maxX, newX));
-      newY = Math.max(minY, Math.min(maxY, newY));
-    }
-
-    setOffset({ x: newX, y: newY });
+    offsetRef.current = { x: newX, y: newY };
+    // Direct DOM update — no React re-render
+    elementRef.current.style.transform = `translate(calc(-50% + ${newX}px), calc(-50% + ${newY}px))`;
   }, []);
 
   const handleMouseUp = useCallback(() => {
-    dragStart.current = null;
-    setIsDragging(false);
+    dragStartRef.current = null;
+    isDraggingRef.current = false;
     document.body.style.userSelect = "";
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", handleMouseUp);
@@ -72,10 +59,8 @@ export function useDraggable(): UseDraggableReturn {
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      // Skip on touch devices
       if (isTouchDevice()) return;
 
-      // Skip interactive elements
       const target = e.target as HTMLElement;
       if (INTERACTIVE_ELEMENTS.includes(target.tagName) || target.closest("button, input, select, textarea, a")) {
         return;
@@ -83,26 +68,32 @@ export function useDraggable(): UseDraggableReturn {
 
       e.preventDefault();
 
-      // Find the dialog content element (closest ancestor with fixed positioning)
       const content = target.closest('[role="dialog"], [role="alertdialog"]') as HTMLElement | null;
-      contentRef.current = content;
+      if (!content) return;
+      elementRef.current = content;
 
-      dragStart.current = {
+      dragStartRef.current = {
         mouseX: e.clientX,
         mouseY: e.clientY,
-        offsetX: offset.x,
-        offsetY: offset.y,
+        startX: offsetRef.current.x,
+        startY: offsetRef.current.y,
       };
 
-      setIsDragging(true);
+      isDraggingRef.current = true;
       document.body.style.userSelect = "none";
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [offset, handleMouseMove, handleMouseUp]
+    [handleMouseMove, handleMouseUp]
   );
 
-  // Cleanup on unmount
+  const resetPosition = useCallback(() => {
+    offsetRef.current = { x: 0, y: 0 };
+    if (elementRef.current) {
+      elementRef.current.style.transform = "";
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       document.removeEventListener("mousemove", handleMouseMove);
@@ -111,5 +102,5 @@ export function useDraggable(): UseDraggableReturn {
     };
   }, [handleMouseMove, handleMouseUp]);
 
-  return { offset, handleMouseDown, isDragging, resetPosition };
+  return { handleMouseDown, resetPosition };
 }
