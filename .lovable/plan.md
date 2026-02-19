@@ -1,129 +1,56 @@
 
 
-# Fase 4I -- CNPJ no Contexto de Negocios + Vinculo na Edicao de Usuario + CNPJ Padrao
+# Correcao do Modulo de Estoque: Trocar `companies` por `legal_entities`
 
-## Resumo
+## Problema
 
-Tres mudancas principais:
-1. Mover o vinculo usuario-CNPJ para dentro do modal de edicao/criacao de usuario (removendo da aba CNPJs)
-2. Adicionar campo "CNPJ padrao" (headquarters) na gestao de entidades
-3. Adicionar `legal_entity_id` em deals e companies, com seletor de CNPJ nos formularios do Pipeline e Cadastro de Clientes
+O modulo de estoque foi implementado referenciando a tabela `companies` (base de clientes), mas deveria usar a tabela `legal_entities` (entidades juridicas/CNPJs proprios da empresa, gerenciados em Configuracoes > CNPJ).
 
----
-
-## 1. Migracao de Banco de Dados
-
-Adicionar `legal_entity_id` nas tabelas `deals` e `companies`:
-
-```sql
-ALTER TABLE deals ADD COLUMN legal_entity_id uuid REFERENCES legal_entities(id);
-ALTER TABLE companies ADD COLUMN legal_entity_id uuid REFERENCES legal_entities(id);
-```
-
-Nenhuma outra alteracao no banco -- o campo `is_headquarters` da tabela `legal_entities` ja existe e sera usado para marcar o CNPJ padrao.
+Conforme a imagem enviada, o dropdown de "Empresa" esta mostrando clientes (ex: "Gustavo Santos", "Marcos") em vez das entidades juridicas cadastradas (ex: "QUALYVAC EMBALAGENS LTDA").
 
 ---
 
-## 2. Vinculo de CNPJs no Modal de Edicao de Usuario
+## Alteracoes Necessarias
 
-**Arquivo**: `src/pages/Settings.tsx`
+### 1. Migration SQL
 
-Alteracoes no dialog "Editar Usuario" (linhas 870-959):
-- Adicionar secao "CNPJs Vinculados" abaixo do campo "Nivel de Acesso"
-- Listar os CNPJs ja vinculados ao usuario (badge com botao de remover)
-- Botao "Vincular CNPJ" com Select de entidades disponiveis
-- INSERT/DELETE em `user_legal_entities` diretamente no modal
-- Mesma logica no dialog de criacao de usuario (opcional, pode ser feito apos criacao)
+Alterar as FKs e funcoes RPC para referenciar `legal_entities` em vez de `companies`:
 
-Alteracoes no dialog "Novo Usuario":
-- Adicionar secao similar para vincular CNPJs ao criar
+- Remover FK `product_stock.company_id -> companies.id`
+- Adicionar FK `product_stock.company_id -> legal_entities.id`
+- Remover FK `stock_movements.company_id -> companies.id`
+- Adicionar FK `stock_movements.company_id -> legal_entities.id`
+- Recriar as funcoes `process_stock_movement` e `transfer_stock` para que os JOINs e validacoes internos (se houver) referenciem `legal_entities`
+- Recriar o indice unico composto se necessario
 
-**Remover**: a secao de vinculos usuario-CNPJ do `LegalEntityPermissionsManager.tsx` (manter apenas o CRUD de entidades juridicas e a marcacao de CNPJ padrao)
+### 2. Hook `src/hooks/useStock.ts`
 
----
+- **`useCompaniesForStock`** -> renomear para **`useLegalEntitiesForStock`**
+  - Trocar query de `companies` para `legal_entities`
+  - Filtrar por `active = true` e `tenant_id`
+  - Retornar `id`, `name`, `cnpj`
 
-## 3. CNPJ Padrao (Headquarters)
+- **`useStockList`**: trocar o join de `companies:company_id` para `legal_entities:company_id`
+- **`useStockHistory`**: trocar o join de `companies:company_id` para `legal_entities:company_id`
 
-**Arquivo**: `src/components/settings/LegalEntityPermissionsManager.tsx`
+### 3. Pagina `src/pages/Stock.tsx`
 
-- Adicionar botao/switch "Padrao" na lista de entidades juridicas
-- Ao marcar uma entidade como padrao, executar UPDATE `is_headquarters = true` nela e `is_headquarters = false` em todas as outras do mesmo tenant
-- O CNPJ padrao sera pre-selecionado em todos os formularios quando o usuario nao tiver um `active_legal_entity_id` definido
-
-**Arquivo**: `src/hooks/useLegalEntities.ts`
-
-- Adicionar no retorno: `defaultEntity` (a entidade com `is_headquarters = true`)
-- Logica de fallback: `activeLegalEntity || defaultEntity || primeira entidade`
+- Atualizar todos os imports de `useCompaniesForStock` para `useLegalEntitiesForStock`
+- Manter nomes de variaveis como `companies` internamente (ou renomear para `entities`) -- sem impacto funcional
 
 ---
 
-## 4. Seletor de CNPJ no Pipeline (Deals)
+## Arquivos Afetados
 
-**Arquivo**: `src/pages/Pipeline.tsx`
-
-No formulario de criacao/edicao de negocio:
-- Adicionar campo Select "CNPJ Atendimento" apos o campo de empresa/contato
-- Pre-selecionar com `activeLegalEntityId` ou CNPJ padrao (via `useLegalEntities`)
-- Salvar `legal_entity_id` no INSERT e UPDATE de deals
-- Campo oculto se nao houver entidades cadastradas (compatibilidade legado)
+| Acao | Arquivo |
+|------|---------|
+| Migration | Alterar FKs de `companies` para `legal_entities` |
+| Editar | `src/hooks/useStock.ts` |
+| Editar | `src/pages/Stock.tsx` |
 
 ---
 
-## 5. Seletor de CNPJ no Cadastro de Clientes
+## Resultado
 
-**Arquivo**: `src/pages/CustomerNew.tsx`
-
-No wizard de cadastro:
-- Adicionar campo "CNPJ Atendimento" no Step 1 (dados da empresa)
-- Pre-selecionar com CNPJ padrao
-- Salvar `legal_entity_id` no INSERT de companies
-- Campo oculto se nao houver entidades
-
----
-
-## 6. Fluxo de Dados Atualizado
-
-```text
-legal_entities (banco)
-       |
-       +---> is_headquarters = true (CNPJ padrao do tenant)
-       |
-       v
-useLegalEntities (hook)
-       |
-       +---> defaultEntity (is_headquarters)
-       +---> activeLegalEntity (do perfil do usuario)
-       +---> effectiveEntity = active || default || first
-       |
-       +---> Pipeline.tsx (deals.legal_entity_id)
-       +---> CustomerNew.tsx (companies.legal_entity_id)
-       +---> OrderDialog.tsx (orders.legal_entity_id) [ja implementado]
-       +---> ProposalDialog.tsx (proposals.legal_entity_id) [ja implementado]
-       |
-       +---> Settings.tsx > Editar Usuario (user_legal_entities)
-       +---> Settings.tsx > Novo Usuario (user_legal_entities)
-```
-
----
-
-## Secao Tecnica
-
-### Migracao SQL
-- `ALTER TABLE deals ADD COLUMN legal_entity_id uuid REFERENCES legal_entities(id);`
-- `ALTER TABLE companies ADD COLUMN legal_entity_id uuid REFERENCES legal_entities(id);`
-
-### Arquivos a modificar
-1. **`src/pages/Settings.tsx`** -- Adicionar secao CNPJs nos dialogs de usuario (criar e editar); queries para buscar `legal_entities` e `user_legal_entities`; mutations para INSERT/DELETE vinculos
-2. **`src/components/settings/LegalEntityPermissionsManager.tsx`** -- Remover secao de vinculos usuario-CNPJ; adicionar botao "Definir como Padrao" que atualiza `is_headquarters`
-3. **`src/hooks/useLegalEntities.ts`** -- Adicionar `defaultEntity` (is_headquarters=true) e `effectiveEntityId` (active || default || first)
-4. **`src/pages/Pipeline.tsx`** -- Adicionar campo `legal_entity_id` no formulario de deal; usar `useLegalEntities` para listar opcoes e pre-selecionar
-5. **`src/pages/CustomerNew.tsx`** -- Adicionar campo `legal_entity_id` no step 1; usar `useLegalEntities`
-
-### Riscos e Mitigacoes
-
-| Risco | Mitigacao |
-|---|---|
-| deals/companies sem legal_entity_id historico | Campo nullable, compatibilidade total com registros antigos |
-| Troca de CNPJ padrao afeta registros existentes | Apenas define o default para novos registros; existentes mantem o valor original |
-| Remocao da secao de vinculos do LegalEntityPermissionsManager | Funcionalidade movida para o modal de usuario; nenhuma perda de funcionalidade |
+Apos a correcao, os dropdowns de empresa no modulo de estoque mostrarao apenas as entidades juridicas (CNPJs) cadastradas em Configuracoes, e nao mais os clientes da base.
 
