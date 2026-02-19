@@ -32,6 +32,7 @@ import ProposalPublic from "./pages/ProposalPublic";
 import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
 import Prospecting from "./pages/Prospecting";
+import Stock from "./pages/Stock";
 
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -107,6 +108,7 @@ const App = () => (
                 <Route path="/pipeline" element={<Pipeline />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/stock" element={<Stock />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/whatsapp" element={<WhatsApp />} />
                 

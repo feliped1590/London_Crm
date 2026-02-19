@@ -4119,6 +4119,71 @@ export type Database = {
           },
         ]
       }
+      product_stock: {
+        Row: {
+          company_id: string
+          created_at: string
+          estoque_maximo: number | null
+          estoque_minimo: number | null
+          id: string
+          product_id: string
+          quantidade_atual: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          estoque_maximo?: number | null
+          estoque_minimo?: number | null
+          id?: string
+          product_id: string
+          quantidade_atual?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          estoque_maximo?: number | null
+          estoque_minimo?: number | null
+          id?: string
+          product_id?: string
+          quantidade_atual?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_stock_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_stock_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "product_stock_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_stock_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_sync_queue: {
         Row: {
           attempt_count: number | null
@@ -5278,6 +5343,77 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          motivo: string | null
+          product_id: string
+          quantidade: number
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["stock_movement_type"]
+          usuario_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          product_id: string
+          quantidade: number
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tenant_id: string
+          tipo: Database["public"]["Enums"]["stock_movement_type"]
+          usuario_id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          product_id?: string
+          quantidade?: number
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tenant_id?: string
+          tipo?: Database["public"]["Enums"]["stock_movement_type"]
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_modules: {
         Row: {
           created_at: string | null
@@ -6421,6 +6557,19 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      process_stock_movement: {
+        Args: {
+          p_company_id: string
+          p_motivo?: string
+          p_product_id: string
+          p_quantidade: number
+          p_referencia_id?: string
+          p_referencia_tipo?: string
+          p_tenant_id: string
+          p_tipo: string
+        }
+        Returns: Json
+      }
       search_ncm: {
         Args: { limit_rows?: number; search_term: string }
         Returns: {
@@ -6430,6 +6579,17 @@ export type Database = {
           id: string
           status: string
         }[]
+      }
+      transfer_stock: {
+        Args: {
+          p_from_company_id: string
+          p_motivo?: string
+          p_product_id: string
+          p_quantidade: number
+          p_tenant_id: string
+          p_to_company_id: string
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -6517,6 +6677,7 @@ export type Database = {
         | "liquidado"
         | "ajustado"
         | "estornado"
+      stock_movement_type: "entrada" | "saida" | "ajuste"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
       tipo_beneficio_fiscal:
@@ -6781,6 +6942,7 @@ export const Constants = {
         "ajustado",
         "estornado",
       ],
+      stock_movement_type: ["entrada", "saida", "ajuste"],
       task_priority: ["baixa", "media", "alta", "urgente"],
       task_status: ["pendente", "em_andamento", "concluida", "cancelada"],
       tipo_beneficio_fiscal: [
