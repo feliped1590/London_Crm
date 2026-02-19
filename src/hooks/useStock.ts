@@ -160,8 +160,7 @@ export function useStockHistory(filters: HistoryFilters = {}) {
         .select(`
           *,
           products:product_id (name, sku),
-          legal_entities:company_id (name),
-          profiles:usuario_id (full_name)
+          legal_entities:company_id (name)
         `)
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
@@ -176,12 +175,23 @@ export function useStockHistory(filters: HistoryFilters = {}) {
       const { data, error } = await query;
       if (error) throw error;
 
+      // Fetch user names separately
+      const userIds = [...new Set((data || []).map((r: any) => r.usuario_id).filter(Boolean))];
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+        userMap = Object.fromEntries((profiles || []).map((p: any) => [p.user_id, p.full_name]));
+      }
+
       return (data || []).map((row: any) => ({
         ...row,
         product_name: row.products?.name || '',
         product_sku: row.products?.sku || '',
         company_name: row.legal_entities?.name || '',
-        usuario_name: row.profiles?.full_name || '',
+        usuario_name: userMap[row.usuario_id] || '',
       })) as StockMovement[];
     },
   });
