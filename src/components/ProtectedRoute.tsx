@@ -12,6 +12,7 @@ const routeToModuleKey: Record<string, string> = {
   '/pipeline': 'pipeline',
   '/products': 'products',
   '/orders': 'orders',
+  '/stock': 'stock',
   '/tasks': 'tasks',
   '/whatsapp': 'whatsapp',
   '/emails': 'emails',
