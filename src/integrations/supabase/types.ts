@@ -4158,15 +4158,8 @@ export type Database = {
             foreignKeyName: "product_stock_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "companies"
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "product_stock_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_activity_summary"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "product_stock_product_id_fkey"
@@ -5388,15 +5381,8 @@ export type Database = {
             foreignKeyName: "stock_movements_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "companies"
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company_activity_summary"
-            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "stock_movements_product_id_fkey"

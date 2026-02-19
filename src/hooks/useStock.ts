@@ -95,7 +95,7 @@ export function useStockList(filters: StockFilters = {}) {
         .select(`
           *,
           products:product_id (name, sku),
-          companies:company_id (name, cnpj)
+          legal_entities:company_id (name, cnpj)
         `)
         .eq('tenant_id', tenantId)
         .order('updated_at', { ascending: false });
@@ -111,8 +111,8 @@ export function useStockList(filters: StockFilters = {}) {
         ...row,
         product_name: row.products?.name || '',
         product_sku: row.products?.sku || '',
-        company_name: row.companies?.name || '',
-        company_cnpj: row.companies?.cnpj || '',
+        company_name: row.legal_entities?.name || '',
+        company_cnpj: row.legal_entities?.cnpj || '',
       }));
 
       // Filter by product search
@@ -160,7 +160,7 @@ export function useStockHistory(filters: HistoryFilters = {}) {
         .select(`
           *,
           products:product_id (name, sku),
-          companies:company_id (name),
+          legal_entities:company_id (name),
           profiles:usuario_id (full_name)
         `)
         .eq('tenant_id', tenantId)
@@ -180,7 +180,7 @@ export function useStockHistory(filters: HistoryFilters = {}) {
         ...row,
         product_name: row.products?.name || '',
         product_sku: row.products?.sku || '',
-        company_name: row.companies?.name || '',
+        company_name: row.legal_entities?.name || '',
         usuario_name: row.profiles?.full_name || '',
       })) as StockMovement[];
     },
@@ -249,13 +249,13 @@ export function useTransferStock() {
 }
 
 // ── Shared data queries ────────────────────────────────────────────────
-export function useCompaniesForStock() {
+export function useLegalEntitiesForStock() {
   return useQuery({
-    queryKey: ['stock-companies'],
+    queryKey: ['stock-legal-entities'],
     queryFn: async () => {
       const tenantId = await getActiveTenantId();
       const { data, error } = await supabase
-        .from('companies')
+        .from('legal_entities')
         .select('id, name, cnpj')
         .eq('tenant_id', tenantId)
         .eq('active', true)

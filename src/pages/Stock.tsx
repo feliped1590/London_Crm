@@ -14,7 +14,7 @@ import {
   useStockHistory,
   useMoveStock,
   useTransferStock,
-  useCompaniesForStock,
+  useLegalEntitiesForStock,
   useProductsForStock,
   type StockFilters,
   type HistoryFilters,
@@ -52,7 +52,7 @@ function TipoBadge({ tipo }: { tipo: string }) {
 // ── Tab: Estoque Atual ─────────────────────────────────────────────────
 function StockCurrentTab() {
   const [filters, setFilters] = useState<StockFilters>({ status: 'all' });
-  const { data: companies } = useCompaniesForStock();
+  const { data: companies } = useLegalEntitiesForStock();
   const { data: stock, isLoading } = useStockList(filters);
 
   return (
@@ -127,7 +127,7 @@ function StockCurrentTab() {
 
 // ── Tab: Movimentar ────────────────────────────────────────────────────
 function StockMoveTab() {
-  const { data: companies } = useCompaniesForStock();
+  const { data: companies } = useLegalEntitiesForStock();
   const { data: products } = useProductsForStock();
   const moveStock = useMoveStock();
 
@@ -202,7 +202,7 @@ function StockMoveTab() {
 
 // ── Tab: Transferência ─────────────────────────────────────────────────
 function StockTransferTab() {
-  const { data: companies } = useCompaniesForStock();
+  const { data: companies } = useLegalEntitiesForStock();
   const { data: products } = useProductsForStock();
   const transfer = useTransferStock();
 
@@ -279,7 +279,7 @@ function StockTransferTab() {
 // ── Tab: Histórico ─────────────────────────────────────────────────────
 function StockHistoryTab() {
   const [filters, setFilters] = useState<HistoryFilters>({});
-  const { data: companies } = useCompaniesForStock();
+  const { data: companies } = useLegalEntitiesForStock();
   const { data: products } = useProductsForStock();
   const { data: history, isLoading } = useStockHistory(filters);
 
