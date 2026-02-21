@@ -33,7 +33,7 @@ serve(async (req) => {
         company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
-        legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email)
+        legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email, logo_url)
       `)
       .eq("id", order_id)
       .single();
@@ -285,11 +285,11 @@ serve(async (req) => {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="logo">
-              <img src="https://id-preview--9eb27420-1c7a-461a-901c-19db50d159be.lovable.app/images/logo-fdk.jpg" alt="FDK Personalizados" />
-            </div>
-            <p class="logo-text">TORNE SEUS MOMENTOS MEMORÁVEIS</p>
+           <div>
+            ${emitter?.logo_url 
+              ? `<div class="logo"><img src="${emitter.logo_url}" alt="${emitter.name || 'Logo'}" /></div>` 
+              : `<div class="logo"><strong style="font-size: 18px;">${emitter?.name || 'CRMPro'}</strong></div>`
+            }
             ${emitter ? `<p style="font-size: 10px; color: #6b7280; margin-top: 4px;">CNPJ: ${emitter.cnpj || "-"}</p>` : ""}
           </div>
           <div class="order-info">
