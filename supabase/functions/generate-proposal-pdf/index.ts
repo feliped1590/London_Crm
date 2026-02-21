@@ -33,7 +33,7 @@ serve(async (req) => {
         *,
         company:companies(id, name, cnpj, address, city, state, phone, email),
         contact:contacts(id, first_name, last_name, email, phone),
-        deal:deals(id, name)
+        deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url))
       `)
       .eq('id', proposal_id)
       .single();
@@ -59,6 +59,8 @@ serve(async (req) => {
     if (itemsError) {
       console.error('Error fetching items:', itemsError);
     }
+
+    const legalEntity = proposal.deal?.legal_entity || null;
 
     // Generate HTML for PDF
     const formatCurrency = (value: number) => {
@@ -210,11 +212,12 @@ serve(async (req) => {
       </head>
       <body>
         <div class="header">
-          <div>
-            <div class="logo">
-              <img src="https://id-preview--9eb27420-1c7a-461a-901c-19db50d159be.lovable.app/images/logo-fdk.jpg" alt="FDK Personalizados" />
-            </div>
-            <p class="logo-text">TORNE SEUS MOMENTOS MEMORÁVEIS</p>
+           <div>
+            ${legalEntity?.logo_url 
+              ? `<div class="logo"><img src="${legalEntity.logo_url}" alt="${legalEntity.name || 'Logo'}" /></div>` 
+              : `<div class="logo"><strong style="font-size: 18px;">${legalEntity?.name || 'CRMPro'}</strong></div>`
+            }
+            ${legalEntity ? `<p style="font-size: 10px; color: #6b7280; margin-top: 4px;">CNPJ: ${legalEntity.cnpj || "-"}</p>` : ""}
           </div>
           <div class="proposal-info">
             <div class="proposal-number">${proposal.number}</div>
