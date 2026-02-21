@@ -17,48 +17,19 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { lines } = body; // array of markdown table lines
+    const { rows, legal_entity_id, tenant_id } = body;
 
-    if (!lines || !Array.isArray(lines) || lines.length === 0) {
-      return new Response(JSON.stringify({ error: 'lines array required' }), {
+    if (!rows || !Array.isArray(rows) || rows.length === 0) {
+      return new Response(JSON.stringify({ error: 'rows array required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const LEGAL_ENTITY_ID = 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
-    const TENANT_ID = '00000000-0000-0000-0000-000000000001';
+    const LEGAL_ENTITY_ID = legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
+    const TENANT_ID = tenant_id || '00000000-0000-0000-0000-000000000001';
 
-    // Parse lines into rows
-    const rows = lines
-      .filter((l: string) => l.trim().startsWith('|') && !l.includes('Razão Social') && !l.match(/^\|[-\s|]+\|$/))
-      .map((line: string) => {
-        const cols = line.split('|').slice(1, -1).map((c: string) => c.trim());
-        const cnpjRaw = cols[9] || '';
-        const cnpj = cnpjRaw.replace(/\D/g, '');
-        let zipCode = (cols[8] || '').replace(/\D/g, '');
-        if (zipCode) zipCode = zipCode.padStart(8, '0');
-
-        return {
-          name: cols[0] || '',
-          contact_name: cols[1] || null,
-          phone: cols[2] || null,
-          fax: cols[3] || null,
-          address: cols[4] || null,
-          neighborhood: cols[5] || null,
-          city: cols[6] || null,
-          state: cols[7] || null,
-          zip_code: zipCode || null,
-          cnpj: cnpj || null,
-          inscricao_estadual: cols[10] === 'ISENTO' ? 'ISENTO' : (cols[10] || null),
-          fantasia: cols[12] || null,
-          address_number: cols[13] || null,
-          origin: cols[14] || null,
-        };
-      })
-      .filter((r: any) => r.name && r.cnpj);
-
-    // Get existing CNPJs
+    // Get existing CNPJs to deduplicate
     const { data: existingCompanies } = await supabase
       .from('companies')
       .select('cnpj');
@@ -77,8 +48,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      let zipCode = (row.zip_code || '').replace(/\D/g, '');
+      if (zipCode) zipCode = zipCode.padStart(8, '0');
+
       toInsert.push({
-        name: row.name,
+        name: row.name || 'Sem nome',
         contact_name: row.contact_name || null,
         phone: row.phone || null,
         fax: row.fax || null,
@@ -86,7 +60,7 @@ Deno.serve(async (req) => {
         neighborhood: row.neighborhood || null,
         city: row.city || null,
         state: row.state || null,
-        zip_code: row.zip_code || null,
+        zip_code: zipCode || null,
         cnpj: cnpjClean,
         inscricao_estadual: row.inscricao_estadual || null,
         fantasia: row.fantasia || null,
@@ -120,7 +94,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({
-      total_parsed: rows.length,
+      total_received: rows.length,
       to_insert: toInsert.length,
       inserted,
       skipped,

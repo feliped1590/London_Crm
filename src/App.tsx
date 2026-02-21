@@ -33,6 +33,7 @@ import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
 import Prospecting from "./pages/Prospecting";
 import Stock from "./pages/Stock";
+import ImportCompanies from "./pages/ImportCompanies";
 
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="/reallocation" element={<Navigate to="/settings?tab=portfolio" replace />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
+                <Route path="/import-companies" element={<ImportCompanies />} />
                 <Route path="/help" element={<Help />} />
               </Route>
             </Route>
