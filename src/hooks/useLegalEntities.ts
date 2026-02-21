@@ -48,14 +48,21 @@ export function useLegalEntities() {
     enabled: !!user?.id,
   });
 
-  // Fetch user's linked legal entities (restrictions)
+  // Fetch user's linked legal entities (restrictions) - user_legal_entities.user_id references profiles.id
   const { data: userLinks = [] } = useQuery({
     queryKey: ['user_legal_entities', user?.id],
     queryFn: async () => {
+      // First get the profile id for this auth user
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user!.id)
+        .single();
+      if (!profileData) return [];
       const { data, error } = await supabase
         .from('user_legal_entities')
         .select('*')
-        .eq('user_id', user!.id);
+        .eq('user_id', profileData.id);
       if (error) throw error;
       return data;
     },
