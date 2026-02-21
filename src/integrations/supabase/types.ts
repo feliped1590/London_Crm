@@ -2758,6 +2758,7 @@ export type Database = {
           inscricao_estadual: string | null
           inscricao_municipal: string | null
           is_headquarters: boolean
+          logo_url: string | null
           name: string
           phone: string | null
           regime_tributario: string | null
@@ -2778,6 +2779,7 @@ export type Database = {
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
           is_headquarters?: boolean
+          logo_url?: string | null
           name: string
           phone?: string | null
           regime_tributario?: string | null
@@ -2798,6 +2800,7 @@ export type Database = {
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
           is_headquarters?: boolean
+          logo_url?: string | null
           name?: string
           phone?: string | null
           regime_tributario?: string | null
