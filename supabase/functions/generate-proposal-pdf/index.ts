@@ -33,7 +33,7 @@ serve(async (req) => {
         *,
         company:companies(id, name, cnpj, address, city, state, phone, email),
         contact:contacts(id, first_name, last_name, email, phone),
-        deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url))
+        deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url, phone, email))
       `)
       .eq('id', proposal_id)
       .single();
@@ -286,7 +286,10 @@ serve(async (req) => {
         ` : ''}
 
         <div class="footer">
-          <p><strong>FDK Personalizados</strong> - Torne seus momentos memoráveis</p>
+          <p><strong>${legalEntity?.name || 'CRMPro'}</strong></p>
+          ${legalEntity?.cnpj ? `<p>CNPJ: ${legalEntity.cnpj}</p>` : ''}
+          ${legalEntity?.phone ? `<p>Tel: ${legalEntity.phone}</p>` : ''}
+          ${legalEntity?.email ? `<p>${legalEntity.email}</p>` : ''}
           <p>Para dúvidas, entre em contato conosco.</p>
         </div>
       </body>
