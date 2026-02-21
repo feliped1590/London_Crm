@@ -148,17 +148,29 @@ export default function Customers() {
   const { data: customers, isLoading: loadingCompanies, refetch, isFetching } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const { data: companies, error } = await supabase
-        .from('companies')
-        .select(`
-          id, name, fantasia, cnpj, phone, email, industry, city, state, address, active,
-          custom_fields, owner_id, created_at,
-          contacts(id, first_name, last_name, job_title, mobile, email),
-          deals(id, name, stage, value)
-        `)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return companies;
+      const PAGE_SIZE = 1000;
+      let allCompanies: any[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select(`
+            id, name, fantasia, cnpj, phone, email, industry, city, state, address, active,
+            custom_fields, owner_id, created_at,
+            contacts(id, first_name, last_name, job_title, mobile, email),
+            deals(id, name, stage, value)
+          `)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allCompanies = allCompanies.concat(data || []);
+        hasMore = (data?.length || 0) === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+
+      return allCompanies;
     },
     staleTime: 0,
     refetchOnMount: 'always',
@@ -219,11 +231,23 @@ export default function Customers() {
   const { data: crmClients, isLoading: loadingErp } = useQuery({
     queryKey: ['crm-clients-list'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('crm_clients')
-        .select('id, razao_social, nome_fantasia, cnpj_cpf, telefone, celular, emails, regiao, tipo_pessoa, insc_estadual, raw_data');
-      if (error) throw error;
-      return data;
+      const PAGE_SIZE = 1000;
+      let allClients: any[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('crm_clients')
+          .select('id, razao_social, nome_fantasia, cnpj_cpf, telefone, celular, emails, regiao, tipo_pessoa, insc_estadual, raw_data')
+          .range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allClients = allClients.concat(data || []);
+        hasMore = (data?.length || 0) === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+
+      return allClients;
     },
     staleTime: 0,
     refetchOnMount: 'always',
