@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
 import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 export function AppLayout() {
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
+  const { effectiveEntity } = useLegalEntities();
 
   return (
     <div 
@@ -35,9 +37,13 @@ export function AppLayout() {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="text-lg font-bold ml-3">
-            CRM<span className="text-primary">Pro</span>
-          </span>
+          {effectiveEntity?.logo_url ? (
+            <img src={effectiveEntity.logo_url} alt={effectiveEntity.name} className="h-7 max-w-[120px] object-contain ml-3" />
+          ) : (
+            <span className="text-lg font-bold ml-3">
+              CRM<span className="text-primary">Pro</span>
+            </span>
+          )}
         </header>
       )}
 
