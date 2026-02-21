@@ -2197,7 +2197,7 @@ export type Database = {
           custom_fields: Json | null
           expected_close_date: string | null
           id: string
-          legal_entity_id: string | null
+          legal_entity_id: string
           lost_reason: string | null
           name: string
           notes: string | null
@@ -2219,7 +2219,7 @@ export type Database = {
           custom_fields?: Json | null
           expected_close_date?: string | null
           id?: string
-          legal_entity_id?: string | null
+          legal_entity_id: string
           lost_reason?: string | null
           name: string
           notes?: string | null
@@ -2241,7 +2241,7 @@ export type Database = {
           custom_fields?: Json | null
           expected_close_date?: string | null
           id?: string
-          legal_entity_id?: string | null
+          legal_entity_id?: string
           lost_reason?: string | null
           name?: string
           notes?: string | null
@@ -3394,7 +3394,7 @@ export type Database = {
           freight_type: string | null
           freight_value: number | null
           id: string
-          legal_entity_id: string | null
+          legal_entity_id: string
           number: string
           observations: string | null
           order_date: string | null
@@ -3423,7 +3423,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
-          legal_entity_id?: string | null
+          legal_entity_id: string
           number: string
           observations?: string | null
           order_date?: string | null
@@ -3452,7 +3452,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
-          legal_entity_id?: string | null
+          legal_entity_id?: string
           number?: string
           observations?: string | null
           order_date?: string | null
