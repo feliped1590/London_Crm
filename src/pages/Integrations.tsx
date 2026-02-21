@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageCircle, Calendar, RefreshCw, Search } from 'lucide-react';
+import { MessageCircle, Calendar, RefreshCw, Search, Upload } from 'lucide-react';
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
+import { Button } from '@/components/ui/button';
 
 export default function Integrations() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('whatsapp');
 
   return (
@@ -44,7 +47,11 @@ export default function Integrations() {
           <GoogleCalendarSettings />
         </TabsContent>
 
-        <TabsContent value="erp" className="mt-6">
+        <TabsContent value="erp" className="mt-6 space-y-4">
+          <Button onClick={() => navigate('/import-companies')} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Empresas (XLSX)
+          </Button>
           <UnderDevelopmentBanner 
             title="Integração ERP em Desenvolvimento"
             description="O módulo de integração com o ERP está sendo desenvolvido e será disponibilizado em breve. Funcionalidades como sincronização de clientes, produtos, pedidos e logs estarão disponíveis nesta aba."
