@@ -38,6 +38,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfileModal } from './UserProfileModal';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 interface NavItem {
   to: string;
@@ -72,6 +73,7 @@ export function AppSidebar() {
   const { data: unreadCount } = useUnreadCount();
   const isMobile = useIsMobile();
   const { canAccess, isAdmin, isLoading: permissionsLoading } = useModulePermissions();
+  const { effectiveEntity } = useLegalEntities();
 
   // Check if user is developer
   const { data: isDeveloper } = useQuery({
@@ -141,9 +143,24 @@ export function AppSidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
         {showLabels && (
-          <span className="text-xl font-bold text-sidebar-primary-foreground">
-            CRM<span className="text-sidebar-primary">Pro</span>
-          </span>
+          effectiveEntity?.logo_url ? (
+            <img 
+              src={effectiveEntity.logo_url} 
+              alt={effectiveEntity.name} 
+              className="h-8 max-w-[140px] object-contain"
+            />
+          ) : (
+            <span className="text-xl font-bold text-sidebar-primary-foreground">
+              CRM<span className="text-sidebar-primary">Pro</span>
+            </span>
+          )
+        )}
+        {!showLabels && effectiveEntity?.logo_url && (
+          <img 
+            src={effectiveEntity.logo_url} 
+            alt={effectiveEntity.name} 
+            className="h-7 w-7 object-contain mx-auto"
+          />
         )}
         {isMobile ? (
           <Button

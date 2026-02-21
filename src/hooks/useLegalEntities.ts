@@ -10,6 +10,7 @@ export interface LegalEntity {
   cnpj: string;
   active: boolean;
   erp_company_code: string | null;
+  logo_url: string | null;
   created_at: string;
   [key: string]: any;
 }
