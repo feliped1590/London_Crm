@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const LEGAL_ENTITY_ID = legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
     const TENANT_ID = tenant_id || '00000000-0000-0000-0000-000000000001';
 
-    const toUpsert = [];
+    const validRows: { cnpj: string; data: Record<string, any> }[] = [];
     let skipped = 0;
     const rowErrors: { row_number: number; error_message: string; raw_data: any }[] = [];
 
@@ -37,7 +37,6 @@ Deno.serve(async (req) => {
       const row = rows[idx];
       const cnpjClean = (row.cnpj || '').replace(/\D/g, '');
 
-      // Validação de obrigatórios
       if (!cnpjClean) {
         rowErrors.push({
           row_number: (batch_index || 0) * 200 + idx + 1,
@@ -61,65 +60,108 @@ Deno.serve(async (req) => {
       let zipCode = (row.zip_code || '').replace(/\D/g, '');
       if (zipCode) zipCode = zipCode.padStart(8, '0');
 
-      toUpsert.push({
-        name: row.name.trim(),
-        contact_name: row.contact_name || null,
-        phone: row.phone || null,
-        fax: row.fax || null,
-        address: row.address || null,
-        neighborhood: row.neighborhood || null,
-        city: row.city || null,
-        state: row.state || null,
-        zip_code: zipCode || null,
+      validRows.push({
         cnpj: cnpjClean,
-        inscricao_estadual: row.inscricao_estadual || null,
-        fantasia: row.fantasia || null,
-        address_number: row.address_number || null,
-        origin: row.origin || null,
-        legal_entity_id: LEGAL_ENTITY_ID,
-        tenant_id: TENANT_ID,
-        active: true,
+        data: {
+          name: row.name.trim(),
+          contact_name: row.contact_name || null,
+          phone: row.phone || null,
+          fax: row.fax || null,
+          address: row.address || null,
+          neighborhood: row.neighborhood || null,
+          city: row.city || null,
+          state: row.state || null,
+          zip_code: zipCode || null,
+          cnpj: cnpjClean,
+          inscricao_estadual: row.inscricao_estadual || null,
+          fantasia: row.fantasia || null,
+          address_number: row.address_number || null,
+          origin: row.origin || null,
+          legal_entity_id: LEGAL_ENTITY_ID,
+          tenant_id: TENANT_ID,
+          active: true,
+        },
       });
     }
 
     let inserted = 0;
     let updated = 0;
-    const BATCH_SIZE = 500;
     const errors: string[] = [];
 
-    for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
-      const batch = toUpsert.slice(i, i + BATCH_SIZE);
+    // Process in chunks to avoid too many queries
+    const CHUNK_SIZE = 200;
 
-      // Upsert: INSERT ... ON CONFLICT (tenant_id, cnpj) DO UPDATE
-      const { error, data } = await supabase
+    for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
+      const chunk = validRows.slice(i, i + CHUNK_SIZE);
+      const cnpjs = chunk.map(r => r.cnpj);
+
+      // Find existing companies by CNPJ + tenant
+      const { data: existing, error: fetchError } = await supabase
         .from('companies')
-        .upsert(batch, {
-          onConflict: 'tenant_id,cnpj',
-          ignoreDuplicates: false,
-        })
-        .select('id, created_at, updated_at');
+        .select('id, cnpj')
+        .eq('tenant_id', TENANT_ID)
+        .in('cnpj', cnpjs);
 
-      if (error) {
-        console.error(`Batch ${i / BATCH_SIZE} error:`, error);
-        errors.push(`Batch ${Math.floor(i / BATCH_SIZE)}: ${error.message}`);
-      } else if (data) {
-        // Diferenciar inserted vs updated: se created_at ~= updated_at, é novo
-        for (const record of data) {
-          const createdAt = new Date(record.created_at).getTime();
-          const updatedAt = new Date(record.updated_at).getTime();
-          // Se a diferença for < 2 segundos, consideramos como inserção
-          if (Math.abs(updatedAt - createdAt) < 2000) {
-            inserted++;
-          } else {
-            updated++;
+      if (fetchError) {
+        errors.push(`Batch ${Math.floor(i / CHUNK_SIZE)}: fetch error - ${fetchError.message}`);
+        continue;
+      }
+
+      const existingMap = new Map<string, string>();
+      for (const ex of (existing || [])) {
+        if (ex.cnpj) existingMap.set(ex.cnpj, ex.id);
+      }
+
+      const toInsert: Record<string, any>[] = [];
+      const toUpdate: { id: string; data: Record<string, any> }[] = [];
+
+      for (const row of chunk) {
+        const existingId = existingMap.get(row.cnpj);
+        if (existingId) {
+          // Update: only fill in non-null fields from import (don't overwrite existing data with null)
+          const updateData: Record<string, any> = {};
+          for (const [key, value] of Object.entries(row.data)) {
+            if (value !== null && key !== 'tenant_id' && key !== 'cnpj') {
+              updateData[key] = value;
+            }
           }
+          toUpdate.push({ id: existingId, data: updateData });
+        } else {
+          toInsert.push(row.data);
+        }
+      }
+
+      // Batch insert new records
+      if (toInsert.length > 0) {
+        const { error: insertError, data: insertData } = await supabase
+          .from('companies')
+          .insert(toInsert)
+          .select('id');
+
+        if (insertError) {
+          errors.push(`Batch ${Math.floor(i / CHUNK_SIZE)}: insert error - ${insertError.message}`);
+        } else {
+          inserted += insertData?.length || 0;
+        }
+      }
+
+      // Update existing records one by one (batch update not supported)
+      for (const upd of toUpdate) {
+        const { error: updateError } = await supabase
+          .from('companies')
+          .update(upd.data)
+          .eq('id', upd.id);
+
+        if (updateError) {
+          errors.push(`Update ${upd.id}: ${updateError.message}`);
+        } else {
+          updated++;
         }
       }
     }
 
-    // Salvar erros de importação no log (se houver)
+    // Save import errors to log
     if (rowErrors.length > 0 && batch_index === 0) {
-      // Criar log de importação no primeiro batch
       const { data: logData } = await supabase
         .from('import_logs')
         .insert({
@@ -136,7 +178,6 @@ Deno.serve(async (req) => {
         .single();
 
       if (logData) {
-        // Salvar erros individuais
         const errorInserts = rowErrors.map(e => ({
           import_log_id: logData.id,
           row_number: e.row_number,
@@ -149,7 +190,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       total_received: rows.length,
-      to_upsert: toUpsert.length,
+      to_process: validRows.length,
       inserted,
       updated,
       skipped,
