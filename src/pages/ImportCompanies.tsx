@@ -8,30 +8,48 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 
-// Column mapping from XLSX headers to DB fields
-const COLUMN_MAP: Record<string, string> = {
-  'Razão Social': 'name',
-  'Contato': 'contact_name',
-  'Telefone': 'phone',
-  'Fax': 'fax',
-  'Endereço': 'address',
-  'Bairro': 'neighborhood',
-  'Cidade': 'city',
-  'UF': 'state',
-  'CEP': 'zip_code',
-  'CNPJ/CPF': 'cnpj',
-  'Inscrição Estadual': 'inscricao_estadual',
-  'Nome Fantasia': 'fantasia',
-  'Número': 'address_number',
-  'Origem': 'origin',
+// Normaliza cabeçalho: remove acentos, lowercase, remove não-alfanuméricos
+function normalizeHeader(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\w]/gi, '')
+    .trim();
+}
+
+// Dicionário inteligente: chave normalizada → campo do banco
+const FIELD_MAP: Record<string, string> = {
+  razaosocial: 'name',
+  contato: 'contact_name',
+  telefone: 'phone',
+  fax: 'fax',
+  rua: 'address',
+  endereco: 'address',
+  bairro: 'neighborhood',
+  municipio: 'city',
+  cidade: 'city',
+  uf: 'state',
+  estado: 'state',
+  cep: 'zip_code',
+  cnpjcpf: 'cnpj',
+  cnpj: 'cnpj',
+  inscricaoestadual: 'inscricao_estadual',
+  nomefantasia: 'fantasia',
+  fantasia: 'fantasia',
+  numero: 'address_number',
+  origem: 'origin',
+  tipodecorrentista: 'origin', // mapeia tipo de correntista para origin
+  aberturacnpj: 'abertura_cnpj', // campo informativo, não salvo no DB por padrão
 };
 
 interface ImportResult {
   total_received: number;
-  to_insert: number;
   inserted: number;
+  updated: number;
   skipped: number;
   errors?: string[];
+  import_log_id?: string;
 }
 
 export default function ImportCompanies() {
@@ -41,6 +59,8 @@ export default function ImportCompanies() {
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult | null>(null);
   const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
+  const [unmappedHeaders, setUnmappedHeaders] = useState<string[]>([]);
+  const [validationErrors, setValidationErrors] = useState<{ row: number; message: string }[]>([]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -48,6 +68,8 @@ export default function ImportCompanies() {
 
     setFile(selectedFile);
     setResults(null);
+    setUnmappedHeaders([]);
+    setValidationErrors([]);
 
     try {
       const data = await selectedFile.arrayBuffer();
@@ -55,22 +77,59 @@ export default function ImportCompanies() {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
 
-      // Map columns
-      const mapped = jsonData.map((row) => {
-        const mappedRow: Record<string, any> = {};
-        for (const [xlsHeader, dbField] of Object.entries(COLUMN_MAP)) {
-          // Try exact match first, then partial
-          const key = Object.keys(row).find(
-            (k) => k.trim() === xlsHeader || k.trim().toLowerCase().includes(xlsHeader.toLowerCase())
-          );
-          mappedRow[dbField] = key ? String(row[key] ?? '').trim() : '';
+      if (jsonData.length === 0) {
+        toast.error('Arquivo vazio ou sem dados válidos.');
+        return;
+      }
+
+      // Detectar cabeçalhos não mapeados
+      const originalHeaders = Object.keys(jsonData[0]);
+      const unmapped: string[] = [];
+      const headerToDbField: Record<string, string> = {};
+
+      for (const header of originalHeaders) {
+        const normalized = normalizeHeader(header);
+        const dbField = FIELD_MAP[normalized];
+        if (dbField) {
+          headerToDbField[header] = dbField;
+        } else {
+          unmapped.push(header);
         }
+      }
+      setUnmappedHeaders(unmapped);
+
+      // Mapear dados usando dicionário inteligente
+      const errors: { row: number; message: string }[] = [];
+      const mapped = jsonData.map((row, index) => {
+        const mappedRow: Record<string, any> = {};
+        for (const [originalHeader, dbField] of Object.entries(headerToDbField)) {
+          if (dbField === 'abertura_cnpj') continue; // campo informativo, não salvar
+          const val = row[originalHeader];
+          mappedRow[dbField] = val != null ? String(val).trim() : '';
+        }
+
+        // Validação de campos obrigatórios
+        if (!mappedRow.cnpj && !mappedRow.name) {
+          errors.push({ row: index + 2, message: 'CNPJ e Nome ausentes' });
+        } else if (!mappedRow.cnpj) {
+          errors.push({ row: index + 2, message: 'CNPJ ausente' });
+        } else if (!mappedRow.name) {
+          errors.push({ row: index + 2, message: 'Nome (Razão Social) ausente' });
+        }
+
         return mappedRow;
       }).filter((r) => r.name && r.cnpj);
 
+      setValidationErrors(errors);
       setParsedRows(mapped);
       setStep('preview');
-      toast.success(`${mapped.length} registros encontrados no arquivo`);
+
+      const msg = `${mapped.length} registros válidos encontrados`;
+      if (errors.length > 0) {
+        toast.warning(`${msg}. ${errors.length} linhas ignoradas por falta de dados obrigatórios.`);
+      } else {
+        toast.success(msg);
+      }
     } catch (err) {
       toast.error('Erro ao ler o arquivo. Verifique se é um XLSX válido.');
       console.error(err);
@@ -87,6 +146,7 @@ export default function ImportCompanies() {
     const BATCH_SIZE = 200;
     const totalBatches = Math.ceil(parsedRows.length / BATCH_SIZE);
     let totalInserted = 0;
+    let totalUpdated = 0;
     let totalSkipped = 0;
     const allErrors: string[] = [];
 
@@ -95,13 +155,19 @@ export default function ImportCompanies() {
 
       try {
         const { data, error } = await supabase.functions.invoke('import-companies-from-file', {
-          body: { rows: batch },
+          body: {
+            rows: batch,
+            file_name: file?.name || 'unknown',
+            batch_index: i,
+            total_batches: totalBatches,
+          },
         });
 
         if (error) {
           allErrors.push(`Lote ${i + 1}: ${error.message}`);
         } else if (data) {
           totalInserted += data.inserted || 0;
+          totalUpdated += data.updated || 0;
           totalSkipped += data.skipped || 0;
           if (data.errors) allErrors.push(...data.errors);
         }
@@ -114,16 +180,16 @@ export default function ImportCompanies() {
 
     setResults({
       total_received: parsedRows.length,
-      to_insert: totalInserted + totalSkipped,
       inserted: totalInserted,
+      updated: totalUpdated,
       skipped: totalSkipped,
       errors: allErrors.length > 0 ? allErrors : undefined,
     });
 
     setImporting(false);
     setStep('done');
-    toast.success(`Importação concluída: ${totalInserted} empresas inseridas`);
-  }, [parsedRows]);
+    toast.success(`Importação concluída: ${totalInserted} inseridos, ${totalUpdated} atualizados`);
+  }, [parsedRows, file]);
 
   const reset = () => {
     setFile(null);
@@ -131,6 +197,8 @@ export default function ImportCompanies() {
     setResults(null);
     setProgress(0);
     setStep('upload');
+    setUnmappedHeaders([]);
+    setValidationErrors([]);
   };
 
   return (
@@ -149,7 +217,7 @@ export default function ImportCompanies() {
               Upload do Arquivo
             </CardTitle>
             <CardDescription>
-              Selecione um arquivo .xlsx com os dados das empresas. Colunas esperadas: Razão Social, CNPJ/CPF, Cidade, UF, etc.
+              Selecione um arquivo .xlsx com os dados das empresas. Cabeçalhos aceitos: Razão Social, CNPJ/CPF, Município/Cidade, UF/Estado, Rua/Endereço, Bairro, Número, CEP, etc.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -185,6 +253,35 @@ export default function ImportCompanies() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Unmapped headers warning */}
+            {unmappedHeaders.length > 0 && (
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3">
+                <p className="text-sm font-medium text-yellow-600 mb-1">Colunas não mapeadas (ignoradas):</p>
+                <div className="flex flex-wrap gap-1">
+                  {unmappedHeaders.map((h) => (
+                    <Badge key={h} variant="outline" className="text-xs">{h}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Validation errors */}
+            {validationErrors.length > 0 && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                <p className="text-sm font-medium text-destructive mb-1">
+                  {validationErrors.length} linhas ignoradas por falta de dados obrigatórios:
+                </p>
+                <ul className="text-xs space-y-0.5 text-muted-foreground max-h-20 overflow-auto">
+                  {validationErrors.slice(0, 10).map((e, i) => (
+                    <li key={i}>Linha {e.row}: {e.message}</li>
+                  ))}
+                  {validationErrors.length > 10 && (
+                    <li>... e mais {validationErrors.length - 10}</li>
+                  )}
+                </ul>
+              </div>
+            )}
+
             <div className="rounded-lg border overflow-auto max-h-72">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
@@ -194,6 +291,8 @@ export default function ImportCompanies() {
                     <th className="px-3 py-2 text-left font-medium">CNPJ</th>
                     <th className="px-3 py-2 text-left font-medium">Cidade</th>
                     <th className="px-3 py-2 text-left font-medium">UF</th>
+                    <th className="px-3 py-2 text-left font-medium">Endereço</th>
+                    <th className="px-3 py-2 text-left font-medium">Bairro</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -204,6 +303,8 @@ export default function ImportCompanies() {
                       <td className="px-3 py-1.5 font-mono text-xs">{row.cnpj}</td>
                       <td className="px-3 py-1.5">{row.city}</td>
                       <td className="px-3 py-1.5">{row.state}</td>
+                      <td className="px-3 py-1.5 truncate max-w-[150px]">{row.address}</td>
+                      <td className="px-3 py-1.5">{row.neighborhood}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -266,16 +367,14 @@ export default function ImportCompanies() {
                 <p className="text-2xl font-bold text-green-600">{results.inserted}</p>
                 <p className="text-xs text-muted-foreground">Inseridos</p>
               </div>
+              <div className="text-center p-3 rounded-lg bg-blue-500/10">
+                <p className="text-2xl font-bold text-blue-600">{results.updated}</p>
+                <p className="text-xs text-muted-foreground">Atualizados</p>
+              </div>
               <div className="text-center p-3 rounded-lg bg-yellow-500/10">
                 <p className="text-2xl font-bold text-yellow-600">{results.skipped}</p>
-                <p className="text-xs text-muted-foreground">Ignorados (duplicados)</p>
+                <p className="text-xs text-muted-foreground">Ignorados</p>
               </div>
-              {results.errors && (
-                <div className="text-center p-3 rounded-lg bg-destructive/10">
-                  <p className="text-2xl font-bold text-destructive">{results.errors.length}</p>
-                  <p className="text-xs text-muted-foreground">Erros</p>
-                </div>
-              )}
             </div>
 
             {results.errors && results.errors.length > 0 && (

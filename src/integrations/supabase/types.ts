@@ -2712,6 +2712,98 @@ export type Database = {
           },
         ]
       }
+      import_errors: {
+        Row: {
+          created_at: string
+          error_message: string
+          id: string
+          import_log_id: string
+          raw_data: Json | null
+          row_number: number | null
+        }
+        Insert: {
+          created_at?: string
+          error_message: string
+          id?: string
+          import_log_id: string
+          raw_data?: Json | null
+          row_number?: number | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string
+          id?: string
+          import_log_id?: string
+          raw_data?: Json | null
+          row_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_errors_import_log_id_fkey"
+            columns: ["import_log_id"]
+            isOneToOne: false
+            referencedRelation: "import_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_logs: {
+        Row: {
+          created_at: string
+          error_count: number
+          file_name: string
+          id: string
+          imported_by: string | null
+          legal_entity_id: string | null
+          skipped_count: number
+          success_count: number
+          tenant_id: string | null
+          total_rows: number
+          updated_count: number
+        }
+        Insert: {
+          created_at?: string
+          error_count?: number
+          file_name: string
+          id?: string
+          imported_by?: string | null
+          legal_entity_id?: string | null
+          skipped_count?: number
+          success_count?: number
+          tenant_id?: string | null
+          total_rows?: number
+          updated_count?: number
+        }
+        Update: {
+          created_at?: string
+          error_count?: number
+          file_name?: string
+          id?: string
+          imported_by?: string | null
+          legal_entity_id?: string | null
+          skipped_count?: number
+          success_count?: number
+          tenant_id?: string | null
+          total_rows?: number
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_logs_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       iniflex_sandbox_logs: {
         Row: {
           created_at: string
