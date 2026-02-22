@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { TransicaoTributariaPanel } from '@/components/fiscal/TransicaoTributariaPanel';
 import { ImpostoSeletivoManager } from '@/components/fiscal/ImpostoSeletivoManager';
 import { CreditoPresumidoManager } from '@/components/fiscal/CreditoPresumidoManager';
+import { NCMManager } from '@/components/fiscal/NCMManager';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -978,79 +979,53 @@ function BeneficiosFiscaisManager() {
 // =============================================================================
 
 function CadastrosBaseInfo() {
+  const [activeSection, setActiveSection] = useState<'ncm' | 'overview'>('ncm');
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              NCM
-            </CardTitle>
-            <CardDescription>
-              Nomenclatura Comum do Mercosul - Códigos de classificação fiscal de produtos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Os códigos NCM são carregados automaticamente da tabela oficial e validados semanticamente via IA.
-              Configure-os diretamente no cadastro de produtos.
-            </p>
-          </CardContent>
-        </Card>
+      <NCMManager />
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
               CST / CSOSN
             </CardTitle>
-            <CardDescription>
-              Códigos de Situação Tributária para ICMS, IPI, PIS e COFINS
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Os códigos CST são definidos nas regras de tributação. 
-              Use CST para Lucro Presumido/Real e CSOSN para Simples Nacional.
+            <p className="text-xs text-muted-foreground">
+              Definidos nas regras de tributação. CST para Lucro Presumido/Real, CSOSN para Simples Nacional.
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <FileText className="h-4 w-4" />
               CFOP
             </CardTitle>
-            <CardDescription>
-              Código Fiscal de Operações e Prestações
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              O CFOP resultante é definido automaticamente pelas regras de tributação 
-              com base no tipo de operação e UFs envolvidas.
+            <p className="text-xs text-muted-foreground">
+              Definido automaticamente pelas regras de tributação com base no tipo de operação e UFs.
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Info className="h-4 w-4" />
               Próximos Passos
             </CardTitle>
-            <CardDescription>
-              Expansões futuras do módulo fiscal
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Integração com IBPT para alíquotas aproximadas</li>
-              <li>• Serialização XML para NF-e</li>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• Integração IBPT</li>
+              <li>• Serialização XML NF-e</li>
               <li>• Relatórios SPED</li>
-              <li>• Multi-empresa</li>
             </ul>
           </CardContent>
         </Card>
