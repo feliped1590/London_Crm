@@ -65,15 +65,8 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Buscar regiões disponíveis
-  const { data: availableRegions } = useQuery({
-    queryKey: ['reallocation-regions'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_distinct_regions_for_reallocation');
-      if (error) throw error;
-      return (data as { regiao: string }[]).map(d => d.regiao);
-    }
-  });
+  // Regiões fixas (derivadas do estado)
+  const availableRegions = ['Norte', 'Nordeste', 'Centro-Oeste', 'Sudeste', 'Sul'];
 
   // Buscar vendedores para filtro e destino
   const { data: sellers } = useQuery({
