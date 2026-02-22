@@ -6590,6 +6590,7 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_region_by_state: { Args: { state_code: string }; Returns: string }
       get_seller_performance: {
         Args: {
           p_compare_previous?: boolean
