@@ -6700,6 +6700,7 @@ export type Database = {
           primary_contact_job_title: string
           primary_contact_mobile: string
           primary_contact_name: string
+          region: string
           state: string
           total_count: number
         }[]
