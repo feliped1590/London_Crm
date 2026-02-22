@@ -111,6 +111,7 @@ interface UnifiedCustomer {
   last_reviewed_at?: string | null;
   active?: boolean;
   owner_id?: string | null;
+  contact_name?: string | null;
   // Metadados
   source: 'crm' | 'erp';
   contacts?: Contact[];
@@ -1119,6 +1120,27 @@ export default function CustomerDetail() {
                   <p className="text-muted-foreground max-w-md">
                     Os contatos de clientes sincronizados do ERP são gerenciados diretamente no sistema de origem.
                   </p>
+                </div>
+              ) : contacts.length === 0 && customer.contact_name ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                    <div className="flex items-center gap-4">
+                      <Avatar>
+                        <AvatarFallback>
+                          {customer.contact_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{customer.contact_name}</p>
+                          <Badge variant="outline" className="text-xs">Importado</Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Contato importado do arquivo. Clique em "+ Novo Contato" para cadastrar com mais detalhes.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : contacts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
