@@ -6508,6 +6508,14 @@ export type Database = {
           percentual_credito: number
         }[]
       }
+      get_customer_filter_options: {
+        Args: never
+        Returns: {
+          cities: string[]
+          industries: string[]
+          states: string[]
+        }[]
+      }
       get_distinct_regions_for_reallocation: {
         Args: never
         Returns: {
@@ -6650,6 +6658,51 @@ export type Database = {
           p_tipo: string
         }
         Returns: Json
+      }
+      search_customers_paginated: {
+        Args: {
+          p_city?: string
+          p_industry?: string
+          p_limit?: number
+          p_offset?: number
+          p_owner_id?: string
+          p_search?: string
+          p_sort_dir?: string
+          p_sort_field?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: {
+          active: boolean
+          address: string
+          city: string
+          cnpj: string
+          contact_name: string
+          contacts_count: number
+          created_at: string
+          custom_fields: Json
+          deals_count: number
+          deals_lost_count: number
+          deals_open_count: number
+          deals_total_value: number
+          deals_won_count: number
+          email: string
+          fantasia: string
+          id: string
+          industry: string
+          last_interaction_at: string
+          last_order_at: string
+          name: string
+          owner_id: string
+          owner_name: string
+          phone: string
+          primary_contact_email: string
+          primary_contact_job_title: string
+          primary_contact_mobile: string
+          primary_contact_name: string
+          state: string
+          total_count: number
+        }[]
       }
       search_ncm: {
         Args: { limit_rows?: number; search_term: string }

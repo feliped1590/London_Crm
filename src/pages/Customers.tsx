@@ -16,7 +16,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DealStageBadges } from '@/components/DealStageBadges';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,19 +29,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import type { Tables } from '@/integrations/supabase/types';
 
-type DealStage = Tables<'deals'>['stage'];
 const ITEMS_PER_PAGE = 25;
 
-interface CustomerDeal {
-  id: string;
-  name: string;
-  stage: DealStage;
-  value: number | null;
-}
+type StatusFilter = 'active' | 'inactive' | 'all';
+type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
+type SortDirection = 'asc' | 'desc';
 
-interface CustomerListItem {
+interface CustomerRow {
   id: string;
   name: string;
   fantasia: string | null;
@@ -53,27 +47,26 @@ interface CustomerListItem {
   city: string | null;
   state: string | null;
   address: string | null;
-  tipo_cliente: 'PJ' | 'PF';
-  source: 'crm' | 'erp';
   active: boolean;
+  custom_fields: any;
   owner_id: string | null;
   owner_name: string | null;
-  primary_contact: {
-    id: string;
-    name: string;
-    job_title: string | null;
-    mobile: string | null;
-    email: string | null;
-  } | null;
-  deals: CustomerDeal[];
-  last_activity_at: string | null;
-  contacts_count: number;
   created_at: string | null;
+  contact_name: string | null;
+  primary_contact_name: string | null;
+  primary_contact_job_title: string | null;
+  primary_contact_mobile: string | null;
+  primary_contact_email: string | null;
+  contacts_count: number;
+  deals_count: number;
+  deals_open_count: number;
+  deals_won_count: number;
+  deals_lost_count: number;
+  deals_total_value: number;
+  last_interaction_at: string | null;
+  last_order_at: string | null;
+  total_count: number;
 }
-
-type StatusFilter = 'active' | 'inactive' | 'all';
-type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
-type SortDirection = 'asc' | 'desc';
 
 export default function Customers() {
   const navigate = useNavigate();
@@ -86,7 +79,7 @@ export default function Customers() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState<CustomerListItem | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<CustomerRow | null>(null);
 
   // Filters
   const [filterCity, setFilterCity] = useState('');
@@ -99,13 +92,14 @@ export default function Customers() {
 
   // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setCurrentPage(1);
+    }, 400);
     return () => clearTimeout(timer);
   }, [search]);
 
-  useEffect(() => { setCurrentPage(1); }, [debouncedSearch]);
-
-  // Fetch profiles
+  // Fetch profiles for owner filter dropdown
   const { data: profiles } = useQuery({
     queryKey: ['profiles-for-customers'],
     queryFn: async () => {
@@ -115,192 +109,61 @@ export default function Customers() {
     },
   });
 
-  const profilesMap = useMemo(() => {
-    const map = new Map<string, string>();
-    profiles?.forEach(p => { if (p.user_id && p.full_name) map.set(p.user_id, p.full_name); });
-    return map;
-  }, [profiles]);
-
-  // Fetch activity summary from the view
-  const { data: activitySummary } = useQuery({
-    queryKey: ['company-activity-summary'],
+  // Fetch filter options
+  const { data: filterOptions } = useQuery({
+    queryKey: ['customer-filter-options'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('company_activity_summary')
-        .select('company_id, last_interaction_at, last_order_at, total_orders, total_order_value');
+      const { data, error } = await supabase.rpc('get_customer_filter_options');
       if (error) throw error;
-      return data;
-    },
-  });
-
-  const activityMap = useMemo(() => {
-    const map = new Map<string, { last_interaction_at: string | null; last_order_at: string | null }>();
-    activitySummary?.forEach(s => {
-      map.set(s.company_id, {
-        last_interaction_at: s.last_interaction_at,
-        last_order_at: s.last_order_at,
-      });
-    });
-    return map;
-  }, [activitySummary]);
-
-  // Fetch companies
-  const { data: customers, isLoading: loadingCompanies, refetch, isFetching } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      const PAGE_SIZE = 1000;
-      let allCompanies: any[] = [];
-      let from = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('companies')
-          .select(`
-            id, name, fantasia, cnpj, phone, email, industry, city, state, address, active,
-            custom_fields, owner_id, created_at, contact_name,
-            contacts(id, first_name, last_name, job_title, mobile, email),
-            deals(id, name, stage, value)
-          `)
-          .order('created_at', { ascending: false })
-          .range(from, from + PAGE_SIZE - 1);
-        if (error) throw error;
-        allCompanies = allCompanies.concat(data || []);
-        hasMore = (data?.length || 0) === PAGE_SIZE;
-        from += PAGE_SIZE;
-      }
-
-      return allCompanies;
-    },
-    staleTime: 0,
-    refetchOnMount: 'always',
-  });
-
-  // Transform companies
-  const transformedCustomers = useMemo(() => {
-    if (!customers) return [];
-    return customers.map((company: any) => {
-      const contacts = company.contacts || [];
-      const primaryContact = contacts[0];
-      const tipoCliente = (company.custom_fields as any)?.tipo_cliente || (company.cnpj ? 'PJ' : 'PJ');
-
-      // Use activity summary view for last_interaction_at (includes deals, tasks, emails, whatsapp)
-      const summary = activityMap.get(company.id);
-      // Determine best last activity: use last_interaction_at but exclude if it equals company_created_at (fallback)
-      let lastActivity = summary?.last_interaction_at || null;
-      // If last_interaction_at equals created_at, check if there's a real activity
-      if (lastActivity && company.created_at && lastActivity === company.created_at) {
-        // Check if there's an order that's more recent
-        if (summary?.last_order_at) {
-          lastActivity = summary.last_order_at;
-        }
-      }
-
+      const row = data?.[0] || data;
       return {
-        id: company.id,
-        name: company.fantasia || company.name,
-        fantasia: company.fantasia,
-        cnpj: company.cnpj,
-        phone: company.phone,
-        email: company.email,
-        industry: company.industry,
-        city: company.city,
-        state: company.state,
-        address: company.address,
-        tipo_cliente: tipoCliente,
-        source: 'crm' as const,
-        active: company.active !== false,
-        owner_id: company.owner_id,
-        owner_name: company.owner_id ? profilesMap.get(company.owner_id) || null : null,
-        primary_contact: primaryContact ? {
-          id: primaryContact.id,
-          name: `${primaryContact.first_name}${primaryContact.last_name ? ' ' + primaryContact.last_name : ''}`,
-          job_title: primaryContact.job_title,
-          mobile: primaryContact.mobile,
-          email: primaryContact.email,
-        } : company.contact_name ? {
-          id: 'imported',
-          name: company.contact_name,
-          job_title: null,
-          mobile: null,
-          email: null,
-        } : null,
-        deals: company.deals || [],
-        last_activity_at: lastActivity,
-        contacts_count: contacts.length,
-        created_at: company.created_at,
-      } as CustomerListItem;
-    });
-  }, [customers, profilesMap, activityMap]);
-
-  // Fetch crm_clients (ERP)
-  const { data: crmClients, isLoading: loadingErp } = useQuery({
-    queryKey: ['crm-clients-list'],
-    queryFn: async () => {
-      const PAGE_SIZE = 1000;
-      let allClients: any[] = [];
-      let from = 0;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('crm_clients')
-          .select('id, razao_social, nome_fantasia, cnpj_cpf, telefone, celular, emails, regiao, tipo_pessoa, insc_estadual, raw_data')
-          .range(from, from + PAGE_SIZE - 1);
-        if (error) throw error;
-        allClients = allClients.concat(data || []);
-        hasMore = (data?.length || 0) === PAGE_SIZE;
-        from += PAGE_SIZE;
-      }
-
-      return allClients;
+        states: (row as any)?.states || [],
+        cities: (row as any)?.cities || [],
+        industries: (row as any)?.industries || [],
+        owners: (profiles || []).filter(p => p.full_name).map(p => ({ id: p.user_id, name: p.full_name! })),
+      };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled: !!profiles,
   });
 
-  // Combine companies + crm_clients
-  const allCustomers = useMemo(() => {
-    const companyCnpjs = new Set(transformedCustomers?.map(c => c.cnpj?.replace(/\D/g, '')).filter(Boolean));
-    const companiesList = transformedCustomers || [];
-    const erpClients: CustomerListItem[] = (crmClients || [])
-      .filter(c => { const cleanDoc = c.cnpj_cpf?.replace(/\D/g, '') || ''; return !companyCnpjs.has(cleanDoc); })
-      .map(c => {
-        const rawData = c.raw_data as any;
-        return {
-          id: c.id, name: c.nome_fantasia || c.razao_social || '', fantasia: c.nome_fantasia,
-          cnpj: c.cnpj_cpf, phone: c.telefone || c.celular, email: c.emails?.[0] || null,
-          industry: null, city: rawData?.loc_cidade || null, state: rawData?.loc_uf || null,
-          address: rawData?.loc_endereco ? `${rawData.loc_endereco}${rawData.loc_numero ? ', ' + rawData.loc_numero : ''}` : null,
-          tipo_cliente: (c.tipo_pessoa === 'PF' ? 'PF' : 'PJ') as 'PJ' | 'PF',
-          source: 'erp' as const, active: true, owner_id: null, owner_name: null,
-          primary_contact: null, deals: [], last_activity_at: null, contacts_count: 0, created_at: null,
-        };
+  // Map sort field to DB field
+  const dbSortField = useMemo(() => {
+    switch (sortField) {
+      case 'name': return 'name';
+      case 'created_at': return 'created_at';
+      case 'status': return 'status';
+      case 'owner': return 'owner';
+      default: return 'name';
+    }
+  }, [sortField]);
+
+  // Main paginated query
+  const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterIndustry, dbSortField, sortDirection, currentPage],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('search_customers_paginated', {
+        p_search: debouncedSearch || null,
+        p_status: statusFilter,
+        p_state: filterState || null,
+        p_city: filterCity || null,
+        p_owner_id: filterOwner || null,
+        p_industry: filterIndustry || null,
+        p_sort_field: dbSortField,
+        p_sort_dir: sortDirection,
+        p_limit: ITEMS_PER_PAGE,
+        p_offset: (currentPage - 1) * ITEMS_PER_PAGE,
       });
-    return [...companiesList, ...erpClients];
-  }, [transformedCustomers, crmClients]);
+      if (error) throw error;
+      return data as CustomerRow[];
+    },
+    staleTime: 30000,
+  });
 
-  const isLoading = loadingCompanies || loadingErp;
-
-  // Unique values for filters
-  const filterOptions = useMemo(() => {
-    const cities = new Set<string>();
-    const states = new Set<string>();
-    const owners = new Set<string>();
-    const industries = new Set<string>();
-    allCustomers.forEach(c => {
-      if (c.city) cities.add(c.city);
-      if (c.state) states.add(c.state);
-      if (c.owner_name) owners.add(c.owner_name);
-      if (c.industry) industries.add(c.industry);
-    });
-    return {
-      cities: Array.from(cities).sort(),
-      states: Array.from(states).sort(),
-      owners: Array.from(owners).sort(),
-      industries: Array.from(industries).sort(),
-    };
-  }, [allCustomers]);
+  const customers = queryResult || [];
+  const totalItems = customers.length > 0 ? Number(customers[0].total_count) : 0;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + customers.length, totalItems);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -309,13 +172,13 @@ export default function Customers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-filter-options'] });
       toast.success('Cliente excluído com sucesso!');
       setDeleteDialogOpen(false);
       setCustomerToDelete(null);
     },
     onError: (error: any) => {
-      console.error('Error deleting customer:', error);
       toast.error('Erro ao excluir cliente: ' + (error.message || 'Erro desconhecido'));
     },
   });
@@ -327,7 +190,7 @@ export default function Customers() {
       if (error) throw error;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
       toast.success(variables.active ? 'Cliente ativado!' : 'Cliente desativado!');
     },
     onError: (error: any) => {
@@ -341,16 +204,16 @@ export default function Customers() {
   });
 
   const handleRefresh = async () => { await refetch(); toast.success('Dados atualizados!'); };
-  const handleDeleteClick = (customer: CustomerListItem, e: React.MouseEvent) => { e.stopPropagation(); setCustomerToDelete(customer); setDeleteDialogOpen(true); };
+  const handleDeleteClick = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); setCustomerToDelete(customer); setDeleteDialogOpen(true); };
   const handleConfirmDelete = () => { if (customerToDelete) deleteMutation.mutate(customerToDelete.id); };
-  const handleToggleActive = (customer: CustomerListItem, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
+  const handleToggleActive = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
   const handleEditClick = (customerId: string, e: React.MouseEvent) => { e.stopPropagation(); navigate(`/customers/${customerId}`); };
   const handleOpenCustomer = (customerId: string) => { navigate(`/customers/${customerId}`); };
-  const handleOpenWhatsApp = (customer: CustomerListItem, e: React.MouseEvent) => {
+  const handleOpenWhatsApp = (customer: CustomerRow, e: React.MouseEvent) => {
     e.stopPropagation();
-    const phone = customer.primary_contact?.mobile || customer.phone;
+    const phone = customer.primary_contact_mobile || customer.phone;
     if (!phone) { toast.error('Este cliente não possui telefone cadastrado'); return; }
-    const contactName = customer.primary_contact?.name || customer.name;
+    const contactName = customer.primary_contact_name || customer.contact_name || customer.name;
     navigate(`/whatsapp?phone=${encodeURIComponent(phone)}&contactName=${encodeURIComponent(contactName)}`);
   };
 
@@ -361,6 +224,7 @@ export default function Customers() {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
@@ -368,6 +232,7 @@ export default function Customers() {
     setFilterState('');
     setFilterOwner('');
     setFilterIndustry('');
+    setCurrentPage(1);
   };
 
   const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
@@ -386,77 +251,22 @@ export default function Customers() {
     </TableHead>
   );
 
-  // Filter + search + sort
-  const filteredCustomers = useMemo(() => {
-    let result = allCustomers || [];
+  const getCustomerIcon = (cnpj: string | null) => {
+    if (!cnpj) return Building2;
+    const digits = cnpj.replace(/\D/g, '');
+    return digits.length <= 11 ? User : Building2;
+  };
 
-    // Status filter
-    if (statusFilter === 'active') result = result.filter(c => c.active);
-    else if (statusFilter === 'inactive') result = result.filter(c => !c.active);
+  const formatDocument = (cnpj: string | null) => {
+    if (!cnpj) return '-';
+    const digits = cnpj.replace(/\D/g, '');
+    return digits.length <= 11 ? formatCPF(cnpj) : formatCNPJ(cnpj);
+  };
 
-    // Advanced filters
-    if (filterCity) result = result.filter(c => c.city === filterCity);
-    if (filterState) result = result.filter(c => c.state === filterState);
-    if (filterOwner) result = result.filter(c => c.owner_name === filterOwner);
-    if (filterIndustry) result = result.filter(c => c.industry === filterIndustry);
-
-    // Search
-    if (debouncedSearch) {
-      const searchLower = debouncedSearch.toLowerCase();
-      const searchDigits = debouncedSearch.replace(/\D/g, '');
-      result = result.filter(customer =>
-        customer.name?.toLowerCase().includes(searchLower) ||
-        customer.fantasia?.toLowerCase().includes(searchLower) ||
-        (searchDigits && customer.cnpj?.replace(/\D/g, '').includes(searchDigits)) ||
-        customer.address?.toLowerCase().includes(searchLower) ||
-        customer.city?.toLowerCase().includes(searchLower) ||
-        customer.state?.toLowerCase().includes(searchLower) ||
-        (searchDigits && customer.phone?.replace(/\D/g, '').includes(searchDigits)) ||
-        customer.email?.toLowerCase().includes(searchLower) ||
-        customer.primary_contact?.name?.toLowerCase().includes(searchLower) ||
-        customer.industry?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Sort
-    result = [...result].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-
-      switch (sortField) {
-        case 'name':
-          aVal = a.name?.toLowerCase() || ''; bVal = b.name?.toLowerCase() || ''; break;
-        case 'contact':
-          aVal = a.primary_contact?.name?.toLowerCase() || ''; bVal = b.primary_contact?.name?.toLowerCase() || ''; break;
-        case 'phone':
-          aVal = (a.primary_contact?.mobile || a.phone || '').replace(/\D/g, '');
-          bVal = (b.primary_contact?.mobile || b.phone || '').replace(/\D/g, ''); break;
-        case 'last_activity':
-          aVal = a.last_activity_at || ''; bVal = b.last_activity_at || ''; break;
-        case 'deals':
-          aVal = a.deals.length; bVal = b.deals.length; break;
-        case 'owner':
-          aVal = a.owner_name?.toLowerCase() || ''; bVal = b.owner_name?.toLowerCase() || ''; break;
-        case 'status':
-          aVal = a.active ? 1 : 0; bVal = b.active ? 1 : 0; break;
-        case 'created_at':
-          aVal = a.created_at || ''; bVal = b.created_at || ''; break;
-      }
-
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [allCustomers, debouncedSearch, statusFilter, sortField, sortDirection, filterCity, filterState, filterOwner, filterIndustry]);
-
-  // Pagination
-  const totalItems = filteredCustomers?.length || 0;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
-  const paginatedCustomers = useMemo(() => filteredCustomers?.slice(startIndex, endIndex) || [], [filteredCustomers, startIndex, endIndex]);
+  const getLastActivityText = (date: string | null) => {
+    if (!date) return 'Sem atividade';
+    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
+  };
 
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
@@ -471,16 +281,35 @@ export default function Customers() {
     return pages;
   };
 
-  const getCustomerIcon = (tipo: 'PJ' | 'PF') => tipo === 'PJ' ? Building2 : User;
+  // Determine display contact name
+  const getContactName = (c: CustomerRow) => c.primary_contact_name || c.contact_name || null;
+  const getContactPhone = (c: CustomerRow) => c.primary_contact_mobile || c.phone;
 
-  const formatDocument = (cnpj: string | null, tipo: 'PJ' | 'PF') => {
-    if (!cnpj) return '-';
-    return tipo === 'PJ' ? formatCNPJ(cnpj) : formatCPF(cnpj);
+  // Deal summary badges
+  const DealSummaryBadges = ({ customer }: { customer: CustomerRow }) => {
+    if (customer.deals_count === 0) return <span className="text-muted-foreground text-sm">-</span>;
+    return (
+      <div className="flex items-center gap-1 flex-wrap">
+        {customer.deals_open_count > 0 && (
+          <Badge variant="secondary" className="text-xs">{customer.deals_open_count} aberto{customer.deals_open_count > 1 ? 's' : ''}</Badge>
+        )}
+        {customer.deals_won_count > 0 && (
+          <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-0 text-xs">{customer.deals_won_count} ganho{customer.deals_won_count > 1 ? 's' : ''}</Badge>
+        )}
+        {customer.deals_lost_count > 0 && (
+          <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20 border-0 text-xs">{customer.deals_lost_count} perdido{customer.deals_lost_count > 1 ? 's' : ''}</Badge>
+        )}
+      </div>
+    );
   };
 
-  const getLastActivityText = (date: string | null) => {
-    if (!date) return 'Sem atividade';
-    return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
+  // Determine last activity considering fallback
+  const getLastActivity = (c: CustomerRow) => {
+    let lastActivity = c.last_interaction_at || null;
+    if (lastActivity && c.created_at && lastActivity === c.created_at) {
+      if (c.last_order_at) lastActivity = c.last_order_at;
+    }
+    return lastActivity;
   };
 
   return (
@@ -549,7 +378,7 @@ export default function Customers() {
                       <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_all">Todos</SelectItem>
-                        {filterOptions.states.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        {(filterOptions?.states || []).map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -560,7 +389,7 @@ export default function Customers() {
                       <SelectTrigger className="h-8"><SelectValue placeholder="Todas" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_all">Todas</SelectItem>
-                        {filterOptions.cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {(filterOptions?.cities || []).map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -571,7 +400,7 @@ export default function Customers() {
                       <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_all">Todos</SelectItem>
-                        {filterOptions.owners.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                        {(filterOptions?.owners || []).map((o: any) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -582,7 +411,7 @@ export default function Customers() {
                       <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_all">Todos</SelectItem>
-                        {filterOptions.industries.map(i => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+                        {(filterOptions?.industries || []).map((i: string) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -601,15 +430,19 @@ export default function Customers() {
             <div className="flex items-center justify-center py-10">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
-          ) : filteredCustomers?.length === 0 ? (
+          ) : customers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Users className="h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">Nenhum cliente encontrado</h3>
-              <p className="text-muted-foreground">Comece adicionando seu primeiro cliente.</p>
-              <Button className="mt-4 gap-2" onClick={() => navigate('/customers/new')}>
-                <Plus className="h-4 w-4" />
-                Novo Cliente
-              </Button>
+              <p className="text-muted-foreground">
+                {debouncedSearch || activeFiltersCount > 0 ? 'Tente ajustar sua busca ou filtros.' : 'Comece adicionando seu primeiro cliente.'}
+              </p>
+              {!debouncedSearch && activeFiltersCount === 0 && (
+                <Button className="mt-4 gap-2" onClick={() => navigate('/customers/new')}>
+                  <Plus className="h-4 w-4" />
+                  Novo Cliente
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -643,9 +476,12 @@ export default function Customers() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {paginatedCustomers.map((customer) => {
-                    const CustomerIcon = getCustomerIcon(customer.tipo_cliente);
-                    const phone = customer.primary_contact?.mobile || customer.phone;
+                  {customers.map((customer) => {
+                    const CustomerIcon = getCustomerIcon(customer.cnpj);
+                    const contactName = getContactName(customer);
+                    const phone = getContactPhone(customer);
+                    const lastActivity = getLastActivity(customer);
+                    const displayName = customer.fantasia || customer.name;
 
                     return (
                       <TableRow
@@ -661,20 +497,20 @@ export default function Customers() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">{customer.name}</p>
+                              <p className="font-medium">{displayName}</p>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                {customer.cnpj && <span>{formatDocument(customer.cnpj, customer.tipo_cliente)}</span>}
+                                {customer.cnpj && <span>{formatDocument(customer.cnpj)}</span>}
                                 {customer.city && customer.state && <span>• {customer.city}/{customer.state}</span>}
                               </div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {customer.primary_contact ? (
+                          {contactName ? (
                             <div>
-                              <p className="font-medium">{customer.primary_contact.name}</p>
-                              {customer.primary_contact.job_title && (
-                                <p className="text-sm text-muted-foreground">{customer.primary_contact.job_title}</p>
+                              <p className="font-medium">{contactName}</p>
+                              {customer.primary_contact_job_title && (
+                                <p className="text-sm text-muted-foreground">{customer.primary_contact_job_title}</p>
                               )}
                             </div>
                           ) : (
@@ -692,16 +528,12 @@ export default function Customers() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <span className={`text-sm ${!customer.last_activity_at ? 'text-muted-foreground' : ''}`}>
-                            {getLastActivityText(customer.last_activity_at)}
+                          <span className={`text-sm ${!lastActivity ? 'text-muted-foreground' : ''}`}>
+                            {getLastActivityText(lastActivity)}
                           </span>
                         </TableCell>
                         <TableCell>
-                          {customer.deals.length > 0 ? (
-                            <DealStageBadges deals={customer.deals} />
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
+                          <DealSummaryBadges customer={customer} />
                         </TableCell>
                         <TableCell>
                           {customer.owner_name ? (
@@ -722,11 +554,11 @@ export default function Customers() {
                             <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)} disabled={customer.source === 'erp'}>
+                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>{customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Editar'}</TooltipContent>
+                                <TooltipContent>Editar</TooltipContent>
                               </Tooltip>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -739,23 +571,21 @@ export default function Customers() {
                               {isAdmin && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={(e) => handleToggleActive(customer, e)} disabled={customer.source === 'erp' || toggleActiveMutation.isPending}>
+                                    <Button variant="ghost" size="icon" onClick={(e) => handleToggleActive(customer, e)} disabled={toggleActiveMutation.isPending}>
                                       {customer.active ? <PowerOff className="h-4 w-4 text-destructive" /> : <Power className="h-4 w-4 text-primary" />}
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>
-                                    {customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : customer.active ? 'Desativar cliente' : 'Ativar cliente'}
-                                  </TooltipContent>
+                                  <TooltipContent>{customer.active ? 'Desativar cliente' : 'Ativar cliente'}</TooltipContent>
                                 </Tooltip>
                               )}
                               {isAdmin && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Button variant="ghost" size="icon" onClick={(e) => handleDeleteClick(customer, e)} disabled={customer.source === 'erp'} className="text-destructive hover:text-destructive">
+                                    <Button variant="ghost" size="icon" onClick={(e) => handleDeleteClick(customer, e)} className="text-destructive hover:text-destructive">
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>{customer.source === 'erp' ? 'Dados gerenciados pelo ERP' : 'Excluir cliente'}</TooltipContent>
+                                  <TooltipContent>Excluir cliente</TooltipContent>
                                 </Tooltip>
                               )}
                             </div>
@@ -804,7 +634,7 @@ export default function Customers() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o cliente <strong>{customerToDelete?.name}</strong>?
+              Tem certeza que deseja excluir o cliente <strong>{customerToDelete?.fantasia || customerToDelete?.name}</strong>?
               <br />Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
