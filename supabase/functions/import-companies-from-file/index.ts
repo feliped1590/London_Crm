@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { rows, legal_entity_id, tenant_id } = body;
+    const { rows, legal_entity_id, tenant_id, file_name, batch_index, total_batches } = body;
 
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return new Response(JSON.stringify({ error: 'rows array required' }), {
@@ -29,21 +29,31 @@ Deno.serve(async (req) => {
     const LEGAL_ENTITY_ID = legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
     const TENANT_ID = tenant_id || '00000000-0000-0000-0000-000000000001';
 
-    // Get existing CNPJs to deduplicate
-    const { data: existingCompanies } = await supabase
-      .from('companies')
-      .select('cnpj');
-
-    const existingCnpjs = new Set(
-      (existingCompanies || []).map((c: any) => c.cnpj?.replace(/\D/g, '')).filter(Boolean)
-    );
-
-    const toInsert = [];
+    const toUpsert = [];
     let skipped = 0;
+    const rowErrors: { row_number: number; error_message: string; raw_data: any }[] = [];
 
-    for (const row of rows) {
+    for (let idx = 0; idx < rows.length; idx++) {
+      const row = rows[idx];
       const cnpjClean = (row.cnpj || '').replace(/\D/g, '');
-      if (!cnpjClean || existingCnpjs.has(cnpjClean)) {
+
+      // Validação de obrigatórios
+      if (!cnpjClean) {
+        rowErrors.push({
+          row_number: (batch_index || 0) * 200 + idx + 1,
+          error_message: 'CNPJ ausente ou inválido',
+          raw_data: row,
+        });
+        skipped++;
+        continue;
+      }
+
+      if (!row.name || !row.name.trim()) {
+        rowErrors.push({
+          row_number: (batch_index || 0) * 200 + idx + 1,
+          error_message: 'Razão Social ausente',
+          raw_data: row,
+        });
         skipped++;
         continue;
       }
@@ -51,8 +61,8 @@ Deno.serve(async (req) => {
       let zipCode = (row.zip_code || '').replace(/\D/g, '');
       if (zipCode) zipCode = zipCode.padStart(8, '0');
 
-      toInsert.push({
-        name: row.name || 'Sem nome',
+      toUpsert.push({
+        name: row.name.trim(),
         contact_name: row.contact_name || null,
         phone: row.phone || null,
         fax: row.fax || null,
@@ -70,33 +80,78 @@ Deno.serve(async (req) => {
         tenant_id: TENANT_ID,
         active: true,
       });
-
-      existingCnpjs.add(cnpjClean);
     }
 
     let inserted = 0;
+    let updated = 0;
     const BATCH_SIZE = 500;
     const errors: string[] = [];
 
-    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
-      const batch = toInsert.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < toUpsert.length; i += BATCH_SIZE) {
+      const batch = toUpsert.slice(i, i + BATCH_SIZE);
+
+      // Upsert: INSERT ... ON CONFLICT (tenant_id, cnpj) DO UPDATE
       const { error, data } = await supabase
         .from('companies')
-        .insert(batch)
-        .select('id');
+        .upsert(batch, {
+          onConflict: 'tenant_id,cnpj',
+          ignoreDuplicates: false,
+        })
+        .select('id, created_at, updated_at');
 
       if (error) {
         console.error(`Batch ${i / BATCH_SIZE} error:`, error);
         errors.push(`Batch ${Math.floor(i / BATCH_SIZE)}: ${error.message}`);
-      } else {
-        inserted += (data?.length || 0);
+      } else if (data) {
+        // Diferenciar inserted vs updated: se created_at ~= updated_at, é novo
+        for (const record of data) {
+          const createdAt = new Date(record.created_at).getTime();
+          const updatedAt = new Date(record.updated_at).getTime();
+          // Se a diferença for < 2 segundos, consideramos como inserção
+          if (Math.abs(updatedAt - createdAt) < 2000) {
+            inserted++;
+          } else {
+            updated++;
+          }
+        }
+      }
+    }
+
+    // Salvar erros de importação no log (se houver)
+    if (rowErrors.length > 0 && batch_index === 0) {
+      // Criar log de importação no primeiro batch
+      const { data: logData } = await supabase
+        .from('import_logs')
+        .insert({
+          file_name: file_name || 'unknown',
+          total_rows: rows.length * (total_batches || 1),
+          success_count: inserted,
+          error_count: rowErrors.length,
+          skipped_count: skipped,
+          updated_count: updated,
+          tenant_id: TENANT_ID,
+          legal_entity_id: LEGAL_ENTITY_ID,
+        })
+        .select('id')
+        .single();
+
+      if (logData) {
+        // Salvar erros individuais
+        const errorInserts = rowErrors.map(e => ({
+          import_log_id: logData.id,
+          row_number: e.row_number,
+          error_message: e.error_message,
+          raw_data: e.raw_data,
+        }));
+        await supabase.from('import_errors').insert(errorInserts);
       }
     }
 
     return new Response(JSON.stringify({
       total_received: rows.length,
-      to_insert: toInsert.length,
+      to_upsert: toUpsert.length,
       inserted,
+      updated,
       skipped,
       errors: errors.length > 0 ? errors : undefined,
     }), {
