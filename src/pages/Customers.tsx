@@ -218,6 +218,12 @@ export default function Customers() {
           job_title: primaryContact.job_title,
           mobile: primaryContact.mobile,
           email: primaryContact.email,
+        } : company.contact_name ? {
+          id: 'imported',
+          name: company.contact_name,
+          job_title: null,
+          mobile: null,
+          email: null,
         } : null,
         deals: company.deals || [],
         last_activity_at: lastActivity,
