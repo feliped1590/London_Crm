@@ -158,7 +158,7 @@ export default function Customers() {
           .from('companies')
           .select(`
             id, name, fantasia, cnpj, phone, email, industry, city, state, address, active,
-            custom_fields, owner_id, created_at,
+            custom_fields, owner_id, created_at, contact_name,
             contacts(id, first_name, last_name, job_title, mobile, email),
             deals(id, name, stage, value)
           `)
