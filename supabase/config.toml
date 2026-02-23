@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.erp-import-orders]
 verify_jwt = false
+
+[functions.import-ncm-tipi]
+verify_jwt = false
+
+[functions.lookup-ncm-online]
+verify_jwt = false
