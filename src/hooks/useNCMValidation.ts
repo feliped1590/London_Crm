@@ -12,30 +12,52 @@ export function useNCMValidation(options?: UseNCMValidationOptions) {
   const [validationResult, setValidationResult] = useState<NCMSemanticValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
-  // Buscar NCM por código ou descrição
+  // Buscar NCM por código ou descrição (local + fallback online)
   const searchNCM = useCallback(async (searchTerm: string): Promise<NCMCode[]> => {
     if (!searchTerm || searchTerm.length < 2) return [];
 
+    // First: try local database via RPC
     const { data, error } = await supabase.rpc('search_ncm', {
       search_term: searchTerm,
       limit_rows: 20,
     });
 
-    if (error) {
-      console.error('Erro ao buscar NCM:', error);
-      return [];
+    if (!error && data && data.length > 0) {
+      return data.map((item: any) => ({
+        id: item.id,
+        codigo: item.codigo?.trim() || '',
+        descricao: item.descricao || '',
+        status: item.status || 'ativo',
+        aliquota_ipi_oficial: item.aliquota_ipi_oficial,
+        data_vigencia: '',
+        created_at: '',
+        updated_at: '',
+      }));
     }
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      codigo: item.codigo?.trim() || '',
-      descricao: item.descricao || '',
-      status: item.status || 'ativo',
-      aliquota_ipi_oficial: item.aliquota_ipi_oficial,
-      data_vigencia: '',
-      created_at: '',
-      updated_at: '',
-    }));
+    // Fallback: try online lookup edge function
+    try {
+      const { data: onlineData, error: onlineError } = await supabase.functions.invoke('lookup-ncm-online', {
+        body: { search_term: searchTerm },
+      });
+
+      if (!onlineError && onlineData?.success && onlineData.data?.length > 0) {
+        return onlineData.data.map((item: any) => ({
+          id: item.id || crypto.randomUUID(),
+          codigo: item.codigo?.trim() || '',
+          descricao: item.descricao || '',
+          status: item.status || 'ativo',
+          aliquota_ipi_oficial: item.aliquota_ipi_oficial || null,
+          data_vigencia: item.data_vigencia || '',
+          created_at: '',
+          updated_at: '',
+        }));
+      }
+    } catch (e) {
+      console.warn('Online NCM lookup failed:', e);
+    }
+
+    return [];
   }, []);
 
   // Buscar NCM específico por código

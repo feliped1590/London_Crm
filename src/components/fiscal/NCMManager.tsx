@@ -12,8 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Pencil, Trash2, Search, FileText, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, FileText, Upload, Download, Loader2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 
 type NCMRow = {
   id: string;
@@ -55,6 +56,37 @@ export function NCMManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<NCMInsert>({ ...emptyForm });
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Get total count
+  const { data: totalCount } = useQuery({
+    queryKey: ['ncm-codes-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase.from('ncm_codes').select('*', { count: 'exact', head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  const handleImportTIPI = async () => {
+    setIsImporting(true);
+    const toastId = toast.loading('Importando base TIPI da Receita Federal... Isso pode levar alguns minutos.');
+    try {
+      const { data, error } = await supabase.functions.invoke('import-ncm-tipi');
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(`Importação concluída! ${data.valid_codes} NCMs processados.`, { id: toastId });
+        queryClient.invalidateQueries({ queryKey: ['ncm-codes-manager'] });
+        queryClient.invalidateQueries({ queryKey: ['ncm-codes-count'] });
+      } else {
+        toast.error(`Erro na importação: ${data?.error || 'Erro desconhecido'}`, { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(`Falha ao importar: ${err.message}`, { id: toastId });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const { data: ncms, isLoading } = useQuery({
     queryKey: ['ncm-codes-manager', search],
@@ -151,7 +183,7 @@ export function NCMManager() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -159,16 +191,26 @@ export function NCMManager() {
           </h3>
           <p className="text-sm text-muted-foreground">
             Gerencie os códigos NCM disponíveis para classificação fiscal de produtos.
-            {ncms && <span className="ml-1 font-medium">({ncms.length} registros)</span>}
+            {totalCount != null && <span className="ml-1 font-medium">({totalCount} registros na base)</span>}
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setIsDialogOpen(true); }}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo NCM
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="gap-2" 
+            onClick={handleImportTIPI}
+            disabled={isImporting}
+          >
+            {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {isImporting ? 'Importando...' : 'Importar Base TIPI'}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); else setIsDialogOpen(true); }}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo NCM
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editingId ? 'Editar NCM' : 'Novo Código NCM'}</DialogTitle>
@@ -250,7 +292,8 @@ export function NCMManager() {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Search */}
