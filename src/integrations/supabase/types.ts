@@ -6463,6 +6463,7 @@ export type Database = {
       }
     }
     Functions: {
+      admin_kill_session: { Args: { p_session_id: string }; Returns: boolean }
       can_access_legal_entity: {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean
@@ -6472,9 +6473,43 @@ export type Database = {
         Returns: boolean
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
+      check_existing_session: { Args: { p_user_id: string }; Returns: Json }
+      cleanup_expired_sessions: { Args: never; Returns: number }
       compute_product_erp_hash: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
         Returns: string
+      }
+      create_app_session: {
+        Args: {
+          p_device_info?: string
+          p_ip_address?: string
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      force_replace_session: {
+        Args: {
+          p_device_info?: string
+          p_ip_address?: string
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      get_active_sessions_admin: {
+        Args: never
+        Returns: {
+          device_info: string
+          expires_at: string
+          ip_address: string
+          last_activity_at: string
+          session_id: string
+          started_at: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
       }
       get_bi_anomalies: {
         Args: never
@@ -6662,6 +6697,7 @@ export type Database = {
           total_value_won: number
         }[]
       }
+      get_session_idle_timeout_minutes: { Args: never; Returns: number }
       get_stalled_deals_by_seller: {
         Args: { p_min_days?: number; p_seller_id?: string }
         Returns: {
@@ -6694,6 +6730,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      invalidate_own_session: {
+        Args: { p_session_id: string }
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
@@ -6766,6 +6806,7 @@ export type Database = {
           status: string
         }[]
       }
+      touch_app_session: { Args: { p_session_id: string }; Returns: boolean }
       transfer_stock: {
         Args: {
           p_from_company_id: string
@@ -6777,6 +6818,7 @@ export type Database = {
         }
         Returns: Json
       }
+      validate_app_session: { Args: { p_session_id: string }; Returns: Json }
     }
     Enums: {
       access_level: "restrito" | "total"

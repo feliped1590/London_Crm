@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { clearSessionId, getSessionId } from '@/hooks/useSessionGuard';
 
 interface AuthContextType {
   user: User | null;
@@ -64,6 +65,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Invalidate app session first
+      const sessionId = getSessionId();
+      if (sessionId) {
+        try {
+          await supabase.rpc('invalidate_own_session', { p_session_id: sessionId });
+        } catch (_) {
+          // Ignore errors - session cleanup is best-effort
+        }
+      }
+      clearSessionId();
+
       // Timeout de 3 segundos para evitar travamento no Chrome
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Timeout no logout')), 3000)
@@ -79,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // SEMPRE limpar estado local, independente de erro ou timeout
       setSession(null);
       setUser(null);
+      clearSessionId();
       
       // Fallback: limpar localStorage manualmente
       const storageKey = `sb-lusyhkizwoihixcvcgap-auth-token`;

@@ -9,8 +9,10 @@ import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
 import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { useSessionGuard } from '@/hooks/useSessionGuard';
 
 export function AppLayout() {
+  useSessionGuard();
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
