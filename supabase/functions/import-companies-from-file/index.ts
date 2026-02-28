@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
           name: row.name.trim(),
           contact_name: row.contact_name || null,
           phone: row.phone || null,
+          phone2: row.phone2 || null,
           fax: row.fax || null,
           address: row.address || null,
           neighborhood: row.neighborhood || null,
