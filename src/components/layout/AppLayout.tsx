@@ -10,9 +10,12 @@ import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
+import { useLoginTaskAlert } from '@/hooks/useLoginTaskAlert';
+import { TaskAlertModal } from '@/components/tasks/TaskAlertModal';
 
 export function AppLayout() {
   useSessionGuard();
+  const { showModal, alertData, closeModal } = useLoginTaskAlert();
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
@@ -86,6 +89,11 @@ export function AppLayout() {
         </main>
       </div>
 
+
+      {/* Task Alert Modal */}
+      {alertData && (
+        <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />
+      )}
 
       {/* AI Assistant Widget */}
       <AIChatWidget />
