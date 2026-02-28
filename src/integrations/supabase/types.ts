@@ -236,6 +236,59 @@ export type Database = {
         }
         Relationships: []
       }
+      app_sessions: {
+        Row: {
+          device_info: string | null
+          expires_at: string
+          id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
+          ip_address: string | null
+          is_valid: boolean
+          last_activity_at: string
+          started_at: string
+          tenant_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          device_info?: string | null
+          expires_at: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          ip_address?: string | null
+          is_valid?: boolean
+          last_activity_at?: string
+          started_at?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          device_info?: string | null
+          expires_at?: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          ip_address?: string | null
+          is_valid?: boolean
+          last_activity_at?: string
+          started_at?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beneficios_fiscais: {
         Row: {
           aliquota_resultante: number | null
