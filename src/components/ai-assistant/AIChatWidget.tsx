@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,7 +11,8 @@ import {
   Trash2,
   Sparkles,
   Mic,
-  MicOff
+  MicOff,
+  GripVertical
 } from "lucide-react";
 import { useAIAssistant } from "@/hooks/useAIAssistant";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -28,6 +29,8 @@ import {
 export function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const { messages, isLoading, sendMessage, clearConversation } = useAIAssistant();
   const { 
     transcript, 
@@ -41,6 +44,40 @@ export function AIChatWidget() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatRef = useRef<HTMLDivElement>(null);
+
+  // Drag handlers
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, origX: position.x, origY: position.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [position]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    let newX = dragRef.current.origX + dx;
+    let newY = dragRef.current.origY + dy;
+    
+    // Clamp to viewport
+    if (chatRef.current) {
+      const rect = chatRef.current.getBoundingClientRect();
+      const maxX = window.innerWidth - 24 - rect.width + position.x - (rect.left - 24);
+      const minX = -(rect.left - 24) + position.x;
+      const maxY = window.innerHeight - 24 - rect.height + position.y - (rect.top - 24);
+      const minY = -(rect.top - 24) + position.y;
+      newX = Math.max(minX, Math.min(maxX, newX));
+      newY = Math.max(minY, Math.min(maxY, newY));
+    }
+    
+    setPosition({ x: newX, y: newY });
+  }, [position]);
+
+  const handlePointerUp = useCallback(() => {
+    dragRef.current = null;
+  }, []);
 
   // Scroll to bottom when new messages arrive or loading state changes
   useEffect(() => {
@@ -109,7 +146,7 @@ export function AIChatWidget() {
     <>
       {/* Floating button */}
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => { setIsOpen(true); setPosition({ x: 0, y: 0 }); }}
         className={cn(
           "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg",
           "bg-primary hover:bg-primary/90 transition-all duration-300",
@@ -123,16 +160,23 @@ export function AIChatWidget() {
 
       {/* Chat window */}
       <div
+        ref={chatRef}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex flex-col",
           "w-[400px] h-[600px] max-h-[80vh]",
           "bg-background border rounded-xl shadow-2xl",
-          "transition-all duration-300 ease-out",
-          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none",
+          !dragRef.current && "transition-all duration-300 ease-out"
         )}
+        style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b bg-primary/5 rounded-t-xl">
+        {/* Header — drag handle */}
+        <div
+          className="flex items-center justify-between p-4 border-b bg-primary/5 rounded-t-xl cursor-grab active:cursor-grabbing select-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
               <Bot className="h-5 w-5 text-primary" />
