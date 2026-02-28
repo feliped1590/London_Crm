@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,24 +9,76 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Building2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { ActiveSessionModal } from '@/components/auth/ActiveSessionModal';
+import { setSessionId, clearSessionId } from '@/hooks/useSessionGuard';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
 
+function getDeviceInfo(): string {
+  const ua = navigator.userAgent;
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Safari')) return 'Safari';
+  if (ua.includes('Edge')) return 'Edge';
+  return 'Navegador';
+}
+
 export default function Auth() {
   const navigate = useNavigate();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signOut } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Form state
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Active session modal state
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [activeSessionInfo, setActiveSessionInfo] = useState<any>(null);
+  const [isReplacingSession, setIsReplacingSession] = useState(false);
+  // Keep user ref for session creation after signIn
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard', { replace: true });
+    if (!loading && user && !showSessionModal && !pendingUserId) {
+      // If user is already logged in and has a session, redirect
+      const sid = localStorage.getItem('app_session_id');
+      if (sid) {
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, showSessionModal, pendingUserId]);
+
+  const createSessionAndNavigate = async (userId: string) => {
+    const deviceInfo = getDeviceInfo();
+    const { data, error } = await supabase.rpc('create_app_session', {
+      p_user_id: userId,
+      p_device_info: deviceInfo,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent.substring(0, 200),
+    });
+
+    if (error) {
+      console.error('Error creating session:', error);
+      toast.error('Erro ao criar sessão');
+      return;
+    }
+
+    const result = data as any;
+    if (result?.success) {
+      setSessionId(result.session_id);
+      toast.success('Login realizado com sucesso!');
+      navigate('/dashboard');
+    } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
+      // Race condition fallback — check again
+      const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
+      const check = checkData as any;
+      if (check?.has_active) {
+        setPendingUserId(userId);
+        setActiveSessionInfo(check.session);
+        setShowSessionModal(true);
+      }
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,18 +95,91 @@ export default function Auth() {
 
     setIsSubmitting(true);
     const { error } = await signIn(loginEmail, loginPassword);
-    setIsSubmitting(false);
 
     if (error) {
+      setIsSubmitting(false);
       if (error.message.includes('Invalid login credentials')) {
         toast.error('Email ou senha incorretos');
       } else {
         toast.error('Erro ao fazer login: ' + error.message);
       }
+      return;
+    }
+
+    // Auth succeeded — get current user
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+      setIsSubmitting(false);
+      toast.error('Erro ao obter dados do usuário');
+      return;
+    }
+
+    // Check for existing session
+    const { data: checkData, error: checkError } = await supabase.rpc('check_existing_session', {
+      p_user_id: currentUser.id,
+    });
+
+    if (checkError) {
+      console.error('Error checking session:', checkError);
+      // Proceed to create session anyway
+      await createSessionAndNavigate(currentUser.id);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const check = checkData as any;
+
+    if (check?.has_active) {
+      // Show modal
+      setPendingUserId(currentUser.id);
+      setActiveSessionInfo(check.session);
+      setShowSessionModal(true);
+      setIsSubmitting(false);
     } else {
+      // No active session — create one
+      await createSessionAndNavigate(currentUser.id);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelSession = async () => {
+    setShowSessionModal(false);
+    setActiveSessionInfo(null);
+    setPendingUserId(null);
+    clearSessionId();
+    await signOut();
+  };
+
+  const handleReplaceSession = async () => {
+    if (!pendingUserId) return;
+    setIsReplacingSession(true);
+
+    const deviceInfo = getDeviceInfo();
+    const { data, error } = await supabase.rpc('force_replace_session', {
+      p_user_id: pendingUserId,
+      p_device_info: deviceInfo,
+      p_ip_address: null,
+      p_user_agent: navigator.userAgent.substring(0, 200),
+    });
+
+    if (error) {
+      toast.error('Erro ao substituir sessão');
+      setIsReplacingSession(false);
+      return;
+    }
+
+    const result = data as any;
+    if (result?.success) {
+      setSessionId(result.session_id);
+      setShowSessionModal(false);
+      setPendingUserId(null);
+      setActiveSessionInfo(null);
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
+    } else {
+      toast.error('Erro ao criar nova sessão');
     }
+    setIsReplacingSession(false);
   };
 
   if (loading) {
@@ -132,6 +258,14 @@ export default function Auth() {
           Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
         </p>
       </div>
+
+      <ActiveSessionModal
+        open={showSessionModal}
+        session={activeSessionInfo}
+        isLoading={isReplacingSession}
+        onCancel={handleCancelSession}
+        onReplace={handleReplaceSession}
+      />
     </div>
   );
 }
