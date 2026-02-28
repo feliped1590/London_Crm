@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TaskAlertData {
@@ -39,7 +39,6 @@ function playNotificationSound() {
 export function useLoginTaskAlert() {
   const [showModal, setShowModal] = useState(false);
   const [alertData, setAlertData] = useState<TaskAlertData | null>(null);
-  const checkedRef = useRef(false);
 
   const closeModal = useCallback(() => setShowModal(false), []);
 
@@ -49,29 +48,21 @@ export function useLoginTaskAlert() {
     let pollTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const tryCheck = (): boolean => {
-      if (checkedRef.current) return true;
-
       const sessionId = localStorage.getItem('app_session_id');
-      console.log('[TaskAlert] Checking session_id:', sessionId);
       if (!sessionId) return false;
 
       const storageKey = `task_alert_checked_${sessionId}`;
       if (sessionStorage.getItem(storageKey)) {
-        console.log('[TaskAlert] Already checked for this session');
-        checkedRef.current = true;
-        return true;
+        return true; // already checked for this session
       }
 
-      checkedRef.current = true;
       sessionStorage.setItem(storageKey, '1');
-      console.log('[TaskAlert] Running check...');
       runCheck();
       return true;
     };
 
     const runCheck = async () => {
       try {
-        // Load config
         const { data: configRow } = await supabase
           .from('system_settings')
           .select('value')
@@ -83,38 +74,20 @@ export function useLoginTaskAlert() {
           ...(configRow?.value as Partial<TaskAlertConfig> || {}),
         };
 
-        console.log('[TaskAlert] Config:', config);
+        if (!config.enable_task_login_alert || cancelled) return;
 
-        if (!config.enable_task_login_alert) {
-          console.log('[TaskAlert] Alert disabled in config');
-          return;
-        }
-
-        // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || cancelled) {
-          console.log('[TaskAlert] No user or cancelled');
-          return;
-        }
+        if (!user || cancelled) return;
 
-        console.log('[TaskAlert] Calling RPC for user:', user.id);
-
-        // Call RPC
         const { data, error } = await supabase.rpc('check_pending_tasks', {
           p_user_id: user.id,
         });
 
-        console.log('[TaskAlert] RPC result:', data, 'error:', error);
-
         if (error || cancelled) return;
 
         const result = data as unknown as TaskAlertData;
-        if (!result || (result.overdue_count === 0 && result.today_count === 0)) {
-          console.log('[TaskAlert] No pending tasks');
-          return;
-        }
+        if (!result || (result.overdue_count === 0 && result.today_count === 0)) return;
 
-        console.log('[TaskAlert] Found tasks! overdue:', result.overdue_count, 'today:', result.today_count);
         setAlertData(result);
 
         setTimeout(() => {
@@ -124,32 +97,35 @@ export function useLoginTaskAlert() {
             playNotificationSound();
           }
         }, 800);
-      } catch (err) {
-        console.warn('[TaskAlert] Error:', err);
+      } catch {
+        // Silently fail
       }
     };
 
-    // Try immediately
-    if (!tryCheck()) {
-      // Poll for session_id to appear
-      pollInterval = setInterval(() => {
-        if (tryCheck() && pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-        }
-      }, 500);
+    // Delay initial check slightly to ensure session_id is written after login navigation
+    const initialDelay = setTimeout(() => {
+      if (cancelled) return;
+      if (!tryCheck()) {
+        pollInterval = setInterval(() => {
+          if (cancelled) return;
+          if (tryCheck() && pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 500);
 
-      pollTimeout = setTimeout(() => {
-        if (pollInterval) {
-          clearInterval(pollInterval);
-          pollInterval = null;
-        }
-        console.log('[TaskAlert] Polling timed out');
-      }, 10000);
-    }
+        pollTimeout = setTimeout(() => {
+          if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+          }
+        }, 10000);
+      }
+    }, 300);
 
     return () => {
       cancelled = true;
+      clearTimeout(initialDelay);
       if (pollInterval) clearInterval(pollInterval);
       if (pollTimeout) clearTimeout(pollTimeout);
     };
