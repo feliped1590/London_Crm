@@ -44,22 +44,30 @@ export function useLoginTaskAlert() {
   const closeModal = useCallback(() => setShowModal(false), []);
 
   useEffect(() => {
-    // Try to check immediately if session already exists
-    const tryCheck = () => {
+    let cancelled = false;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const tryCheck = (): boolean => {
+      if (checkedRef.current) return true;
+
       const sessionId = localStorage.getItem('app_session_id');
+      console.log('[TaskAlert] Checking session_id:', sessionId);
       if (!sessionId) return false;
 
       const storageKey = `task_alert_checked_${sessionId}`;
-      if (sessionStorage.getItem(storageKey)) return true; // already checked
-      if (checkedRef.current) return true;
+      if (sessionStorage.getItem(storageKey)) {
+        console.log('[TaskAlert] Already checked for this session');
+        checkedRef.current = true;
+        return true;
+      }
 
       checkedRef.current = true;
       sessionStorage.setItem(storageKey, '1');
+      console.log('[TaskAlert] Running check...');
       runCheck();
       return true;
     };
-
-    let cancelled = false;
 
     const runCheck = async () => {
       try {
@@ -75,28 +83,40 @@ export function useLoginTaskAlert() {
           ...(configRow?.value as Partial<TaskAlertConfig> || {}),
         };
 
-        if (!config.enable_task_login_alert) return;
+        console.log('[TaskAlert] Config:', config);
+
+        if (!config.enable_task_login_alert) {
+          console.log('[TaskAlert] Alert disabled in config');
+          return;
+        }
 
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
+        if (!user || cancelled) {
+          console.log('[TaskAlert] No user or cancelled');
+          return;
+        }
+
+        console.log('[TaskAlert] Calling RPC for user:', user.id);
 
         // Call RPC
         const { data, error } = await supabase.rpc('check_pending_tasks', {
           p_user_id: user.id,
         });
 
-        if (error || cancelled) {
-          console.warn('[TaskAlert] RPC error:', error);
+        console.log('[TaskAlert] RPC result:', data, 'error:', error);
+
+        if (error || cancelled) return;
+
+        const result = data as unknown as TaskAlertData;
+        if (!result || (result.overdue_count === 0 && result.today_count === 0)) {
+          console.log('[TaskAlert] No pending tasks');
           return;
         }
 
-        const result = data as unknown as TaskAlertData;
-        if (!result || (result.overdue_count === 0 && result.today_count === 0)) return;
-
+        console.log('[TaskAlert] Found tasks! overdue:', result.overdue_count, 'today:', result.today_count);
         setAlertData(result);
 
-        // Delay for smooth UX
         setTimeout(() => {
           if (cancelled) return;
           setShowModal(true);
@@ -111,22 +131,28 @@ export function useLoginTaskAlert() {
 
     // Try immediately
     if (!tryCheck()) {
-      // If no session yet, poll briefly (session is set right after login)
-      const interval = setInterval(() => {
-        if (tryCheck()) clearInterval(interval);
+      // Poll for session_id to appear
+      pollInterval = setInterval(() => {
+        if (tryCheck() && pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
       }, 500);
 
-      // Stop polling after 5 seconds
-      const timeout = setTimeout(() => clearInterval(interval), 5000);
-
-      return () => {
-        cancelled = true;
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
+      pollTimeout = setTimeout(() => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        console.log('[TaskAlert] Polling timed out');
+      }, 10000);
     }
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (pollInterval) clearInterval(pollInterval);
+      if (pollTimeout) clearTimeout(pollTimeout);
+    };
   }, []);
 
   return { showModal, alertData, closeModal };
