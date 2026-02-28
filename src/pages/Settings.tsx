@@ -697,12 +697,6 @@ export default function Settings() {
               CNPJs
             </TabsTrigger>
           )}
-          {(isAdmin || isDeveloper) && (
-            <TabsTrigger value="sessions" className="gap-2">
-              <Monitor className="h-4 w-4" />
-              Sessões
-            </TabsTrigger>
-          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -765,6 +759,12 @@ export default function Settings() {
                 <TabsTrigger value="interventions-sub" className="gap-2">
                   <Shield className="h-4 w-4" />
                   Intervenções
+                </TabsTrigger>
+              )}
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="sessions-sub" className="gap-2">
+                  <Monitor className="h-4 w-4" />
+                  Sessões
                 </TabsTrigger>
               )}
             </TabsList>
@@ -992,6 +992,11 @@ export default function Settings() {
                 <AdminInterventionsViewer />
               </TabsContent>
             )}
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="sessions-sub" className="mt-4">
+                <ActiveSessionsManager />
+              </TabsContent>
+            )}
           </Tabs>
         </TabsContent>
 
@@ -1071,11 +1076,6 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        {(isAdmin || isDeveloper) && (
-          <TabsContent value="sessions" className="mt-6 space-y-6">
-            <ActiveSessionsManager />
-          </TabsContent>
-        )}
 
 
         {isDeveloper && (
