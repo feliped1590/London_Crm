@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface TaskAlertData {
@@ -39,22 +39,29 @@ function playNotificationSound() {
 export function useLoginTaskAlert() {
   const [showModal, setShowModal] = useState(false);
   const [alertData, setAlertData] = useState<TaskAlertData | null>(null);
+  const checkedRef = useRef(false);
 
   const closeModal = useCallback(() => setShowModal(false), []);
 
   useEffect(() => {
-    const sessionId = localStorage.getItem('app_session_id');
-    if (!sessionId) return;
+    // Try to check immediately if session already exists
+    const tryCheck = () => {
+      const sessionId = localStorage.getItem('app_session_id');
+      if (!sessionId) return false;
 
-    const storageKey = `task_alert_checked_${sessionId}`;
-    if (sessionStorage.getItem(storageKey)) return;
+      const storageKey = `task_alert_checked_${sessionId}`;
+      if (sessionStorage.getItem(storageKey)) return true; // already checked
+      if (checkedRef.current) return true;
 
-    // Mark as checked immediately to prevent re-runs
-    sessionStorage.setItem(storageKey, '1');
+      checkedRef.current = true;
+      sessionStorage.setItem(storageKey, '1');
+      runCheck();
+      return true;
+    };
 
     let cancelled = false;
 
-    (async () => {
+    const runCheck = async () => {
       try {
         // Load config
         const { data: configRow } = await supabase
@@ -79,7 +86,10 @@ export function useLoginTaskAlert() {
           p_user_id: user.id,
         });
 
-        if (error || cancelled) return;
+        if (error || cancelled) {
+          console.warn('[TaskAlert] RPC error:', error);
+          return;
+        }
 
         const result = data as unknown as TaskAlertData;
         if (!result || (result.overdue_count === 0 && result.today_count === 0)) return;
@@ -94,10 +104,27 @@ export function useLoginTaskAlert() {
             playNotificationSound();
           }
         }, 800);
-      } catch {
-        // Silently fail — not critical
+      } catch (err) {
+        console.warn('[TaskAlert] Error:', err);
       }
-    })();
+    };
+
+    // Try immediately
+    if (!tryCheck()) {
+      // If no session yet, poll briefly (session is set right after login)
+      const interval = setInterval(() => {
+        if (tryCheck()) clearInterval(interval);
+      }, 500);
+
+      // Stop polling after 5 seconds
+      const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+      return () => {
+        cancelled = true;
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
 
     return () => { cancelled = true; };
   }, []);
