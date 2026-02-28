@@ -30,7 +30,9 @@ export function AIChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [btnPosition, setBtnPosition] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const btnDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number; moved: boolean } | null>(null);
   const { messages, isLoading, sendMessage, clearConversation } = useAIAssistant();
   const { 
     transcript, 
@@ -77,6 +79,39 @@ export function AIChatWidget() {
 
   const handlePointerUp = useCallback(() => {
     dragRef.current = null;
+  }, []);
+
+  // Button drag handlers
+  const handleBtnPointerDown = useCallback((e: React.PointerEvent) => {
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+    btnDragRef.current = { startX: e.clientX, startY: e.clientY, origX: btnPosition.x, origY: btnPosition.y, moved: false };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [btnPosition]);
+
+  const handleBtnPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!btnDragRef.current) return;
+    const dx = e.clientX - btnDragRef.current.startX;
+    const dy = e.clientY - btnDragRef.current.startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) btnDragRef.current.moved = true;
+    if (!btnDragRef.current.moved) return;
+    let newX = btnDragRef.current.origX + dx;
+    let newY = btnDragRef.current.origY + dy;
+    const btnSize = 56;
+    const margin = 24;
+    const maxX = -(window.innerWidth - btnSize - margin - margin);
+    const minY = -(window.innerHeight - btnSize - margin - margin);
+    newX = Math.min(0, Math.max(maxX, newX));
+    newY = Math.min(0, Math.max(minY, newY));
+    setBtnPosition({ x: newX, y: newY });
+  }, [btnPosition]);
+
+  const handleBtnPointerUp = useCallback(() => {
+    const wasDrag = btnDragRef.current?.moved;
+    btnDragRef.current = null;
+    if (!wasDrag) {
+      setIsOpen(true);
+      setPosition({ x: 0, y: 0 });
+    }
   }, []);
 
   // Scroll to bottom when new messages arrive or loading state changes
@@ -144,15 +179,18 @@ export function AIChatWidget() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — draggable */}
       <Button
-        onClick={() => { setIsOpen(true); setPosition({ x: 0, y: 0 }); }}
+        onPointerDown={handleBtnPointerDown}
+        onPointerMove={handleBtnPointerMove}
+        onPointerUp={handleBtnPointerUp}
         className={cn(
-          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg",
+          "fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg cursor-grab active:cursor-grabbing",
           "bg-primary hover:bg-primary/90 transition-all duration-300",
-          "hover:scale-110",
+          "hover:scale-110 touch-none",
           isOpen && "hidden"
         )}
+        style={{ transform: `translate(${btnPosition.x}px, ${btnPosition.y}px)` }}
         size="icon"
       >
         <Sparkles className="h-6 w-6" />
