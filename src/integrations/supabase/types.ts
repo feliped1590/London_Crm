@@ -863,6 +863,7 @@ export type Database = {
           owner_id: string | null
           parent_company_id: string | null
           phone: string | null
+          phone2: string | null
           regime_tributario:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
@@ -915,6 +916,7 @@ export type Database = {
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
+          phone2?: string | null
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
@@ -967,6 +969,7 @@ export type Database = {
           owner_id?: string | null
           parent_company_id?: string | null
           phone?: string | null
+          phone2?: string | null
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null

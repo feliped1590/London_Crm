@@ -22,7 +22,8 @@ function normalizeHeader(str: string): string {
 const FIELD_MAP: Record<string, string> = {
   razaosocial: 'name',
   contato: 'contact_name',
-  telefone: 'phone',
+  telefone1: 'phone',
+  telefone2: 'phone2',
   fax: 'fax',
   rua: 'address',
   endereco: 'address',
