@@ -299,6 +299,84 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
   );
 }
 
+function TaskAlertSettings() {
+  const queryClient = useQueryClient();
+  
+  const { data: config, isLoading } = useQuery({
+    queryKey: ['task_alert_config'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'task_alert_config')
+        .maybeSingle();
+      if (error) throw error;
+      return {
+        enable_task_login_alert: true,
+        enable_task_login_sound: true,
+        ...(data?.value as Record<string, boolean> || {}),
+      };
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async (newConfig: Record<string, boolean>) => {
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({ key: 'task_alert_config', value: newConfig as any }, { onConflict: 'key' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task_alert_config'] });
+      toast.success('Configuração salva');
+    },
+    onError: () => toast.error('Erro ao salvar configuração'),
+  });
+
+  const toggle = (field: string) => {
+    if (!config) return;
+    mutation.mutate({ ...config, [field]: !config[field as keyof typeof config] });
+  };
+
+  if (isLoading || !config) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Bell className="h-4 w-4" />
+          Alerta de Tarefas no Login
+        </CardTitle>
+        <CardDescription>
+          Configurações do alerta automático de tarefas pendentes exibido ao realizar login.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Alerta no login</p>
+            <p className="text-xs text-muted-foreground">Exibir modal com tarefas vencidas/vencendo hoje</p>
+          </div>
+          <Switch
+            checked={config.enable_task_login_alert}
+            onCheckedChange={() => toggle('enable_task_login_alert')}
+          />
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Som de notificação</p>
+            <p className="text-xs text-muted-foreground">Tocar som ao exibir o alerta</p>
+          </div>
+          <Switch
+            checked={config.enable_task_login_sound}
+            onCheckedChange={() => toggle('enable_task_login_sound')}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function Settings() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -1033,6 +1111,8 @@ export default function Settings() {
 
         <TabsContent value="notifications" className="mt-6 space-y-6">
           <CustomNotificationsManager />
+          
+          {isDeveloper && <TaskAlertSettings />}
         </TabsContent>
 
 

@@ -6477,6 +6477,7 @@ export type Database = {
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
       check_existing_session: { Args: { p_user_id: string }; Returns: Json }
+      check_pending_tasks: { Args: { p_user_id: string }; Returns: Json }
       cleanup_expired_sessions: { Args: never; Returns: number }
       compute_product_erp_hash: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
