@@ -223,7 +223,7 @@ export default function Pipeline() {
   const { data: contacts } = useQuery({
     queryKey: ['contacts-with-cpf'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf').order('first_name');
+      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').order('first_name');
       if (error) throw error;
       return data;
     },
@@ -238,14 +238,17 @@ export default function Pipeline() {
     })) || [];
   }, [companies]);
 
-  // Searchable options for contacts
+  // Searchable options for contacts — filtered by selected company
   const contactOptions: SearchableSelectOption[] = useMemo(() => {
-    return contacts?.map(c => ({
+    const filtered = formData.company_id
+      ? contacts?.filter(c => c.company_id === formData.company_id)
+      : contacts;
+    return filtered?.map(c => ({
       value: c.id,
       label: `${c.first_name} ${c.last_name || ''}`.trim(),
       searchTerms: c.cpf ? cleanDocument(c.cpf) : undefined,
     })) || [];
-  }, [contacts]);
+  }, [contacts, formData.company_id]);
 
   // Helper functions to get contact info
   const getContactInfo = (contactId: string | null) => {
@@ -833,7 +836,7 @@ export default function Pipeline() {
                         <SearchableSelect
                           options={companyOptions}
                           value={formData.company_id}
-                          onChange={(v) => setFormData({ ...formData, company_id: v })}
+                          onChange={(v) => setFormData({ ...formData, company_id: v, contact_id: null })}
                           placeholder="Buscar empresa..."
                           searchPlaceholder="Nome ou CNPJ..."
                           emptyMessage="Nenhuma empresa encontrada."
@@ -1034,7 +1037,7 @@ export default function Pipeline() {
                     <SearchableSelect
                       options={companyOptions}
                       value={formData.company_id || ''}
-                      onChange={(v) => setFormData({ ...formData, company_id: v || null })}
+                      onChange={(v) => setFormData({ ...formData, company_id: v || null, contact_id: null })}
                       placeholder="Buscar empresa..."
                       searchPlaceholder="Nome ou CNPJ..."
                       emptyMessage="Nenhuma empresa encontrada."
