@@ -60,14 +60,6 @@ export interface MoveStockPayload {
   motivo: string;
 }
 
-export interface TransferStockPayload {
-  product_id: string;
-  from_company_id: string;
-  to_company_id: string;
-  quantidade: number;
-  motivo: string;
-}
-
 // ── Helper: get tenant_id ──────────────────────────────────────────────
 async function getActiveTenantId(): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -228,35 +220,7 @@ export function useMoveStock() {
   });
 }
 
-export function useTransferStock() {
-  const qc = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (payload: TransferStockPayload) => {
-      const tenantId = await getActiveTenantId();
-
-      const { data, error } = await supabase.rpc('transfer_stock', {
-        p_product_id: payload.product_id,
-        p_from_company_id: payload.from_company_id,
-        p_to_company_id: payload.to_company_id,
-        p_tenant_id: tenantId,
-        p_quantidade: payload.quantidade,
-        p_motivo: payload.motivo,
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['stock-list'] });
-      qc.invalidateQueries({ queryKey: ['stock-history'] });
-      toast.success('Transferência realizada com sucesso');
-    },
-    onError: (err: any) => {
-      toast.error(err.message || 'Erro ao realizar transferência');
-    },
-  });
-}
 
 // ── Shared data queries ────────────────────────────────────────────────
 export function useLegalEntitiesForStock() {

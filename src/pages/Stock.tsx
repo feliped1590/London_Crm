@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Warehouse, ArrowRightLeft, History, PackagePlus, Filter } from 'lucide-react';
+import { Warehouse, History, PackagePlus, Filter } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {
   useStockList,
   useStockHistory,
   useMoveStock,
-  useTransferStock,
   useLegalEntitiesForStock,
   useProductsForStock,
   type StockFilters,
@@ -200,81 +199,7 @@ function StockMoveTab() {
   );
 }
 
-// ── Tab: Transferência ─────────────────────────────────────────────────
-function StockTransferTab() {
-  const { data: companies } = useLegalEntitiesForStock();
-  const { data: products } = useProductsForStock();
-  const transfer = useTransferStock();
 
-  const [productId, setProductId] = useState('');
-  const [fromId, setFromId] = useState('');
-  const [toId, setToId] = useState('');
-  const [quantidade, setQuantidade] = useState('');
-  const [motivo, setMotivo] = useState('');
-
-  const handleSubmit = () => {
-    if (!productId || !fromId || !toId || !quantidade || fromId === toId) return;
-    transfer.mutate(
-      { product_id: productId, from_company_id: fromId, to_company_id: toId, quantidade: parseFloat(quantidade), motivo: motivo || 'Transferência entre empresas' },
-      {
-        onSuccess: () => {
-          setQuantidade('');
-          setMotivo('');
-        },
-      }
-    );
-  };
-
-  return (
-    <Card>
-      <CardHeader><CardTitle className="text-lg">Transferência entre Empresas</CardTitle></CardHeader>
-      <CardContent className="space-y-4 max-w-xl">
-        <div>
-          <Label>Produto *</Label>
-          <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.sku ? `${p.sku} - ` : ''}{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Empresa Origem *</Label>
-          <Select value={fromId} onValueChange={setFromId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Empresa Destino *</Label>
-          <Select value={toId} onValueChange={setToId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {companies?.filter((c) => c.id !== fromId).map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label>Quantidade *</Label>
-          <Input type="number" min="0.0001" step="0.0001" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="0,00" />
-        </div>
-        <div>
-          <Label>Motivo</Label>
-          <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo da transferência (opcional)" />
-        </div>
-        {fromId && toId && fromId === toId && (
-          <p className="text-sm text-destructive">Empresa de origem e destino devem ser diferentes.</p>
-        )}
-        <Button onClick={handleSubmit} disabled={transfer.isPending || !productId || !fromId || !toId || !quantidade || fromId === toId}>
-          {transfer.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ArrowRightLeft className="h-4 w-4 mr-2" />}
-          Realizar Transferência
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
 
 // ── Tab: Histórico ─────────────────────────────────────────────────────
 function StockHistoryTab() {
@@ -387,16 +312,14 @@ export default function Stock() {
       </div>
 
       <Tabs defaultValue="atual" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="atual">Estoque Atual</TabsTrigger>
           <TabsTrigger value="movimentar">Movimentar</TabsTrigger>
-          <TabsTrigger value="transferencia">Transferência</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="atual"><StockCurrentTab /></TabsContent>
         <TabsContent value="movimentar"><StockMoveTab /></TabsContent>
-        <TabsContent value="transferencia"><StockTransferTab /></TabsContent>
         <TabsContent value="historico"><StockHistoryTab /></TabsContent>
       </Tabs>
     </div>
