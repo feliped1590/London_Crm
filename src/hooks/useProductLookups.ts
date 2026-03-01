@@ -9,7 +9,7 @@ export interface LookupItem {
   is_active: boolean;
 }
 
-type LookupTable = 'product_categories' | 'product_materials' | 'product_colors' | 'product_unit_measures';
+type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
 
 function useLookupTable(table: LookupTable) {
   const queryClient = useQueryClient();
@@ -81,10 +81,12 @@ function useLookupTable(table: LookupTable) {
 }
 
 export function useProductLookups() {
-  const categories = useLookupTable('product_categories');
-  const materials = useLookupTable('product_materials');
-  const colors = useLookupTable('product_colors');
+  const tipos = useLookupTable('product_types');
+  const grupos = useLookupTable('product_groups');
+  const subgrupos = useLookupTable('product_subgroups');
+  const familias = useLookupTable('product_families');
+  const classes = useLookupTable('product_classes');
   const unitMeasures = useLookupTable('product_unit_measures');
 
-  return { categories, materials, colors, unitMeasures };
+  return { tipos, grupos, subgrupos, familias, classes, unitMeasures };
 }
