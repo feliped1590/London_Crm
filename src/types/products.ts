@@ -8,13 +8,15 @@ export interface Product {
   sku: string;
   name: string;
   description?: string;
-  category?: string;
+  tipo?: string;
   unit_measure?: string;
   unit_price?: number;
   fator_kg?: number;
   fator_milheiro?: number;
-  material?: string;
-  color?: string;
+  grupo?: string;
+  subgrupo?: string;
+  family_id?: string;
+  class_id?: string;
   width?: number;
   length?: number;
   thickness?: number;
@@ -176,7 +178,7 @@ export const orderStatusConfig: Record<OrderStatus, { label: string; color: stri
   cancelado: { label: 'Cancelado', color: 'bg-red-500' },
 };
 
-export const categoryOptions = [
+export const tipoOptions = [
   { value: 'bobina', label: 'Bobina' },
   { value: 'sacola', label: 'Sacola' },
   { value: 'filme', label: 'Filme' },
@@ -194,7 +196,7 @@ export const unitMeasureOptions = [
   { value: 'rl', label: 'Rolo (rl)' },
 ];
 
-export const materialOptions = [
+export const grupoOptions = [
   { value: 'PEBD', label: 'PEBD (Polietileno de Baixa Densidade)' },
   { value: 'PEAD', label: 'PEAD (Polietileno de Alta Densidade)' },
   { value: 'PP', label: 'PP (Polipropileno)' },
@@ -204,7 +206,7 @@ export const materialOptions = [
   { value: 'outros', label: 'Outros' },
 ];
 
-export const colorOptions = [
+export const subgrupoOptions = [
   { value: 'transparente', label: 'Transparente' },
   { value: 'branco', label: 'Branco' },
   { value: 'preto', label: 'Preto' },

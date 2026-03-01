@@ -3966,65 +3966,43 @@ export type Database = {
         }
         Relationships: []
       }
-      product_categories: {
+      product_classes: {
         Row: {
-          created_at: string | null
-          created_by: string | null
+          created_at: string
           id: string
-          is_active: boolean | null
+          is_active: boolean
           label: string
-          sort_order: number | null
+          sort_order: number
+          tenant_id: string | null
           value: string
         }
         Insert: {
-          created_at?: string | null
-          created_by?: string | null
+          created_at?: string
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           label: string
-          sort_order?: number | null
+          sort_order?: number
+          tenant_id?: string | null
           value: string
         }
         Update: {
-          created_at?: string | null
-          created_by?: string | null
+          created_at?: string
           id?: string
-          is_active?: boolean | null
+          is_active?: boolean
           label?: string
-          sort_order?: number | null
+          sort_order?: number
+          tenant_id?: string | null
           value?: string
         }
-        Relationships: []
-      }
-      product_colors: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          id: string
-          is_active: boolean | null
-          label: string
-          sort_order: number | null
-          value: string
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          label: string
-          sort_order?: number | null
-          value: string
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          is_active?: boolean | null
-          label?: string
-          sort_order?: number | null
-          value?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_classes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_erp_data: {
         Row: {
@@ -4187,7 +4165,45 @@ export type Database = {
           },
         ]
       }
-      product_materials: {
+      product_families: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          tenant_id: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          tenant_id?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_families_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_groups: {
         Row: {
           created_at: string | null
           created_by: string | null
@@ -4195,6 +4211,7 @@ export type Database = {
           is_active: boolean | null
           label: string
           sort_order: number | null
+          tenant_id: string | null
           value: string
         }
         Insert: {
@@ -4204,6 +4221,7 @@ export type Database = {
           is_active?: boolean | null
           label: string
           sort_order?: number | null
+          tenant_id?: string | null
           value: string
         }
         Update: {
@@ -4213,9 +4231,18 @@ export type Database = {
           is_active?: boolean | null
           label?: string
           sort_order?: number | null
+          tenant_id?: string | null
           value?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_ncm_audit: {
         Row: {
@@ -4328,6 +4355,47 @@ export type Database = {
           },
         ]
       }
+      product_subgroups: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          tenant_id: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_subgroups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_sync_queue: {
         Row: {
           attempt_count: number | null
@@ -4378,6 +4446,47 @@ export type Database = {
           },
         ]
       }
+      product_types: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          sort_order: number | null
+          tenant_id: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_types_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_unit_measures: {
         Row: {
           created_at: string | null
@@ -4416,8 +4525,7 @@ export type Database = {
           aliquota_icms: number | null
           aliquota_ipi: number | null
           aliquota_pis: number | null
-          category: string | null
-          color: string | null
+          class_id: string | null
           created_at: string
           created_by: string | null
           crm_last_update_at: string | null
@@ -4438,11 +4546,12 @@ export type Database = {
           erp_versao_detalhes: string | null
           erp_versao_roteiro: number | null
           erp_versao_situacao: string | null
+          family_id: string | null
           fator_kg: number | null
           fator_milheiro: number | null
+          grupo: string | null
           id: string
           length: number | null
-          material: string | null
           name: string
           ncm_code: string | null
           ncm_id: string | null
@@ -4457,9 +4566,11 @@ export type Database = {
           reference: string | null
           sku: string
           subcategory: string | null
+          subgrupo: string | null
           tem_icms_st: boolean | null
           tenant_id: string
           thickness: number | null
+          tipo: string | null
           tipo_ficha: number | null
           tipo_item: string | null
           tipo_produto_fiscal:
@@ -4480,8 +4591,7 @@ export type Database = {
           aliquota_icms?: number | null
           aliquota_ipi?: number | null
           aliquota_pis?: number | null
-          category?: string | null
-          color?: string | null
+          class_id?: string | null
           created_at?: string
           created_by?: string | null
           crm_last_update_at?: string | null
@@ -4502,11 +4612,12 @@ export type Database = {
           erp_versao_detalhes?: string | null
           erp_versao_roteiro?: number | null
           erp_versao_situacao?: string | null
+          family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
+          grupo?: string | null
           id?: string
           length?: number | null
-          material?: string | null
           name: string
           ncm_code?: string | null
           ncm_id?: string | null
@@ -4521,9 +4632,11 @@ export type Database = {
           reference?: string | null
           sku: string
           subcategory?: string | null
+          subgrupo?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
+          tipo?: string | null
           tipo_ficha?: number | null
           tipo_item?: string | null
           tipo_produto_fiscal?:
@@ -4544,8 +4657,7 @@ export type Database = {
           aliquota_icms?: number | null
           aliquota_ipi?: number | null
           aliquota_pis?: number | null
-          category?: string | null
-          color?: string | null
+          class_id?: string | null
           created_at?: string
           created_by?: string | null
           crm_last_update_at?: string | null
@@ -4566,11 +4678,12 @@ export type Database = {
           erp_versao_detalhes?: string | null
           erp_versao_roteiro?: number | null
           erp_versao_situacao?: string | null
+          family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
+          grupo?: string | null
           id?: string
           length?: number | null
-          material?: string | null
           name?: string
           ncm_code?: string | null
           ncm_id?: string | null
@@ -4585,9 +4698,11 @@ export type Database = {
           reference?: string | null
           sku?: string
           subcategory?: string | null
+          subgrupo?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
+          tipo?: string | null
           tipo_ficha?: number | null
           tipo_item?: string | null
           tipo_produto_fiscal?:
@@ -4602,6 +4717,20 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "product_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_ncm_id_fkey"
             columns: ["ncm_id"]

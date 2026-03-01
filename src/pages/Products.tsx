@@ -27,20 +27,20 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 
-type SortField = 'sku' | 'name' | 'category' | 'unit_price';
+type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
-  const { categories, materials, colors, unitMeasures } = useProductLookups();
+  const { tipos, grupos, subgrupos, unitMeasures } = useProductLookups();
   const { isAdmin } = useModulePermissions();
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -69,13 +69,13 @@ export default function Products() {
     sku: '',
     name: '',
     description: '',
-    category: '',
+    tipo: '',
     unit_measure: 'un',
     unit_price: 0,
     fator_kg: 0,
     fator_milheiro: 0,
-    material: '',
-    color: '',
+    grupo: '',
+    subgrupo: '',
     width: 0,
     length: 0,
     thickness: 0,
@@ -145,7 +145,7 @@ export default function Products() {
   );
 
   const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', filterCategory, filterActive],
+    queryKey: ['products', filterTipo, filterActive],
     queryFn: async () => {
       let query = supabase
         .from('products')
@@ -153,8 +153,8 @@ export default function Products() {
         .order('name')
         .limit(500);
 
-      if (filterCategory !== 'all') {
-        query = query.eq('category', filterCategory);
+      if (filterTipo !== 'all') {
+        query = query.eq('tipo', filterTipo);
       }
 
       if (filterActive === 'active') {
@@ -165,7 +165,7 @@ export default function Products() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
     staleTime: 0,
     refetchOnMount: 'always',
@@ -188,13 +188,13 @@ export default function Products() {
         sku: data.sku!,
         name: data.name!,
         description: data.description,
-        category: data.category,
+        tipo: data.tipo,
         unit_measure: data.unit_measure,
         unit_price: data.unit_price,
         fator_kg: data.fator_kg,
         fator_milheiro: fatorMilheiro,
-        material: data.material,
-        color: data.color,
+        grupo: data.grupo,
+        subgrupo: data.subgrupo,
         width: data.width,
         length: data.length,
         thickness: data.thickness,
@@ -250,7 +250,7 @@ export default function Products() {
       const { error } = await supabase.from('products').update({
         ...data,
         fator_milheiro: fatorMilheiro,
-      }).eq('id', id);
+      } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -284,13 +284,13 @@ export default function Products() {
       sku: '',
       name: '',
       description: '',
-      category: '',
+      tipo: '',
       unit_measure: 'un',
       unit_price: 0,
       fator_kg: 0,
       fator_milheiro: 0,
-      material: '',
-      color: '',
+      grupo: '',
+      subgrupo: '',
       width: 0,
       length: 0,
       thickness: 0,
@@ -342,13 +342,13 @@ export default function Products() {
       sku: product.sku,
       name: product.name,
       description: product.description || '',
-      category: product.category || '',
+      tipo: product.tipo || '',
       unit_measure: product.unit_measure || 'un',
       unit_price: product.unit_price || 0,
       fator_kg: product.fator_kg || 0,
       fator_milheiro: product.fator_milheiro || 0,
-      material: product.material || '',
-      color: product.color || '',
+      grupo: product.grupo || '',
+      subgrupo: product.subgrupo || '',
       width: product.width || 0,
       length: product.length || 0,
       thickness: product.thickness || 0,
@@ -386,7 +386,7 @@ export default function Products() {
     const { finalPrice, rule } = calculatePrice(
       table.id,
       product.id,
-      product.category,
+      product.tipo,
       1,
       product.unit_price || 0
     );
@@ -417,9 +417,9 @@ export default function Products() {
           aVal = a.name.toLowerCase();
           bVal = b.name.toLowerCase();
           break;
-        case 'category':
-          aVal = (a.category || '').toLowerCase();
-          bVal = (b.category || '').toLowerCase();
+        case 'tipo':
+          aVal = (a.tipo || '').toLowerCase();
+          bVal = (b.tipo || '').toLowerCase();
           break;
         case 'unit_price':
           aVal = a.unit_price || 0;
@@ -556,51 +556,51 @@ export default function Products() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="category">Categoria</Label>
+                      <Label htmlFor="tipo">Tipo</Label>
                       <Select
-                        value={formData.category || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, category: v === 'none' ? '' : v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nenhuma</SelectItem>
-                          {categories.items.map((c) => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="material">Material</Label>
-                      <Select
-                        value={formData.material || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, material: v === 'none' ? '' : v })}
+                        value={formData.tipo || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, tipo: v === 'none' ? '' : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
-                          {materials.items.map((m) => (
+                          {tipos.items.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="grupo">Grupo</Label>
+                      <Select
+                        value={formData.grupo || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, grupo: v === 'none' ? '' : v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {grupos.items.map((m) => (
                             <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="color">Cor</Label>
+                      <Label htmlFor="subgrupo">Subgrupo</Label>
                       <Select
-                        value={formData.color || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, color: v === 'none' ? '' : v })}
+                        value={formData.subgrupo || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, subgrupo: v === 'none' ? '' : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Nenhuma</SelectItem>
-                          {colors.items.map((c) => (
+                          <SelectItem value="none">Nenhum</SelectItem>
+                          {subgrupos.items.map((c) => (
                             <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -752,11 +752,10 @@ export default function Products() {
                         ...formData, 
                         ncm_code: ncmCode,
                         ncm_id: ncm?.id,
-                        // Se tem IPI oficial, sugerir
                         aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
                       });
                     }}
-                    productDescription={`${formData.name} ${formData.description || ''} ${formData.material || ''}`}
+                    productDescription={`${formData.name} ${formData.description || ''} ${formData.grupo || ''}`}
                     onValidationChange={setNcmValidation}
                   />
 
@@ -934,14 +933,14 @@ export default function Products() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <Select value={filterTipo} onValueChange={setFilterTipo}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Categoria" />
+                <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas Categorias</SelectItem>
-                {categories.items.map((c) => (
+                <SelectItem value="all">Todos os Tipos</SelectItem>
+                {tipos.items.map((c) => (
                   <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -975,8 +974,8 @@ export default function Products() {
                     <SortableHeader field="sku">SKU</SortableHeader>
                     <SortableHeader field="name">Nome</SortableHeader>
                     <TableHead>NCM</TableHead>
-                    <SortableHeader field="category">Categoria</SortableHeader>
-                    <TableHead>Material</TableHead>
+                    <SortableHeader field="tipo">Tipo</SortableHeader>
+                    <TableHead>Grupo</TableHead>
                     <SortableHeader field="unit_price">Preço Base</SortableHeader>
                     <TableHead>Tabela de Preços</TableHead>
                     <TableHead>Status</TableHead>
@@ -1006,16 +1005,16 @@ export default function Products() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.category && (
+                        {product.tipo && (
                           <Badge variant="secondary">
-                            {categories.items.find((c) => c.value === product.category)?.label || product.category}
+                            {tipos.items.find((c) => c.value === product.tipo)?.label || product.tipo}
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.material && (
+                        {product.grupo && (
                           <span className="text-sm text-muted-foreground">
-                            {materials.items.find((m) => m.value === product.material)?.label || product.material}
+                            {grupos.items.find((m) => m.value === product.grupo)?.label || product.grupo}
                           </span>
                         )}
                       </TableCell>
