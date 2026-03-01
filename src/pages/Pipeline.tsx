@@ -215,49 +215,135 @@ export default function Pipeline() {
     toast.success('Dados atualizados!');
   };
 
-  const { data: companies } = useQuery({
-    queryKey: ['companies-with-cnpj'],
+  // Search-based company loading (on-demand, max 50)
+  const [companySearch, setCompanySearch] = useState('');
+  const { data: companiesSearchResult } = useQuery({
+    queryKey: ['companies-search', companySearch],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name, cnpj').order('name');
+      let query = supabase.from('companies').select('id, name, cnpj').order('name').limit(50);
+      if (companySearch) {
+        query = query.or(`name.ilike.%${companySearch}%,cnpj.ilike.%${companySearch}%,fantasia.ilike.%${companySearch}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: contacts } = useQuery({
-    queryKey: ['contacts-with-cpf'],
+  // Always fetch the currently selected company so it appears in the select
+  const { data: selectedCompanyData } = useQuery({
+    queryKey: ['company-selected', formData.company_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').order('first_name');
+      if (!formData.company_id) return null;
+      const { data, error } = await supabase.from('companies').select('id, name, cnpj').eq('id', formData.company_id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.company_id,
+  });
+
+  // Search-based contact loading (on-demand, max 50, filtered by company)
+  const [contactSearch, setContactSearch] = useState('');
+  const { data: contactsSearchResult } = useQuery({
+    queryKey: ['contacts-search', contactSearch, formData.company_id],
+    queryFn: async () => {
+      let query = supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').order('first_name').limit(50);
+      if (formData.company_id) {
+        query = query.eq('company_id', formData.company_id);
+      }
+      if (contactSearch) {
+        query = query.or(`first_name.ilike.%${contactSearch}%,last_name.ilike.%${contactSearch}%,cpf.ilike.%${contactSearch}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
   });
 
-  // Searchable options for companies
+  // Always fetch the currently selected contact
+  const { data: selectedContactData } = useQuery({
+    queryKey: ['contact-selected', formData.contact_id],
+    queryFn: async () => {
+      if (!formData.contact_id) return null;
+      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').eq('id', formData.contact_id).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.contact_id,
+  });
+
+  // Also load contacts for existing deals (for getContactInfo helper)
+  const allDealContactIds = useMemo(() => {
+    return [...new Set(deals?.map(d => d.contact_id).filter(Boolean) || [])];
+  }, [deals]);
+  
+  const { data: dealContacts } = useQuery({
+    queryKey: ['deal-contacts', allDealContactIds],
+    queryFn: async () => {
+      if (allDealContactIds.length === 0) return [];
+      // Fetch in batches to avoid URL length limits
+      const batchSize = 50;
+      const results = [];
+      for (let i = 0; i < allDealContactIds.length; i += batchSize) {
+        const batch = allDealContactIds.slice(i, i + batchSize);
+        const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').in('id', batch);
+        if (error) throw error;
+        if (data) results.push(...data);
+      }
+      return results;
+    },
+    enabled: allDealContactIds.length > 0,
+  });
+
+  // Searchable options for companies — merge search results with selected
   const companyOptions: SearchableSelectOption[] = useMemo(() => {
-    return companies?.map(c => ({
-      value: c.id,
-      label: c.name,
-      searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined,
-    })) || [];
-  }, [companies]);
+    const map = new Map<string, SearchableSelectOption>();
+    // Add selected company first so it always shows
+    if (selectedCompanyData) {
+      map.set(selectedCompanyData.id, {
+        value: selectedCompanyData.id,
+        label: selectedCompanyData.name,
+        searchTerms: selectedCompanyData.cnpj ? cleanDocument(selectedCompanyData.cnpj) : undefined,
+      });
+    }
+    companiesSearchResult?.forEach(c => {
+      if (!map.has(c.id)) {
+        map.set(c.id, {
+          value: c.id,
+          label: c.name,
+          searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [companiesSearchResult, selectedCompanyData]);
 
-  // Searchable options for contacts — filtered by selected company
+  // Searchable options for contacts — merge search results with selected
   const contactOptions: SearchableSelectOption[] = useMemo(() => {
-    const filtered = formData.company_id
-      ? contacts?.filter(c => c.company_id === formData.company_id)
-      : contacts;
-    return filtered?.map(c => ({
-      value: c.id,
-      label: `${c.first_name} ${c.last_name || ''}`.trim(),
-      searchTerms: c.cpf ? cleanDocument(c.cpf) : undefined,
-    })) || [];
-  }, [contacts, formData.company_id]);
+    const map = new Map<string, SearchableSelectOption>();
+    if (selectedContactData) {
+      map.set(selectedContactData.id, {
+        value: selectedContactData.id,
+        label: `${selectedContactData.first_name} ${selectedContactData.last_name || ''}`.trim(),
+        searchTerms: selectedContactData.cpf ? cleanDocument(selectedContactData.cpf) : undefined,
+      });
+    }
+    contactsSearchResult?.forEach(c => {
+      if (!map.has(c.id)) {
+        map.set(c.id, {
+          value: c.id,
+          label: `${c.first_name} ${c.last_name || ''}`.trim(),
+          searchTerms: c.cpf ? cleanDocument(c.cpf) : undefined,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [contactsSearchResult, selectedContactData]);
 
   // Helper functions to get contact info
   const getContactInfo = (contactId: string | null) => {
     if (!contactId) return null;
-    return contacts?.find(c => c.id === contactId);
+    return dealContacts?.find(c => c.id === contactId) || selectedContactData?.id === contactId ? selectedContactData : null;
   };
 
   const getContactPhone = (contactId: string | null) => {
@@ -863,6 +949,7 @@ export default function Pipeline() {
                           emptyMessage="Nenhuma empresa encontrada."
                           onCreateNew={() => setQuickCreateCompanyOpen(true)}
                           createNewLabel="Criar nova empresa"
+                          onSearchChange={setCompanySearch}
                         />
                       </div>
                       <div>
@@ -876,6 +963,7 @@ export default function Pipeline() {
                           emptyMessage="Nenhum contato encontrado."
                           onCreateNew={() => setQuickCreateContactOpen(true)}
                           createNewLabel="Criar novo contato"
+                          onSearchChange={setContactSearch}
                         />
                       </div>
                       {legalEntities.length > 0 && (
@@ -1123,7 +1211,7 @@ export default function Pipeline() {
         setFilterDateFrom={setFilterDateFrom}
         filterDateTo={filterDateTo}
         setFilterDateTo={setFilterDateTo}
-        companies={companies}
+        companies={companiesSearchResult}
         hasActiveFilters={hasActiveFilters}
       />
 
