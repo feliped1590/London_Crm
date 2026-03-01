@@ -34,7 +34,7 @@ export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
-  const { tipos, grupos, subgrupos, unitMeasures } = useProductLookups();
+  const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
   const { isAdmin } = useModulePermissions();
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -533,44 +533,15 @@ export default function Products() {
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
+                    {/* Tipo */}
                     <div>
-                      <Label htmlFor="sku">Código SKU *</Label>
-                      <Input
-                        id="sku"
-                        value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                        placeholder="Ex: BOB-001"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="name">Nome do Produto *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Ex: Bobina PEBD Transparente"
-                        required
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <Label htmlFor="description">Descrição</Label>
-                      <Textarea
-                        id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={2}
-                        placeholder="Descrição técnica do produto"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="tipo">Tipo</Label>
+                      <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
                         onValueChange={(v) => setFormData({ ...formData, tipo_id: v === 'none' ? undefined : v })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
@@ -580,42 +551,38 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Família */}
                     <div>
-                      <Label htmlFor="grupo">Grupo</Label>
+                      <Label htmlFor="familia">Família</Label>
                       <Select
-                        value={formData.grupo_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
+                        value={formData.family_id || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, family_id: v === 'none' ? undefined : v })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
+                          <SelectValue placeholder="Selecione a família" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Nenhum</SelectItem>
-                          {grupos.items.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                          <SelectItem value="none">Nenhuma</SelectItem>
+                          {familias.items.map((f) => (
+                            <SelectItem key={f.id} value={f.id}>{f.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Código */}
                     <div>
-                      <Label htmlFor="subgrupo">Subgrupo</Label>
-                      <Select
-                        value={formData.subgrupo_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nenhum</SelectItem>
-                          {subgrupos.items.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="sku">Código *</Label>
+                      <Input
+                        id="sku"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                        placeholder="Ex: BOB-001"
+                        required
+                      />
                     </div>
+                    {/* Unidade */}
                     <div>
-                      <Label htmlFor="unit_measure">Unidade de Medida</Label>
+                      <Label htmlFor="unit_measure">Unidade</Label>
                       <Select
                         value={formData.unit_measure}
                         onValueChange={(v) => setFormData({ ...formData, unit_measure: v })}
@@ -630,39 +597,35 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {/* Seção de Precificação */}
-                    <div className="col-span-2 pt-2">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Precificação
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="unit_price">Preço Unitário (R$)</Label>
-                          <CurrencyInput
-                            id="unit_price"
-                            value={formData.unit_price}
-                            onChange={(val) => setFormData({ ...formData, unit_price: val })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="fator_kg">Valor do Fator KG (R$/kg)</Label>
-                          <CurrencyInput
-                            id="fator_kg"
-                            value={formData.fator_kg || null}
-                            onChange={(val) => {
-                              const newData = { ...formData, fator_kg: val };
-                              newData.fator_milheiro = recalcularFatorMilheiro(newData);
-                              setFormData(newData);
-                            }}
-                            placeholder="Valor por KG"
-                          />
-                        </div>
-                      </div>
+                    {/* Descrição */}
+                    <div className="col-span-2">
+                      <Label htmlFor="name">Descrição *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Descrição do produto"
+                        required
+                      />
+                    </div>
+                    {/* NCM */}
+                    <div className="col-span-2">
+                      <NCMSelector
+                        value={formData.ncm_code}
+                        onChange={(ncmCode, ncm) => {
+                          setFormData({ 
+                            ...formData, 
+                            ncm_code: ncmCode,
+                            ncm_id: ncm?.id,
+                            aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
+                          });
+                        }}
+                        productDescription={`${formData.name} ${formData.description || ''}`}
+                        onValidationChange={setNcmValidation}
+                      />
                     </div>
 
-                    {/* Seção de Dimensões */}
+                    {/* Dimensões */}
                     <div className="col-span-2 pt-2">
                       <h3 className="text-sm font-medium text-muted-foreground mb-3">Dimensões</h3>
                       <div className="grid grid-cols-3 gap-4">
@@ -720,6 +683,107 @@ export default function Products() {
                       </div>
                     </div>
 
+                    {/* Classificação complementar (colapsável) */}
+                    <div className="col-span-2 pt-2">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Classificação Complementar</h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="grupo">Grupo</Label>
+                          <Select
+                            value={formData.grupo_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {grupos.items.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="subgrupo">Subgrupo</Label>
+                          <Select
+                            value={formData.subgrupo_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {subgrupos.items.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="classe">Classe</Label>
+                          <Select
+                            value={formData.class_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, class_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhuma</SelectItem>
+                              {classes.items.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    <div className="col-span-2">
+                      <Label htmlFor="description">Observações</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        rows={2}
+                        placeholder="Observações técnicas do produto"
+                      />
+                    </div>
+
+                    {/* Precificação */}
+                    <div className="col-span-2 pt-2">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Precificação
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="unit_price">Preço Unitário (R$)</Label>
+                          <CurrencyInput
+                            id="unit_price"
+                            value={formData.unit_price}
+                            onChange={(val) => setFormData({ ...formData, unit_price: val })}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="fator_kg">Valor do Fator KG (R$/kg)</Label>
+                          <CurrencyInput
+                            id="fator_kg"
+                            value={formData.fator_kg || null}
+                            onChange={(val) => {
+                              const newData = { ...formData, fator_kg: val };
+                              newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                              setFormData(newData);
+                            }}
+                            placeholder="Valor por KG"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Fator Milheiro calculado */}
                     {formData.fator_kg > 0 && formData.width > 0 && formData.length > 0 && formData.thickness > 0 && (
                       <div className="col-span-2 p-3 bg-muted/50 rounded-lg border">
@@ -752,20 +816,6 @@ export default function Products() {
                 </TabsContent>
 
                 <TabsContent value="fiscal" className="space-y-4 mt-4">
-                  {/* NCM Selector */}
-                  <NCMSelector
-                    value={formData.ncm_code}
-                    onChange={(ncmCode, ncm) => {
-                      setFormData({ 
-                        ...formData, 
-                        ncm_code: ncmCode,
-                        ncm_id: ncm?.id,
-                        aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
-                      });
-                    }}
-                    productDescription={`${formData.name} ${formData.description || ''}`}
-                    onValidationChange={setNcmValidation}
-                  />
 
                   {/* Dados Fiscais */}
                   <FiscalSuggestionsCard
@@ -979,23 +1029,37 @@ export default function Products() {
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="sku">SKU</SortableHeader>
-                    <SortableHeader field="name">Nome</SortableHeader>
-                    <TableHead>NCM</TableHead>
                     <SortableHeader field="tipo">Tipo</SortableHeader>
-                    <TableHead>Grupo</TableHead>
-                    <SortableHeader field="unit_price">Preço Base</SortableHeader>
-                    <TableHead>Tabela de Preços</TableHead>
+                    <TableHead>Família</TableHead>
+                    <SortableHeader field="sku">Código</SortableHeader>
+                    <SortableHeader field="name">Descrição</SortableHeader>
+                    <TableHead>Unidade</TableHead>
+                    <TableHead>NCM</TableHead>
+                    <TableHead>Largura</TableHead>
+                    <TableHead>Comprimento</TableHead>
+                    <TableHead>Espessura</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Sync ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                 {filteredProducts.map((product) => {
-                  const pricingInfo = getProductPricingInfo(product);
                   return (
                     <TableRow key={product.id}>
+                      <TableCell>
+                        {product.tipo_id ? (
+                          <Badge variant="secondary">
+                            {tipos.items.find((c) => c.id === product.tipo_id)?.label || '—'}
+                          </Badge>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        {product.family_id ? (
+                          <span className="text-sm">
+                            {familias.items.find((f) => f.id === product.family_id)?.label || '—'}
+                          </span>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell className="font-mono font-medium">{product.sku}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -1003,68 +1067,23 @@ export default function Products() {
                           {product.name}
                         </div>
                       </TableCell>
+                      <TableCell className="text-sm">{product.unit_measure || '—'}</TableCell>
                       <TableCell>
                         {product.ncm_code ? (
                           <Badge variant="outline" className="font-mono text-xs">
                             {product.ncm_code}
                           </Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        {product.tipo_id && (
-                          <Badge variant="secondary">
-                            {tipos.items.find((c) => c.id === product.tipo_id)?.label || '—'}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.grupo_id && (
-                          <span className="text-sm text-muted-foreground">
-                            {grupos.items.find((m) => m.id === product.grupo_id)?.label || '—'}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatCurrency(product.unit_price || 0)}</TableCell>
-                      <TableCell>
-                        {pricingInfo ? (
-                          <div className="flex flex-col gap-1">
-                            <Badge variant="outline" className="text-xs gap-1 w-fit">
-                              <DollarSign className="h-3 w-3" />
-                              {pricingInfo.table.name}
-                            </Badge>
-                            {pricingInfo.hasDiscount && (
-                              <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                                → {formatCurrency(pricingInfo.finalPrice)}
-                                {pricingInfo.rule?.discount_percent && pricingInfo.rule.discount_percent > 0 && (
-                                  <span className="ml-1">(-{pricingInfo.rule.discount_percent}%)</span>
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      <TableCell className="text-sm">{product.width ? `${product.width}` : '—'}</TableCell>
+                      <TableCell className="text-sm">{product.length ? `${product.length}` : '—'}</TableCell>
+                      <TableCell className="text-sm">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
                       <TableCell>
                         <Badge variant={product.active ? 'default' : 'outline'}>
                           {product.active ? 'Ativo' : 'Inativo'}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {product.pendente_envio ? (
-                          <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 gap-1">
-                            <RefreshCw className="h-3 w-3" />
-                            Pendente
-                          </Badge>
-                        ) : product.erp_last_sync_at ? (
-                          <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-400 gap-1">
-                            Sincronizado
-                          </Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
