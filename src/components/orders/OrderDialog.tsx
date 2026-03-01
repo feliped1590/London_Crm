@@ -123,7 +123,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     id: string;
     sku: string;
     name: string;
-    tipo: string | null;
+    tipo_id: string | null;
     unit_price: number | null;
     width: number | null;
     length: number | null;
@@ -135,11 +135,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     queryFn: async (): Promise<ProductItem[]> => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, sku, name, tipo, unit_price, width, length, thickness')
+        .select('id, sku, name, tipo_id, unit_price, width, length, thickness')
         .eq('active', true)
         .order('name');
       if (error) throw error;
-      return (data ?? []) as ProductItem[];
+      return (data ?? []) as unknown as ProductItem[];
     },
   });
 
@@ -242,7 +242,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       const { finalPrice, rule } = calculatePrice(
         applicableTable.id,
         product.id,
-        product.tipo,
+        product.tipo_id,
         1,
         product.unit_price || 0
       );
@@ -281,7 +281,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       companyId ? 'company' : contactId ? 'contact' : null,
       companyId || contactId || null,
       product.id,
-      product.tipo || null,
+        product.tipo_id || null,
       item.quantity || 1,
       product.unit_price || 0,
       item.unit_price || 0
@@ -331,7 +331,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         companyId ? 'company' : contactId ? 'contact' : null,
         companyId || contactId || null,
         item.product_id,
-        product.tipo || null,
+        product.tipo_id || null,
         item.quantity || 1,
         product.unit_price || 0,
         item.unit_price || 0
@@ -429,7 +429,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           const { finalPrice, rule } = calculatePrice(
             applicableTable.id,
             product.id,
-            product.tipo,
+            product.tipo_id,
             item.quantity,
             product.unit_price || 0
           );

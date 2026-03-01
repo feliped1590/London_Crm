@@ -4549,7 +4549,7 @@ export type Database = {
           family_id: string | null
           fator_kg: number | null
           fator_milheiro: number | null
-          grupo: string | null
+          grupo_id: string | null
           id: string
           length: number | null
           name: string
@@ -4566,12 +4566,12 @@ export type Database = {
           reference: string | null
           sku: string
           subcategory: string | null
-          subgrupo: string | null
+          subgrupo_id: string | null
           tem_icms_st: boolean | null
           tenant_id: string
           thickness: number | null
-          tipo: string | null
           tipo_ficha: number | null
+          tipo_id: string | null
           tipo_item: string | null
           tipo_produto_fiscal:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
@@ -4615,7 +4615,7 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
-          grupo?: string | null
+          grupo_id?: string | null
           id?: string
           length?: number | null
           name: string
@@ -4632,12 +4632,12 @@ export type Database = {
           reference?: string | null
           sku: string
           subcategory?: string | null
-          subgrupo?: string | null
+          subgrupo_id?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
-          tipo?: string | null
           tipo_ficha?: number | null
+          tipo_id?: string | null
           tipo_item?: string | null
           tipo_produto_fiscal?:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
@@ -4681,7 +4681,7 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
-          grupo?: string | null
+          grupo_id?: string | null
           id?: string
           length?: number | null
           name?: string
@@ -4698,12 +4698,12 @@ export type Database = {
           reference?: string | null
           sku?: string
           subcategory?: string | null
-          subgrupo?: string | null
+          subgrupo_id?: string | null
           tem_icms_st?: boolean | null
           tenant_id?: string
           thickness?: number | null
-          tipo?: string | null
           tipo_ficha?: number | null
+          tipo_id?: string | null
           tipo_item?: string | null
           tipo_produto_fiscal?:
             | Database["public"]["Enums"]["tipo_produto_fiscal"]
@@ -4717,6 +4717,27 @@ export type Database = {
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_products_grupo"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "product_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_products_subgrupo"
+            columns: ["subgrupo_id"]
+            isOneToOne: false
+            referencedRelation: "product_subgroups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_products_tipo"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_class_id_fkey"
             columns: ["class_id"]
