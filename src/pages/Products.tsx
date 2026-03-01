@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -45,6 +45,58 @@ export default function Products() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useState<HTMLInputElement | null>(null);
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      let text: string;
+      
+      // Try UTF-16 LE first (common for Excel CSV exports)
+      const bytes = new Uint8Array(buffer);
+      if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        text = new TextDecoder('utf-16le').decode(buffer);
+      } else if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+        text = new TextDecoder('utf-16be').decode(buffer);
+      } else {
+        text = new TextDecoder('utf-8').decode(buffer);
+      }
+      
+      // Clean up: remove null chars and normalize
+      text = text.replace(/\0/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
+      const { data, error } = await supabase.functions.invoke('import-products-csv', {
+        body: { csvContent: text },
+      });
+      
+      if (error) throw error;
+      
+      if (data.inserted > 0) {
+        toast.success(`Importação concluída: ${data.inserted} produtos importados`);
+      }
+      if (data.insert_errors > 0) {
+        toast.warning(`${data.insert_errors} erros de inserção`);
+      }
+      if (data.warnings?.length > 0) {
+        console.warn('Import warnings:', data.warnings);
+        toast.info(`${data.warnings.length} avisos durante o parse`);
+      }
+      
+      await refetch();
+    } catch (err: any) {
+      toast.error('Erro na importação: ' + (err.message || 'erro desconhecido'));
+      console.error('Import error:', err);
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      if (e.target) e.target.value = '';
+    }
+  };
 
   const handleSyncNow = async () => {
     setIsSyncing(true);
@@ -488,6 +540,22 @@ export default function Products() {
                 <p>Integração ERP em desenvolvimento</p>
               </TooltipContent>
             </Tooltip>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isImporting}
+              className="gap-2"
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.csv,.txt';
+                input.onchange = (e) => handleImportCSV(e as any);
+                input.click();
+              }}
+            >
+              <FileUp className={`h-4 w-4 ${isImporting ? 'animate-spin' : ''}`} />
+              {isImporting ? 'Importando...' : 'Importar CSV'}
+            </Button>
             <Button
               variant="outline"
               size="sm"
