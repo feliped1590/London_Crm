@@ -18,12 +18,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, Edit2, Trash2, DollarSign, Percent, Package, Building2, Users, Link2 } from 'lucide-react';
 import { usePricingTables, PricingTable, PricingRule } from '@/hooks/usePricingTables';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { useProductLookups } from '@/hooks/useProductLookups';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { EntityAssignmentsTab } from '@/components/pricing/EntityAssignmentsTab';
 
 export default function PricingTables() {
   const { isAdmin } = useModulePermissions();
+  const { tipos } = useProductLookups();
   const {
     pricingTables,
     pricingRules,
@@ -94,7 +96,11 @@ export default function PricingTables() {
     },
   });
 
-  const categories = [...new Set(products?.map((p: any) => p.tipo_id).filter(Boolean) || [])];
+  const categoryIds = [...new Set(products?.map((p: any) => p.tipo_id).filter(Boolean) || [])];
+  const categories = categoryIds.map((id) => {
+    const found = tipos.items.find((t) => t.id === id);
+    return { id: id as string, label: found?.label || id as string };
+  });
 
   const resetTableForm = () => {
     setTableFormData({
@@ -370,7 +376,7 @@ export default function PricingTables() {
                       {getRulesForTable(selectedTableId).map((rule: any) => (
                         <TableRow key={rule.id}>
                           <TableCell>
-                            {rule.products?.name || rule.category || <span className="text-muted-foreground">Todos</span>}
+                            {rule.products?.name || (rule.category ? (tipos.items.find((t) => t.id === rule.category)?.label || rule.category) : <span className="text-muted-foreground">Todos</span>)}
                           </TableCell>
                           <TableCell>
                             {rule.min_quantity}
@@ -549,8 +555,8 @@ export default function PricingTables() {
                   <SelectContent>
                     <SelectItem value="none">Todas as categorias</SelectItem>
                     {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat!}>
-                        {cat}
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
