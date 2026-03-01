@@ -588,6 +588,23 @@ export default function Pipeline() {
     
     // Skip checklist validation if moving to the same stage
     if (deal.stage === stage) return;
+
+    // Block moving from first stage without company and contact
+    const firstStage = stages[0];
+    if (deal.stage === firstStage) {
+      if (!deal.company_id && !deal.contact_id) {
+        toast.error('Para avançar da primeira etapa, é necessário preencher a Empresa e o Contato do negócio.');
+        return;
+      }
+      if (!deal.company_id) {
+        toast.error('Para avançar da primeira etapa, é necessário preencher a Empresa do negócio.');
+        return;
+      }
+      if (!deal.contact_id) {
+        toast.error('Para avançar da primeira etapa, é necessário preencher o Contato do negócio.');
+        return;
+      }
+    }
     
     // If dropping to fechado_perdido, show loss reason modal
     if (stage === 'fechado_perdido') {
