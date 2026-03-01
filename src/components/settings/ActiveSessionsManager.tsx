@@ -45,13 +45,8 @@ export function ActiveSessionsManager() {
   const { data: sessions = [], isLoading, refetch } = useQuery({
     queryKey: ['active_sessions_admin'],
     queryFn: async () => {
-      console.log('[ActiveSessions] Fetching sessions, user:', user?.id, user?.email);
       const { data, error } = await supabase.rpc('get_active_sessions_admin');
-      console.log('[ActiveSessions] Result:', { data, error });
-      if (error) {
-        console.error('[ActiveSessions] Error:', error.message, error.details, error.hint);
-        throw error;
-      }
+      if (error) throw error;
       return (data || []) as any[];
     },
   });
