@@ -70,7 +70,7 @@ export default function PricingTables() {
   const { data: products } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id, name, sku, tipo').eq('active', true).order('name');
+      const { data, error } = await supabase.from('products').select('id, name, sku, tipo_id').eq('active', true).order('name');
       if (error) throw error;
       return data;
     },
@@ -94,7 +94,7 @@ export default function PricingTables() {
     },
   });
 
-  const categories = [...new Set(products?.map((p) => p.tipo).filter(Boolean) || [])];
+  const categories = [...new Set(products?.map((p: any) => p.tipo_id).filter(Boolean) || [])];
 
   const resetTableForm = () => {
     setTableFormData({
@@ -527,7 +527,7 @@ export default function PricingTables() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Todos os produtos</SelectItem>
-                    {products?.map((p) => (
+                    {products?.map((p: any) => (
                       <SelectItem key={p.id} value={p.id}>
                         {p.name} ({p.sku})
                       </SelectItem>

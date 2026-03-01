@@ -386,7 +386,7 @@ export function ProposalDialog({
       const { finalPrice, rule } = calculatePrice(
         applicableTable.id,
         product.id,
-        product.tipo,
+        product.tipo_id,
         1, // initial quantity
         product.unit_price || 0
       );
@@ -431,7 +431,7 @@ export function ProposalDialog({
       companyId ? 'company' : contactId ? 'contact' : null,
       companyId || contactId || null,
       product.id,
-      product.tipo || null,
+      product.tipo_id || null,
       item.quantity || 1,
       product.unit_price || 0,
       item.unit_price || 0
@@ -567,7 +567,7 @@ export function ProposalDialog({
           const { finalPrice, rule } = calculatePrice(
             applicableTable.id,
             product.id,
-            product.tipo,
+            product.tipo_id,
             value as number,
             product.unit_price || 0
           );
@@ -596,7 +596,7 @@ export function ProposalDialog({
         companyId ? 'company' : contactId ? 'contact' : null,
         companyId || contactId || null,
         item.product_id,
-        product.tipo || null,
+        product.tipo_id || null,
         item.quantity || 1,
         product.unit_price || 0,
         item.unit_price || 0

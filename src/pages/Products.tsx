@@ -69,13 +69,15 @@ export default function Products() {
     sku: '',
     name: '',
     description: '',
-    tipo: '',
+    tipo_id: '' as string | undefined,
     unit_measure: 'un',
     unit_price: 0,
     fator_kg: 0,
     fator_milheiro: 0,
-    grupo: '',
-    subgrupo: '',
+    grupo_id: '' as string | undefined,
+    subgrupo_id: '' as string | undefined,
+    family_id: '' as string | undefined,
+    class_id: '' as string | undefined,
     width: 0,
     length: 0,
     thickness: 0,
@@ -154,7 +156,7 @@ export default function Products() {
         .limit(500);
 
       if (filterTipo !== 'all') {
-        query = query.eq('tipo', filterTipo);
+        query = query.eq('tipo_id', filterTipo);
       }
 
       if (filterActive === 'active') {
@@ -188,13 +190,15 @@ export default function Products() {
         sku: data.sku!,
         name: data.name!,
         description: data.description,
-        tipo: data.tipo,
+        tipo_id: data.tipo_id || null,
+        grupo_id: data.grupo_id || null,
+        subgrupo_id: data.subgrupo_id || null,
+        family_id: data.family_id || null,
+        class_id: data.class_id || null,
         unit_measure: data.unit_measure,
         unit_price: data.unit_price,
         fator_kg: data.fator_kg,
         fator_milheiro: fatorMilheiro,
-        grupo: data.grupo,
-        subgrupo: data.subgrupo,
         width: data.width,
         length: data.length,
         thickness: data.thickness,
@@ -284,13 +288,15 @@ export default function Products() {
       sku: '',
       name: '',
       description: '',
-      tipo: '',
+      tipo_id: undefined,
       unit_measure: 'un',
       unit_price: 0,
       fator_kg: 0,
       fator_milheiro: 0,
-      grupo: '',
-      subgrupo: '',
+      grupo_id: undefined,
+      subgrupo_id: undefined,
+      family_id: undefined,
+      class_id: undefined,
       width: 0,
       length: 0,
       thickness: 0,
@@ -342,13 +348,15 @@ export default function Products() {
       sku: product.sku,
       name: product.name,
       description: product.description || '',
-      tipo: product.tipo || '',
+      tipo_id: product.tipo_id || undefined,
       unit_measure: product.unit_measure || 'un',
       unit_price: product.unit_price || 0,
       fator_kg: product.fator_kg || 0,
       fator_milheiro: product.fator_milheiro || 0,
-      grupo: product.grupo || '',
-      subgrupo: product.subgrupo || '',
+      grupo_id: product.grupo_id || undefined,
+      subgrupo_id: product.subgrupo_id || undefined,
+      family_id: product.family_id || undefined,
+      class_id: product.class_id || undefined,
       width: product.width || 0,
       length: product.length || 0,
       thickness: product.thickness || 0,
@@ -386,7 +394,7 @@ export default function Products() {
     const { finalPrice, rule } = calculatePrice(
       table.id,
       product.id,
-      product.tipo,
+      product.tipo_id || null,
       1,
       product.unit_price || 0
     );
@@ -418,8 +426,8 @@ export default function Products() {
           bVal = b.name.toLowerCase();
           break;
         case 'tipo':
-          aVal = (a.tipo || '').toLowerCase();
-          bVal = (b.tipo || '').toLowerCase();
+          aVal = (a.tipo_id || '').toLowerCase();
+          bVal = (b.tipo_id || '').toLowerCase();
           break;
         case 'unit_price':
           aVal = a.unit_price || 0;
@@ -558,8 +566,8 @@ export default function Products() {
                     <div>
                       <Label htmlFor="tipo">Tipo</Label>
                       <Select
-                        value={formData.tipo || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, tipo: v === 'none' ? '' : v })}
+                        value={formData.tipo_id || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, tipo_id: v === 'none' ? undefined : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -567,7 +575,7 @@ export default function Products() {
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
                           {tipos.items.map((c) => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                            <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -575,8 +583,8 @@ export default function Products() {
                     <div>
                       <Label htmlFor="grupo">Grupo</Label>
                       <Select
-                        value={formData.grupo || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, grupo: v === 'none' ? '' : v })}
+                        value={formData.grupo_id || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -584,7 +592,7 @@ export default function Products() {
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
                           {grupos.items.map((m) => (
-                            <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                            <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -592,8 +600,8 @@ export default function Products() {
                     <div>
                       <Label htmlFor="subgrupo">Subgrupo</Label>
                       <Select
-                        value={formData.subgrupo || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, subgrupo: v === 'none' ? '' : v })}
+                        value={formData.subgrupo_id || 'none'}
+                        onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione" />
@@ -601,7 +609,7 @@ export default function Products() {
                         <SelectContent>
                           <SelectItem value="none">Nenhum</SelectItem>
                           {subgrupos.items.map((c) => (
-                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                            <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -755,7 +763,7 @@ export default function Products() {
                         aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
                       });
                     }}
-                    productDescription={`${formData.name} ${formData.description || ''} ${formData.grupo || ''}`}
+                    productDescription={`${formData.name} ${formData.description || ''}`}
                     onValidationChange={setNcmValidation}
                   />
 
@@ -941,7 +949,7 @@ export default function Products() {
               <SelectContent>
                 <SelectItem value="all">Todos os Tipos</SelectItem>
                 {tipos.items.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -1005,16 +1013,16 @@ export default function Products() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.tipo && (
+                        {product.tipo_id && (
                           <Badge variant="secondary">
-                            {tipos.items.find((c) => c.value === product.tipo)?.label || product.tipo}
+                            {tipos.items.find((c) => c.id === product.tipo_id)?.label || '—'}
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.grupo && (
+                        {product.grupo_id && (
                           <span className="text-sm text-muted-foreground">
-                            {grupos.items.find((m) => m.value === product.grupo)?.label || product.grupo}
+                            {grupos.items.find((m) => m.id === product.grupo_id)?.label || '—'}
                           </span>
                         )}
                       </TableCell>
