@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
@@ -177,6 +178,9 @@ export default function Pipeline() {
   // Quick create modals state
   const [quickCreateCompanyOpen, setQuickCreateCompanyOpen] = useState(false);
   const [quickCreateContactOpen, setQuickCreateContactOpen] = useState(false);
+
+  // Missing data alert modal state
+  const [missingDataAlert, setMissingDataAlert] = useState<string | null>(null);
 
   // Admin intervention modal state
   const [interventionModalOpen, setInterventionModalOpen] = useState(false);
@@ -593,15 +597,15 @@ export default function Pipeline() {
     const firstStage = stages[0];
     if (deal.stage === firstStage) {
       if (!deal.company_id && !deal.contact_id) {
-        toast.error('Para avançar da primeira etapa, é necessário preencher a Empresa e o Contato do negócio.');
+        setMissingDataAlert('Para avançar da primeira etapa, é necessário preencher a Empresa e o Contato do negócio.');
         return;
       }
       if (!deal.company_id) {
-        toast.error('Para avançar da primeira etapa, é necessário preencher a Empresa do negócio.');
+        setMissingDataAlert('Para avançar da primeira etapa, é necessário preencher a Empresa do negócio.');
         return;
       }
       if (!deal.contact_id) {
-        toast.error('Para avançar da primeira etapa, é necessário preencher o Contato do negócio.');
+        setMissingDataAlert('Para avançar da primeira etapa, é necessário preencher o Contato do negócio.');
         return;
       }
     }
@@ -1429,6 +1433,26 @@ export default function Pipeline() {
         onCancel={() => setInterventionData(null)}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+
+      {/* Missing data alert modal */}
+      <AlertDialog open={!!missingDataAlert} onOpenChange={(open) => !open && setMissingDataAlert(null)}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader className="flex flex-col items-center gap-3">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-7 w-7 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center text-lg">Cadastro Incompleto</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-base">
+              {missingDataAlert}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogAction onClick={() => setMissingDataAlert(null)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
