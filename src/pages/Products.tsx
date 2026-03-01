@@ -543,22 +543,6 @@ export default function Products() {
             <Button
               variant="outline"
               size="sm"
-              disabled={isImporting}
-              className="gap-2"
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.csv,.txt';
-                input.onchange = (e) => handleImportCSV(e as any);
-                input.click();
-              }}
-            >
-              <FileUp className={`h-4 w-4 ${isImporting ? 'animate-spin' : ''}`} />
-              {isImporting ? 'Importando...' : 'Importar CSV'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={handleRefresh}
               disabled={isFetching}
               className="gap-2"
