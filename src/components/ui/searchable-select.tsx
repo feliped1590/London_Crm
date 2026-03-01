@@ -34,6 +34,7 @@ interface SearchableSelectProps {
   allowClear?: boolean;
   onCreateNew?: () => void;
   createNewLabel?: string;
+  onSearchChange?: (search: string) => void;
 }
 
 export function SearchableSelect({
@@ -48,9 +49,19 @@ export function SearchableSelect({
   allowClear = true,
   onCreateNew,
   createNewLabel = 'Criar novo',
+  onSearchChange,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
+
+  const handleSearchChange = React.useCallback((value: string) => {
+    setSearch(value);
+    if (onSearchChange) {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => onSearchChange(value), 300);
+    }
+  }, [onSearchChange]);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
@@ -86,7 +97,7 @@ export function SearchableSelect({
           <CommandInput
             placeholder={searchPlaceholder}
             value={search}
-            onValueChange={setSearch}
+            onValueChange={handleSearchChange}
           />
           <CommandList>
             <CommandEmpty>
