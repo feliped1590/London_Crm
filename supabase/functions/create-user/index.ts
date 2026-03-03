@@ -144,7 +144,27 @@ Deno.serve(async (req) => {
 
     console.log('User created:', newUser.user?.id);
 
-    // The trigger handle_new_user will create the profile and assign default role (vendedor)
+    // The trigger handle_new_user will create the profile, assign default role, and insert into user_tenants.
+    // As a safety net, also ensure user_tenants entry exists via edge function.
+    if (newUser.user) {
+      const { data: tenantData } = await supabaseAdmin
+        .from('tenants')
+        .select('id')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (tenantData) {
+        const { error: tenantError } = await supabaseAdmin
+          .from('user_tenants')
+          .upsert({ user_id: newUser.user.id, tenant_id: tenantData.id }, { onConflict: 'user_id,tenant_id' });
+
+        if (tenantError) {
+          console.error('Error inserting user_tenants:', tenantError);
+        }
+      }
+    }
+
     // If the role should be different, update it
     if (role && role !== 'vendedor' && newUser.user) {
       console.log('Updating role to:', role);
