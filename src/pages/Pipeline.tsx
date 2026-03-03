@@ -1152,6 +1152,7 @@ export default function Pipeline() {
                       emptyMessage="Nenhuma empresa encontrada."
                       onCreateNew={() => setQuickCreateCompanyOpen(true)}
                       createNewLabel="Criar nova empresa"
+                      onSearchChange={setCompanySearch}
                     />
                   </div>
                   <div>
