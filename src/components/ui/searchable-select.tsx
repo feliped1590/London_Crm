@@ -65,8 +65,9 @@ export function SearchableSelect({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Filter options based on search
+  // Filter options based on search — skip local filtering when server-side search is active
   const filteredOptions = React.useMemo(() => {
+    if (onSearchChange) return options; // Server handles filtering
     if (!search) return options;
     const searchLower = search.toLowerCase();
     return options.filter(
@@ -74,7 +75,7 @@ export function SearchableSelect({
         opt.label.toLowerCase().includes(searchLower) ||
         opt.searchTerms?.toLowerCase().includes(searchLower)
     );
-  }, [options, search]);
+  }, [options, search, onSearchChange]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
