@@ -94,7 +94,7 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command shouldFilter={false}>
+        <Command shouldFilter={false} filter={() => 1}>
           <CommandInput
             placeholder={searchPlaceholder}
             value={search}
