@@ -1,48 +1,70 @@
 
 
-## Diagnóstico
+## Plano: Alerta de Tarefas Pendentes no Login
 
-**Erro**: `invalid input syntax for type uuid: ""`
+### 1. Migração SQL — RPC + Índice
 
-**Causa raiz**: No `EditUserForm` (Settings.tsx, linha 127), ao vincular um CNPJ, o código faz:
+Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
+- Usa `date_trunc('day', now())` para comparações sem timezone issues
+- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
+- Filtra `status != 'done'` e `assigned_to = p_user_id`
 
-```typescript
-tenant_id: profile?.active_tenant_id || ''
+Criar índice composto:
+```sql
+CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
+ON public.tasks (assigned_to, status, due_date);
 ```
 
-Quando o usuário sendo editado não tem `active_tenant_id` definido no perfil, o fallback é uma **string vazia `''`**, que é inválida para uma coluna UUID NOT NULL.
+### 2. Hook `useLoginTaskAlert`
 
-## Correção
+Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
+- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
+- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
+- Se alert habilitado, chama RPC `check_pending_tasks`
+- Se total > 0, abre modal com delay de ~800ms + fade-in
+- Se som habilitado, toca audio com try/catch no `.play()`
+- Retorna estado do modal e dados para o componente
 
-Em `src/pages/Settings.tsx`, linha ~115-128, na `addLinkMutation`:
+### 3. Componente `TaskAlertModal`
 
-1. Buscar o `tenant_id` de forma confiável — usar o tenant da `legal_entity` selecionada como fallback, ou o tenant padrão do sistema.
-2. Impedir o insert se não houver `tenant_id` válido, exibindo um toast de erro ao invés de enviar `''`.
+Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
+- Dialog com animação suave (fade-in com delay)
+- Exibe contagens de tarefas vencidas e vencendo hoje
+- Botão "Ver Tarefas" → navega para `/tasks`
+- Botão "Fechar"
+- Design discreto e profissional
 
-**Alteração concreta**: Substituir a lógica do `mutationFn` para:
-- Obter o `tenant_id` da entidade jurídica selecionada (`legal_entities.tenant_id`) como fonte primária, já que a entidade já pertence a um tenant.
-- Remover o fallback para string vazia.
-- Validar antes do insert.
+### 4. Som de Notificação
 
-```typescript
-mutationFn: async (entityId: string) => {
-  if (!userProfile) throw new Error('Profile not found');
-  // Get tenant_id from the legal entity itself (reliable source)
-  const { data: entity } = await supabase
-    .from('legal_entities')
-    .select('tenant_id')
-    .eq('id', entityId)
-    .single();
-  if (!entity?.tenant_id) throw new Error('Não foi possível determinar o tenant da entidade');
-  const { error } = await supabase.from('user_legal_entities').insert({
-    user_id: userProfile.id,
-    legal_entity_id: entityId,
-    role: 'member',
-    tenant_id: entity.tenant_id,
-  });
-  if (error) throw error;
-},
-```
+Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
 
-Esta abordagem é mais robusta porque usa o `tenant_id` diretamente da entidade jurídica sendo vinculada, eliminando a dependência do `active_tenant_id` do perfil (que pode ser null para usuários recém-criados).
+### 5. Configuração no Settings (Notificações)
+
+Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
+- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
+- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
+- Persiste via upsert em `system_settings` key `task_alert_config`
+
+### 6. Integração no Login
+
+No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
+
+Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
+
+### Arquivos Criados/Editados
+
+| Ação | Arquivo |
+|------|---------|
+| Criar | Migração SQL (RPC + índice) |
+| Criar | `src/hooks/useLoginTaskAlert.ts` |
+| Criar | `src/components/tasks/TaskAlertModal.tsx` |
+| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
+| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
+
+### Performance
+
+- Índice composto garante query eficiente
+- Hook executa apenas 1x por sessão (sessionStorage)
+- Delay de 800ms não bloqueia carregamento do dashboard
+- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
 

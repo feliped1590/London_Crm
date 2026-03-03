@@ -115,16 +115,17 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
   const addLinkMutation = useMutation({
     mutationFn: async (entityId: string) => {
       if (!userProfile) throw new Error('Profile not found');
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('active_tenant_id')
-        .eq('id', userProfile.id)
+      const { data: entity } = await supabase
+        .from('legal_entities')
+        .select('tenant_id')
+        .eq('id', entityId)
         .single();
+      if (!entity?.tenant_id) throw new Error('Não foi possível determinar o tenant da entidade jurídica');
       const { error } = await supabase.from('user_legal_entities').insert({
         user_id: userProfile.id,
         legal_entity_id: entityId,
         role: 'member',
-        tenant_id: profile?.active_tenant_id || '',
+        tenant_id: entity.tenant_id,
       });
       if (error) throw error;
     },
