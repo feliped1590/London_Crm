@@ -103,7 +103,7 @@ export default function Pipeline() {
 
   // View mode and filters
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-  const [filterOwner, setFilterOwner] = useState('all');
+  const [filterOwner, setFilterOwner] = useState('mine');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
