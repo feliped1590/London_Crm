@@ -92,31 +92,81 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     pricingTableName: string;
   } | null>(null);
 
-  // Fetch companies
-  const { data: companies } = useQuery({
-    queryKey: ['companies-list'],
+  // Fetch companies (limited to 500, but ensure order's company is always included)
+  const { data: companiesRaw } = useQuery({
+    queryKey: ['companies-list-orders'],
     queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
       const { data, error } = await supabase
         .from('companies')
         .select('id, name')
-        .order('name');
+        .order('name')
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
   });
 
-  // Fetch contacts
-  const { data: contacts } = useQuery({
-    queryKey: ['contacts-list'],
+  // Ensure order's company is in the list
+  const { data: orderCompanyData } = useQuery({
+    queryKey: ['order-company', order?.company_id],
+    queryFn: async () => {
+      if (!order?.company_id) return null;
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('id', order.company_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!order?.company_id,
+  });
+
+  const companies = useMemo(() => {
+    const list = companiesRaw ?? [];
+    if (orderCompanyData && !list.find(c => c.id === orderCompanyData.id)) {
+      return [orderCompanyData, ...list];
+    }
+    return list;
+  }, [companiesRaw, orderCompanyData]);
+
+  // Fetch contacts (limited to 500, but ensure order's contact is always included)
+  const { data: contactsRaw } = useQuery({
+    queryKey: ['contacts-list-orders'],
     queryFn: async (): Promise<Array<{ id: string; first_name: string; last_name: string | null }>> => {
       const { data, error } = await supabase
         .from('contacts')
         .select('id, first_name, last_name')
-        .order('first_name');
+        .order('first_name')
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  // Ensure order's contact is in the list
+  const { data: orderContactData } = useQuery({
+    queryKey: ['order-contact', order?.contact_id],
+    queryFn: async () => {
+      if (!order?.contact_id) return null;
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, first_name, last_name')
+        .eq('id', order.contact_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!order?.contact_id,
+  });
+
+  const contacts = useMemo(() => {
+    const list = contactsRaw ?? [];
+    if (orderContactData && !list.find(c => c.id === orderContactData.id)) {
+      return [orderContactData, ...list];
+    }
+    return list;
+  }, [contactsRaw, orderContactData]);
 
   // Fetch products
   type ProductItem = {
