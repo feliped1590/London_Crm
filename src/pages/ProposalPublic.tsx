@@ -45,6 +45,17 @@ interface ProposalData {
     email: string | null;
     phone: string | null;
   } | null;
+  legal_entity: {
+    name: string;
+    trade_name: string | null;
+    cnpj: string;
+    logo_url: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  } | null;
   items: Array<{
     id: string;
     description: string;
@@ -269,7 +280,42 @@ export default function ProposalPublic() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-6">
+            {/* Issuer (Legal Entity) */}
+            {proposal.legal_entity && (
+              <div className="p-4 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  {proposal.legal_entity.logo_url && (
+                    <img 
+                      src={proposal.legal_entity.logo_url} 
+                      alt={proposal.legal_entity.trade_name || proposal.legal_entity.name}
+                      className="h-12 w-auto object-contain"
+                    />
+                  )}
+                  <div>
+                    <p className="font-bold text-lg">
+                      {proposal.legal_entity.trade_name || proposal.legal_entity.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      CNPJ: {proposal.legal_entity.cnpj}
+                    </p>
+                    {proposal.legal_entity.address && (
+                      <p className="text-sm text-muted-foreground">
+                        {proposal.legal_entity.address}
+                        {proposal.legal_entity.city ? ` - ${proposal.legal_entity.city}` : ''}
+                        {proposal.legal_entity.state ? `/${proposal.legal_entity.state}` : ''}
+                      </p>
+                    )}
+                    {(proposal.legal_entity.phone || proposal.legal_entity.email) && (
+                      <p className="text-sm text-muted-foreground">
+                        {proposal.legal_entity.phone}{proposal.legal_entity.phone && proposal.legal_entity.email ? ' | ' : ''}{proposal.legal_entity.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-6">
               {/* Company Info */}
               <div className="space-y-2">
