@@ -1130,7 +1130,7 @@ export default function Products() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {filteredProducts.map((product) => {
+                {paginatedProducts?.map((product) => {
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
