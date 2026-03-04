@@ -1208,7 +1208,7 @@ export default function Products() {
       </Card>
 
       {/* Pagination */}
-      {totalItems > ITEMS_PER_PAGE && (
+      {totalItems > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Exibindo {startIndex + 1}-{endIndex} de {totalItems} produtos
