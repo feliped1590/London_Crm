@@ -1080,7 +1080,7 @@ export default function Pipeline() {
                     </div>
                     
                     <div className="flex justify-between gap-2 pt-4">
-                      <div>
+                      <div className="flex gap-2">
                         {(editingDeal as any).contacts?.email && (
                           <Button 
                             type="button" 
@@ -1090,6 +1090,17 @@ export default function Pipeline() {
                           >
                             <Mail className="h-4 w-4" />
                             Enviar Email
+                          </Button>
+                        )}
+                        {canDeleteDeal(editingDeal) && (
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            onClick={() => handleDeleteDeal(editingDeal)}
+                            className="gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Excluir
                           </Button>
                         )}
                       </div>
