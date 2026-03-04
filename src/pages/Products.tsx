@@ -505,47 +505,7 @@ export default function Products() {
     };
   };
 
-  const filteredProducts = products
-    ?.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    ?.sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-      
-      switch (sortField) {
-        case 'sku':
-          aVal = a.sku.toLowerCase();
-          bVal = b.sku.toLowerCase();
-          break;
-        case 'name':
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
-          break;
-        case 'tipo':
-          aVal = (a.tipo_id || '').toLowerCase();
-          bVal = (b.tipo_id || '').toLowerCase();
-          break;
-        case 'unit_price':
-          aVal = a.unit_price || 0;
-          bVal = b.unit_price || 0;
-          break;
-      }
-      
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  // Pagination logic
-  const totalItems = filteredProducts?.length || 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-  const safePage = Math.min(currentPage, totalPages);
-
-  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
-  const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
