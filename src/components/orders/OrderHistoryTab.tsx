@@ -12,6 +12,7 @@ interface OrderHistoryTabProps {
 }
 
 const fieldIcons: Record<string, React.ElementType> = {
+  created: FileText,
   number: FileText,
   company_id: Building2,
   contact_id: Users,
@@ -26,6 +27,7 @@ const fieldIcons: Record<string, React.ElementType> = {
 };
 
 const fieldColors: Record<string, string> = {
+  created: 'bg-emerald-500',
   status: 'bg-purple-500',
   item_added: 'bg-green-500',
   item_removed: 'bg-red-500',
@@ -152,7 +154,9 @@ function AuditEntry({
 }) {
   const Icon = fieldIcons[entry.field_name] || Edit2;
   const dotColor = fieldColors[entry.field_name] || 'bg-blue-500';
-  const bgColor = entry.field_name.startsWith('item_') 
+  const bgColor = entry.field_name === 'created'
+    ? 'bg-emerald-500/10 border-emerald-500/20'
+    : entry.field_name.startsWith('item_') 
     ? entry.field_name === 'item_added' 
       ? 'bg-green-500/10 border-green-500/20'
       : entry.field_name === 'item_removed'
@@ -169,6 +173,7 @@ function AuditEntry({
       <div className={`rounded-lg p-3 border ${bgColor}`}>
         <div className="flex items-start gap-2">
           <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+            entry.field_name === 'created' ? 'text-emerald-600' :
             entry.field_name === 'item_added' ? 'text-green-600' :
             entry.field_name === 'item_removed' ? 'text-red-600' :
             entry.field_name === 'item_modified' ? 'text-yellow-600' :

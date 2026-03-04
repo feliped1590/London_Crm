@@ -568,6 +568,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
 
       if (itemsError) throw itemsError;
 
+      // Register creation in audit log
+      await supabase.from('order_audit_log').insert({
+        order_id: newOrder.id,
+        field_name: 'created',
+        field_label: 'Pedido criado',
+        old_value: null,
+        new_value: `Pedido ${newOrder.number} criado manualmente`,
+        changed_by: user?.id || null,
+      });
+
       return newOrder;
     },
     onSuccess: () => {
