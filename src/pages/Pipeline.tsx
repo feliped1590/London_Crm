@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,6 +79,7 @@ export default function Pipeline() {
   const { isAdmin } = useModulePermissions();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'deals'>>>({
@@ -196,6 +198,32 @@ export default function Pipeline() {
   // Portfolio governance hook
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
   const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
+
+  // Auto-open deal creation when navigating from customer detail with ?newDeal=companyId
+  useEffect(() => {
+    const newDealCompanyId = searchParams.get('newDeal');
+    if (newDealCompanyId && !isDialogOpen) {
+      setEditingDeal(null);
+      setFormData({
+        name: '',
+        value: 0,
+        stage: stages[0] || 'prospeccao',
+        probability: 10,
+        expected_close_date: '',
+        company_id: newDealCompanyId,
+        contact_id: null,
+        notes: '',
+        pipeline_id: currentPipelineId,
+        legal_entity_id: effectiveLegalEntityId,
+      } as any);
+      setCustomFieldsData({});
+      setIsDialogOpen(true);
+      // Clear the param so it doesn't re-trigger
+      searchParams.delete('newDeal');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, currentPipelineId, stages]);
+
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
