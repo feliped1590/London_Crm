@@ -56,7 +56,8 @@ export default function Products() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 25;
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
