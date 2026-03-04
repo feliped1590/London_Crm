@@ -30,7 +30,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-const ITEMS_PER_PAGE = 25;
+const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
 type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
@@ -75,6 +75,8 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const ITEMS_PER_PAGE = itemsPerPage;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -598,11 +600,25 @@ export default function Customers() {
                 </Table>
               </div>
 
-              {totalPages > 1 && (
+              {totalItems > 0 && (
                 <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Exibindo {startIndex + 1}-{endIndex} de {totalItems} clientes
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Linhas por página</span>
+                    <Select value={String(itemsPerPage)} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
+                      <SelectTrigger className="w-[70px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-muted-foreground ml-2">
+                      {totalItems} registros encontrados
+                    </span>
+                  </div>
+                  {totalPages > 1 && (
                   <Pagination>
                     <PaginationContent>
                       <PaginationItem>
@@ -622,6 +638,7 @@ export default function Customers() {
                       </PaginationItem>
                     </PaginationContent>
                   </Pagination>
+                  )}
                 </div>
               )}
             </>
