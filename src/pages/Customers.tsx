@@ -75,6 +75,8 @@ export default function Customers() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const ITEMS_PER_PAGE = itemsPerPage;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
