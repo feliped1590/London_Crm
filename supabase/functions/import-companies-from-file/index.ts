@@ -78,6 +78,7 @@ Deno.serve(async (req) => {
           fantasia: row.fantasia || null,
           address_number: row.address_number || null,
           origin: row.origin || null,
+          industry: row.industry || null,
           legal_entity_id: LEGAL_ENTITY_ID,
           tenant_id: TENANT_ID,
           active: true,
