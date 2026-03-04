@@ -173,6 +173,7 @@ function AuditEntry({
       <div className={`rounded-lg p-3 border ${bgColor}`}>
         <div className="flex items-start gap-2">
           <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${
+            entry.field_name === 'created' ? 'text-emerald-600' :
             entry.field_name === 'item_added' ? 'text-green-600' :
             entry.field_name === 'item_removed' ? 'text-red-600' :
             entry.field_name === 'item_modified' ? 'text-yellow-600' :
