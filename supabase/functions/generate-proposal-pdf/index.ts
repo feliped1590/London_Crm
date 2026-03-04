@@ -296,6 +296,14 @@ serve(async (req) => {
         </div>
         ` : ''}
 
+        ${sellerName ? `
+        <div class="section" style="margin-top: 30px;">
+          <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor:</strong> ${sellerName}</span>
+          </div>
+        </div>
+        ` : ''}
+
         <div class="footer">
           <p><strong>${legalEntity?.name || 'CRMPro'}</strong></p>
           ${legalEntity?.cnpj ? `<p>CNPJ: ${legalEntity.cnpj}</p>` : ''}
