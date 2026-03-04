@@ -32,6 +32,7 @@ interface PipelineFiltersProps {
   companies: { id: string; name: string }[] | undefined;
   hasActiveFilters: boolean;
   isAdmin?: boolean;
+  sellers?: { id: string; user_id: string; full_name: string }[] | null;
 }
 
 export function PipelineFilters({
@@ -48,6 +49,7 @@ export function PipelineFilters({
   companies,
   hasActiveFilters,
   isAdmin = false,
+  sellers,
 }: PipelineFiltersProps) {
   const clearFilters = () => {
     setFilterOwner('mine');
@@ -66,12 +68,15 @@ export function PipelineFilters({
         
         {isAdmin ? (
           <Select value={filterOwner} onValueChange={setFilterOwner}>
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="w-[200px] h-9">
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="mine">Meus negócios</SelectItem>
               <SelectItem value="all">Todos</SelectItem>
+              {sellers?.map((s) => (
+                <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         ) : (
