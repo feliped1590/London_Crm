@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/formatters';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 type Task = Tables<'tasks'>;
 type TaskStatus = Task['status'];
