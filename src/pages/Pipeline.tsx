@@ -1299,6 +1299,7 @@ export default function Pipeline() {
         companies={companiesSearchResult}
         hasActiveFilters={hasActiveFilters}
         isAdmin={isAdmin}
+        sellers={sellers}
       />
 
       {/* Email Dialog */}
