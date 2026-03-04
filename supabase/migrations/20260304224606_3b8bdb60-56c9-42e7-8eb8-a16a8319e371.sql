@@ -1,0 +1,1 @@
+UPDATE legal_entities SET logo_url = 'https://lusyhkizwoihixcvcgap.supabase.co/storage/v1/object/public/legal-entity-logos/embazec.jpeg' WHERE id = '57e0a034-c6ea-4ebf-a7b6-0facea9afc0d';
