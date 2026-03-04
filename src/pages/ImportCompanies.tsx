@@ -293,6 +293,7 @@ export default function ImportCompanies() {
                     <th className="px-3 py-2 text-left font-medium">#</th>
                     <th className="px-3 py-2 text-left font-medium">Razão Social</th>
                     <th className="px-3 py-2 text-left font-medium">CNPJ</th>
+                    <th className="px-3 py-2 text-left font-medium">Ramo</th>
                     <th className="px-3 py-2 text-left font-medium">Cidade</th>
                     <th className="px-3 py-2 text-left font-medium">UF</th>
                     <th className="px-3 py-2 text-left font-medium">Endereço</th>
@@ -305,6 +306,7 @@ export default function ImportCompanies() {
                       <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
                       <td className="px-3 py-1.5 truncate max-w-[200px]">{row.name}</td>
                       <td className="px-3 py-1.5 font-mono text-xs">{row.cnpj}</td>
+                      <td className="px-3 py-1.5">{row.industry}</td>
                       <td className="px-3 py-1.5">{row.city}</td>
                       <td className="px-3 py-1.5">{row.state}</td>
                       <td className="px-3 py-1.5 truncate max-w-[150px]">{row.address}</td>
