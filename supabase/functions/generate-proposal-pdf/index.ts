@@ -62,6 +62,17 @@ serve(async (req) => {
 
     const legalEntity = proposal.deal?.legal_entity || null;
 
+    // Fetch seller name
+    let sellerName = '';
+    if (proposal.created_by) {
+      const { data: sellerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', proposal.created_by)
+        .maybeSingle();
+      sellerName = sellerProfile?.full_name || '';
+    }
+
     // Generate HTML for PDF
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat('pt-BR', {
@@ -282,6 +293,14 @@ serve(async (req) => {
           ${proposal.payment_terms ? `<p><strong>Pagamento:</strong> ${proposal.payment_terms}</p>` : ''}
           ${proposal.delivery_terms ? `<p><strong>Prazo de Entrega:</strong> ${proposal.delivery_terms}</p>` : ''}
           ${proposal.observations ? `<p><strong>Observações:</strong> ${proposal.observations}</p>` : ''}
+        </div>
+        ` : ''}
+
+        ${sellerName ? `
+        <div class="section" style="margin-top: 30px;">
+          <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor:</strong> ${sellerName}</span>
+          </div>
         </div>
         ` : ''}
 

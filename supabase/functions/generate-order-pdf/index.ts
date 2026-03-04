@@ -151,8 +151,20 @@ serve(async (req) => {
           state: emitterEntity.state,
           phone: emitterEntity.phone,
           email: emitterEntity.email,
+          logo_url: emitterEntity.logo_url,
         }
       : null;
+
+    // Fetch seller name
+    let sellerName = '';
+    if (order.created_by) {
+      const { data: sellerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', order.created_by)
+        .maybeSingle();
+      sellerName = sellerProfile?.full_name || '';
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -366,6 +378,14 @@ serve(async (req) => {
           <p>${order.observations}</p>
         </div>
         ` : ""}
+
+        ${sellerName ? `
+        <div class="section" style="margin-top: 30px;">
+          <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor:</strong> ${sellerName}</span>
+          </div>
+        </div>
+        ` : ''}
 
         <div class="footer">
           <p><strong>${emitter?.name || "FDK Personalizados"}</strong></p>
