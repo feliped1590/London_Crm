@@ -503,11 +503,10 @@ export default function Products() {
       return 0;
     });
 
-  // Reset page when filters change
+  // Pagination logic
   const totalItems = filteredProducts?.length || 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-  if (safePage !== currentPage) setCurrentPage(safePage);
 
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
@@ -1209,7 +1208,7 @@ export default function Products() {
       </Card>
 
       {/* Pagination */}
-      {totalItems > ITEMS_PER_PAGE && (
+      {totalItems > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Exibindo {startIndex + 1}-{endIndex} de {totalItems} produtos
