@@ -147,6 +147,21 @@ export function ProposalDialog({
     }
   }, [existingItems]);
 
+  // Fetch deal to get legal_entity_id
+  const { data: dealData } = useQuery({
+    queryKey: ['deal_legal_entity', dealId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deals')
+        .select('legal_entity_id')
+        .eq('id', dealId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!dealId,
+  });
+
   const { data: products } = useQuery({
     queryKey: ['products', 'active'],
     queryFn: async () => {
