@@ -209,23 +209,58 @@ export default function Products() {
     </TableHead>
   );
 
-  const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', filterTipo, filterActive],
+  // Count query for total
+  const { data: totalCount } = useQuery({
+    queryKey: ['products-count', filterTipo, filterActive, searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('*')
-        .order('name')
-        .limit(500);
+        .select('id', { count: 'exact', head: true });
 
       if (filterTipo !== 'all') {
         query = query.eq('tipo_id', filterTipo);
       }
-
       if (filterActive === 'active') {
         query = query.eq('active', true);
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
+      }
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    staleTime: 0,
+  });
+
+  const totalItems = totalCount || 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+
+  const { data: products, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['products', filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
+    queryFn: async () => {
+      const orderColumn = sortField === 'tipo' ? 'tipo_id' : sortField;
+      let query = supabase
+        .from('products')
+        .select('*')
+        .order(orderColumn, { ascending: sortDirection === 'asc' })
+        .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
+
+      if (filterTipo !== 'all') {
+        query = query.eq('tipo_id', filterTipo);
+      }
+      if (filterActive === 'active') {
+        query = query.eq('active', true);
+      } else if (filterActive === 'inactive') {
+        query = query.eq('active', false);
+      }
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query;
