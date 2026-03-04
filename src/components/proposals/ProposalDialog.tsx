@@ -905,21 +905,21 @@ export function ProposalDialog({
                                 placeholder="L"
                                 value={item.width || ''}
                                 onChange={(e) => updateItem(index, 'width', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                               <Input
                                 type="number"
                                 placeholder="C"
                                 value={item.length || ''}
                                 onChange={(e) => updateItem(index, 'length', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                               <Input
                                 type="number"
                                 placeholder="E"
                                 value={item.thickness || ''}
                                 onChange={(e) => updateItem(index, 'thickness', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                             </div>
                           </TableCell>
