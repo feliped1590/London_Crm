@@ -12,6 +12,7 @@ interface OrderHistoryTabProps {
 }
 
 const fieldIcons: Record<string, React.ElementType> = {
+  created: FileText,
   number: FileText,
   company_id: Building2,
   contact_id: Users,
