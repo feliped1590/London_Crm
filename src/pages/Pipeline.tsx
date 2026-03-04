@@ -79,6 +79,7 @@ export default function Pipeline() {
   const { isAdmin } = useModulePermissions();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'deals'>>>({
