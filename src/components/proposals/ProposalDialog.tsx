@@ -727,7 +727,7 @@ export function ProposalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -866,14 +866,14 @@ export function ProposalDialog({
               <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">SKU</TableHead>
-                      <TableHead>Descrição</TableHead>
-                      <TableHead className="w-[100px]">Medidas</TableHead>
-                      <TableHead className="w-[80px]">Qtd</TableHead>
-                      <TableHead className="w-[100px]">Preço Un.</TableHead>
-                      <TableHead className="w-[80px]">Desc %</TableHead>
-                      <TableHead className="w-[100px] text-right">Subtotal</TableHead>
+                     <TableRow>
+                      <TableHead className="w-[110px]">SKU</TableHead>
+                      <TableHead className="min-w-[200px]">Descrição</TableHead>
+                      <TableHead className="w-[150px]">Medidas</TableHead>
+                      <TableHead className="w-[90px]">Qtd</TableHead>
+                      <TableHead className="w-[130px]">Preço Un.</TableHead>
+                      <TableHead className="w-[90px]">Desc %</TableHead>
+                      <TableHead className="w-[120px] text-right">Subtotal</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -905,21 +905,21 @@ export function ProposalDialog({
                                 placeholder="L"
                                 value={item.width || ''}
                                 onChange={(e) => updateItem(index, 'width', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                               <Input
                                 type="number"
                                 placeholder="C"
                                 value={item.length || ''}
                                 onChange={(e) => updateItem(index, 'length', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                               <Input
                                 type="number"
                                 placeholder="E"
                                 value={item.thickness || ''}
                                 onChange={(e) => updateItem(index, 'thickness', parseFloat(e.target.value) || 0)}
-                                className="h-8 w-12 p-1 text-xs"
+                                className="h-8 w-14 px-1 text-xs"
                               />
                             </div>
                           </TableCell>
