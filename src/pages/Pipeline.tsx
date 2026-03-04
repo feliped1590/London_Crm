@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle, Trash2 } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
