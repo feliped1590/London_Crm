@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle, Trash2 } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
@@ -487,6 +487,36 @@ export default function Pipeline() {
       }
     },
   });
+
+  // Delete deal state and mutation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (dealId: string) => {
+      const { error } = await supabase.from('deals').delete().eq('id', dealId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      toast.success('Negócio excluído com sucesso!');
+      setDeleteConfirmOpen(false);
+      setDealToDelete(null);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao excluir negócio: ${error.message}`);
+    },
+  });
+
+  const canDeleteDeal = (deal: Deal) => {
+    return isAdmin || deal.owner_id === user?.id;
+  };
+
+  const handleDeleteDeal = (deal: Deal) => {
+    setDealToDelete(deal);
+    setDeleteConfirmOpen(true);
+  };
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1050,7 +1080,7 @@ export default function Pipeline() {
                     </div>
                     
                     <div className="flex justify-between gap-2 pt-4">
-                      <div>
+                      <div className="flex gap-2">
                         {(editingDeal as any).contacts?.email && (
                           <Button 
                             type="button" 
@@ -1060,6 +1090,17 @@ export default function Pipeline() {
                           >
                             <Mail className="h-4 w-4" />
                             Enviar Email
+                          </Button>
+                        )}
+                        {canDeleteDeal(editingDeal) && (
+                          <Button 
+                            type="button" 
+                            variant="destructive" 
+                            onClick={() => handleDeleteDeal(editingDeal)}
+                            className="gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Excluir
                           </Button>
                         )}
                       </div>
@@ -1567,6 +1608,27 @@ export default function Pipeline() {
           <AlertDialogFooter className="sm:justify-center">
             <AlertDialogAction onClick={() => setMissingDataAlert(null)}>
               Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete deal confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Negócio</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o negócio <strong>"{dealToDelete?.name}"</strong>? Esta ação não pode ser desfeita. Todas as propostas, histórico e atividades vinculadas serão mantidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => dealToDelete && deleteMutation.mutate(dealToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
