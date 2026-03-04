@@ -47,6 +47,7 @@ export default function Tasks() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<string>('mine');
   const [formData, setFormData] = useState<Partial<TablesInsert<'tasks'>>>({
     title: '',
     description: '',
@@ -62,17 +63,36 @@ export default function Tasks() {
   // Check if user is admin
   const { isAdmin } = useModulePermissions();
 
+  // Fetch sellers for admin filter
+  const { data: sellers } = useQuery({
+    queryKey: ['sellers-for-tasks'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, user_id, full_name')
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
   const { data: tasks, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['tasks', user?.id, isAdmin],
+    queryKey: ['tasks', user?.id, isAdmin, ownerFilter],
     queryFn: async () => {
       let query = supabase
         .from('tasks')
         .select('*, companies(name), contacts(first_name, last_name), deals(name)')
         .order('due_date', { ascending: true, nullsFirst: false });
       
-      // Non-admin users only see their own tasks
-      if (!isAdmin && user?.id) {
-        query = query.eq('assigned_to', user.id);
+      if (!isAdmin) {
+        // Non-admin users always see only their own tasks
+        query = query.eq('assigned_to', user!.id);
+      } else if (ownerFilter === 'mine') {
+        query = query.eq('assigned_to', user!.id);
+      } else if (ownerFilter !== 'all') {
+        // Specific seller selected
+        query = query.eq('assigned_to', ownerFilter);
       }
       
       const { data, error } = await query;
