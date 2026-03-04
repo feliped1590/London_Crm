@@ -99,9 +99,13 @@ export default function Tasks() {
   });
 
   const { data: contacts } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts', formData.company_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name').order('first_name');
+      let query = supabase.from('contacts').select('id, first_name, last_name, company_id').order('first_name');
+      if (formData.company_id) {
+        query = query.eq('company_id', formData.company_id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -366,7 +370,7 @@ export default function Tasks() {
                   <SearchableSelect
                     options={companyOptions}
                     value={formData.company_id}
-                    onChange={(v) => setFormData({ ...formData, company_id: v })}
+                    onChange={(v) => setFormData({ ...formData, company_id: v, contact_id: null })}
                     placeholder="Selecione a empresa"
                     searchPlaceholder="Buscar empresa..."
                     emptyMessage="Nenhuma empresa encontrada."
