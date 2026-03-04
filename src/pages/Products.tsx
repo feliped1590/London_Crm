@@ -1105,7 +1105,7 @@ export default function Products() {
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : filteredProducts && filteredProducts.length > 0 ? (
+          ) : products && products.length > 0 ? (
             <div className="table-responsive">
               <Table className="min-w-[900px]">
                 <TableHeader>
