@@ -852,6 +852,7 @@ export default function Pipeline() {
       
       // Filter by owner
       if (filterOwner === 'mine' && deal.owner_id !== user?.id) return false;
+      if (filterOwner !== 'mine' && filterOwner !== 'all' && deal.owner_id !== filterOwner) return false;
       
       // Filter by stage
       if (filterStage !== 'all' && deal.stage !== filterStage) return false;
