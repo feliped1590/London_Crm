@@ -75,6 +75,7 @@ export function ProposalDialog({
 
   const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
 
   // Approval link states
   const [showApprovalModal, setShowApprovalModal] = useState(false);
