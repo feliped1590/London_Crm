@@ -148,20 +148,28 @@ serve(async (req) => {
       // Log successful approval
       await logAccess(proposal.id, 'approve', true);
 
-      // Fetch deal data to get legal_entity_id and tenant_id
+      // Fetch deal data to get legal_entity_id, tenant_id, and fallback company/contact
       let legalEntityId = proposal.legal_entity_id;
       let tenantId = proposal.tenant_id;
+      let orderCompanyId = proposal.company_id;
+      let orderContactId = proposal.contact_id;
+      let orderDeliveryDate = null;
+      let orderCreatedBy = null;
 
       if (proposal.deal_id) {
         const { data: dealData } = await supabase
           .from('deals')
-          .select('legal_entity_id, tenant_id')
+          .select('legal_entity_id, tenant_id, company_id, contact_id, expected_close_date, owner_id')
           .eq('id', proposal.deal_id)
           .single();
 
         if (dealData) {
           if (!legalEntityId) legalEntityId = dealData.legal_entity_id;
           if (!tenantId) tenantId = dealData.tenant_id;
+          if (!orderCompanyId) orderCompanyId = dealData.company_id;
+          if (!orderContactId) orderContactId = dealData.contact_id;
+          orderDeliveryDate = dealData.expected_close_date || null;
+          orderCreatedBy = dealData.owner_id || null;
         }
       }
 
