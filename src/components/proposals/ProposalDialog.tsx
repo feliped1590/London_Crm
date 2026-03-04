@@ -807,19 +807,54 @@ export function ProposalDialog({
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
                   <Label>Adicionar Produto do Catálogo</Label>
-                  <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          <span className="font-mono text-xs mr-2">{p.sku}</span>
-                          {p.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={productSearchOpen} onOpenChange={setProductSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={productSearchOpen}
+                        className="w-full justify-between font-normal"
+                        type="button"
+                      >
+                        {selectedProductId
+                          ? (() => {
+                              const p = products?.find((p) => p.id === selectedProductId);
+                              return p ? `${p.sku} - ${p.name}` : 'Selecione um produto';
+                            })()
+                          : 'Selecione um produto'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[500px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Pesquisar produto por nome ou SKU..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {products?.map((p) => (
+                              <CommandItem
+                                key={p.id}
+                                value={`${p.sku} ${p.name}`}
+                                onSelect={() => {
+                                  setSelectedProductId(p.id);
+                                  setProductSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    selectedProductId === p.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="font-mono text-xs mr-2">{p.sku}</span>
+                                <span className="truncate">{p.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Button type="button" onClick={addProductToItems} disabled={!selectedProductId}>
                   <Plus className="h-4 w-4 mr-2" />
