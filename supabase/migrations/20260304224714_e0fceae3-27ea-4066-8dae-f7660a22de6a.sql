@@ -1,0 +1,1 @@
+UPDATE legal_entities SET logo_url = 'https://lusyhkizwoihixcvcgap.supabase.co/storage/v1/object/public/legal-entity-logos/sitio-ze-maria.jpg' WHERE id = '392d6904-fd7f-4fe9-9373-b4f6fc183f17';
