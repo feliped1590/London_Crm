@@ -1074,7 +1074,7 @@ export default function Products() {
               <Input
                 placeholder="Buscar por SKU ou nome..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="pl-10"
               />
             </div>
