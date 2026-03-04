@@ -103,7 +103,7 @@ export default function Pipeline() {
 
   // View mode and filters
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-  const [filterOwner, setFilterOwner] = useState('all');
+  const [filterOwner, setFilterOwner] = useState('mine');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -769,7 +769,7 @@ export default function Pipeline() {
   };
 
   // Filtered deals
-  const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
+  const hasActiveFilters = filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
   
   
   const filteredDeals = useMemo(() => {
@@ -1214,6 +1214,7 @@ export default function Pipeline() {
         setFilterDateTo={setFilterDateTo}
         companies={companiesSearchResult}
         hasActiveFilters={hasActiveFilters}
+        isAdmin={isAdmin}
       />
 
       {/* Email Dialog */}

@@ -31,6 +31,7 @@ interface PipelineFiltersProps {
   setFilterDateTo: (value: string) => void;
   companies: { id: string; name: string }[] | undefined;
   hasActiveFilters: boolean;
+  isAdmin?: boolean;
 }
 
 export function PipelineFilters({
@@ -46,9 +47,10 @@ export function PipelineFilters({
   setFilterDateTo,
   companies,
   hasActiveFilters,
+  isAdmin = false,
 }: PipelineFiltersProps) {
   const clearFilters = () => {
-    setFilterOwner('all');
+    setFilterOwner('mine');
     setFilterStage('all');
     setFilterCompany('all');
     setFilterDateFrom('');
@@ -62,15 +64,19 @@ export function PipelineFilters({
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Filtros:</span>
         
-        <Select value={filterOwner} onValueChange={setFilterOwner}>
-          <SelectTrigger className="w-[160px] h-9">
-            <SelectValue placeholder="Responsável" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="mine">Meus negócios</SelectItem>
-          </SelectContent>
-        </Select>
+        {isAdmin ? (
+          <Select value={filterOwner} onValueChange={setFilterOwner}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue placeholder="Responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mine">Meus negócios</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">Meus negócios</span>
+        )}
 
         <Select value={filterStage} onValueChange={setFilterStage}>
           <SelectTrigger className="w-[160px] h-9">
