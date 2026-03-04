@@ -41,6 +41,9 @@ const FIELD_MAP: Record<string, string> = {
   numero: 'address_number',
   origem: 'origin',
   tipodecorrentista: 'origin', // mapeia tipo de correntista para origin
+  ramo: 'industry',
+  ramoatividade: 'industry',
+  segmento: 'industry',
   aberturacnpj: 'abertura_cnpj', // campo informativo, não salvo no DB por padrão
 };
 
