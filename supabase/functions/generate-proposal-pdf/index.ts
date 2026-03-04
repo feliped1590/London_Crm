@@ -62,6 +62,17 @@ serve(async (req) => {
 
     const legalEntity = proposal.deal?.legal_entity || null;
 
+    // Fetch seller name
+    let sellerName = '';
+    if (proposal.created_by) {
+      const { data: sellerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', proposal.created_by)
+        .maybeSingle();
+      sellerName = sellerProfile?.full_name || '';
+    }
+
     // Generate HTML for PDF
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat('pt-BR', {
