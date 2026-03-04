@@ -56,7 +56,7 @@ export default function Products() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
 
