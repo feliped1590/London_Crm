@@ -154,7 +154,9 @@ function AuditEntry({
 }) {
   const Icon = fieldIcons[entry.field_name] || Edit2;
   const dotColor = fieldColors[entry.field_name] || 'bg-blue-500';
-  const bgColor = entry.field_name.startsWith('item_') 
+  const bgColor = entry.field_name === 'created'
+    ? 'bg-emerald-500/10 border-emerald-500/20'
+    : entry.field_name.startsWith('item_') 
     ? entry.field_name === 'item_added' 
       ? 'bg-green-500/10 border-green-500/20'
       : entry.field_name === 'item_removed'
