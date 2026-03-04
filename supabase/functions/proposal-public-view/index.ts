@@ -86,8 +86,10 @@ serve(async (req) => {
         created_at,
         approval_token_expires_at,
         approved_at,
+        legal_entity_id,
         company:companies(id, name, cnpj, address, city, state, phone, email),
-        contact:contacts(id, first_name, last_name, email, phone)
+        contact:contacts(id, first_name, last_name, email, phone),
+        legal_entity:legal_entities(id, name, trade_name, cnpj, logo_url, phone, email, address, city, state)
       `)
       .eq('approval_token', token)
       .single();

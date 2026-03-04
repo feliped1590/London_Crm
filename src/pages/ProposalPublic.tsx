@@ -45,6 +45,17 @@ interface ProposalData {
     email: string | null;
     phone: string | null;
   } | null;
+  legal_entity: {
+    name: string;
+    trade_name: string | null;
+    cnpj: string;
+    logo_url: string | null;
+    phone: string | null;
+    email: string | null;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+  } | null;
   items: Array<{
     id: string;
     description: string;
