@@ -148,6 +148,36 @@ serve(async (req) => {
       // Log successful approval
       await logAccess(proposal.id, 'approve', true);
 
+      // Fetch deal data to get legal_entity_id and tenant_id
+      let legalEntityId = proposal.legal_entity_id;
+      let tenantId = proposal.tenant_id;
+
+      if (proposal.deal_id) {
+        const { data: dealData } = await supabase
+          .from('deals')
+          .select('legal_entity_id, tenant_id')
+          .eq('id', proposal.deal_id)
+          .single();
+
+        if (dealData) {
+          if (!legalEntityId) legalEntityId = dealData.legal_entity_id;
+          if (!tenantId) tenantId = dealData.tenant_id;
+        }
+      }
+
+      // Fallback: get first active legal entity
+      if (!legalEntityId) {
+        const { data: fallbackEntity } = await supabase
+          .from('legal_entities')
+          .select('id')
+          .eq('is_active', true)
+          .order('is_headquarters', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (fallbackEntity) legalEntityId = fallbackEntity.id;
+      }
+
       // Create order from approved proposal
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
@@ -159,6 +189,8 @@ serve(async (req) => {
           status: 'pendente',
           total_value: proposal.total_value,
           observations: proposal.observations,
+          legal_entity_id: legalEntityId,
+          tenant_id: tenantId,
         })
         .select()
         .single();
