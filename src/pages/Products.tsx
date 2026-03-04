@@ -1207,6 +1207,46 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalItems > ITEMS_PER_PAGE && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Exibindo {startIndex + 1}-{endIndex} de {totalItems} produtos
+          </p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                  className={safePage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                />
+              </PaginationItem>
+              {getPageNumbers().map((page, idx) =>
+                page === 'ellipsis' ? (
+                  <PaginationItem key={`ellipsis-${idx}`}><PaginationEllipsis /></PaginationItem>
+                ) : (
+                  <PaginationItem key={page}>
+                    <PaginationLink 
+                      onClick={() => setCurrentPage(page)} 
+                      isActive={safePage === page} 
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                  className={safePage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
         </TabsContent>
       </Tabs>
