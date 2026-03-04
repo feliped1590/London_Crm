@@ -1,70 +1,34 @@
 
 
-## Plano: Alerta de Tarefas Pendentes no Login
+## Diagnóstico
 
-### 1. Migração SQL — RPC + Índice
+Após análise detalhada do código e das políticas de segurança do banco de dados (RLS), identifiquei o seguinte:
 
-Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
-- Usa `date_trunc('day', now())` para comparações sem timezone issues
-- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
-- Filtra `status != 'done'` e `assigned_to = p_user_id`
+1. **As políticas de segurança (RLS) estão corretas** — vendedores e atendentes só conseguem buscar do banco os negócios onde são donos, criadores, participantes ou delegados. Administradores veem tudo.
 
-Criar índice composto:
-```sql
-CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
-ON public.tasks (assigned_to, status, due_date);
-```
+2. **O problema real é o filtro padrão no frontend** — o filtro "Responsável" inicia com o valor `"all"` (Todos) para todos os tipos de usuário. Para administradores, isso mostra todos os negócios do banco. Para vendedores, mesmo com `"all"`, o RLS já restringe, mas a opção "Todos" fica visível sem necessidade.
 
-### 2. Hook `useLoginTaskAlert`
+3. **A correção necessária é exclusivamente no frontend** — alterar o valor inicial do filtro e ajustar as opções visíveis conforme o perfil do usuário.
 
-Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
-- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
-- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
-- Se alert habilitado, chama RPC `check_pending_tasks`
-- Se total > 0, abre modal com delay de ~800ms + fade-in
-- Se som habilitado, toca audio com try/catch no `.play()`
-- Retorna estado do modal e dados para o componente
+---
 
-### 3. Componente `TaskAlertModal`
+## Plano de Implementação
 
-Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
-- Dialog com animação suave (fade-in com delay)
-- Exibe contagens de tarefas vencidas e vencendo hoje
-- Botão "Ver Tarefas" → navega para `/tasks`
-- Botão "Fechar"
-- Design discreto e profissional
+### 1. Alterar o filtro padrão para "Meus negócios" (`src/pages/Pipeline.tsx`)
 
-### 4. Som de Notificação
+- Mudar o `useState` do `filterOwner` de `'all'` para `'mine'` — assim **todos os perfis** (incluindo administradores) iniciam vendo apenas seus próprios negócios.
 
-Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
+### 2. Restringir opções do filtro para não-administradores (`src/components/pipeline/PipelineFilters.tsx`)
 
-### 5. Configuração no Settings (Notificações)
+- Receber uma nova prop `isAdmin` no componente de filtros.
+- Vendedores/atendentes: remover a opção "Todos" do select de responsável (só terão "Meus negócios").
+- Administradores: manter ambas as opções ("Meus negócios" e "Todos").
 
-Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
-- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
-- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
-- Persiste via upsert em `system_settings` key `task_alert_config`
+### 3. Ajustar "Limpar filtros" para respeitar o novo padrão
 
-### 6. Integração no Login
+- A função `clearFilters` deve redefinir o filtro de responsável para `'mine'` em vez de `'all'`.
 
-No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
+---
 
-Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
-
-### Arquivos Criados/Editados
-
-| Ação | Arquivo |
-|------|---------|
-| Criar | Migração SQL (RPC + índice) |
-| Criar | `src/hooks/useLoginTaskAlert.ts` |
-| Criar | `src/components/tasks/TaskAlertModal.tsx` |
-| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
-| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
-
-### Performance
-
-- Índice composto garante query eficiente
-- Hook executa apenas 1x por sessão (sessionStorage)
-- Delay de 800ms não bloqueia carregamento do dashboard
-- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
+**Resultado esperado**: Todos os usuários iniciam vendo apenas seus próprios negócios. Somente administradores podem optar por ver todos os negócios do pipeline selecionando "Todos" no filtro.
 
