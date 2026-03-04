@@ -56,7 +56,8 @@ export default function Products() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 25;
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,6 +188,7 @@ export default function Products() {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1);
   };
 
   const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
@@ -209,23 +211,58 @@ export default function Products() {
     </TableHead>
   );
 
-  const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', filterTipo, filterActive],
+  // Count query for total
+  const { data: totalCount } = useQuery({
+    queryKey: ['products-count', filterTipo, filterActive, searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('*')
-        .order('name')
-        .limit(500);
+        .select('id', { count: 'exact', head: true });
 
       if (filterTipo !== 'all') {
         query = query.eq('tipo_id', filterTipo);
       }
-
       if (filterActive === 'active') {
         query = query.eq('active', true);
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
+      }
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    staleTime: 0,
+  });
+
+  const totalItems = totalCount || 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
+
+  const { data: products, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['products', filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
+    queryFn: async () => {
+      const orderColumn = sortField === 'tipo' ? 'tipo_id' : sortField;
+      let query = supabase
+        .from('products')
+        .select('*')
+        .order(orderColumn, { ascending: sortDirection === 'asc' })
+        .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
+
+      if (filterTipo !== 'all') {
+        query = query.eq('tipo_id', filterTipo);
+      }
+      if (filterActive === 'active') {
+        query = query.eq('active', true);
+      } else if (filterActive === 'inactive') {
+        query = query.eq('active', false);
+      }
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query;
@@ -470,47 +507,7 @@ export default function Products() {
     };
   };
 
-  const filteredProducts = products
-    ?.filter((p) =>
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    ?.sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-      
-      switch (sortField) {
-        case 'sku':
-          aVal = a.sku.toLowerCase();
-          bVal = b.sku.toLowerCase();
-          break;
-        case 'name':
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
-          break;
-        case 'tipo':
-          aVal = (a.tipo_id || '').toLowerCase();
-          bVal = (b.tipo_id || '').toLowerCase();
-          break;
-        case 'unit_price':
-          aVal = a.unit_price || 0;
-          bVal = b.unit_price || 0;
-          break;
-      }
-      
-      if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-      if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  // Pagination logic
-  const totalItems = filteredProducts?.length || 0;
-  const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-  const safePage = Math.min(currentPage, totalPages);
-
-  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
-  const paginatedProducts = filteredProducts?.slice(startIndex, endIndex);
 
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
@@ -1110,7 +1107,7 @@ export default function Products() {
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : filteredProducts && filteredProducts.length > 0 ? (
+          ) : products && products.length > 0 ? (
             <div className="table-responsive">
               <Table className="min-w-[900px]">
                 <TableHeader>
@@ -1129,7 +1126,7 @@ export default function Products() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {paginatedProducts?.map((product) => {
+                {products?.map((product) => {
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
@@ -1210,9 +1207,22 @@ export default function Products() {
       {/* Pagination */}
       {totalItems > 0 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Exibindo {startIndex + 1}-{endIndex} de {totalItems} produtos
-          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Linhas por página</span>
+            <Select value={String(itemsPerPage)} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
+              <SelectTrigger className="w-[70px] h-8 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground ml-2">
+              {totalItems} registros encontrados
+            </span>
+          </div>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
