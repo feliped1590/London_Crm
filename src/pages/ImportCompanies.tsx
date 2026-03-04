@@ -221,7 +221,7 @@ export default function ImportCompanies() {
               Upload do Arquivo
             </CardTitle>
             <CardDescription>
-              Selecione um arquivo .xlsx com os dados das empresas. Cabeçalhos aceitos: Razão Social, CNPJ/CPF, Município/Cidade, UF/Estado, Rua/Endereço, Bairro, Número, CEP, etc.
+              Selecione um arquivo .xlsx com os dados das empresas. Cabeçalhos aceitos: Razão Social, CNPJ/CPF, Município/Cidade, UF/Estado, Rua/Endereço, Bairro, Número, CEP, Ramo, etc.
             </CardDescription>
           </CardHeader>
           <CardContent>
