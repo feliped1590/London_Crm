@@ -450,6 +450,21 @@ export default function Tasks() {
                   className="pl-10"
                 />
               </div>
+              {isAdmin && (
+                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
+                  <SelectTrigger className="w-[220px]">
+                    <User className="h-4 w-4 mr-2" />
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mine">Minhas tarefas</SelectItem>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {sellers?.map((s) => (
+                      <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button
                 variant="outline"
                 size="sm"
