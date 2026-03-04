@@ -1078,7 +1078,7 @@ export default function Products() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterTipo} onValueChange={setFilterTipo}>
+            <Select value={filterTipo} onValueChange={(v) => { setFilterTipo(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[180px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Tipo" />
