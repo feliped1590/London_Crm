@@ -1124,7 +1124,7 @@ export default function Products() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {paginatedProducts?.map((product) => {
+                {products?.map((product) => {
                   return (
                     <TableRow key={product.id}>
                       <TableCell>
