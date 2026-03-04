@@ -224,6 +224,20 @@ export default function Pipeline() {
     }
   }, [searchParams, currentPipelineId, stages]);
 
+  // Fetch sellers for admin owner filter
+  const { data: sellers } = useQuery({
+    queryKey: ['sellers-for-pipeline'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, user_id, full_name')
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin,
+  });
+
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
