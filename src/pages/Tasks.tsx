@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/formatters';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 type Task = Tables<'tasks'>;
 type TaskStatus = Task['status'];
@@ -114,6 +115,18 @@ export default function Tasks() {
       return data;
     },
   });
+
+  const companyOptions = useMemo(() => 
+    (companies || []).map(c => ({ value: c.id, label: c.name })), [companies]
+  );
+
+  const contactOptions = useMemo(() => 
+    (contacts || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name || ''}`.trim() })), [contacts]
+  );
+
+  const dealOptions = useMemo(() => 
+    (deals || []).map(d => ({ value: d.id, label: d.name })), [deals]
+  );
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'tasks'>) => {
@@ -350,54 +363,36 @@ export default function Tasks() {
                 </div>
                 <div>
                   <Label htmlFor="company_id">Empresa</Label>
-                  <Select 
-                    value={formData.company_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      {companies?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={companyOptions}
+                    value={formData.company_id}
+                    onChange={(v) => setFormData({ ...formData, company_id: v })}
+                    placeholder="Selecione a empresa"
+                    searchPlaceholder="Buscar empresa..."
+                    emptyMessage="Nenhuma empresa encontrada."
+                  />
                 </div>
                 <div>
                   <Label htmlFor="contact_id">Contato</Label>
-                  <Select 
-                    value={formData.contact_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, contact_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {contacts?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={contactOptions}
+                    value={formData.contact_id}
+                    onChange={(v) => setFormData({ ...formData, contact_id: v })}
+                    placeholder="Selecione o contato"
+                    searchPlaceholder="Buscar contato..."
+                    emptyMessage="Nenhum contato encontrado."
+                  />
                 </div>
                 <div className="col-span-2">
                   <Label htmlFor="deal_id">Negócio</Label>
-                  <Select 
-                    value={formData.deal_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, deal_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {deals?.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={dealOptions}
+                    value={formData.deal_id}
+                    onChange={(v) => setFormData({ ...formData, deal_id: v })}
+                    placeholder="Selecione o negócio"
+                    searchPlaceholder="Buscar negócio..."
+                    emptyMessage="Nenhum negócio encontrado."
+                  />
                 </div>
               </div>
               <div className="flex justify-end gap-2">
