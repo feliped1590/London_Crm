@@ -6,16 +6,23 @@ export function formatCurrency(value: number): string {
 }
 
 export function formatDate(date: string | Date): string {
-  // Handle timestamptz strings by extracting date-only portion to avoid timezone shift
   if (typeof date === 'string') {
-    const dateOnly = date.split('T')[0].split(' ')[0]; // "2026-02-17" from "2026-02-17 00:00:00+00"
-    const [year, month, day] = dateOnly.split('-').map(Number);
+    // If it's a date-only string (no time component), parse without timezone shift
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) {
+      const [year, month, day] = date.split('-').map(Number);
+      return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date(year, month - 1, day));
+    }
+    // For timestamptz strings, use timezone-aware formatting
     return new Intl.DateTimeFormat('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       timeZone: 'America/Sao_Paulo',
-    }).format(new Date(year, month - 1, day));
+    }).format(new Date(date));
   }
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
