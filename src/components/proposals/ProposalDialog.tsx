@@ -185,6 +185,7 @@ export function ProposalDialog({
           deal_id: dealId,
           company_id: companyId,
           contact_id: contactId,
+          legal_entity_id: dealData?.legal_entity_id || null,
           status: formData.status,
           validity_date: formData.validity_date || null,
           payment_terms: formData.payment_terms || null,
