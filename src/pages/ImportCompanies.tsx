@@ -22,9 +22,11 @@ function normalizeHeader(str: string): string {
 const FIELD_MAP: Record<string, string> = {
   razaosocial: 'name',
   contato: 'contact_name',
+  telefone: 'phone',
   telefone1: 'phone',
   telefone2: 'phone2',
   fax: 'fax',
+  email: 'email',
   rua: 'address',
   endereco: 'address',
   bairro: 'neighborhood',
@@ -40,10 +42,11 @@ const FIELD_MAP: Record<string, string> = {
   fantasia: 'fantasia',
   numero: 'address_number',
   origem: 'origin',
-  tipodecorrentista: 'origin', // mapeia tipo de correntista para origin
+  tipodecorrentista: 'origin',
   ramo: 'industry',
   ramoatividade: 'industry',
   segmento: 'industry',
+  vendedor: 'vendedor_nome', // resolvido para owner_id na edge function
   aberturacnpj: 'abertura_cnpj', // campo informativo, não salvo no DB por padrão
 };
 

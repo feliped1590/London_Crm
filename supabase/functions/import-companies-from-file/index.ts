@@ -62,12 +62,14 @@ Deno.serve(async (req) => {
 
       validRows.push({
         cnpj: cnpjClean,
+        vendedor_nome: row.vendedor_nome || null,
         data: {
           name: row.name.trim(),
           contact_name: row.contact_name || null,
           phone: row.phone || null,
           phone2: row.phone2 || null,
           fax: row.fax || null,
+          email: row.email || null,
           address: row.address || null,
           neighborhood: row.neighborhood || null,
           city: row.city || null,
@@ -89,6 +91,36 @@ Deno.serve(async (req) => {
     let inserted = 0;
     let updated = 0;
     const errors: string[] = [];
+
+    // Resolve vendedor names to user IDs
+    const vendedorNames = [...new Set(validRows.map(r => r.vendedor_nome).filter(Boolean))] as string[];
+    const vendedorMap = new Map<string, string>();
+
+    if (vendedorNames.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+
+      if (profiles) {
+        for (const name of vendedorNames) {
+          const nameLower = name.toLowerCase().trim();
+          const match = profiles.find(p => p.full_name?.toLowerCase().trim() === nameLower);
+          if (match) {
+            vendedorMap.set(nameLower, match.user_id);
+          }
+        }
+      }
+    }
+
+    // Assign owner_id from vendedor lookup
+    for (const row of validRows) {
+      if (row.vendedor_nome) {
+        const ownerId = vendedorMap.get(row.vendedor_nome.toLowerCase().trim());
+        if (ownerId) {
+          row.data.owner_id = ownerId;
+        }
+      }
+    }
 
     // Process in chunks to avoid too many queries
     const CHUNK_SIZE = 200;
