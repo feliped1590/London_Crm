@@ -116,6 +116,18 @@ export default function Tasks() {
     },
   });
 
+  const companyOptions = useMemo(() => 
+    (companies || []).map(c => ({ value: c.id, label: c.name })), [companies]
+  );
+
+  const contactOptions = useMemo(() => 
+    (contacts || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name || ''}`.trim() })), [contacts]
+  );
+
+  const dealOptions = useMemo(() => 
+    (deals || []).map(d => ({ value: d.id, label: d.name })), [deals]
+  );
+
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'tasks'>) => {
       const { error } = await supabase.from('tasks').insert(data);
