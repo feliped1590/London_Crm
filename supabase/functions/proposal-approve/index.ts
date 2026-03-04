@@ -199,6 +199,16 @@ serve(async (req) => {
         console.error('Error creating order:', orderError);
         // Don't throw - proposal is still approved even if order creation fails
       } else if (newOrder) {
+        // Register creation in order audit log
+        await supabase.from('order_audit_log').insert({
+          order_id: newOrder.id,
+          field_name: 'created',
+          field_label: 'Pedido criado',
+          old_value: null,
+          new_value: `Pedido ${newOrder.number} gerado automaticamente a partir da proposta ${proposal.number || proposal.id}`,
+          changed_by: null,
+        });
+
         // Copy proposal items to order items
         const { data: proposalItems } = await supabase
           .from('proposal_items')

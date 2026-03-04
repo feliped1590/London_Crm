@@ -27,6 +27,7 @@ const fieldIcons: Record<string, React.ElementType> = {
 };
 
 const fieldColors: Record<string, string> = {
+  created: 'bg-emerald-500',
   status: 'bg-purple-500',
   item_added: 'bg-green-500',
   item_removed: 'bg-red-500',
