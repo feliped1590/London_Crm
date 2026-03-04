@@ -488,6 +488,36 @@ export default function Pipeline() {
     },
   });
 
+  // Delete deal state and mutation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<Deal | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (dealId: string) => {
+      const { error } = await supabase.from('deals').delete().eq('id', dealId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      toast.success('Negócio excluído com sucesso!');
+      setDeleteConfirmOpen(false);
+      setDealToDelete(null);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao excluir negócio: ${error.message}`);
+    },
+  });
+
+  const canDeleteDeal = (deal: Deal) => {
+    return isAdmin || deal.owner_id === user?.id;
+  };
+
+  const handleDeleteDeal = (deal: Deal) => {
+    setDealToDelete(deal);
+    setDeleteConfirmOpen(true);
+  };
+
   const sendEmailMutation = useMutation({
     mutationFn: async (data: any) => {
       const { data: response, error } = await supabase.functions.invoke('send-email', {
