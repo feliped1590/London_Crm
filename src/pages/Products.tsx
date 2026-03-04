@@ -1090,7 +1090,7 @@ export default function Products() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterActive} onValueChange={setFilterActive}>
+            <Select value={filterActive} onValueChange={(v) => { setFilterActive(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
