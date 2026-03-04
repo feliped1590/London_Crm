@@ -55,6 +55,8 @@ export default function Products() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 25;
   const fileInputRef = useState<HTMLInputElement | null>(null);
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
