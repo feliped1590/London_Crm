@@ -11,7 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle, ShieldAlert, ChevronsUpDown, Search } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
