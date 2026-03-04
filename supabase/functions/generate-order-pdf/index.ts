@@ -151,8 +151,20 @@ serve(async (req) => {
           state: emitterEntity.state,
           phone: emitterEntity.phone,
           email: emitterEntity.email,
+          logo_url: emitterEntity.logo_url,
         }
       : null;
+
+    // Fetch seller name
+    let sellerName = '';
+    if (order.created_by) {
+      const { data: sellerProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', order.created_by)
+        .maybeSingle();
+      sellerName = sellerProfile?.full_name || '';
+    }
 
     const html = `
       <!DOCTYPE html>
