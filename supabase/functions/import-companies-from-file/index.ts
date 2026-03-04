@@ -62,12 +62,14 @@ Deno.serve(async (req) => {
 
       validRows.push({
         cnpj: cnpjClean,
+        vendedor_nome: row.vendedor_nome || null,
         data: {
           name: row.name.trim(),
           contact_name: row.contact_name || null,
           phone: row.phone || null,
           phone2: row.phone2 || null,
           fax: row.fax || null,
+          email: row.email || null,
           address: row.address || null,
           neighborhood: row.neighborhood || null,
           city: row.city || null,
