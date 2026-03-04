@@ -14,6 +14,7 @@ export function formatDate(date: string | Date): string {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
+      timeZone: 'America/Sao_Paulo',
     }).format(new Date(year, month - 1, day));
   }
   return new Intl.DateTimeFormat('pt-BR', {
