@@ -198,6 +198,32 @@ export default function Pipeline() {
   // Portfolio governance hook
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
   const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
+
+  // Auto-open deal creation when navigating from customer detail with ?newDeal=companyId
+  useEffect(() => {
+    const newDealCompanyId = searchParams.get('newDeal');
+    if (newDealCompanyId && !isDialogOpen) {
+      setEditingDeal(null);
+      setFormData({
+        name: '',
+        value: 0,
+        stage: stages[0] || 'prospeccao',
+        probability: 10,
+        expected_close_date: '',
+        company_id: newDealCompanyId,
+        contact_id: null,
+        notes: '',
+        pipeline_id: currentPipelineId,
+        legal_entity_id: effectiveLegalEntityId,
+      } as any);
+      setCustomFieldsData({});
+      setIsDialogOpen(true);
+      // Clear the param so it doesn't re-trigger
+      searchParams.delete('newDeal');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, currentPipelineId, stages]);
+
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['deals'],
     queryFn: async () => {
