@@ -370,7 +370,7 @@ export default function Tasks() {
                   <SearchableSelect
                     options={companyOptions}
                     value={formData.company_id}
-                    onChange={(v) => setFormData({ ...formData, company_id: v })}
+                    onChange={(v) => setFormData({ ...formData, company_id: v, contact_id: null })}
                     placeholder="Selecione a empresa"
                     searchPlaceholder="Buscar empresa..."
                     emptyMessage="Nenhuma empresa encontrada."
