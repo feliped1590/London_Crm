@@ -1214,6 +1214,7 @@ export default function Pipeline() {
         setFilterDateTo={setFilterDateTo}
         companies={companiesSearchResult}
         hasActiveFilters={hasActiveFilters}
+        isAdmin={isAdmin}
       />
 
       {/* Email Dialog */}
