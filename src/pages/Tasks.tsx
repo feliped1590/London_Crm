@@ -99,9 +99,13 @@ export default function Tasks() {
   });
 
   const { data: contacts } = useQuery({
-    queryKey: ['contacts'],
+    queryKey: ['contacts', formData.company_id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('contacts').select('id, first_name, last_name').order('first_name');
+      let query = supabase.from('contacts').select('id, first_name, last_name, company_id').order('first_name');
+      if (formData.company_id) {
+        query = query.eq('company_id', formData.company_id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
