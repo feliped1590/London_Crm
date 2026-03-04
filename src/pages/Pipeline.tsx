@@ -769,7 +769,7 @@ export default function Pipeline() {
   };
 
   // Filtered deals
-  const hasActiveFilters = filterOwner !== 'all' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
+  const hasActiveFilters = filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
   
   
   const filteredDeals = useMemo(() => {
