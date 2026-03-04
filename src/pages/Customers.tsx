@@ -30,7 +30,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-const ITEMS_PER_PAGE = 25;
+const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
 type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
