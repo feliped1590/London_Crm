@@ -186,7 +186,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     queryFn: async (): Promise<ProductItem[]> => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, sku, name, tipo_id, unit_price, width, length, thickness')
+        .select('id, sku, name, tipo_id, unit_price, width, length, thickness, aliquota_ipi')
         .eq('active', true)
         .order('name');
       if (error) throw error;
