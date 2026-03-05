@@ -239,6 +239,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setDeliveryDate(order.delivery_date ? new Date(order.delivery_date) : undefined);
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
+      setIpiMode((order as any).ipi_mode || 'destacar');
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
     }
