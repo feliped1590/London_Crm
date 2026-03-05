@@ -293,9 +293,11 @@ export default function ImportCompanies() {
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">#</th>
+                     <th className="px-3 py-2 text-left font-medium">#</th>
                     <th className="px-3 py-2 text-left font-medium">Razão Social</th>
+                    <th className="px-3 py-2 text-left font-medium">Nome Fantasia</th>
                     <th className="px-3 py-2 text-left font-medium">CNPJ</th>
+                    <th className="px-3 py-2 text-left font-medium">Vendedor</th>
                     <th className="px-3 py-2 text-left font-medium">Ramo</th>
                     <th className="px-3 py-2 text-left font-medium">Cidade</th>
                     <th className="px-3 py-2 text-left font-medium">UF</th>
