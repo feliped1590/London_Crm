@@ -44,6 +44,7 @@ interface OrderItemDraft {
   unit_price: number;
   subtotal: number;
   discount_percent: number;
+  ipi_rate: number;
   width?: number;
   length?: number;
   thickness?: number;
