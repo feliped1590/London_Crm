@@ -73,6 +73,7 @@ export function ProposalDialog({
     delivery_terms: '',
     observations: '',
     status: 'rascunho' as ProposalStatus,
+    ipi_mode: 'destacar' as IpiMode,
   });
 
   const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
