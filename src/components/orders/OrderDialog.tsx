@@ -270,9 +270,41 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     }
   }, [open]);
 
+  // IPI calculation helpers
+  const calculateIpiValue = (subtotalItem: number, ipiRate: number, mode: IpiMode) => {
+    if (mode === 'isento' || ipiRate <= 0) return 0;
+    if (mode === 'destacar') return subtotalItem * (ipiRate / 100);
+    if (mode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
+    return 0;
+  };
+
+  const calculateItemTotal = (subtotalItem: number, ipiValue: number, mode: IpiMode) => {
+    if (mode === 'destacar') return subtotalItem + ipiValue;
+    return subtotalItem;
+  };
+
   // Calculate total
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + item.subtotal, 0);
+    let subtotalProducts = 0;
+    let totalIpi = 0;
+    items.forEach(item => {
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+      subtotalProducts += item.subtotal;
+      totalIpi += ipiVal;
+    });
+    return ipiMode === 'destacar' ? subtotalProducts + totalIpi : subtotalProducts;
+  };
+
+  const calculateSubtotalProducts = () => items.reduce((sum, item) => sum + item.subtotal, 0);
+
+  const calculateTotalIpi = () => {
+    let totalIpi = 0;
+    items.forEach(item => {
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      totalIpi += calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+    });
+    return totalIpi;
   };
 
   // Add product to items
