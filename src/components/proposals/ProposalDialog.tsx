@@ -176,7 +176,7 @@ export function ProposalDialog({
         .eq('active', true)
         .order('name');
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
   });
 
