@@ -112,6 +112,7 @@ export function ProposalDialog({
         delivery_terms: proposal.delivery_terms || '',
         observations: proposal.observations || '',
         status: proposal.status,
+        ipi_mode: (proposal as any).ipi_mode || 'destacar',
       });
     } else {
       // Default validity date: 30 days from now
@@ -123,6 +124,7 @@ export function ProposalDialog({
         delivery_terms: '',
         observations: '',
         status: 'rascunho',
+        ipi_mode: 'destacar',
       });
       setItems([]);
     }
