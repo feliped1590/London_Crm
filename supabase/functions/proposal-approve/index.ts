@@ -240,6 +240,11 @@ serve(async (req) => {
             thickness: item.thickness,
             subtotal: item.subtotal,
             sort_order: item.sort_order,
+            discount_percent: item.discount_percent || 0,
+            ipi_rate: item.ipi_rate || 0,
+            ipi_value: item.ipi_value || 0,
+            subtotal_item: item.subtotal_item || item.subtotal,
+            total_item: item.total_item || item.subtotal,
           }));
 
           await supabase.from('order_items').insert(orderItems);
