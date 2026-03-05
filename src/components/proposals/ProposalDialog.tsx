@@ -1011,7 +1011,7 @@ export function ProposalDialog({
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={formData.ipi_mode !== 'isento' ? 12 : 10} className="text-center text-muted-foreground py-8">
                           <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Adicione produtos à proposta
                         </TableCell>
