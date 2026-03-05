@@ -82,7 +82,7 @@ export default function ImportCompanies() {
       const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
 
       if (jsonData.length === 0) {
         toast.error('Arquivo vazio ou sem dados válidos.');
