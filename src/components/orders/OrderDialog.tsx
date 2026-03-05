@@ -312,6 +312,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       unit_price: unitPrice,
       subtotal: unitPrice,
       discount_percent: discountPercent,
+      ipi_rate: (product as any).aliquota_ipi || 0,
       width: product.width || undefined,
       length: product.length || undefined,
       thickness: product.thickness || undefined,
