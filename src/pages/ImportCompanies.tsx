@@ -310,7 +310,9 @@ export default function ImportCompanies() {
                     <tr key={i} className="border-t">
                       <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
                       <td className="px-3 py-1.5 truncate max-w-[200px]">{row.name}</td>
+                      <td className="px-3 py-1.5 truncate max-w-[150px]">{row.fantasia || <span className="text-muted-foreground">-</span>}</td>
                       <td className="px-3 py-1.5 font-mono text-xs">{row.cnpj}</td>
+                      <td className="px-3 py-1.5">{row.vendedor_nome || <span className="text-muted-foreground">-</span>}</td>
                       <td className="px-3 py-1.5">{row.industry}</td>
                       <td className="px-3 py-1.5">{row.city}</td>
                       <td className="px-3 py-1.5">{row.state}</td>
