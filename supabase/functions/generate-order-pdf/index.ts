@@ -175,6 +175,29 @@ serve(async (req) => {
       sellerName = sellerProfile?.full_name || '';
     }
 
+    const statusLabels: Record<string, string> = {
+      pendente: "Pendente",
+      confirmado: "Confirmado",
+      em_producao: "Em Produção",
+      pronto: "Pronto",
+      enviado: "Enviado",
+      entregue: "Entregue",
+      cancelado: "Cancelado",
+    };
+
+    const statusColors: Record<string, string> = {
+      pendente: "#f59e0b",
+      confirmado: "#3b82f6",
+      em_producao: "#8b5cf6",
+      pronto: "#10b981",
+      enviado: "#06b6d4",
+      entregue: "#059669",
+      cancelado: "#ef4444",
+    };
+
+    const statusLabel = statusLabels[order.status] || order.status;
+    const statusColor = statusColors[order.status] || "#6b7280";
+
     const html = `
       <!DOCTYPE html>
       <html>
