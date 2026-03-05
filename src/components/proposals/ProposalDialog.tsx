@@ -351,6 +351,9 @@ export function ProposalDialog({
         status: 'pendente',
         total_value: proposalData.total_value,
         observations: proposalData.observations,
+        ipi_mode: proposalData.ipi_mode || 'destacar',
+        subtotal_products: proposalData.subtotal_products || 0,
+        total_ipi: proposalData.total_ipi || 0,
       } as any)
       .select()
       .single();
@@ -364,7 +367,7 @@ export function ProposalDialog({
       .eq('proposal_id', proposalId);
 
     if (proposalItems && proposalItems.length > 0) {
-      const orderItems = proposalItems.map((item) => ({
+      const orderItems = proposalItems.map((item: any) => ({
         order_id: newOrder.id,
         product_id: item.product_id,
         description: item.description,
@@ -375,6 +378,10 @@ export function ProposalDialog({
         thickness: item.thickness,
         subtotal: item.subtotal,
         sort_order: item.sort_order,
+        ipi_rate: item.ipi_rate || 0,
+        ipi_value: item.ipi_value || 0,
+        subtotal_item: item.subtotal_item || item.subtotal,
+        total_item: item.total_item || item.subtotal,
       }));
 
       await supabase.from('order_items').insert(orderItems);
