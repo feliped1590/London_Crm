@@ -73,7 +73,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [legalEntityId, setLegalEntityId] = useState<string>('');
-  
+  const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
