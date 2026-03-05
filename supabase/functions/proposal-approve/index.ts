@@ -201,6 +201,9 @@ serve(async (req) => {
           created_by: orderCreatedBy,
           legal_entity_id: legalEntityId,
           tenant_id: tenantId,
+          ipi_mode: proposal.ipi_mode || 'isento',
+          subtotal_products: proposal.subtotal_products || proposal.total_value || 0,
+          total_ipi: proposal.total_ipi || 0,
         })
         .select()
         .single();
