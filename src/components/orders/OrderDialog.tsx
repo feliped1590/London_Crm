@@ -179,6 +179,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     width: number | null;
     length: number | null;
     thickness: number | null;
+    aliquota_ipi: number | null;
   };
   
   const { data: products } = useQuery({
