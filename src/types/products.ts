@@ -122,9 +122,13 @@ export interface ProposalItem {
   thickness?: number;
   discount_percent?: number;
   subtotal: number;
+  ipi_rate?: number;
+  ipi_value?: number;
+  subtotal_item?: number;
+  total_item?: number;
   sort_order?: number;
   created_at: string;
-  product?: Product;
+  product?: Partial<Product> | { id: string; sku: string; name: string };
 }
 
 export interface Order {
