@@ -87,6 +87,9 @@ export interface Proposal {
   delivery_terms?: string;
   observations?: string;
   total_value?: number;
+  ipi_mode?: IpiMode;
+  subtotal_products?: number;
+  total_ipi?: number;
   created_by?: string;
   created_at: string;
   updated_at: string;
