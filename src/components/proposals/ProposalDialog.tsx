@@ -25,6 +25,8 @@ import {
   ProposalItem,
   Product,
   ProposalStatus,
+  IpiMode,
+  ipiModeConfig,
   proposalStatusConfig,
 } from '@/types/products';
 import { ApprovalLinkModal } from './ApprovalLinkModal';
