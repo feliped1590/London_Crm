@@ -100,30 +100,35 @@ serve(async (req) => {
 
     const todayBR = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    const statusLabels: Record<string, string> = {
-      pendente: "Pendente",
-      confirmado: "Confirmado",
-      em_producao: "Em Produção",
-      pronto: "Pronto",
-      enviado: "Enviado",
-      entregue: "Entregue",
-      cancelado: "Cancelado",
+    // IPI logic
+    const ipiMode = order.ipi_mode || 'isento';
+    const showIpi = ipiMode !== 'isento';
+    const ipiModeLabels: Record<string, string> = {
+      destacar: 'IPI Destacado',
+      incluso: 'IPI Incluso',
+      isento: 'Isento de IPI',
     };
 
-    const statusColors: Record<string, string> = {
-      pendente: "#f59e0b",
-      confirmado: "#3b82f6",
-      em_producao: "#8b5cf6",
-      pronto: "#10b981",
-      enviado: "#06b6d4",
-      entregue: "#059669",
-      cancelado: "#ef4444",
+    const calculateIpiValue = (subtotalItem: number, ipiRate: number) => {
+      if (ipiMode === 'isento' || ipiRate <= 0) return 0;
+      if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
+      if (ipiMode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
+      return 0;
     };
 
-    const statusLabel = statusLabels[order.status] || order.status;
-    const statusColor = statusColors[order.status] || "#6b7280";
+    const itemsData = (items || []).map((item: any) => {
+      const ipiRate = item.ipi_rate || 0;
+      const ipiValue = item.ipi_value || calculateIpiValue(item.subtotal || 0, ipiRate);
+      const totalItem = ipiMode === 'destacar' ? (item.subtotal || 0) + ipiValue : (item.subtotal || 0);
+      return { ...item, ipiRate, ipiValue, totalItem };
+    });
 
-    const itemsHtml = (items || [])
+    const subtotalProducts = order.subtotal_products || itemsData.reduce((sum: number, i: any) => sum + (i.subtotal || 0), 0);
+    const totalIpi = order.total_ipi || itemsData.reduce((sum: number, i: any) => sum + i.ipiValue, 0);
+    const colSpanBase = 6;
+    const colSpanTotal = colSpanBase + (showIpi ? 2 : 0);
+
+    const itemsHtml = itemsData
       .map(
         (item: any, index: number) => `
       <tr>
@@ -135,7 +140,11 @@ serve(async (req) => {
         </td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unit_price)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatCurrency(item.subtotal)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.subtotal)}</td>
+        ${showIpi ? `
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${(item.ipiRate || 0).toFixed(2)}%</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.ipiValue)}</td>
+        ` : ''}
       </tr>
     `
       )
@@ -347,7 +356,10 @@ serve(async (req) => {
         </div>
 
         <div class="section">
-          <div class="section-title">Itens do Pedido</div>
+          <div class="section-title">
+            Itens do Pedido
+            ${showIpi ? `<span style="display: inline-block; margin-left: 10px; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: normal;">${ipiModeLabels[ipiMode] || ipiMode}</span>` : ''}
+          </div>
           <table>
             <thead>
               <tr>
@@ -358,13 +370,27 @@ serve(async (req) => {
                 <th style="width: 60px; text-align: right;">Qtd</th>
                 <th style="width: 90px; text-align: right;">Preço Unit.</th>
                 <th style="width: 100px; text-align: right;">Subtotal</th>
+                ${showIpi ? `
+                  <th style="width: 70px; text-align: right;">IPI %</th>
+                  <th style="width: 90px; text-align: right;">IPI R$</th>
+                ` : ''}
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
+              ${showIpi ? `
               <tr class="total-row">
-                <td colspan="6" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
-                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;">
+                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 1px solid #d1d5db; font-size: 12px; font-weight: normal; padding: 8px;">
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span>Subtotal Produtos: <strong>${formatCurrency(subtotalProducts)}</strong></span>
+                    <span>IPI Total: <strong>${formatCurrency(totalIpi)}</strong></span>
+                  </div>
+                </td>
+              </tr>
+              ` : ''}
+              <tr class="total-row">
+                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
+                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;" colspan="1">
                   ${formatCurrency(order.total_value)}
                 </td>
               </tr>
