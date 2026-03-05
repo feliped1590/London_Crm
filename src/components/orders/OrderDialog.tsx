@@ -737,19 +737,28 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       if (deleteError) throw deleteError;
 
       // Insert new items
-      const orderItems = items.map((item, index) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
-        discount_percent: item.discount_percent,
-        width: item.width,
-        length: item.length,
-        thickness: item.thickness,
-        sort_order: index,
-      }));
+      const orderItems = items.map((item, index) => {
+        const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+        const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+        const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+        return {
+          order_id: order.id,
+          product_id: item.product_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          discount_percent: item.discount_percent,
+          ipi_rate: ipiRate,
+          ipi_value: ipiVal,
+          subtotal_item: item.subtotal,
+          total_item: totalItem,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+          sort_order: index,
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')
