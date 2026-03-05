@@ -1093,8 +1093,26 @@ export function ProposalDialog({
                               />
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium text-xs">
                             {formatCurrency(calculateItemSubtotal(item))}
+                          </TableCell>
+                          {formData.ipi_mode !== 'isento' && (
+                            <>
+                              <TableCell className="text-right text-xs">
+                                {(item.ipi_rate || 0).toFixed(2)}%
+                              </TableCell>
+                              <TableCell className="text-right text-xs">
+                                {formatCurrency(calculateIpiValue(calculateItemSubtotal(item), item.ipi_rate || 0, formData.ipi_mode))}
+                              </TableCell>
+                            </>
+                          )}
+                          <TableCell className="text-right font-bold text-xs">
+                            {(() => {
+                              const sub = calculateItemSubtotal(item);
+                              const ipiRate = formData.ipi_mode === 'isento' ? 0 : (item.ipi_rate || 0);
+                              const ipiVal = calculateIpiValue(sub, ipiRate, formData.ipi_mode);
+                              return formatCurrency(calculateItemTotal(sub, ipiVal, formData.ipi_mode));
+                            })()}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -1114,11 +1132,25 @@ export function ProposalDialog({
                 </Table>
               </div>
 
-              {/* Total */}
+              {/* Totals */}
               <div className="flex justify-end">
-                <div className="text-right p-4 bg-muted rounded-lg">
-                  <p className="text-muted-foreground text-sm">Valor Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
+                <div className="text-right p-4 bg-muted rounded-lg space-y-1">
+                  <div className="flex justify-between gap-8 text-sm">
+                    <span className="text-muted-foreground">Subtotal Produtos:</span>
+                    <span>{formatCurrency(calculateSubtotalProducts())}</span>
+                  </div>
+                  {formData.ipi_mode !== 'isento' && (
+                    <div className="flex justify-between gap-8 text-sm">
+                      <span className="text-muted-foreground">
+                        IPI Total {formData.ipi_mode === 'incluso' ? '(informativo)' : ''}:
+                      </span>
+                      <span>{formatCurrency(calculateTotalIpi())}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-8 pt-1 border-t">
+                    <span className="text-muted-foreground font-medium">Valor Total:</span>
+                    <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+                  </div>
                 </div>
               </div>
 
