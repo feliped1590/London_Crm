@@ -140,6 +140,9 @@ export interface Order {
   status: OrderStatus;
   delivery_date?: string;
   total_value?: number;
+  ipi_mode?: IpiMode;
+  subtotal_products?: number;
+  total_ipi?: number;
   observations?: string;
   created_by?: string;
   created_at: string;
