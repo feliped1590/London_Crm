@@ -224,7 +224,7 @@ export default function ImportCompanies() {
               Upload do Arquivo
             </CardTitle>
             <CardDescription>
-              Selecione um arquivo .xlsx com os dados das empresas. Cabeçalhos aceitos: Razão Social, CNPJ/CPF, Município/Cidade, UF/Estado, Rua/Endereço, Bairro, Número, CEP, Ramo, etc.
+              Selecione um arquivo .xlsx com os dados das empresas. Cabeçalhos aceitos: Razão Social, Nome Fantasia, CNPJ/CPF, Município/Cidade, UF/Estado, Rua/Endereço, Bairro, Número, CEP, Ramo/Segmento, Vendedor, etc.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -293,9 +293,11 @@ export default function ImportCompanies() {
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium">#</th>
+                     <th className="px-3 py-2 text-left font-medium">#</th>
                     <th className="px-3 py-2 text-left font-medium">Razão Social</th>
+                    <th className="px-3 py-2 text-left font-medium">Nome Fantasia</th>
                     <th className="px-3 py-2 text-left font-medium">CNPJ</th>
+                    <th className="px-3 py-2 text-left font-medium">Vendedor</th>
                     <th className="px-3 py-2 text-left font-medium">Ramo</th>
                     <th className="px-3 py-2 text-left font-medium">Cidade</th>
                     <th className="px-3 py-2 text-left font-medium">UF</th>
@@ -308,7 +310,9 @@ export default function ImportCompanies() {
                     <tr key={i} className="border-t">
                       <td className="px-3 py-1.5 text-muted-foreground">{i + 1}</td>
                       <td className="px-3 py-1.5 truncate max-w-[200px]">{row.name}</td>
+                      <td className="px-3 py-1.5 truncate max-w-[150px]">{row.fantasia || <span className="text-muted-foreground">-</span>}</td>
                       <td className="px-3 py-1.5 font-mono text-xs">{row.cnpj}</td>
+                      <td className="px-3 py-1.5">{row.vendedor_nome || <span className="text-muted-foreground">-</span>}</td>
                       <td className="px-3 py-1.5">{row.industry}</td>
                       <td className="px-3 py-1.5">{row.city}</td>
                       <td className="px-3 py-1.5">{row.state}</td>
