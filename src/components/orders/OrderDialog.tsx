@@ -717,6 +717,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           observations,
           total_value: calculateTotal(),
           legal_entity_id: legalEntityId || null,
+          ipi_mode: ipiMode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         })
         .eq('id', order.id);
 
