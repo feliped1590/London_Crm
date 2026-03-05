@@ -929,7 +929,22 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         </Popover>
       </div>
 
-      {/* Add Product */}
+      {/* IPI Mode Selector */}
+      <div className="space-y-2">
+        <Label>Modo IPI</Label>
+        <Select value={ipiMode} onValueChange={(v) => setIpiMode(v as IpiMode)} disabled={!canEdit}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ipiModeConfig).map(([value, config]) => (
+              <SelectItem key={value} value={value}>{config.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">{ipiModeConfig[ipiMode].description}</p>
+      </div>
+
       {canEdit && (
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
