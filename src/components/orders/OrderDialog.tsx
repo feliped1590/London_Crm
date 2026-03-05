@@ -24,7 +24,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
-import { Order, OrderItem, OrderStatus, orderStatusConfig } from '@/types/products';
+import { Order, OrderItem, OrderStatus, IpiMode, ipiModeConfig, orderStatusConfig } from '@/types/products';
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
