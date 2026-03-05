@@ -2,6 +2,13 @@ import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
 export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
+export type IpiMode = 'destacar' | 'incluso' | 'isento';
+
+export const ipiModeConfig: Record<IpiMode, { label: string; description: string }> = {
+  destacar: { label: 'Destacar IPI', description: 'IPI calculado e somado ao total' },
+  incluso: { label: 'IPI Incluso no Preço', description: 'IPI embutido no preço (informativo)' },
+  isento: { label: 'Isento de IPI', description: 'IPI não se aplica' },
+};
 
 export interface Product {
   id: string;
