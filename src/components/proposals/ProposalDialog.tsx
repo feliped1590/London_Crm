@@ -197,6 +197,9 @@ export function ProposalDialog({
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
           total_value: calculateTotal(),
+          ipi_mode: formData.ipi_mode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         } as any)
         .select()
         .single();
