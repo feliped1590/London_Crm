@@ -979,68 +979,55 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-24">Desc %</TableHead>
-                <TableHead className="w-32 text-right">Subtotal</TableHead>
+                <TableHead className="w-28 text-right">Subtotal</TableHead>
+                {ipiMode !== 'isento' && (
+                  <>
+                    <TableHead className="w-20 text-right">IPI %</TableHead>
+                    <TableHead className="w-28 text-right">IPI R$</TableHead>
+                  </>
+                )}
+                <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item, index) => {
                 const product = products?.find(p => p.id === item.product_id);
+                const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+                const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+                const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
                 
                 return (
                   <TableRow key={index}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {product?.sku}
-                        </p>
+                        <p className="text-sm text-muted-foreground font-mono">{product?.sku}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                        className="w-20"
-                        disabled={!canEdit}
-                      />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput
-                          value={item.unit_price}
-                          onChange={(val) => updateItem(index, 'unit_price', val)}
-                          onBlur={() => handlePriceBlur(index)}
-                          className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
-                          disabled={(hasPricingTable && !isAdmin) || !canEdit}
-                        />
-                        {hasPricingTable && (
-                          <DollarSign className={cn(
-                            'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4',
-                            isAdmin ? 'text-amber-500' : 'text-muted-foreground'
-                          )} />
-                        )}
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit} />
+                        {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {item.discount_percent > 0 && (
-                        <span className="text-primary font-medium">
-                          {item.discount_percent}%
-                        </span>
-                      )}
+                      {item.discount_percent > 0 && (<span className="text-primary font-medium">{item.discount_percent}%</span>)}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.subtotal)}
-                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
+                    {ipiMode !== 'isento' && (
+                      <>
+                        <TableCell className="text-right text-sm">{ipiRate.toFixed(2)}%</TableCell>
+                        <TableCell className="text-right text-sm">{formatCurrency(ipiVal)}</TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(index)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -1053,12 +1040,24 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         </div>
       )}
 
-      {/* Total */}
+      {/* Totals */}
       {items.length > 0 && (
         <div className="flex justify-end">
-          <div className="text-right">
-            <p className="text-muted-foreground">Valor Total</p>
-            <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
+          <div className="text-right p-4 bg-muted rounded-lg space-y-1">
+            <div className="flex justify-between gap-8 text-sm">
+              <span className="text-muted-foreground">Subtotal Produtos:</span>
+              <span>{formatCurrency(calculateSubtotalProducts())}</span>
+            </div>
+            {ipiMode !== 'isento' && (
+              <div className="flex justify-between gap-8 text-sm">
+                <span className="text-muted-foreground">IPI Total {ipiMode === 'incluso' ? '(informativo)' : ''}:</span>
+                <span>{formatCurrency(calculateTotalIpi())}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-8 pt-1 border-t">
+              <span className="text-muted-foreground font-medium">Valor Total:</span>
+              <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+            </div>
           </div>
         </div>
       )}
