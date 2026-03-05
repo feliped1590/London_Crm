@@ -356,7 +356,10 @@ serve(async (req) => {
         </div>
 
         <div class="section">
-          <div class="section-title">Itens do Pedido</div>
+          <div class="section-title">
+            Itens do Pedido
+            ${showIpi ? `<span style="display: inline-block; margin-left: 10px; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: normal;">${ipiModeLabels[ipiMode] || ipiMode}</span>` : ''}
+          </div>
           <table>
             <thead>
               <tr>
@@ -367,13 +370,27 @@ serve(async (req) => {
                 <th style="width: 60px; text-align: right;">Qtd</th>
                 <th style="width: 90px; text-align: right;">Preço Unit.</th>
                 <th style="width: 100px; text-align: right;">Subtotal</th>
+                ${showIpi ? `
+                  <th style="width: 70px; text-align: right;">IPI %</th>
+                  <th style="width: 90px; text-align: right;">IPI R$</th>
+                ` : ''}
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
+              ${showIpi ? `
               <tr class="total-row">
-                <td colspan="6" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
-                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;">
+                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 1px solid #d1d5db; font-size: 12px; font-weight: normal; padding: 8px;">
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span>Subtotal Produtos: <strong>${formatCurrency(subtotalProducts)}</strong></span>
+                    <span>IPI Total: <strong>${formatCurrency(totalIpi)}</strong></span>
+                  </div>
+                </td>
+              </tr>
+              ` : ''}
+              <tr class="total-row">
+                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
+                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;" colspan="1">
                   ${formatCurrency(order.total_value)}
                 </td>
               </tr>
