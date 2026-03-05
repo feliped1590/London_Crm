@@ -992,12 +992,19 @@ export function ProposalDialog({
                   <TableHeader>
                      <TableRow>
                       <TableHead className="w-[110px]">SKU</TableHead>
-                      <TableHead className="min-w-[200px]">Descrição</TableHead>
+                      <TableHead className="min-w-[150px]">Descrição</TableHead>
                       <TableHead className="w-[150px]">Medidas</TableHead>
-                      <TableHead className="w-[90px]">Qtd</TableHead>
-                      <TableHead className="w-[130px]">Preço Un.</TableHead>
-                      <TableHead className="w-[90px]">Desc %</TableHead>
-                      <TableHead className="w-[120px] text-right">Subtotal</TableHead>
+                      <TableHead className="w-[80px]">Qtd</TableHead>
+                      <TableHead className="w-[120px]">Preço Un.</TableHead>
+                      <TableHead className="w-[70px]">Desc %</TableHead>
+                      <TableHead className="w-[100px] text-right">Subtotal</TableHead>
+                      {formData.ipi_mode !== 'isento' && (
+                        <>
+                          <TableHead className="w-[70px] text-right">IPI %</TableHead>
+                          <TableHead className="w-[100px] text-right">IPI R$</TableHead>
+                        </>
+                      )}
+                      <TableHead className="w-[110px] text-right">Total</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
