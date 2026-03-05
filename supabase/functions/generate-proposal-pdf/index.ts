@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -26,12 +25,11 @@ serve(async (req) => {
       );
     }
 
-    // Fetch proposal with related data
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .select(`
         *,
-        company:companies(id, name, cnpj, address, city, state, phone, email),
+        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email),
         contact:contacts(id, first_name, last_name, email, phone),
         deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url, phone, email))
       `)
@@ -46,7 +44,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch proposal items
     const { data: items, error: itemsError } = await supabase
       .from('proposal_items')
       .select(`
@@ -61,6 +58,8 @@ serve(async (req) => {
     }
 
     const legalEntity = proposal.deal?.legal_entity || null;
+    const ipiMode = proposal.ipi_mode || 'destacar';
+    const showIpi = ipiMode !== 'isento';
 
     // Fetch seller name
     let sellerName = '';
@@ -73,7 +72,6 @@ serve(async (req) => {
       sellerName = sellerProfile?.full_name || '';
     }
 
-    // Generate HTML for PDF
     const formatCurrency = (value: number) => {
       return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -86,7 +84,40 @@ serve(async (req) => {
       return new Date(dateStr).toLocaleDateString('pt-BR');
     };
 
-    const itemsHtml = (items || []).map((item: any, index: number) => `
+    // Calculate IPI for each item
+    const calculateIpiValue = (subtotalItem: number, ipiRate: number) => {
+      if (ipiMode === 'isento' || ipiRate <= 0) return 0;
+      if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
+      if (ipiMode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
+      return 0;
+    };
+
+    // Calculate totals
+    let subtotalProducts = 0;
+    let totalIpi = 0;
+
+    const processedItems = (items || []).map((item: any) => {
+      const subtotal = item.subtotal || (item.quantity * item.unit_price);
+      const ipiRate = item.ipi_rate || 0;
+      const ipiValue = item.ipi_value != null ? item.ipi_value : calculateIpiValue(subtotal, ipiRate);
+      const totalItem = ipiMode === 'destacar' ? subtotal + ipiValue : subtotal;
+      
+      subtotalProducts += subtotal;
+      totalIpi += ipiValue;
+
+      return { ...item, subtotal, ipiRate, ipiValue, totalItem };
+    });
+
+    const grandTotal = ipiMode === 'destacar' ? subtotalProducts + totalIpi : subtotalProducts;
+
+    // IPI mode label
+    const ipiModeLabels: Record<string, string> = {
+      destacar: 'IPI Destacado',
+      incluso: 'IPI Incluso no Preço',
+      isento: 'Isento de IPI',
+    };
+
+    const itemsHtml = processedItems.map((item: any, index: number) => `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.sku || '-'}</td>
@@ -97,9 +128,16 @@ serve(async (req) => {
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unit_price)}</td>
         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.discount_percent || 0}%</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatCurrency(item.subtotal)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.subtotal)}</td>
+        ${showIpi ? `
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${(item.ipiRate || 0).toFixed(2)}%</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.ipiValue)}</td>
+        ` : ''}
+        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatCurrency(item.totalItem)}</td>
       </tr>
     `).join('');
+
+    const totalColSpan = showIpi ? 10 : 8;
 
     const html = `
       <!DOCTYPE html>
@@ -125,12 +163,6 @@ serve(async (req) => {
           .logo img {
             max-height: 70px;
             width: auto;
-          }
-          .logo-text {
-            margin-top: 5px;
-            font-size: 10px;
-            color: #1e3a5f;
-            letter-spacing: 1px;
           }
           .proposal-info {
             text-align: right;
@@ -184,13 +216,32 @@ serve(async (req) => {
             font-size: 11px;
             text-transform: uppercase;
           }
-          .total-row {
-            background: #f3f4f6;
+          .total-section {
+            margin-top: 15px;
+            display: flex;
+            justify-content: flex-end;
           }
-          .total-row td {
-            padding: 12px 8px;
+          .total-box {
+            background: #f3f4f6;
+            padding: 15px 20px;
+            border-radius: 8px;
+            min-width: 280px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 12px;
+          }
+          .total-row.grand {
+            border-top: 2px solid #3b82f6;
+            margin-top: 6px;
+            padding-top: 8px;
+            font-size: 16px;
             font-weight: bold;
-            font-size: 14px;
+          }
+          .total-row.grand .total-value {
+            color: #3b82f6;
           }
           .terms {
             background: #f9fafb;
@@ -219,11 +270,21 @@ serve(async (req) => {
             font-weight: bold;
             margin-top: 10px;
           }
+          .ipi-mode-badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 6px;
+          }
         </style>
       </head>
       <body>
         <div class="header">
-           <div>
+          <div>
             ${legalEntity?.logo_url 
               ? `<div class="logo"><img src="${legalEntity.logo_url}" alt="${legalEntity.name || 'Logo'}" /></div>` 
               : `<div class="logo"><strong style="font-size: 18px;">${legalEntity?.name || 'CRMPro'}</strong></div>`
@@ -234,6 +295,7 @@ serve(async (req) => {
             <div class="proposal-number">${proposal.number}</div>
             <p style="color: #6b7280; margin: 5px 0;">Data: ${formatDate(proposal.created_at)}</p>
             <div class="validity">Válida até: ${formatDate(proposal.validity_date)}</div>
+            ${showIpi ? `<div class="ipi-mode-badge">${ipiModeLabels[ipiMode] || ipiMode}</div>` : ''}
           </div>
         </div>
 
@@ -246,7 +308,7 @@ serve(async (req) => {
                 ${proposal.company?.name || 'Não informado'}
               </div>
               ${proposal.company?.cnpj ? `<div class="info-value">CNPJ: ${proposal.company.cnpj}</div>` : ''}
-              ${proposal.company?.address ? `<div class="info-value">${proposal.company.address}</div>` : ''}
+              ${proposal.company?.address ? `<div class="info-value">${proposal.company.address}${proposal.company?.address_number ? ', ' + proposal.company.address_number : ''}</div>` : ''}
               ${proposal.company?.city ? `<div class="info-value">${proposal.company.city}${proposal.company.state ? ' - ' + proposal.company.state : ''}</div>` : ''}
             </div>
             <div class="info-box">
@@ -269,22 +331,40 @@ serve(async (req) => {
                 <th style="width: 80px;">SKU</th>
                 <th>Descrição</th>
                 <th style="width: 100px; text-align: center;">Medidas (LxCxE)</th>
-                <th style="width: 60px; text-align: right;">Qtd</th>
-                <th style="width: 90px; text-align: right;">Preço Unit.</th>
-                <th style="width: 60px; text-align: right;">Desc.</th>
-                <th style="width: 100px; text-align: right;">Subtotal</th>
+                <th style="width: 50px; text-align: right;">Qtd</th>
+                <th style="width: 85px; text-align: right;">Preço Unit.</th>
+                <th style="width: 50px; text-align: right;">Desc.</th>
+                <th style="width: 90px; text-align: right;">Subtotal</th>
+                ${showIpi ? `
+                  <th style="width: 55px; text-align: right;">IPI %</th>
+                  <th style="width: 80px; text-align: right;">IPI R$</th>
+                ` : ''}
+                <th style="width: 95px; text-align: right;">Total</th>
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
-              <tr class="total-row">
-                <td colspan="7" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
-                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;">
-                  ${formatCurrency(proposal.total_value)}
-                </td>
-              </tr>
             </tbody>
           </table>
+
+          <div class="total-section">
+            <div class="total-box">
+              <div class="total-row">
+                <span>Subtotal Produtos:</span>
+                <span>${formatCurrency(subtotalProducts)}</span>
+              </div>
+              ${showIpi ? `
+                <div class="total-row">
+                  <span>IPI Total${ipiMode === 'incluso' ? ' (informativo)' : ''}:</span>
+                  <span>${formatCurrency(totalIpi)}</span>
+                </div>
+              ` : ''}
+              <div class="total-row grand">
+                <span>VALOR TOTAL:</span>
+                <span class="total-value">${formatCurrency(grandTotal)}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         ${(proposal.payment_terms || proposal.delivery_terms || proposal.observations) ? `
@@ -315,15 +395,11 @@ serve(async (req) => {
       </html>
     `;
 
-    // For now, return the HTML content - in production you'd use a PDF library
-    // or an external service like Puppeteer, jsPDF, or a PDF API
     return new Response(
       JSON.stringify({ 
         success: true,
         html: html,
         proposal_number: proposal.number,
-        // In a production environment, you would generate a PDF and return the URL
-        // For now, we return the HTML which can be printed to PDF in the browser
         message: 'HTML gerado com sucesso. Use Ctrl+P no navegador para salvar como PDF.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
