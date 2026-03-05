@@ -24,7 +24,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
-import { Order, OrderItem, OrderStatus, orderStatusConfig } from '@/types/products';
+import { Order, OrderItem, OrderStatus, IpiMode, ipiModeConfig, orderStatusConfig } from '@/types/products';
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
@@ -44,6 +44,7 @@ interface OrderItemDraft {
   unit_price: number;
   subtotal: number;
   discount_percent: number;
+  ipi_rate: number;
   width?: number;
   length?: number;
   thickness?: number;
@@ -72,7 +73,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [legalEntityId, setLegalEntityId] = useState<string>('');
-  
+  const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
@@ -178,6 +179,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     width: number | null;
     length: number | null;
     thickness: number | null;
+    aliquota_ipi: number | null;
   };
   
   const { data: products } = useQuery({
@@ -185,7 +187,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     queryFn: async (): Promise<ProductItem[]> => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, sku, name, tipo_id, unit_price, width, length, thickness')
+        .select('id, sku, name, tipo_id, unit_price, width, length, thickness, aliquota_ipi')
         .eq('active', true)
         .order('name');
       if (error) throw error;
@@ -204,7 +206,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         .eq('order_id', order.id)
         .order('sort_order');
       if (error) throw error;
-      return (data ?? []).map(item => ({
+      return (data ?? []).map((item: any) => ({
         id: item.id,
         product_id: item.product_id || '',
         description: item.description,
@@ -212,6 +214,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         unit_price: item.unit_price,
         subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0,
+        ipi_rate: item.ipi_rate || 0,
         width: item.width || undefined,
         length: item.length || undefined,
         thickness: item.thickness || undefined,
@@ -237,6 +240,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setDeliveryDate(order.delivery_date ? new Date(order.delivery_date) : undefined);
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
+      setIpiMode((order as any).ipi_mode || 'destacar');
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
     }
@@ -266,9 +270,41 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     }
   }, [open]);
 
+  // IPI calculation helpers
+  const calculateIpiValue = (subtotalItem: number, ipiRate: number, mode: IpiMode) => {
+    if (mode === 'isento' || ipiRate <= 0) return 0;
+    if (mode === 'destacar') return subtotalItem * (ipiRate / 100);
+    if (mode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
+    return 0;
+  };
+
+  const calculateItemTotal = (subtotalItem: number, ipiValue: number, mode: IpiMode) => {
+    if (mode === 'destacar') return subtotalItem + ipiValue;
+    return subtotalItem;
+  };
+
   // Calculate total
   const calculateTotal = () => {
-    return items.reduce((sum, item) => sum + item.subtotal, 0);
+    let subtotalProducts = 0;
+    let totalIpi = 0;
+    items.forEach(item => {
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+      subtotalProducts += item.subtotal;
+      totalIpi += ipiVal;
+    });
+    return ipiMode === 'destacar' ? subtotalProducts + totalIpi : subtotalProducts;
+  };
+
+  const calculateSubtotalProducts = () => items.reduce((sum, item) => sum + item.subtotal, 0);
+
+  const calculateTotalIpi = () => {
+    let totalIpi = 0;
+    items.forEach(item => {
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      totalIpi += calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+    });
+    return totalIpi;
   };
 
   // Add product to items
@@ -309,6 +345,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       unit_price: unitPrice,
       subtotal: unitPrice,
       discount_percent: discountPercent,
+      ipi_rate: (product as any).aliquota_ipi || 0,
       width: product.width || undefined,
       length: product.length || undefined,
       thickness: product.thickness || undefined,
@@ -591,6 +628,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           status: 'pendente',
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
+          ipi_mode: ipiMode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         })
         .select()
         .single();
@@ -598,19 +638,28 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       if (orderError) throw orderError;
 
       // Create order items
-      const orderItems = items.map((item, index) => ({
-        order_id: newOrder.id,
-        product_id: item.product_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
-        discount_percent: item.discount_percent,
-        width: item.width,
-        length: item.length,
-        thickness: item.thickness,
-        sort_order: index,
-      }));
+      const orderItems = items.map((item, index) => {
+        const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+        const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+        const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+        return {
+          order_id: newOrder.id,
+          product_id: item.product_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          discount_percent: item.discount_percent,
+          ipi_rate: ipiRate,
+          ipi_value: ipiVal,
+          subtotal_item: item.subtotal,
+          total_item: totalItem,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+          sort_order: index,
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -668,6 +717,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           observations,
           total_value: calculateTotal(),
           legal_entity_id: legalEntityId || null,
+          ipi_mode: ipiMode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         })
         .eq('id', order.id);
 
@@ -685,19 +737,28 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       if (deleteError) throw deleteError;
 
       // Insert new items
-      const orderItems = items.map((item, index) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.subtotal,
-        discount_percent: item.discount_percent,
-        width: item.width,
-        length: item.length,
-        thickness: item.thickness,
-        sort_order: index,
-      }));
+      const orderItems = items.map((item, index) => {
+        const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+        const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+        const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+        return {
+          order_id: order.id,
+          product_id: item.product_id,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          discount_percent: item.discount_percent,
+          ipi_rate: ipiRate,
+          ipi_value: ipiVal,
+          subtotal_item: item.subtotal,
+          total_item: totalItem,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+          sort_order: index,
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -868,7 +929,22 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         </Popover>
       </div>
 
-      {/* Add Product */}
+      {/* IPI Mode Selector */}
+      <div className="space-y-2">
+        <Label>Modo IPI</Label>
+        <Select value={ipiMode} onValueChange={(v) => setIpiMode(v as IpiMode)} disabled={!canEdit}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(ipiModeConfig).map(([value, config]) => (
+              <SelectItem key={value} value={value}>{config.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">{ipiModeConfig[ipiMode].description}</p>
+      </div>
+
       {canEdit && (
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
@@ -903,68 +979,55 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-24">Desc %</TableHead>
-                <TableHead className="w-32 text-right">Subtotal</TableHead>
+                <TableHead className="w-28 text-right">Subtotal</TableHead>
+                {ipiMode !== 'isento' && (
+                  <>
+                    <TableHead className="w-20 text-right">IPI %</TableHead>
+                    <TableHead className="w-28 text-right">IPI R$</TableHead>
+                  </>
+                )}
+                <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item, index) => {
                 const product = products?.find(p => p.id === item.product_id);
+                const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+                const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+                const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
                 
                 return (
                   <TableRow key={index}>
                     <TableCell>
                       <div>
                         <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {product?.sku}
-                        </p>
+                        <p className="text-sm text-muted-foreground font-mono">{product?.sku}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                        className="w-20"
-                        disabled={!canEdit}
-                      />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput
-                          value={item.unit_price}
-                          onChange={(val) => updateItem(index, 'unit_price', val)}
-                          onBlur={() => handlePriceBlur(index)}
-                          className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')}
-                          disabled={(hasPricingTable && !isAdmin) || !canEdit}
-                        />
-                        {hasPricingTable && (
-                          <DollarSign className={cn(
-                            'absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4',
-                            isAdmin ? 'text-amber-500' : 'text-muted-foreground'
-                          )} />
-                        )}
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit} />
+                        {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {item.discount_percent > 0 && (
-                        <span className="text-primary font-medium">
-                          {item.discount_percent}%
-                        </span>
-                      )}
+                      {item.discount_percent > 0 && (<span className="text-primary font-medium">{item.discount_percent}%</span>)}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(item.subtotal)}
-                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
+                    {ipiMode !== 'isento' && (
+                      <>
+                        <TableCell className="text-right text-sm">{ipiRate.toFixed(2)}%</TableCell>
+                        <TableCell className="text-right text-sm">{formatCurrency(ipiVal)}</TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(index)}
-                        >
+                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
@@ -977,12 +1040,24 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         </div>
       )}
 
-      {/* Total */}
+      {/* Totals */}
       {items.length > 0 && (
         <div className="flex justify-end">
-          <div className="text-right">
-            <p className="text-muted-foreground">Valor Total</p>
-            <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
+          <div className="text-right p-4 bg-muted rounded-lg space-y-1">
+            <div className="flex justify-between gap-8 text-sm">
+              <span className="text-muted-foreground">Subtotal Produtos:</span>
+              <span>{formatCurrency(calculateSubtotalProducts())}</span>
+            </div>
+            {ipiMode !== 'isento' && (
+              <div className="flex justify-between gap-8 text-sm">
+                <span className="text-muted-foreground">IPI Total {ipiMode === 'incluso' ? '(informativo)' : ''}:</span>
+                <span>{formatCurrency(calculateTotalIpi())}</span>
+              </div>
+            )}
+            <div className="flex justify-between gap-8 pt-1 border-t">
+              <span className="text-muted-foreground font-medium">Valor Total:</span>
+              <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+            </div>
           </div>
         </div>
       )}

@@ -2,6 +2,13 @@ import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
 export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
+export type IpiMode = 'destacar' | 'incluso' | 'isento';
+
+export const ipiModeConfig: Record<IpiMode, { label: string; description: string }> = {
+  destacar: { label: 'Destacar IPI', description: 'IPI calculado e somado ao total' },
+  incluso: { label: 'IPI Incluso no Preço', description: 'IPI embutido no preço (informativo)' },
+  isento: { label: 'Isento de IPI', description: 'IPI não se aplica' },
+};
 
 export interface Product {
   id: string;
@@ -80,6 +87,9 @@ export interface Proposal {
   delivery_terms?: string;
   observations?: string;
   total_value?: number;
+  ipi_mode?: IpiMode;
+  subtotal_products?: number;
+  total_ipi?: number;
   created_by?: string;
   created_at: string;
   updated_at: string;
@@ -112,9 +122,13 @@ export interface ProposalItem {
   thickness?: number;
   discount_percent?: number;
   subtotal: number;
+  ipi_rate?: number;
+  ipi_value?: number;
+  subtotal_item?: number;
+  total_item?: number;
   sort_order?: number;
   created_at: string;
-  product?: Product;
+  product?: Partial<Product> | { id: string; sku: string; name: string };
 }
 
 export interface Order {
@@ -126,6 +140,9 @@ export interface Order {
   status: OrderStatus;
   delivery_date?: string;
   total_value?: number;
+  ipi_mode?: IpiMode;
+  subtotal_products?: number;
+  total_ipi?: number;
   observations?: string;
   created_by?: string;
   created_at: string;
@@ -155,6 +172,10 @@ export interface OrderItem {
   thickness?: number;
   discount_percent?: number;
   subtotal: number;
+  ipi_rate?: number;
+  ipi_value?: number;
+  subtotal_item?: number;
+  total_item?: number;
   sort_order?: number;
   created_at: string;
   product?: Partial<Product> | { id: string; sku: string; name: string };

@@ -25,6 +25,8 @@ import {
   ProposalItem,
   Product,
   ProposalStatus,
+  IpiMode,
+  ipiModeConfig,
   proposalStatusConfig,
 } from '@/types/products';
 import { ApprovalLinkModal } from './ApprovalLinkModal';
@@ -71,6 +73,7 @@ export function ProposalDialog({
     delivery_terms: '',
     observations: '',
     status: 'rascunho' as ProposalStatus,
+    ipi_mode: 'destacar' as IpiMode,
   });
 
   const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
@@ -109,6 +112,7 @@ export function ProposalDialog({
         delivery_terms: proposal.delivery_terms || '',
         observations: proposal.observations || '',
         status: proposal.status,
+        ipi_mode: (proposal as any).ipi_mode || 'destacar',
       });
     } else {
       // Default validity date: 30 days from now
@@ -120,6 +124,7 @@ export function ProposalDialog({
         delivery_terms: '',
         observations: '',
         status: 'rascunho',
+        ipi_mode: 'destacar',
       });
       setItems([]);
     }
@@ -171,7 +176,7 @@ export function ProposalDialog({
         .eq('active', true)
         .order('name');
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
   });
 
@@ -192,6 +197,9 @@ export function ProposalDialog({
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
           total_value: calculateTotal(),
+          ipi_mode: formData.ipi_mode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         } as any)
         .select()
         .single();
@@ -200,19 +208,30 @@ export function ProposalDialog({
 
       // Create items
       if (items.length > 0) {
-        const itemsToInsert = items.map((item, index) => ({
-          proposal_id: newProposal.id,
-          product_id: item.product_id || null,
-          description: item.description || '',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          width: item.width || null,
-          length: item.length || null,
-          thickness: item.thickness || null,
-          discount_percent: item.discount_percent || 0,
-          subtotal: calculateItemSubtotal(item),
-          sort_order: index,
-        }));
+        const ipiMode = formData.ipi_mode;
+        const itemsToInsert = items.map((item, index) => {
+          const sub = calculateItemSubtotal(item);
+          const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+          const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
+          const totalItem = calculateItemTotal(sub, ipiVal, ipiMode);
+          return {
+            proposal_id: newProposal.id,
+            product_id: item.product_id || null,
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            width: item.width || null,
+            length: item.length || null,
+            thickness: item.thickness || null,
+            discount_percent: item.discount_percent || 0,
+            subtotal: sub,
+            ipi_rate: ipiRate,
+            ipi_value: ipiVal,
+            subtotal_item: sub,
+            total_item: totalItem,
+            sort_order: index,
+          };
+        });
 
         const { error: itemsError } = await supabase
           .from('proposal_items')
@@ -252,6 +271,9 @@ export function ProposalDialog({
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
           total_value: calculateTotal(),
+          ipi_mode: formData.ipi_mode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         })
         .eq('id', proposal.id);
 
@@ -261,19 +283,30 @@ export function ProposalDialog({
       await supabase.from('proposal_items').delete().eq('proposal_id', proposal.id);
 
       if (items.length > 0) {
-        const itemsToInsert = items.map((item, index) => ({
-          proposal_id: proposal.id,
-          product_id: item.product_id || null,
-          description: item.description || '',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          width: item.width || null,
-          length: item.length || null,
-          thickness: item.thickness || null,
-          discount_percent: item.discount_percent || 0,
-          subtotal: calculateItemSubtotal(item),
-          sort_order: index,
-        }));
+        const ipiMode = formData.ipi_mode;
+        const itemsToInsert = items.map((item, index) => {
+          const sub = calculateItemSubtotal(item);
+          const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+          const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
+          const totalItem = calculateItemTotal(sub, ipiVal, ipiMode);
+          return {
+            proposal_id: proposal.id,
+            product_id: item.product_id || null,
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            width: item.width || null,
+            length: item.length || null,
+            thickness: item.thickness || null,
+            discount_percent: item.discount_percent || 0,
+            subtotal: sub,
+            ipi_rate: ipiRate,
+            ipi_value: ipiVal,
+            subtotal_item: sub,
+            total_item: totalItem,
+            sort_order: index,
+          };
+        });
 
         const { error: itemsError } = await supabase
           .from('proposal_items')
@@ -318,6 +351,9 @@ export function ProposalDialog({
         status: 'pendente',
         total_value: proposalData.total_value,
         observations: proposalData.observations,
+        ipi_mode: proposalData.ipi_mode || 'destacar',
+        subtotal_products: proposalData.subtotal_products || 0,
+        total_ipi: proposalData.total_ipi || 0,
       } as any)
       .select()
       .single();
@@ -331,7 +367,7 @@ export function ProposalDialog({
       .eq('proposal_id', proposalId);
 
     if (proposalItems && proposalItems.length > 0) {
-      const orderItems = proposalItems.map((item) => ({
+      const orderItems = proposalItems.map((item: any) => ({
         order_id: newOrder.id,
         product_id: item.product_id,
         description: item.description,
@@ -342,6 +378,10 @@ export function ProposalDialog({
         thickness: item.thickness,
         subtotal: item.subtotal,
         sort_order: item.sort_order,
+        ipi_rate: item.ipi_rate || 0,
+        ipi_value: item.ipi_value || 0,
+        subtotal_item: item.subtotal_item || item.subtotal,
+        total_item: item.total_item || item.subtotal,
       }));
 
       await supabase.from('order_items').insert(orderItems);
@@ -382,7 +422,47 @@ export function ProposalDialog({
     return qty * price * (1 - discount / 100);
   };
 
+  const calculateIpiValue = (subtotalItem: number, ipiRate: number, ipiMode: IpiMode) => {
+    if (ipiMode === 'isento' || ipiRate <= 0) return 0;
+    if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
+    if (ipiMode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
+    return 0;
+  };
+
+  const calculateItemTotal = (subtotalItem: number, ipiValue: number, ipiMode: IpiMode) => {
+    if (ipiMode === 'destacar') return subtotalItem + ipiValue;
+    return subtotalItem; // incluso and isento: total = subtotal
+  };
+
   const calculateTotal = () => {
+    const ipiMode = formData.ipi_mode;
+    let subtotalProducts = 0;
+    let totalIpi = 0;
+    
+    items.forEach(item => {
+      const sub = calculateItemSubtotal(item);
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
+      subtotalProducts += sub;
+      totalIpi += ipiVal;
+    });
+
+    if (ipiMode === 'destacar') return subtotalProducts + totalIpi;
+    return subtotalProducts;
+  };
+
+  const calculateTotalIpi = () => {
+    const ipiMode = formData.ipi_mode;
+    let totalIpi = 0;
+    items.forEach(item => {
+      const sub = calculateItemSubtotal(item);
+      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+      totalIpi += calculateIpiValue(sub, ipiRate, ipiMode);
+    });
+    return totalIpi;
+  };
+
+  const calculateSubtotalProducts = () => {
     return items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
   };
 
@@ -416,6 +496,8 @@ export function ProposalDialog({
       }
     }
 
+    const ipiRate = product.aliquota_ipi || 0;
+
     setItems([
       ...items,
       {
@@ -428,6 +510,7 @@ export function ProposalDialog({
         thickness: product.thickness,
         discount_percent: discountPercent,
         subtotal: unitPrice,
+        ipi_rate: ipiRate,
         product: product,
       },
     ]);
@@ -801,6 +884,31 @@ export function ProposalDialog({
                 </div>
               </div>
 
+              {/* IPI Mode Selector */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="col-span-2">
+                  <Label>Modo IPI</Label>
+                  <Select
+                    value={formData.ipi_mode}
+                    onValueChange={(v) => setFormData({ ...formData, ipi_mode: v as IpiMode })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ipiModeConfig).map(([value, config]) => (
+                        <SelectItem key={value} value={value}>
+                          {config.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ipiModeConfig[formData.ipi_mode].description}
+                  </p>
+                </div>
+              </div>
+
               {/* Pricing Table Indicator */}
               {linkedPricingTableFromEntity && (
                 <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -884,19 +992,26 @@ export function ProposalDialog({
                   <TableHeader>
                      <TableRow>
                       <TableHead className="w-[110px]">SKU</TableHead>
-                      <TableHead className="min-w-[200px]">Descrição</TableHead>
+                      <TableHead className="min-w-[150px]">Descrição</TableHead>
                       <TableHead className="w-[150px]">Medidas</TableHead>
-                      <TableHead className="w-[90px]">Qtd</TableHead>
-                      <TableHead className="w-[130px]">Preço Un.</TableHead>
-                      <TableHead className="w-[90px]">Desc %</TableHead>
-                      <TableHead className="w-[120px] text-right">Subtotal</TableHead>
+                      <TableHead className="w-[80px]">Qtd</TableHead>
+                      <TableHead className="w-[120px]">Preço Un.</TableHead>
+                      <TableHead className="w-[70px]">Desc %</TableHead>
+                      <TableHead className="w-[100px] text-right">Subtotal</TableHead>
+                      {formData.ipi_mode !== 'isento' && (
+                        <>
+                          <TableHead className="w-[70px] text-right">IPI %</TableHead>
+                          <TableHead className="w-[100px] text-right">IPI R$</TableHead>
+                        </>
+                      )}
+                      <TableHead className="w-[110px] text-right">Total</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={formData.ipi_mode !== 'isento' ? 12 : 10} className="text-center text-muted-foreground py-8">
                           <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                           Adicione produtos à proposta
                         </TableCell>
@@ -978,8 +1093,26 @@ export function ProposalDialog({
                               />
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium text-xs">
                             {formatCurrency(calculateItemSubtotal(item))}
+                          </TableCell>
+                          {formData.ipi_mode !== 'isento' && (
+                            <>
+                              <TableCell className="text-right text-xs">
+                                {(item.ipi_rate || 0).toFixed(2)}%
+                              </TableCell>
+                              <TableCell className="text-right text-xs">
+                                {formatCurrency(calculateIpiValue(calculateItemSubtotal(item), item.ipi_rate || 0, formData.ipi_mode))}
+                              </TableCell>
+                            </>
+                          )}
+                          <TableCell className="text-right font-bold text-xs">
+                            {(() => {
+                              const sub = calculateItemSubtotal(item);
+                              const ipiRate = formData.ipi_mode === 'isento' ? 0 : (item.ipi_rate || 0);
+                              const ipiVal = calculateIpiValue(sub, ipiRate, formData.ipi_mode);
+                              return formatCurrency(calculateItemTotal(sub, ipiVal, formData.ipi_mode));
+                            })()}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -999,11 +1132,25 @@ export function ProposalDialog({
                 </Table>
               </div>
 
-              {/* Total */}
+              {/* Totals */}
               <div className="flex justify-end">
-                <div className="text-right p-4 bg-muted rounded-lg">
-                  <p className="text-muted-foreground text-sm">Valor Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(calculateTotal())}</p>
+                <div className="text-right p-4 bg-muted rounded-lg space-y-1">
+                  <div className="flex justify-between gap-8 text-sm">
+                    <span className="text-muted-foreground">Subtotal Produtos:</span>
+                    <span>{formatCurrency(calculateSubtotalProducts())}</span>
+                  </div>
+                  {formData.ipi_mode !== 'isento' && (
+                    <div className="flex justify-between gap-8 text-sm">
+                      <span className="text-muted-foreground">
+                        IPI Total {formData.ipi_mode === 'incluso' ? '(informativo)' : ''}:
+                      </span>
+                      <span>{formatCurrency(calculateTotalIpi())}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between gap-8 pt-1 border-t">
+                    <span className="text-muted-foreground font-medium">Valor Total:</span>
+                    <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+                  </div>
                 </div>
               </div>
 

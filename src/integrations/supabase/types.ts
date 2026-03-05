@@ -3447,6 +3447,8 @@ export type Database = {
           erp_status: string | null
           erp_synced_at: string | null
           id: string
+          ipi_rate: number
+          ipi_value: number
           item_date: string | null
           length: number | null
           order_id: string
@@ -3454,8 +3456,10 @@ export type Database = {
           quantity: number
           sort_order: number | null
           subtotal: number
+          subtotal_item: number
           tenant_id: string
           thickness: number | null
+          total_item: number
           unit_price: number
           width: number | null
         }
@@ -3470,6 +3474,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           id?: string
+          ipi_rate?: number
+          ipi_value?: number
           item_date?: string | null
           length?: number | null
           order_id: string
@@ -3477,8 +3483,10 @@ export type Database = {
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_item?: number
           unit_price?: number
           width?: number | null
         }
@@ -3493,6 +3501,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           id?: string
+          ipi_rate?: number
+          ipi_value?: number
           item_date?: string | null
           length?: number | null
           order_id?: string
@@ -3500,8 +3510,10 @@ export type Database = {
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_item?: number
           unit_price?: number
           width?: number | null
         }
@@ -3545,6 +3557,7 @@ export type Database = {
           freight_type: string | null
           freight_value: number | null
           id: string
+          ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string
           number: string
           observations: string | null
@@ -3552,9 +3565,11 @@ export type Database = {
           origin: string
           proposal_id: string | null
           status: Database["public"]["Enums"]["order_status"]
+          subtotal_products: number
           tenant_id: string
           total_discount: number | null
           total_goods: number | null
+          total_ipi: number
           total_value: number | null
           updated_at: string
           valid_until: string | null
@@ -3574,6 +3589,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
+          ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string
           number: string
           observations?: string | null
@@ -3581,9 +3597,11 @@ export type Database = {
           origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          subtotal_products?: number
           tenant_id?: string
           total_discount?: number | null
           total_goods?: number | null
+          total_ipi?: number
           total_value?: number | null
           updated_at?: string
           valid_until?: string | null
@@ -3603,6 +3621,7 @@ export type Database = {
           freight_type?: string | null
           freight_value?: number | null
           id?: string
+          ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string
           number?: string
           observations?: string | null
@@ -3610,9 +3629,11 @@ export type Database = {
           origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          subtotal_products?: number
           tenant_id?: string
           total_discount?: number | null
           total_goods?: number | null
+          total_ipi?: number
           total_value?: number | null
           updated_at?: string
           valid_until?: string | null
@@ -4863,13 +4884,17 @@ export type Database = {
           description: string
           discount_percent: number | null
           id: string
+          ipi_rate: number
+          ipi_value: number
           length: number | null
           product_id: string | null
           proposal_id: string
           quantity: number
           sort_order: number | null
           subtotal: number
+          subtotal_item: number
           thickness: number | null
+          total_item: number
           unit_price: number
           width: number | null
         }
@@ -4878,13 +4903,17 @@ export type Database = {
           description: string
           discount_percent?: number | null
           id?: string
+          ipi_rate?: number
+          ipi_value?: number
           length?: number | null
           product_id?: string | null
           proposal_id: string
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          subtotal_item?: number
           thickness?: number | null
+          total_item?: number
           unit_price?: number
           width?: number | null
         }
@@ -4893,13 +4922,17 @@ export type Database = {
           description?: string
           discount_percent?: number | null
           id?: string
+          ipi_rate?: number
+          ipi_value?: number
           length?: number | null
           product_id?: string | null
           proposal_id?: string
           quantity?: number
           sort_order?: number | null
           subtotal?: number
+          subtotal_item?: number
           thickness?: number | null
+          total_item?: number
           unit_price?: number
           width?: number | null
         }
@@ -4934,13 +4967,16 @@ export type Database = {
           deal_id: string
           delivery_terms: string | null
           id: string
+          ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string | null
           number: string
           observations: string | null
           payment_terms: string | null
           rejection_reason: string | null
           status: Database["public"]["Enums"]["proposal_status"]
+          subtotal_products: number
           tenant_id: string
+          total_ipi: number
           total_value: number | null
           updated_at: string
           validity_date: string | null
@@ -4958,13 +4994,16 @@ export type Database = {
           deal_id: string
           delivery_terms?: string | null
           id?: string
+          ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
           number: string
           observations?: string | null
           payment_terms?: string | null
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
+          subtotal_products?: number
           tenant_id?: string
+          total_ipi?: number
           total_value?: number | null
           updated_at?: string
           validity_date?: string | null
@@ -4982,13 +5021,16 @@ export type Database = {
           deal_id?: string
           delivery_terms?: string | null
           id?: string
+          ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
           number?: string
           observations?: string | null
           payment_terms?: string | null
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
+          subtotal_products?: number
           tenant_id?: string
+          total_ipi?: number
           total_value?: number | null
           updated_at?: string
           validity_date?: string | null
@@ -7021,6 +7063,7 @@ export type Database = {
         | "negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+      ipi_mode: "destacar" | "incluso" | "isento"
       modelo_tributario: "legado" | "dual_teste" | "dual_transicao" | "novo"
       order_status:
         | "pendente"
@@ -7281,6 +7324,7 @@ export const Constants = {
         "fechado_ganho",
         "fechado_perdido",
       ],
+      ipi_mode: ["destacar", "incluso", "isento"],
       modelo_tributario: ["legado", "dual_teste", "dual_transicao", "novo"],
       order_status: [
         "pendente",
