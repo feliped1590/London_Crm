@@ -31,6 +31,9 @@ interface ProposalData {
   delivery_terms: string | null;
   observations: string | null;
   total_value: number | null;
+  subtotal_products: number | null;
+  total_ipi: number | null;
+  ipi_mode: string | null;
   created_at: string;
   company: {
     name: string;
@@ -66,6 +69,10 @@ interface ProposalData {
     thickness: number | null;
     discount_percent: number | null;
     subtotal: number;
+    ipi_rate: number | null;
+    ipi_value: number | null;
+    subtotal_item: number | null;
+    total_item: number | null;
     product: {
       sku: string;
       name: string;
@@ -369,45 +376,96 @@ export default function ProposalPublic() {
             <CardTitle className="text-lg">Itens da Proposta</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60px]">#</TableHead>
-                    <TableHead className="w-[100px]">SKU</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-center">Medidas</TableHead>
-                    <TableHead className="text-right">Qtd</TableHead>
-                    <TableHead className="text-right">Preço Un.</TableHead>
-                    <TableHead className="text-right">Desc.</TableHead>
-                    <TableHead className="text-right">Subtotal</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {proposal.items.map((item, index) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{index + 1}</TableCell>
-                      <TableCell className="font-mono text-xs">{item.product?.sku || '-'}</TableCell>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell className="text-center text-sm">
-                        {item.width || '-'} x {item.length || '-'} x {item.thickness || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
-                      <TableCell className="text-right">{item.discount_percent || 0}%</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.subtotal)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            {(() => {
+              const ipiMode = proposal.ipi_mode || 'destacar';
+              const showIpi = ipiMode !== 'isento';
+              const ipiModeLabels: Record<string, string> = {
+                destacar: 'IPI Destacado',
+                incluso: 'IPI Incluso no Preço',
+                isento: 'Isento de IPI',
+              };
 
-            <div className="flex justify-end mt-4">
-              <div className="bg-primary/10 rounded-lg p-4 text-right">
-                <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.total_value || 0)}</p>
-              </div>
-            </div>
+              return (
+                <>
+                  {showIpi && (
+                    <div className="mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {ipiModeLabels[ipiMode] || ipiMode}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[60px]">#</TableHead>
+                          <TableHead className="w-[100px]">SKU</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead className="text-center">Medidas</TableHead>
+                          <TableHead className="text-right">Qtd</TableHead>
+                          <TableHead className="text-right">Preço Un.</TableHead>
+                          <TableHead className="text-right">Desc.</TableHead>
+                          <TableHead className="text-right">Subtotal</TableHead>
+                          {showIpi && (
+                            <>
+                              <TableHead className="text-right">IPI %</TableHead>
+                              <TableHead className="text-right">IPI R$</TableHead>
+                            </>
+                          )}
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {proposal.items.map((item, index) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{index + 1}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.product?.sku || '-'}</TableCell>
+                            <TableCell>{item.description}</TableCell>
+                            <TableCell className="text-center text-sm">
+                              {item.width || '-'} x {item.length || '-'} x {item.thickness || '-'}
+                            </TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
+                            <TableCell className="text-right">{item.discount_percent || 0}%</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.subtotal)}</TableCell>
+                            {showIpi && (
+                              <>
+                                <TableCell className="text-right">{(item.ipi_rate || 0).toFixed(2)}%</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.ipi_value || 0)}</TableCell>
+                              </>
+                            )}
+                            <TableCell className="text-right font-bold">
+                              {formatCurrency(item.total_item || item.subtotal)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  <div className="flex justify-end mt-4">
+                    <div className="bg-primary/10 rounded-lg p-4 text-right space-y-1">
+                      <div className="flex justify-between gap-6 text-sm">
+                        <span className="text-muted-foreground">Subtotal Produtos:</span>
+                        <span>{formatCurrency(proposal.subtotal_products || proposal.total_value || 0)}</span>
+                      </div>
+                      {showIpi && (proposal.total_ipi || 0) > 0 && (
+                        <div className="flex justify-between gap-6 text-sm">
+                          <span className="text-muted-foreground">
+                            IPI Total{ipiMode === 'incluso' ? ' (informativo)' : ''}:
+                          </span>
+                          <span>{formatCurrency(proposal.total_ipi || 0)}</span>
+                        </div>
+                      )}
+                      <div className="pt-1 border-t">
+                        <p className="text-sm text-muted-foreground">Valor Total</p>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(proposal.total_value || 0)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 

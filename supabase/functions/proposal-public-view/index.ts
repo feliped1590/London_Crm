@@ -83,6 +83,9 @@ serve(async (req) => {
         delivery_terms,
         observations,
         total_value,
+        subtotal_products,
+        total_ipi,
+        ipi_mode,
         created_at,
         approval_token_expires_at,
         approved_at,
@@ -152,6 +155,10 @@ serve(async (req) => {
         thickness,
         discount_percent,
         subtotal,
+        ipi_rate,
+        ipi_value,
+        subtotal_item,
+        total_item,
         product:products(id, sku, name)
       `)
       .eq('proposal_id', proposal.id)
