@@ -461,6 +461,8 @@ export function ProposalDialog({
       }
     }
 
+    const ipiRate = product.aliquota_ipi || 0;
+
     setItems([
       ...items,
       {
@@ -473,6 +475,7 @@ export function ProposalDialog({
         thickness: product.thickness,
         discount_percent: discountPercent,
         subtotal: unitPrice,
+        ipi_rate: ipiRate,
         product: product,
       },
     ]);
