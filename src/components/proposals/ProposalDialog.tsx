@@ -884,6 +884,31 @@ export function ProposalDialog({
                 </div>
               </div>
 
+              {/* IPI Mode Selector */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="col-span-2">
+                  <Label>Modo IPI</Label>
+                  <Select
+                    value={formData.ipi_mode}
+                    onValueChange={(v) => setFormData({ ...formData, ipi_mode: v as IpiMode })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(ipiModeConfig).map(([value, config]) => (
+                        <SelectItem key={value} value={value}>
+                          {config.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ipiModeConfig[formData.ipi_mode].description}
+                  </p>
+                </div>
+              </div>
+
               {/* Pricing Table Indicator */}
               {linkedPricingTableFromEntity && (
                 <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
