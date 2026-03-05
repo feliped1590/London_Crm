@@ -31,6 +31,9 @@ interface ProposalData {
   delivery_terms: string | null;
   observations: string | null;
   total_value: number | null;
+  subtotal_products: number | null;
+  total_ipi: number | null;
+  ipi_mode: string | null;
   created_at: string;
   company: {
     name: string;
@@ -66,6 +69,10 @@ interface ProposalData {
     thickness: number | null;
     discount_percent: number | null;
     subtotal: number;
+    ipi_rate: number | null;
+    ipi_value: number | null;
+    subtotal_item: number | null;
+    total_item: number | null;
     product: {
       sku: string;
       name: string;
