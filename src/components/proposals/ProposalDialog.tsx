@@ -271,6 +271,9 @@ export function ProposalDialog({
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
           total_value: calculateTotal(),
+          ipi_mode: formData.ipi_mode,
+          subtotal_products: calculateSubtotalProducts(),
+          total_ipi: calculateTotalIpi(),
         })
         .eq('id', proposal.id);
 
@@ -280,19 +283,30 @@ export function ProposalDialog({
       await supabase.from('proposal_items').delete().eq('proposal_id', proposal.id);
 
       if (items.length > 0) {
-        const itemsToInsert = items.map((item, index) => ({
-          proposal_id: proposal.id,
-          product_id: item.product_id || null,
-          description: item.description || '',
-          quantity: item.quantity || 1,
-          unit_price: item.unit_price || 0,
-          width: item.width || null,
-          length: item.length || null,
-          thickness: item.thickness || null,
-          discount_percent: item.discount_percent || 0,
-          subtotal: calculateItemSubtotal(item),
-          sort_order: index,
-        }));
+        const ipiMode = formData.ipi_mode;
+        const itemsToInsert = items.map((item, index) => {
+          const sub = calculateItemSubtotal(item);
+          const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+          const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
+          const totalItem = calculateItemTotal(sub, ipiVal, ipiMode);
+          return {
+            proposal_id: proposal.id,
+            product_id: item.product_id || null,
+            description: item.description || '',
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            width: item.width || null,
+            length: item.length || null,
+            thickness: item.thickness || null,
+            discount_percent: item.discount_percent || 0,
+            subtotal: sub,
+            ipi_rate: ipiRate,
+            ipi_value: ipiVal,
+            subtotal_item: sub,
+            total_item: totalItem,
+            sort_order: index,
+          };
+        });
 
         const { error: itemsError } = await supabase
           .from('proposal_items')
