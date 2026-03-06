@@ -165,17 +165,22 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Batch insert new records
-      if (toInsert.length > 0) {
-        const { error: insertError, data: insertData } = await supabase
+      // Insert new records one by one to skip duplicates gracefully
+      for (const record of toInsert) {
+        const { error: insertError } = await supabase
           .from('companies')
-          .insert(toInsert)
-          .select('id');
+          .insert(record)
+          .select('id')
+          .single();
 
         if (insertError) {
-          errors.push(`Batch ${Math.floor(i / CHUNK_SIZE)}: insert error - ${insertError.message}`);
+          if (insertError.message?.includes('duplicate') || insertError.code === '23505') {
+            skipped++;
+          } else {
+            errors.push(`Insert ${record.cnpj}: ${insertError.message}`);
+          }
         } else {
-          inserted += insertData?.length || 0;
+          inserted++;
         }
       }
 
