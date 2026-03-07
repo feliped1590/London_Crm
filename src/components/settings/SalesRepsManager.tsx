@@ -17,11 +17,10 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 export function SalesRepsManager() {
   const {
     salesReps, isLoading,
-    allUserSalesReps,
+    allUserSalesReps, tenantId,
     createSalesRep, updateSalesRep,
     linkUserSalesRep, unlinkUserSalesRep, setDefaultSalesRep,
   } = useSalesReps();
-  const { accessibleEntities } = useLegalEntities();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
