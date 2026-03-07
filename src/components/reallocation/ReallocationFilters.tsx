@@ -110,14 +110,14 @@ export function ReallocationFilters({
         <div className="space-y-2">
           <Label>Vendedor Atual</Label>
           <Select
-            value={filters.noOwner ? '__none__' : (filters.ownerId || 'all')}
+            value={filters.noOwner ? '__none__' : (filters.salesRepId || 'all')}
             onValueChange={(value) => {
               if (value === '__none__') {
-                onFiltersChange({ ...filters, noOwner: true, ownerId: undefined });
+                onFiltersChange({ ...filters, noOwner: true, salesRepId: undefined, ownerId: undefined });
               } else if (value === 'all') {
-                onFiltersChange({ ...filters, noOwner: undefined, ownerId: undefined });
+                onFiltersChange({ ...filters, noOwner: undefined, salesRepId: undefined, ownerId: undefined });
               } else {
-                onFiltersChange({ ...filters, noOwner: undefined, ownerId: value });
+                onFiltersChange({ ...filters, noOwner: undefined, salesRepId: value, ownerId: undefined });
               }
             }}
           >
