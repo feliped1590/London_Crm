@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { MetricType } from '@/types/dashboard';
 import { formatCurrency } from '@/lib/formatters';
 import { useAuth } from '@/hooks/useAuth';
-import { useModulePermissions } from '@/hooks/useModulePermissions';
 
 const stageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
@@ -53,21 +52,27 @@ export interface MetricData {
   trend?: 'up' | 'down' | 'neutral';
 }
 
-export function useDashboardData() {
+/**
+ * @param filterUserId - The user ID to filter data by. 
+ *   If 'all', no user filter is applied (admin view).
+ *   If undefined/null, defaults to current user.
+ */
+export function useDashboardData(filterUserId?: string | null) {
   const { user } = useAuth();
-  const { isAdmin } = useModulePermissions();
+  
+  // Determine effective filter: default to current user
+  const effectiveUserId = filterUserId === 'all' ? null : (filterUserId || user?.id || null);
 
   const { data: deals } = useQuery({
-    queryKey: ['dashboard-deals', user?.id, isAdmin],
+    queryKey: ['dashboard-deals', effectiveUserId],
     queryFn: async () => {
       let query = supabase
         .from('deals')
         .select('*')
         .order('created_at', { ascending: false });
       
-      // Non-admin users only see their own deals
-      if (!isAdmin && user?.id) {
-        query = query.eq('owner_id', user.id);
+      if (effectiveUserId) {
+        query = query.eq('owner_id', effectiveUserId);
       }
       
       const { data, error } = await query;
@@ -78,13 +83,12 @@ export function useDashboardData() {
   });
 
   const { data: tasks } = useQuery({
-    queryKey: ['dashboard-tasks', user?.id, isAdmin],
+    queryKey: ['dashboard-tasks', effectiveUserId],
     queryFn: async () => {
       let query = supabase.from('tasks').select('*');
       
-      // Non-admin users only see their own tasks
-      if (!isAdmin && user?.id) {
-        query = query.eq('assigned_to', user.id);
+      if (effectiveUserId) {
+        query = query.eq('assigned_to', effectiveUserId);
       }
       
       const { data, error } = await query;
@@ -95,35 +99,40 @@ export function useDashboardData() {
   });
 
   const { data: companiesCount } = useQuery({
-    queryKey: ['dashboard-companies-count'],
+    queryKey: ['dashboard-companies-count', effectiveUserId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('companies')
-        .select('*', { count: 'exact', head: true });
+      let query = supabase.from('companies').select('*', { count: 'exact', head: true });
+      if (effectiveUserId) {
+        query = query.eq('owner_id', effectiveUserId);
+      }
+      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
+    enabled: !!user?.id,
   });
 
   const { data: contactsCount } = useQuery({
-    queryKey: ['dashboard-contacts-count'],
+    queryKey: ['dashboard-contacts-count', effectiveUserId],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true });
+      let query = supabase.from('contacts').select('*', { count: 'exact', head: true });
+      if (effectiveUserId) {
+        query = query.eq('owner_id', effectiveUserId);
+      }
+      const { count, error } = await query;
       if (error) throw error;
       return count || 0;
     },
+    enabled: !!user?.id,
   });
 
   const { data: proposals } = useQuery({
-    queryKey: ['dashboard-proposals', user?.id, isAdmin],
+    queryKey: ['dashboard-proposals', effectiveUserId],
     queryFn: async () => {
       let query = supabase.from('proposals').select('*');
       
-      // Non-admin users only see their own proposals
-      if (!isAdmin && user?.id) {
-        query = query.eq('created_by', user.id);
+      if (effectiveUserId) {
+        query = query.eq('created_by', effectiveUserId);
       }
       
       const { data, error } = await query;
@@ -134,13 +143,12 @@ export function useDashboardData() {
   });
 
   const { data: orders } = useQuery({
-    queryKey: ['dashboard-orders', user?.id, isAdmin],
+    queryKey: ['dashboard-orders', effectiveUserId],
     queryFn: async () => {
       let query = supabase.from('orders').select('*');
       
-      // Non-admin users only see their own orders
-      if (!isAdmin && user?.id) {
-        query = query.eq('created_by', user.id);
+      if (effectiveUserId) {
+        query = query.eq('created_by', effectiveUserId);
       }
       
       const { data, error } = await query;
@@ -315,7 +323,6 @@ export function useDashboardData() {
       case 'whatsapp_messages':
         return { value: whatsappMessages || 0, subtitle: 'mensagens total' };
       case 'whatsapp_conversations': {
-        // Count unique phone numbers with messages today
         return { value: '-', subtitle: 'conversas ativas' };
       }
       case 'products_count':

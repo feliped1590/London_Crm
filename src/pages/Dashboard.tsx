@@ -19,6 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useModulePermissions } from "@/hooks/useModulePermissions";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { DashboardWidget } from "@/components/reports/DashboardWidget";
 import { AddWidgetDialog } from "@/components/reports/AddWidgetDialog";
@@ -46,6 +47,7 @@ import {
   X,
   RotateCcw,
   RefreshCw,
+  Filter,
 } from "lucide-react";
 import { DashboardStats, Task, Deal } from "@/types/crm";
 import { formatCurrency } from "@/lib/formatters";
@@ -55,6 +57,13 @@ import { Link } from "react-router-dom";
 import { InsightsSummary } from "@/components/insights/InsightsSummary";
 import { GoalProgressWidget } from "@/components/dashboard/GoalProgressWidget";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ExtendedDashboardStats extends DashboardStats {
   pendingProposals: number;
@@ -74,8 +83,16 @@ const DEFAULT_WIDGETS: WidgetType[] = [
 
 export default function Dashboard({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
+  const { isAdmin } = useModulePermissions();
   const queryClient = useQueryClient();
-  const { getMetricData } = useDashboardData();
+
+  // User filter: default to current user, admin/dev can change
+  const [selectedUserId, setSelectedUserId] = useState<string>('mine');
+
+  // Compute the effective filter user ID for queries
+  const filterUserId = selectedUserId === 'all' ? 'all' : (selectedUserId === 'mine' ? user?.id : selectedUserId);
+
+  const { getMetricData } = useDashboardData(filterUserId || null);
   
   const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [recentDeals, setRecentDeals] = useState<Deal[]>([]);
@@ -89,6 +106,21 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
   const [widgets, setWidgets] = useState<WidgetType[]>(DEFAULT_WIDGETS);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Load team members for admin/dev filter
+  const { data: teamMembers } = useQuery({
+    queryKey: ['dashboard-team-members'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('active', true)
+        .order('first_name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isAdmin,
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -116,7 +148,6 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     if (savedConfig) {
       try {
         const parsedWidgets = savedConfig.widgets as unknown as WidgetType[];
-        // Validate widgets structure
         if (Array.isArray(parsedWidgets) && parsedWidgets.length > 0) {
           const validWidgets = parsedWidgets.filter(
             (w) => w && typeof w === 'object' && w.id && w.type && w.chartType
@@ -124,13 +155,11 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
           if (validWidgets.length > 0) {
             setWidgets(validWidgets);
           } else {
-            console.warn('Invalid widget configuration, using defaults');
             setWidgets(DEFAULT_WIDGETS);
           }
         }
       } catch (error) {
         console.error('Error parsing saved dashboard config:', error);
-        toast.error('Erro ao carregar configuração salva, usando padrão');
         setWidgets(DEFAULT_WIDGETS);
       }
     }
@@ -173,28 +202,36 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     if (user) {
       fetchDashboardData();
     }
-  }, [user]);
+  }, [user, filterUserId]);
 
   const fetchDashboardData = async () => {
     try {
-      // Always filter by current user for the "Visão Geral" lists
-      const userId = user?.id;
+      const effectiveUserId = filterUserId === 'all' ? null : filterUserId;
 
       const dealsQuery = supabase.from("deals").select("*").order("created_at", { ascending: false });
-      if (userId) dealsQuery.eq("owner_id", userId);
+      if (effectiveUserId) dealsQuery.eq("owner_id", effectiveUserId);
 
       const tasksQuery = supabase
         .from("tasks")
         .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
         .in("status", ["pendente", "em_andamento"])
         .order("due_date", { ascending: true });
-      if (userId) tasksQuery.eq("assigned_to", userId);
+      if (effectiveUserId) tasksQuery.eq("assigned_to", effectiveUserId);
 
       const proposalsQuery = supabase.from("proposals").select("total_value").in("status", ["rascunho", "enviada", "em_analise"]);
-      if (userId) proposalsQuery.eq("created_by", userId);
+      if (effectiveUserId) proposalsQuery.eq("created_by", effectiveUserId);
 
       const ordersQuery = supabase.from("orders").select("total_value").in("status", ["pendente", "em_producao"]);
-      if (userId) ordersQuery.eq("created_by", userId);
+      if (effectiveUserId) ordersQuery.eq("created_by", effectiveUserId);
+
+      const dealsCountQuery = supabase.from("deals").select("*", { count: "exact", head: true });
+      if (effectiveUserId) dealsCountQuery.eq("owner_id", effectiveUserId);
+
+      const contactsCountQuery = supabase.from("contacts").select("*", { count: "exact", head: true });
+      if (effectiveUserId) contactsCountQuery.eq("owner_id", effectiveUserId);
+
+      const companiesCountQuery = supabase.from("companies").select("*", { count: "exact", head: true });
+      if (effectiveUserId) companiesCountQuery.eq("owner_id", effectiveUserId);
 
       const [
         { count: totalDeals },
@@ -205,9 +242,9 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         { data: pendingProposals },
         { data: pendingOrders },
       ] = await Promise.all([
-        supabase.from("deals").select("*", { count: "exact", head: true }).eq("owner_id", userId || ''),
-        supabase.from("contacts").select("*", { count: "exact", head: true }),
-        supabase.from("companies").select("*", { count: "exact", head: true }),
+        dealsCountQuery,
+        contactsCountQuery,
+        companiesCountQuery,
         dealsQuery,
         tasksQuery,
         proposalsQuery,
@@ -252,6 +289,8 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
 
       setRecentDeals(allDeals as Deal[]);
       setUpcomingTasks((tasks || []) as Task[]);
+      setDealsPage(0);
+      setTasksPage(0);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast.error("Erro ao carregar dados do dashboard");
@@ -339,6 +378,29 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     </Card>
   );
 
+  // User filter selector for admin/dev
+  const UserFilterSelector = () => {
+    if (!isAdmin) return null;
+
+    return (
+      <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+        <SelectTrigger className="w-[220px]">
+          <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+          <SelectValue placeholder="Filtrar por usuário" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="mine">Meus dados</SelectItem>
+          <SelectItem value="all">Todos os usuários</SelectItem>
+          {teamMembers?.map((member) => (
+            <SelectItem key={member.id} value={member.id}>
+              {member.first_name} {member.last_name || ''}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -406,12 +468,13 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     <div className="space-y-6">
       {/* Header */}
       {!embedded && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
             <p className="text-muted-foreground">Visão geral do seu funil de vendas</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <UserFilterSelector />
             {isEditing ? (
               <>
                 <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(true)}>
@@ -448,7 +511,8 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
       )}
 
       {embedded && (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2 flex-wrap">
+          <UserFilterSelector />
           {isEditing ? (
             <>
               <Button variant="outline" size="sm" onClick={() => setIsAddDialogOpen(true)}>
