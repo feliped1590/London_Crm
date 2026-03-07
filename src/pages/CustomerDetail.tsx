@@ -748,7 +748,7 @@ export default function CustomerDetail() {
                   {isErpCustomer ? (
                     <>
                       <Label>Segmento (ERP)</Label>
-                      <Input value={customer.industry || customer.segmento || ''} disabled />
+                      <Input value={customer.segmento || ''} disabled />
                     </>
                   ) : (
                     <ClassificacaoCascade

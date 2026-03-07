@@ -300,7 +300,7 @@ async function executeTool(
       }
 
       case "create_company": {
-        const { name, cnpj, email, phone, website, address, city, state, industry } = args as {
+        const { name, cnpj, email, phone, website, address, city, state } = args as {
           name: string;
           cnpj?: string;
           email?: string;
@@ -309,7 +309,6 @@ async function executeTool(
           address?: string;
           city?: string;
           state?: string;
-          industry?: string;
         };
         
         const { data, error } = await supabase
@@ -323,7 +322,6 @@ async function executeTool(
             address,
             city,
             state,
-            industry,
             created_by: userId,
             owner_id: userId
           })
