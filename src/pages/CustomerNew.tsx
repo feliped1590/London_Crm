@@ -567,42 +567,16 @@ export default function CustomerNew() {
                       onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })}
                     />
                   </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <Label htmlFor="industry">Setor</Label>
-                    <Select 
-                      value={companyForm.industry} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((i) => (
-                          <SelectItem key={i} value={i}>{i}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="col-span-2">
-                    <Label htmlFor="segment">Segmento *</Label>
-                    <Select 
-                      value={companyForm.segment} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, segment: v })}
-                    >
-                      <SelectTrigger className={!companyForm.segment ? 'border-muted-foreground/50' : ''}>
-                        <SelectValue placeholder="Selecione o segmento (obrigatório)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="industria">Indústria</SelectItem>
-                        <SelectItem value="comercio">Comércio</SelectItem>
-                        <SelectItem value="servicos">Serviços</SelectItem>
-                        <SelectItem value="agronegocio">Agronegócio</SelectItem>
-                        <SelectItem value="construcao">Construção Civil</SelectItem>
-                        <SelectItem value="distribuidor">Distribuidor</SelectItem>
-                        <SelectItem value="varejo">Varejo</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ClassificacaoCascade
+                      setorId={companyForm.setor_id}
+                      segmentoId={companyForm.segmento_id}
+                      atividadeId={companyForm.atividade_id}
+                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
+                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
+                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
+                      required
+                    />
                   </div>
                 </>
               ) : (
