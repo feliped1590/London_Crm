@@ -16,6 +16,7 @@ import { DealStageBadges } from '@/components/DealStageBadges';
 import { PricingTableBadge } from '@/components/pricing/PricingTableBadge';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
@@ -30,6 +31,7 @@ const employeeCounts = [
 
 export default function Companies() {
   const { user } = useAuth();
+  const { canAccessBySalesRep } = useSalesRepAccess();
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
@@ -216,11 +218,14 @@ export default function Companies() {
     setFormData({ ...formData, cnpj: formatted });
   };
 
-  const filteredCompanies = companies?.filter(company =>
-    company.name.toLowerCase().includes(search.toLowerCase()) ||
-    company.email?.toLowerCase().includes(search.toLowerCase()) ||
-    (company as any).cnpj?.includes(search)
-  );
+  const filteredCompanies = companies?.filter(company => {
+    // Sales rep access restriction
+    if (!canAccessBySalesRep(company.sales_rep_id)) return false;
+    
+    return company.name.toLowerCase().includes(search.toLowerCase()) ||
+      company.email?.toLowerCase().includes(search.toLowerCase()) ||
+      (company as any).cnpj?.includes(search);
+  });
 
   const getSyncStatus = (company: any) => {
     if (company.iniflex_id) {
