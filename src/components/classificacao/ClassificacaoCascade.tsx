@@ -89,7 +89,7 @@ export function ClassificacaoCascade({
     <>
       <div>
         <Label>Setor {required && '*'}</Label>
-        <Select value={setorId || ''} onValueChange={handleSetorChange} disabled={disabled}>
+        <Select value={setorId || undefined} onValueChange={handleSetorChange} disabled={disabled}>
           <SelectTrigger className={required && !setorId ? 'border-muted-foreground/50' : ''}>
             <SelectValue placeholder="Selecione o setor" />
           </SelectTrigger>
