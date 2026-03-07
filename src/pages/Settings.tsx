@@ -1149,9 +1149,6 @@ export default function Settings() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="sales-reps" className="mt-6 space-y-6">
-          <SalesRepsManager />
-        </TabsContent>
 
         <TabsContent value="bots" className="mt-6 space-y-6">
           <BotsManager />
