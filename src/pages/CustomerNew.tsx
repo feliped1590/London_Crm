@@ -26,6 +26,15 @@ export default function CustomerNew() {
   const queryClient = useQueryClient();
   const { accessibleEntities: legalEntities, effectiveEntityId } = useLegalEntities();
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
+  const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
+  const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
+
+  // Set default sales rep when loaded
+  useEffect(() => {
+    if (defaultSalesRepId && !selectedSalesRepId) {
+      setSelectedSalesRepId(defaultSalesRepId);
+    }
+  }, [defaultSalesRepId]);
   
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
