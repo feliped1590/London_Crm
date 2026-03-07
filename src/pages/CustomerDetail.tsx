@@ -48,6 +48,7 @@ import { DealStageBadges } from '@/components/DealStageBadges';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
+import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import type { Json } from '@/integrations/supabase/types';
