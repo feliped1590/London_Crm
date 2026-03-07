@@ -16,6 +16,7 @@ import { DealStageBadges } from '@/components/DealStageBadges';
 import { PricingTableBadge } from '@/components/pricing/PricingTableBadge';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
