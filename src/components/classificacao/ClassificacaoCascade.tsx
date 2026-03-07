@@ -114,7 +114,7 @@ export function ClassificacaoCascade({
       {segmentoId && filteredAtividades.length > 0 && (
         <div>
           <Label>Atividade {required && '*'}</Label>
-          <Select value={atividadeId || ''} onValueChange={handleAtividadeChange} disabled={disabled}>
+          <Select value={atividadeId || undefined} onValueChange={handleAtividadeChange} disabled={disabled}>
             <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
               <SelectValue placeholder="Selecione a atividade" />
             </SelectTrigger>
