@@ -114,16 +114,17 @@ export function usePortfolioReallocation() {
 
   // Contagem total
   const { data: totalItems = 0 } = useQuery({
-    queryKey: ['reallocation-companies-count', filters, resolvedOwnerId],
+    queryKey: ['reallocation-companies-count', filters, resolvedSalesRepId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_companies_for_reallocation_count', {
         p_states: filters.states?.length ? filters.states : null,
         p_regions: filters.regions?.length ? filters.regions : null,
-        p_owner_id: filters.noOwner ? null : (resolvedOwnerId || null),
+        p_owner_id: null,
         p_min_days_no_interaction: filters.minDaysNoInteraction || null,
         p_min_days_no_order: filters.minDaysNoOrder || null,
         p_search: filters.search || null,
-        p_no_owner: filters.noOwner || null
+        p_no_owner: filters.noOwner || null,
+        p_sales_rep_id: resolvedSalesRepId,
       });
       if (error) throw error;
       return data as number;
