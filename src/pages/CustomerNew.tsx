@@ -244,6 +244,7 @@ export default function CustomerNew() {
         created_by: user?.id,
         owner_id: user?.id,
         legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
+        sales_rep_id: selectedSalesRepId || null,
         custom_fields: { 
           tipo_cliente: customerType,
         } as Json,
