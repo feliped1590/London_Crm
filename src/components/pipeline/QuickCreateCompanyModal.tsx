@@ -58,6 +58,7 @@ export function QuickCreateCompanyModal({
         phone: formData.phone || null,
         created_by: user?.id,
         owner_id: user?.id,
+        sales_rep_id: selectedSalesRepId || null,
       }).select('id').single();
 
       if (error) throw error;
