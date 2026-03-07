@@ -89,9 +89,12 @@ export default function Customers() {
   const [filterState, setFilterState] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [filterIndustry, setFilterIndustry] = useState('');
+  const [filterSetorId, setFilterSetorId] = useState<string | null>(null);
+  const [filterSegmentoId, setFilterSegmentoId] = useState<string | null>(null);
+  const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const activeFiltersCount = [filterCity, filterState, filterOwner, filterIndustry].filter(Boolean).length;
+  const activeFiltersCount = [filterCity, filterState, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
   useEffect(() => {
