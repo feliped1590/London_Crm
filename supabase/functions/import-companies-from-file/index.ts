@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const LEGAL_ENTITY_ID = legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
     const TENANT_ID = tenant_id || '00000000-0000-0000-0000-000000000001';
 
-    const validRows: { cnpj: string; data: Record<string, any> }[] = [];
+    const validRows: { cnpj: string; vendedor_nome: string | null; data: Record<string, any> }[] = [];
     let skipped = 0;
     const rowErrors: { row_number: number; error_message: string; raw_data: any }[] = [];
 
@@ -92,44 +92,69 @@ Deno.serve(async (req) => {
     let updated = 0;
     const errors: string[] = [];
 
-    // Resolve vendedor names to user IDs
+    // Resolve vendedor names to sales_rep IDs
     const vendedorNames = [...new Set(validRows.map(r => r.vendedor_nome).filter(Boolean))] as string[];
-    const vendedorMap = new Map<string, string>();
+    const vendedorMap = new Map<string, string>(); // lowercase name -> sales_rep_id
 
     if (vendedorNames.length > 0) {
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name');
+      // Fetch all active sales reps
+      const { data: salesReps } = await supabase
+        .from('sales_reps')
+        .select('id, name')
+        .eq('tenant_id', TENANT_ID);
 
-      if (profiles) {
+      if (salesReps) {
         for (const name of vendedorNames) {
           const nameLower = name.toLowerCase().trim();
-          const match = profiles.find(p => p.full_name?.toLowerCase().trim() === nameLower);
+          const match = salesReps.find((sr: any) => sr.name?.toLowerCase().trim() === nameLower);
           if (match) {
-            vendedorMap.set(nameLower, match.user_id);
+            vendedorMap.set(nameLower, match.id);
+          }
+        }
+      }
+
+      // Auto-create missing vendedores as external sales reps
+      for (const name of vendedorNames) {
+        const nameLower = name.toLowerCase().trim();
+        if (!vendedorMap.has(nameLower)) {
+          const { data: newRep, error: createError } = await supabase
+            .from('sales_reps')
+            .insert({
+              name: name.trim(),
+              tenant_id: TENANT_ID,
+              active: true,
+              type: 'external',
+            })
+            .select('id')
+            .single();
+
+          if (newRep) {
+            vendedorMap.set(nameLower, newRep.id);
+            console.log(`Auto-created external sales rep: ${name.trim()} -> ${newRep.id}`);
+          } else if (createError) {
+            errors.push(`Erro ao criar vendedor "${name}": ${createError.message}`);
           }
         }
       }
     }
 
-    // Assign owner_id from vendedor lookup
+    // Assign sales_rep_id from vendedor lookup
     for (const row of validRows) {
       if (row.vendedor_nome) {
-        const ownerId = vendedorMap.get(row.vendedor_nome.toLowerCase().trim());
-        if (ownerId) {
-          row.data.owner_id = ownerId;
+        const salesRepId = vendedorMap.get(row.vendedor_nome.toLowerCase().trim());
+        if (salesRepId) {
+          row.data.sales_rep_id = salesRepId;
         }
       }
     }
 
-    // Process in chunks to avoid too many queries
+    // Process in chunks
     const CHUNK_SIZE = 200;
 
     for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
       const chunk = validRows.slice(i, i + CHUNK_SIZE);
       const cnpjs = chunk.map(r => r.cnpj);
 
-      // Find existing companies by CNPJ + tenant
       const { data: existing, error: fetchError } = await supabase
         .from('companies')
         .select('id, cnpj')
@@ -152,7 +177,6 @@ Deno.serve(async (req) => {
       for (const row of chunk) {
         const existingId = existingMap.get(row.cnpj);
         if (existingId) {
-          // Update: only fill in non-null fields from import (don't overwrite existing data with null)
           const updateData: Record<string, any> = {};
           for (const [key, value] of Object.entries(row.data)) {
             if (value !== null && key !== 'tenant_id' && key !== 'cnpj') {
@@ -165,7 +189,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Insert new records one by one to skip duplicates gracefully
       for (const record of toInsert) {
         const { error: insertError } = await supabase
           .from('companies')
@@ -184,7 +207,6 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update existing records one by one (batch update not supported)
       for (const upd of toUpdate) {
         const { error: updateError } = await supabase
           .from('companies')
