@@ -903,7 +903,6 @@ export type Database = {
           fantasia: string | null
           fax: string | null
           id: string
-          industry: string | null
           iniflex_id: string | null
           iniflex_synced_at: string | null
           inscricao_estadual: string | null
@@ -959,7 +958,6 @@ export type Database = {
           fantasia?: string | null
           fax?: string | null
           id?: string
-          industry?: string | null
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
@@ -1015,7 +1013,6 @@ export type Database = {
           fantasia?: string | null
           fax?: string | null
           id?: string
-          industry?: string | null
           iniflex_id?: string | null
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
@@ -7153,7 +7150,6 @@ export type Database = {
         Args: {
           p_atividade_id?: string
           p_city?: string
-          p_industry?: string
           p_limit?: number
           p_offset?: number
           p_owner_id?: string
@@ -7168,6 +7164,7 @@ export type Database = {
         Returns: {
           active: boolean
           address: string
+          atividade_id: string
           city: string
           cnpj: string
           contact_name: string
@@ -7182,7 +7179,6 @@ export type Database = {
           email: string
           fantasia: string
           id: string
-          industry: string
           last_interaction_at: string
           last_order_at: string
           name: string
@@ -7194,6 +7190,8 @@ export type Database = {
           primary_contact_mobile: string
           primary_contact_name: string
           region: string
+          segmento_id: string
+          setor_id: string
           state: string
           total_count: number
         }[]

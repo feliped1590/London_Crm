@@ -71,8 +71,7 @@ const tools = [
           website: { type: "string", description: "Website URL" },
           address: { type: "string", description: "Address" },
           city: { type: "string", description: "City" },
-          state: { type: "string", description: "State" },
-          industry: { type: "string", description: "Industry sector" }
+          state: { type: "string", description: "State" }
         },
         required: ["name"]
       }
@@ -301,7 +300,7 @@ async function executeTool(
       }
 
       case "create_company": {
-        const { name, cnpj, email, phone, website, address, city, state, industry } = args as {
+        const { name, cnpj, email, phone, website, address, city, state } = args as {
           name: string;
           cnpj?: string;
           email?: string;
@@ -310,7 +309,6 @@ async function executeTool(
           address?: string;
           city?: string;
           state?: string;
-          industry?: string;
         };
         
         const { data, error } = await supabase
@@ -324,7 +322,6 @@ async function executeTool(
             address,
             city,
             state,
-            industry,
             created_by: userId,
             owner_id: userId
           })

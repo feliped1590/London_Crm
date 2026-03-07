@@ -91,7 +91,6 @@ interface UnifiedCustomer {
   phone: string | null;
   email: string | null;
   website: string | null;
-  industry: string | null;
   setor_id?: string | null;
   segmento_id?: string | null;
   atividade_id?: string | null;
@@ -232,7 +231,6 @@ export default function CustomerDetail() {
           phone: erpData.telefone || erpData.celular,
           email: erpData.emails?.[0] || null,
           website: null,
-          industry: erpData.segmento,
           employee_count: null,
           address: fullAddress || null,
           city: localAddress?.cidade || null,
@@ -584,8 +582,8 @@ export default function CustomerDetail() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {customer.cnpj && <span>{formatCNPJ(customer.cnpj)}</span>}
-                {(getNomeById.atividade(customer.atividade_id || null) || customer.industry) && (
-                  <span>• {getNomeById.atividade(customer.atividade_id || null) || customer.industry}</span>
+                {(getNomeById.atividade(customer.atividade_id || null) || customer.segmento) && (
+                  <span>• {getNomeById.atividade(customer.atividade_id || null) || customer.segmento}</span>
                 )}
                 {customer.city && customer.state && (
                   <span>• {customer.city}/{customer.state}</span>
@@ -749,7 +747,7 @@ export default function CustomerDetail() {
                   {isErpCustomer ? (
                     <>
                       <Label>Segmento (ERP)</Label>
-                      <Input value={customer.industry || customer.segmento || ''} disabled />
+                      <Input value={customer.segmento || ''} disabled />
                     </>
                   ) : (
                     <ClassificacaoCascade

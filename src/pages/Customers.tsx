@@ -44,7 +44,6 @@ interface CustomerRow {
   cnpj: string | null;
   phone: string | null;
   email: string | null;
-  industry: string | null;
   city: string | null;
   state: string | null;
   address: string | null;
@@ -67,6 +66,9 @@ interface CustomerRow {
   last_interaction_at: string | null;
   last_order_at: string | null;
   total_count: number;
+  setor_id: string | null;
+  segmento_id: string | null;
+  atividade_id: string | null;
 }
 
 export default function Customers() {
@@ -88,13 +90,12 @@ export default function Customers() {
   const [filterCity, setFilterCity] = useState('');
   const [filterState, setFilterState] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
-  const [filterIndustry, setFilterIndustry] = useState('');
   const [filterSetorId, setFilterSetorId] = useState<string | null>(null);
   const [filterSegmentoId, setFilterSegmentoId] = useState<string | null>(null);
   const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const activeFiltersCount = [filterCity, filterState, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
+  const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
   useEffect(() => {
@@ -145,7 +146,7 @@ export default function Customers() {
 
   // Main paginated query
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -153,7 +154,6 @@ export default function Customers() {
         p_state: filterState || null,
         p_city: filterCity || null,
         p_owner_id: filterOwner || null,
-        p_industry: filterIndustry || null,
         p_setor_id: filterSetorId || null,
         p_segmento_id: filterSegmentoId || null,
         p_atividade_id: filterAtividadeId || null,
@@ -240,7 +240,6 @@ export default function Customers() {
     setFilterCity('');
     setFilterState('');
     setFilterOwner('');
-    setFilterIndustry('');
     setFilterSetorId(null);
     setFilterSegmentoId(null);
     setFilterAtividadeId(null);
