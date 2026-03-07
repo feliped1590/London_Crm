@@ -383,7 +383,7 @@ export default function Customers() {
         </div>
         <div className="flex items-center gap-2">
           {isDeveloper && (
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
               <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
               {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
             </Button>
