@@ -110,7 +110,7 @@ export const METRIC_DEFINITIONS: MetricDefinition[] = [
   // Special widgets
   { type: 'recent_deals', label: 'Negócios Recentes', description: 'Últimos negócios criados', category: 'special', supportedCharts: ['list'], defaultChart: 'list', defaultSize: 'md' },
   { type: 'upcoming_tasks', label: 'Próximas Tarefas', description: 'Tarefas pendentes com prazo', category: 'special', supportedCharts: ['list'], defaultChart: 'list', defaultSize: 'md' },
-  { type: 'insights_summary', label: 'Resumo de Alertas', description: 'Alertas e insights do negócio', category: 'special', supportedCharts: ['custom'], defaultChart: 'custom', defaultSize: 'xl' },
+  
   { type: 'seller_portfolio', label: 'Clientes por Vendedor', description: 'Distribuição de clientes por vendedor com status', category: 'special', supportedCharts: ['custom'], defaultChart: 'custom', defaultSize: 'md' },
 ];
 

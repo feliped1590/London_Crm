@@ -138,7 +138,7 @@ export function DashboardWidget({
     }
     
     if (widget.type === 'insights_summary') {
-      return <InsightsSummary />;
+      return null;
     }
 
     if (widget.chartType === 'number') {
