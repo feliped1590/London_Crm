@@ -241,6 +241,9 @@ export default function Customers() {
     setFilterState('');
     setFilterOwner('');
     setFilterIndustry('');
+    setFilterSetorId(null);
+    setFilterSegmentoId(null);
+    setFilterAtividadeId(null);
     setCurrentPage(1);
   };
 
