@@ -313,6 +313,12 @@ export default function CustomerNew() {
       }
     }
     
+    // Telefone obrigatório
+    if (!companyForm.phone?.trim()) {
+      toast.error('Informe o telefone do cliente');
+      return;
+    }
+    
     // Setor obrigatório para todos os tipos de cliente
     if (!companyForm.setor_id) {
       toast.error('Informe o setor do cliente');
