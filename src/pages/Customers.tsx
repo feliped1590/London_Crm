@@ -805,6 +805,19 @@ export default function Customers() {
                   </TableBody>
                 </Table>
               </ScrollArea>
+              {enrichResult.has_more && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button
+                    size="sm"
+                    onClick={() => handleEnrichBatch(enrichOffset)}
+                    disabled={isEnriching}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+                    {isEnriching ? 'Processando...' : 'Processar próximo lote'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
