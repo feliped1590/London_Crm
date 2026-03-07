@@ -6992,8 +6992,11 @@ export type Database = {
       get_customer_filter_options: {
         Args: never
         Returns: {
+          atividades: Json[]
           cities: string[]
           industries: string[]
+          segmentos: Json[]
+          setores: Json[]
           states: string[]
         }[]
       }
@@ -7148,12 +7151,15 @@ export type Database = {
       }
       search_customers_paginated: {
         Args: {
+          p_atividade_id?: string
           p_city?: string
           p_industry?: string
           p_limit?: number
           p_offset?: number
           p_owner_id?: string
           p_search?: string
+          p_segmento_id?: string
+          p_setor_id?: string
           p_sort_dir?: string
           p_sort_field?: string
           p_state?: string
