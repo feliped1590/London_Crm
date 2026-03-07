@@ -71,8 +71,7 @@ const tools = [
           website: { type: "string", description: "Website URL" },
           address: { type: "string", description: "Address" },
           city: { type: "string", description: "City" },
-          state: { type: "string", description: "State" },
-          industry: { type: "string", description: "Industry sector" }
+          state: { type: "string", description: "State" }
         },
         required: ["name"]
       }
