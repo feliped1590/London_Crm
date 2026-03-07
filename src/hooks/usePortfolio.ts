@@ -17,6 +17,10 @@ export interface UserPortfolio {
   userId: string;
   userName: string;
   userRole: string;
+  companiesCount: number;
+  contactsCount: number;
+  dealsCount: number;
+  // Lazy-loaded items for manage dialog
   companies: PortfolioItem[];
   contacts: PortfolioItem[];
   deals: PortfolioItem[];
@@ -58,113 +62,28 @@ async function resolveUserForSalesRep(salesRepId: string): Promise<string | null
 export function usePortfolio() {
   const queryClient = useQueryClient();
 
-  // Buscar carteiras agrupadas por vendedor comercial (sales_rep)
+  // Buscar resumo de carteiras via RPC (contagens reais sem limite)
   const { data: portfolios, isLoading: isLoadingPortfolios } = useQuery({
     queryKey: ['portfolios'],
     queryFn: async () => {
-      // 1. Sales reps ativos
-      const { data: salesReps, error: repsError } = await supabase
-        .from('sales_reps')
-        .select('id, name, type, active')
-        .eq('active', true)
-        .order('name');
-      if (repsError) throw repsError;
+      const { data, error } = await supabase.rpc('get_portfolio_summary');
+      if (error) throw error;
 
-      // 2. Vínculos user ↔ sales_rep
-      const { data: userLinks, error: linksError } = await supabase
-        .from('user_sales_reps')
-        .select('user_id, sales_rep_id, is_default');
-      if (linksError) throw linksError;
-
-      // Map: sales_rep_id → user_id (prefer is_default)
-      const repToUser: Record<string, string> = {};
-      userLinks?.forEach(link => {
-        if (!repToUser[link.sales_rep_id]) repToUser[link.sales_rep_id] = link.user_id;
-      });
-      userLinks?.forEach(link => {
-        if (link.is_default) repToUser[link.sales_rep_id] = link.user_id;
-      });
-
-      // 3. Empresas com sales_rep_id
-      const { data: companies, error: compError } = await supabase
-        .from('companies')
-        .select('id, name, sales_rep_id');
-      if (compError) throw compError;
-
-      // Map: company_id → sales_rep_id
-      const companyToRep: Record<string, string> = {};
-      companies?.forEach(c => {
-        if (c.sales_rep_id) companyToRep[c.id] = c.sales_rep_id;
-      });
-
-      // 4. Contatos
-      const { data: contacts, error: contError } = await supabase
-        .from('contacts')
-        .select('id, first_name, last_name, company_id');
-      if (contError) throw contError;
-
-      // 5. Negócios
-      const { data: deals, error: dealsError } = await supabase
-        .from('deals')
-        .select('id, name, company_id');
-      if (dealsError) throw dealsError;
-
-      // 6. Montar portfolios por vendedor
-      const portfolioMap: Record<string, UserPortfolio> = {};
-
-      salesReps?.forEach(rep => {
-        const linkedUser = repToUser[rep.id] || null;
-        portfolioMap[rep.id] = {
-          salesRepId: rep.id,
-          salesRepName: rep.name,
-          salesRepType: rep.type,
-          linkedUserId: linkedUser,
-          userId: linkedUser || rep.id,
-          userName: rep.name,
-          userRole: rep.type || 'interno',
-          companies: [],
-          contacts: [],
-          deals: [],
-        };
-      });
-
-      // Adicionar empresas
-      companies?.forEach(company => {
-        if (company.sales_rep_id && portfolioMap[company.sales_rep_id]) {
-          portfolioMap[company.sales_rep_id].companies.push({
-            id: company.id,
-            name: company.name,
-            type: 'company',
-          });
-        }
-      });
-
-      // Adicionar contatos (via empresa → sales_rep)
-      contacts?.forEach(contact => {
-        const repId = contact.company_id ? companyToRep[contact.company_id] : null;
-        if (repId && portfolioMap[repId]) {
-          const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-          portfolioMap[repId].contacts.push({
-            id: contact.id,
-            name: name || 'Sem nome',
-            type: 'contact',
-          });
-        }
-      });
-
-      // Adicionar negócios (via empresa → sales_rep)
-      deals?.forEach(deal => {
-        const repId = deal.company_id ? companyToRep[deal.company_id] : null;
-        if (repId && portfolioMap[repId]) {
-          portfolioMap[repId].deals.push({
-            id: deal.id,
-            name: deal.name,
-            type: 'deal',
-          });
-        }
-      });
-
-      return Object.values(portfolioMap);
+      return (data || []).map((row: any) => ({
+        salesRepId: row.sales_rep_id,
+        salesRepName: row.sales_rep_name,
+        salesRepType: row.sales_rep_type,
+        linkedUserId: row.linked_user_id,
+        userId: row.linked_user_id || row.sales_rep_id,
+        userName: row.sales_rep_name,
+        userRole: row.sales_rep_type || 'interno',
+        companiesCount: Number(row.companies_count),
+        contactsCount: Number(row.contacts_count),
+        dealsCount: Number(row.deals_count),
+        companies: [],
+        contacts: [],
+        deals: [],
+      })) as UserPortfolio[];
     }
   });
 
@@ -270,6 +189,7 @@ export function usePortfolio() {
     onSuccess: (count) => {
       toast.success(`${count} item(ns) transferido(s) com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['portfolios'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio-items'] });
       queryClient.invalidateQueries({ queryKey: ['portfolio-transfers'] });
     },
     onError: (error: any) => {
@@ -285,6 +205,29 @@ export function usePortfolio() {
     transferItems: transferMutation.mutate,
     isTransferring: transferMutation.isPending
   };
+}
+
+/**
+ * Hook to load portfolio items for a specific sales rep on demand (for manage dialog).
+ */
+export function usePortfolioItems(salesRepId: string | null, entityType: 'company' | 'contact' | 'deal') {
+  return useQuery({
+    queryKey: ['portfolio-items', salesRepId, entityType],
+    queryFn: async () => {
+      if (!salesRepId) return [];
+      const { data, error } = await supabase.rpc('get_portfolio_items', {
+        p_sales_rep_id: salesRepId,
+        p_entity_type: entityType,
+      });
+      if (error) throw error;
+      return (data || []).map((row: any) => ({
+        id: row.item_id,
+        name: row.item_name,
+        type: row.item_type as 'company' | 'contact' | 'deal',
+      })) as PortfolioItem[];
+    },
+    enabled: !!salesRepId,
+  });
 }
 
 // Mantido para histórico de transferências e exibição de nomes
