@@ -718,6 +718,78 @@ export default function Customers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Enrichment Results Dialog */}
+      <Dialog open={enrichDialogOpen} onOpenChange={setEnrichDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Resultado do Enriquecimento</DialogTitle>
+          </DialogHeader>
+          {enrichResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{enrichResult.enriched}</p>
+                  <p className="text-xs text-muted-foreground">Atualizados</p>
+                </Card>
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-destructive">{enrichResult.failed}</p>
+                  <p className="text-xs text-muted-foreground">Com erro</p>
+                </Card>
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{enrichResult.total_checked}</p>
+                  <p className="text-xs text-muted-foreground">Verificados</p>
+                </Card>
+              </div>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Campos Atualizados</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(enrichResult.details || []).map((d: any) => {
+                      const fieldLabels: Record<string, string> = {
+                        fantasia: 'Nome Fantasia',
+                        address: 'Endereço',
+                        address_number: 'Número',
+                        address_complement: 'Complemento',
+                        neighborhood: 'Bairro',
+                        city: 'Cidade',
+                        state: 'Estado',
+                        zip_code: 'CEP',
+                        phone: 'Telefone',
+                        email: 'E-mail',
+                      };
+                      return (
+                        <TableRow key={d.id}>
+                          <TableCell className="font-medium text-sm max-w-[200px] truncate" title={d.name}>
+                            {d.name}
+                          </TableCell>
+                          <TableCell>
+                            {d.status === 'enriched' && <Badge className="bg-green-500/10 text-green-600 border-0 text-xs">Atualizado</Badge>}
+                            {d.status === 'no_update_needed' && <Badge variant="secondary" className="text-xs">Completo</Badge>}
+                            {d.status === 'api_error' && <Badge variant="destructive" className="text-xs">Erro API</Badge>}
+                            {d.status === 'update_error' && <Badge variant="destructive" className="text-xs">Erro BD</Badge>}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {d.fields_updated.length > 0
+                              ? d.fields_updated.map((f: string) => fieldLabels[f] || f).join(', ')
+                              : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
