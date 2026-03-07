@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2 } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
 import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import { cn } from '@/lib/utils';
@@ -98,6 +98,7 @@ export default function Customers() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
@@ -216,6 +217,29 @@ export default function Customers() {
   });
 
   const handleRefresh = async () => { await refetch(); toast.success('Dados atualizados!'); };
+
+  const handleEnrichBatch = async () => {
+    setIsEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
+        body: { limit: 50 },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(data.message, { duration: 6000 });
+        if (data.enriched > 0) {
+          queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
+        }
+      } else {
+        toast.error(data?.error || 'Erro no enriquecimento');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao enriquecer: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsEnriching(false);
+    }
+  };
   const handleDeleteClick = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); setCustomerToDelete(customer); setDeleteDialogOpen(true); };
   const handleConfirmDelete = () => { if (customerToDelete) deleteMutation.mutate(customerToDelete.id); };
   const handleToggleActive = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
@@ -334,6 +358,12 @@ export default function Customers() {
           <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
+              <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+              {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
             <Settings2 className="h-4 w-4" />
             Personalizar painel
