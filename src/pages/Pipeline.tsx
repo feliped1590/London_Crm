@@ -78,6 +78,7 @@ interface PipelineStageRow {
 export default function Pipeline() {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { canAccessBySalesRep } = useSalesRepAccess();
   const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
