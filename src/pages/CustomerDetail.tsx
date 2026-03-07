@@ -583,8 +583,8 @@ export default function CustomerDetail() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {customer.cnpj && <span>{formatCNPJ(customer.cnpj)}</span>}
-                {(getNomeById.atividade(customer.atividade_id || null) || customer.industry) && (
-                  <span>• {getNomeById.atividade(customer.atividade_id || null) || customer.industry}</span>
+                {(getNomeById.atividade(customer.atividade_id || null) || customer.segmento) && (
+                  <span>• {getNomeById.atividade(customer.atividade_id || null) || customer.segmento}</span>
                 )}
                 {customer.city && customer.state && (
                   <span>• {customer.city}/{customer.state}</span>
