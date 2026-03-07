@@ -313,9 +313,9 @@ export default function CustomerNew() {
       }
     }
     
-    // Segmento obrigatório para todos os tipos de cliente
-    if (!companyForm.segment) {
-      toast.error('Informe o segmento do cliente');
+    // Setor obrigatório para todos os tipos de cliente
+    if (!companyForm.setor_id) {
+      toast.error('Informe o setor do cliente');
       return;
     }
     
