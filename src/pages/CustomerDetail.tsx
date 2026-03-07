@@ -754,9 +754,9 @@ export default function CustomerDetail() {
                       setorId={companyForm.setor_id}
                       segmentoId={companyForm.segmento_id}
                       atividadeId={companyForm.atividade_id}
-                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
-                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
-                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
+                      onSetorChange={(v) => setCompanyForm(prev => ({ ...prev, setor_id: v, segmento_id: null, atividade_id: null }))}
+                      onSegmentoChange={(v) => setCompanyForm(prev => ({ ...prev, segmento_id: v, atividade_id: null }))}
+                      onAtividadeChange={(v) => setCompanyForm(prev => ({ ...prev, atividade_id: v }))}
                       disabled={!isEditing}
                     />
                   )}
