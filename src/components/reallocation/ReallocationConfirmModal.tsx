@@ -118,7 +118,7 @@ export function ReallocationConfirmModal({
               <SelectContent>
                 {availableSellers.map(seller => (
                   <SelectItem key={seller.id} value={seller.id}>
-                    {seller.name} ({seller.role})
+                    {seller.name}{seller.type === 'external' ? ' (Externo)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
