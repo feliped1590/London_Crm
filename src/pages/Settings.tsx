@@ -1099,6 +1099,10 @@ export default function Settings() {
                 <RefreshCw className="h-4 w-4" />
                 Remanejamento
               </TabsTrigger>
+              <TabsTrigger value="sales-reps-sub" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Vendedores
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="portfolio-sub" className="mt-4">
