@@ -178,6 +178,7 @@ function StockMoveTab() {
             placeholder="Selecione..."
             searchPlaceholder="Buscar produto..."
             allowClear={false}
+          />
         </div>
         <div>
           <Label>Tipo *</Label>
