@@ -362,7 +362,7 @@ export default function Customers() {
           <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {isDeveloper && (
             <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
               <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
               {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
