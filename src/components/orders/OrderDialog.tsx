@@ -843,43 +843,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Empresa</Label>
-          <Select 
-            value={companyId} 
-            onValueChange={(val) => setCompanyId(val === '__none__' ? '' : val)}
+          <SearchableSelect
+            options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+            value={companyId || null}
+            onChange={(v) => setCompanyId(v || '')}
+            placeholder="Selecione uma empresa"
+            searchPlaceholder="Buscar empresa..."
             disabled={!canEdit}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione uma empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Nenhuma</SelectItem>
-              {companies?.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
         <div className="space-y-2">
           <Label>Contato</Label>
-          <Select 
-            value={contactId} 
-            onValueChange={(val) => setContactId(val === '__none__' ? '' : val)}
+          <SearchableSelect
+            options={(contacts || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name || ''}`.trim() }))}
+            value={contactId || null}
+            onChange={(v) => setContactId(v || '')}
+            placeholder="Selecione um contato"
+            searchPlaceholder="Buscar contato..."
             disabled={!canEdit}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione um contato" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Nenhum</SelectItem>
-              {contacts?.map((contact) => (
-                <SelectItem key={contact.id} value={contact.id}>
-                  {contact.first_name} {contact.last_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
       </div>
 
