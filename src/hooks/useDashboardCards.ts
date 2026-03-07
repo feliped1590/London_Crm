@@ -53,69 +53,38 @@ export function useDashboardCards() {
     .filter((p) => p.enabled)
     .sort((a, b) => a.position - b.position);
 
-  // Fetch metrics data
+  // Fetch metrics data via RPC for accurate counts
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['dashboard-cards-metrics'],
     queryFn: async () => {
-      const [totalRes, setorRes, segmentoRes, atividadeRes, activeRes, dealsRes] = await Promise.all([
-        supabase.from('companies').select('id', { count: 'exact', head: true }),
-        supabase.from('companies').select('setor_id, setores!companies_setor_id_fkey(nome)').not('setor_id', 'is', null),
-        supabase.from('companies').select('segmento_id, segmentos!companies_segmento_id_fkey(nome)').not('segmento_id', 'is', null),
-        supabase.from('companies').select('atividade_id, atividades!companies_atividade_id_fkey(nome)').not('atividade_id', 'is', null),
-        supabase.from('companies').select('id', { count: 'exact', head: true }).gte('updated_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-        supabase.from('deals').select('id, value', { count: 'exact' }).not('stage', 'in', '(fechado_ganho,fechado_perdido)'),
-      ]);
-
-      // Count by setor
-      const setorCounts: Record<string, number> = {};
-      (setorRes.data || []).forEach((r: any) => {
-        const nome = r.setores?.nome;
-        if (nome) setorCounts[nome] = (setorCounts[nome] || 0) + 1;
-      });
-      const topSetor = Object.entries(setorCounts).sort((a, b) => b[1] - a[1])[0];
-
-      // Count by segmento
-      const segCounts: Record<string, number> = {};
-      (segmentoRes.data || []).forEach((r: any) => {
-        const nome = r.segmentos?.nome;
-        if (nome) segCounts[nome] = (segCounts[nome] || 0) + 1;
-      });
-      const topSegmento = Object.entries(segCounts).sort((a, b) => b[1] - a[1])[0];
-
-      // Count by atividade
-      const atiCounts: Record<string, number> = {};
-      (atividadeRes.data || []).forEach((r: any) => {
-        const nome = r.atividades?.nome;
-        if (nome) atiCounts[nome] = (atiCounts[nome] || 0) + 1;
-      });
-      const topAtividade = Object.entries(atiCounts).sort((a, b) => b[1] - a[1])[0];
-
-      const dealsValue = (dealsRes.data || []).reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+      const { data, error } = await supabase.rpc('get_dashboard_card_metrics');
+      if (error) throw error;
+      const m = data as any;
 
       return {
         total_clients: {
-          value: String(totalRes.count || 0),
-          subtitle: `${Object.keys(setorCounts).length} setores cadastrados`,
+          value: String(m.total_clients || 0),
+          subtitle: `${m.setores_count || 0} setores cadastrados`,
         },
         top_setor: {
-          value: topSetor ? topSetor[0] : 'N/A',
-          subtitle: topSetor ? `${topSetor[1]} clientes` : 'Sem dados',
+          value: m.top_setor_nome || 'N/A',
+          subtitle: m.top_setor_count ? `${m.top_setor_count} clientes` : 'Sem dados',
         },
         top_segmento: {
-          value: topSegmento ? topSegmento[0] : 'N/A',
-          subtitle: topSegmento ? `${topSegmento[1]} clientes` : 'Sem dados',
+          value: m.top_segmento_nome || 'N/A',
+          subtitle: m.top_segmento_count ? `${m.top_segmento_count} clientes` : 'Sem dados',
         },
         top_atividade: {
-          value: topAtividade ? topAtividade[0] : 'N/A',
-          subtitle: topAtividade ? `${topAtividade[1]} clientes` : 'Sem dados',
+          value: m.top_atividade_nome || 'N/A',
+          subtitle: m.top_atividade_count ? `${m.top_atividade_count} clientes` : 'Sem dados',
         },
         active_clients: {
-          value: String(activeRes.count || 0),
+          value: String(m.active_clients || 0),
           subtitle: 'Últimos 30 dias',
         },
         open_deals: {
-          value: String(dealsRes.count || 0),
-          subtitle: `R$ ${(dealsValue / 1000).toFixed(0)}k em valor`,
+          value: String(m.open_deals_count || 0),
+          subtitle: `R$ ${((m.open_deals_value || 0) / 1000).toFixed(0)}k em valor`,
         },
       } as Record<string, { value: string; subtitle: string }>;
     },

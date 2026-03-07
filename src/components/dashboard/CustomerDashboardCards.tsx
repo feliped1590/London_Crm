@@ -42,16 +42,21 @@ export function CustomerDashboardCards() {
         const data = metrics[card.card_key];
 
         return (
-          <Card key={card.card_key} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4 flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Icon className="h-4 w-4" />
+          <Card key={card.card_key} className="hover:shadow-md transition-shadow min-w-0">
+            <CardContent className="p-4 flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                <Icon className="h-4 w-4 shrink-0" />
                 <span className="text-xs font-medium truncate">{def.label}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground truncate">
+              <p
+                className={`font-bold text-foreground truncate ${
+                  (data?.value?.length ?? 0) > 10 ? 'text-lg' : 'text-2xl'
+                }`}
+                title={data?.value ?? '—'}
+              >
                 {data?.value ?? '—'}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate" title={data?.subtitle ?? ''}>
                 {data?.subtitle ?? ''}
               </p>
             </CardContent>
