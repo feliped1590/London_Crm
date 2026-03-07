@@ -91,7 +91,7 @@ interface UnifiedCustomer {
   phone: string | null;
   email: string | null;
   website: string | null;
-  industry: string | null;
+  segmento?: string | null;
   setor_id?: string | null;
   segmento_id?: string | null;
   atividade_id?: string | null;
