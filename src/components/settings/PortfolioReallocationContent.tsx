@@ -34,11 +34,14 @@ export function PortfolioReallocationContent() {
   const selectedCompanyData = companies?.filter(c => selectedCompanies.has(c.company_id)) || [];
 
   const handleConfirmTransfer = (
-    toUserId: string,
+    toSalesRepId: string,
     transferContacts: boolean,
     transferDeals: boolean,
     reason: string
   ) => {
+    // Resolver user_id do vendedor destino
+    const targetSeller = sellers?.find(s => s.id === toSalesRepId);
+
     const companySources: Record<string, 'crm' | 'erp'> = {};
     companies?.forEach(c => {
       if (selectedCompanies.has(c.company_id)) {
@@ -48,7 +51,8 @@ export function PortfolioReallocationContent() {
 
     transferCompanies({
       companyIds: Array.from(selectedCompanies),
-      toUserId,
+      toSalesRepId,
+      toUserId: targetSeller?.linkedUserId || null,
       transferContacts,
       transferDeals,
       reason,
@@ -58,9 +62,15 @@ export function PortfolioReallocationContent() {
     setConfirmModalOpen(false);
   };
 
+  // Converter sellers para o formato esperado pelo ReallocationFilters
+  const sellersForFilter = sellers?.map(s => ({
+    id: s.id,
+    name: s.name,
+    role: s.type || 'interno'
+  })) || [];
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground">
           Identifique clientes por critérios específicos e transfira entre vendedores
@@ -71,17 +81,24 @@ export function PortfolioReallocationContent() {
         </Button>
       </div>
 
-      {/* Filtros */}
       <ReallocationFilters
         filters={filters}
-        onFiltersChange={setFilters}
+        onFiltersChange={(newFilters) => {
+          // Quando seleciona um vendedor, mapear para salesRepId
+          if (newFilters.ownerId && newFilters.ownerId !== filters.ownerId) {
+            setFilters({ ...newFilters, salesRepId: newFilters.ownerId });
+          } else if (!newFilters.ownerId) {
+            setFilters({ ...newFilters, salesRepId: undefined });
+          } else {
+            setFilters(newFilters);
+          }
+        }}
         onClear={clearFilters}
         availableStates={availableStates || []}
         availableRegions={availableRegions || []}
-        sellers={sellers || []}
+        sellers={sellersForFilter}
       />
 
-      {/* Resultados */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
@@ -117,12 +134,11 @@ export function PortfolioReallocationContent() {
         />
       </div>
 
-      {/* Modal de confirmação */}
       <ReallocationConfirmModal
         open={confirmModalOpen}
         onOpenChange={setConfirmModalOpen}
         selectedCompanies={selectedCompanyData}
-        sellers={sellers || []}
+        sellers={sellersForFilter}
         filterContext={filters}
         onConfirm={handleConfirmTransfer}
         isLoading={isTransferring}

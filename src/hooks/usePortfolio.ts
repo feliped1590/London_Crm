@@ -9,6 +9,11 @@ export interface PortfolioItem {
 }
 
 export interface UserPortfolio {
+  salesRepId: string;
+  salesRepName: string;
+  salesRepType: string | null;
+  linkedUserId: string | null;
+  // Backward-compat aliases
   userId: string;
   userName: string;
   userRole: string;
@@ -19,8 +24,8 @@ export interface UserPortfolio {
 
 export interface TransferRequest {
   items: { id: string; name: string; type: 'company' | 'contact' | 'deal' }[];
-  fromUserId: string | null;
-  toUserId: string;
+  fromSalesRepId: string | null;
+  toSalesRepId: string;
   transferRelated: boolean;
   notes?: string;
 }
@@ -37,90 +42,124 @@ export interface PortfolioTransfer {
   notes: string | null;
 }
 
+/**
+ * Resolve a user_id linked to a sales_rep (prefers default link).
+ */
+async function resolveUserForSalesRep(salesRepId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('user_sales_reps')
+    .select('user_id, is_default')
+    .eq('sales_rep_id', salesRepId);
+
+  if (!data?.length) return null;
+  return data.find(l => l.is_default)?.user_id || data[0].user_id;
+}
+
 export function usePortfolio() {
   const queryClient = useQueryClient();
 
-  // Buscar todos os usuários com suas carteiras
+  // Buscar carteiras agrupadas por vendedor comercial (sales_rep)
   const { data: portfolios, isLoading: isLoadingPortfolios } = useQuery({
     queryKey: ['portfolios'],
     queryFn: async () => {
-      // Buscar todos os usuários
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name');
+      // 1. Sales reps ativos
+      const { data: salesReps, error: repsError } = await supabase
+        .from('sales_reps')
+        .select('id, name, type, active')
+        .eq('active', true)
+        .order('name');
+      if (repsError) throw repsError;
 
-      if (profilesError) throw profilesError;
+      // 2. Vínculos user ↔ sales_rep
+      const { data: userLinks, error: linksError } = await supabase
+        .from('user_sales_reps')
+        .select('user_id, sales_rep_id, is_default');
+      if (linksError) throw linksError;
 
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      // Map: sales_rep_id → user_id (prefer is_default)
+      const repToUser: Record<string, string> = {};
+      userLinks?.forEach(link => {
+        if (!repToUser[link.sales_rep_id]) repToUser[link.sales_rep_id] = link.user_id;
+      });
+      userLinks?.forEach(link => {
+        if (link.is_default) repToUser[link.sales_rep_id] = link.user_id;
+      });
 
-      if (rolesError) throw rolesError;
-
-      // Buscar empresas, contatos e negócios por owner_id
-      const { data: companies, error: companiesError } = await supabase
+      // 3. Empresas com sales_rep_id
+      const { data: companies, error: compError } = await supabase
         .from('companies')
-        .select('id, name, owner_id');
+        .select('id, name, sales_rep_id');
+      if (compError) throw compError;
 
-      if (companiesError) throw companiesError;
+      // Map: company_id → sales_rep_id
+      const companyToRep: Record<string, string> = {};
+      companies?.forEach(c => {
+        if (c.sales_rep_id) companyToRep[c.id] = c.sales_rep_id;
+      });
 
-      const { data: contacts, error: contactsError } = await supabase
+      // 4. Contatos
+      const { data: contacts, error: contError } = await supabase
         .from('contacts')
-        .select('id, first_name, last_name, owner_id');
+        .select('id, first_name, last_name, company_id');
+      if (contError) throw contError;
 
-      if (contactsError) throw contactsError;
-
+      // 5. Negócios
       const { data: deals, error: dealsError } = await supabase
         .from('deals')
-        .select('id, name, owner_id');
-
+        .select('id, name, company_id');
       if (dealsError) throw dealsError;
 
-      // Montar portfolios por usuário
+      // 6. Montar portfolios por vendedor
       const portfolioMap: Record<string, UserPortfolio> = {};
 
-      profiles?.forEach(profile => {
-        const userRole = roles?.find(r => r.user_id === profile.user_id);
-        portfolioMap[profile.user_id] = {
-          userId: profile.user_id,
-          userName: profile.full_name || 'Sem nome',
-          userRole: userRole?.role || 'vendedor',
+      salesReps?.forEach(rep => {
+        const linkedUser = repToUser[rep.id] || null;
+        portfolioMap[rep.id] = {
+          salesRepId: rep.id,
+          salesRepName: rep.name,
+          salesRepType: rep.type,
+          linkedUserId: linkedUser,
+          userId: linkedUser || rep.id,
+          userName: rep.name,
+          userRole: rep.type || 'interno',
           companies: [],
           contacts: [],
-          deals: []
+          deals: [],
         };
       });
 
       // Adicionar empresas
       companies?.forEach(company => {
-        if (company.owner_id && portfolioMap[company.owner_id]) {
-          portfolioMap[company.owner_id].companies.push({
+        if (company.sales_rep_id && portfolioMap[company.sales_rep_id]) {
+          portfolioMap[company.sales_rep_id].companies.push({
             id: company.id,
             name: company.name,
-            type: 'company'
+            type: 'company',
           });
         }
       });
 
-      // Adicionar contatos
+      // Adicionar contatos (via empresa → sales_rep)
       contacts?.forEach(contact => {
-        if (contact.owner_id && portfolioMap[contact.owner_id]) {
+        const repId = contact.company_id ? companyToRep[contact.company_id] : null;
+        if (repId && portfolioMap[repId]) {
           const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-          portfolioMap[contact.owner_id].contacts.push({
+          portfolioMap[repId].contacts.push({
             id: contact.id,
             name: name || 'Sem nome',
-            type: 'contact'
+            type: 'contact',
           });
         }
       });
 
-      // Adicionar negócios
+      // Adicionar negócios (via empresa → sales_rep)
       deals?.forEach(deal => {
-        if (deal.owner_id && portfolioMap[deal.owner_id]) {
-          portfolioMap[deal.owner_id].deals.push({
+        const repId = deal.company_id ? companyToRep[deal.company_id] : null;
+        if (repId && portfolioMap[repId]) {
+          portfolioMap[repId].deals.push({
             id: deal.id,
             name: deal.name,
-            type: 'deal'
+            type: 'deal',
           });
         }
       });
@@ -129,7 +168,7 @@ export function usePortfolio() {
     }
   });
 
-  // Buscar histórico de transferências
+  // Histórico de transferências
   const { data: transfers, isLoading: isLoadingTransfers } = useQuery({
     queryKey: ['portfolio-transfers'],
     queryFn: async () => {
@@ -138,7 +177,6 @@ export function usePortfolio() {
         .select('*')
         .order('transferred_at', { ascending: false })
         .limit(100);
-
       if (error) throw error;
       return data as PortfolioTransfer[];
     }
@@ -150,34 +188,39 @@ export function usePortfolio() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      // Resolver user_id do vendedor destino (para manter RLS)
+      const targetUserId = await resolveUserForSalesRep(request.toSalesRepId);
+
+      // Resolver user_id do vendedor origem (para histórico)
+      let fromUserId: string | null = null;
+      if (request.fromSalesRepId) {
+        fromUserId = await resolveUserForSalesRep(request.fromSalesRepId);
+      }
+
       const transferRecords: any[] = [];
       const relatedItems: { id: string; name: string; type: 'company' | 'contact' | 'deal' }[] = [];
 
-      // Se transferir relacionados, buscar contatos e negócios das empresas
+      // Buscar itens relacionados (contatos e negócios das empresas)
       if (request.transferRelated) {
         const companyIds = request.items
           .filter(item => item.type === 'company')
           .map(item => item.id);
 
         if (companyIds.length > 0) {
-          // Buscar contatos relacionados
           const { data: relatedContacts } = await supabase
             .from('contacts')
             .select('id, first_name, last_name')
-            .in('company_id', companyIds)
-            .eq('owner_id', request.fromUserId);
+            .in('company_id', companyIds);
 
           relatedContacts?.forEach(contact => {
             const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
             relatedItems.push({ id: contact.id, name: name || 'Sem nome', type: 'contact' });
           });
 
-          // Buscar negócios relacionados
           const { data: relatedDeals } = await supabase
             .from('deals')
             .select('id, name')
-            .in('company_id', companyIds)
-            .eq('owner_id', request.fromUserId);
+            .in('company_id', companyIds);
 
           relatedDeals?.forEach(deal => {
             relatedItems.push({ id: deal.id, name: deal.name, type: 'deal' });
@@ -187,39 +230,38 @@ export function usePortfolio() {
 
       const allItems = [...request.items, ...relatedItems];
 
-      // Atualizar owner_id de cada item
       for (const item of allItems) {
         let tableName: 'companies' | 'contacts' | 'deals';
-        
         if (item.type === 'company') tableName = 'companies';
         else if (item.type === 'contact') tableName = 'contacts';
         else tableName = 'deals';
 
+        // Build update: sales_rep_id apenas para empresas, owner_id para todos
+        const updateData: Record<string, any> = {};
+        if (targetUserId) updateData.owner_id = targetUserId;
+        if (item.type === 'company') updateData.sales_rep_id = request.toSalesRepId;
+
         const { error } = await supabase
           .from(tableName)
-          .update({ owner_id: request.toUserId })
+          .update(updateData)
           .eq('id', item.id);
-
         if (error) throw error;
 
-        // Preparar registro de transferência
         transferRecords.push({
           entity_type: item.type,
           entity_id: item.id,
           entity_name: item.name,
-          from_user_id: request.fromUserId,
-          to_user_id: request.toUserId,
+          from_user_id: fromUserId,
+          to_user_id: targetUserId || request.toSalesRepId,
           transferred_by: user.id,
           notes: request.notes
         });
       }
 
-      // Inserir registros de histórico
       if (transferRecords.length > 0) {
         const { error } = await supabase
           .from('portfolio_transfers')
           .insert(transferRecords);
-
         if (error) throw error;
       }
 
@@ -245,6 +287,7 @@ export function usePortfolio() {
   };
 }
 
+// Mantido para histórico de transferências e exibição de nomes
 export function useUsers() {
   return useQuery({
     queryKey: ['users-for-transfer'],
@@ -252,18 +295,26 @@ export function useUsers() {
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('user_id, full_name');
-
       if (error) throw error;
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
+      const { data: salesReps } = await supabase
+        .from('sales_reps')
+        .select('id, name');
 
-      return profiles?.map(p => ({
+      const result = profiles?.map(p => ({
         id: p.user_id,
         name: p.full_name || 'Sem nome',
-        role: roles?.find(r => r.user_id === p.user_id)?.role || 'vendedor'
+        role: 'vendedor'
       })) || [];
+
+      // Adicionar sales_reps para resolução de nome no histórico
+      salesReps?.forEach(sr => {
+        if (!result.find(r => r.id === sr.id)) {
+          result.push({ id: sr.id, name: sr.name, role: 'vendedor' });
+        }
+      });
+
+      return result;
     }
   });
 }
