@@ -761,6 +761,10 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Tabelas e Aprovações
           </TabsTrigger>
+          <TabsTrigger value="sales-reps" className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Vendedores
+          </TabsTrigger>
           <TabsTrigger value="bots" className="gap-2">
             <Bot className="h-4 w-4" />
             Bots
