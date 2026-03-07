@@ -92,6 +92,9 @@ interface UnifiedCustomer {
   email: string | null;
   website: string | null;
   industry: string | null;
+  setor_id?: string | null;
+  segmento_id?: string | null;
+  atividade_id?: string | null;
   employee_count: string | null;
   address: string | null;
   city: string | null;
@@ -99,18 +102,15 @@ interface UnifiedCustomer {
   country: string | null;
   notes: string | null;
   custom_fields: Json | null;
-  // Campos específicos ERP
   regiao?: string | null;
   segmento?: string | null;
   tipo_pessoa?: string | null;
-  // Campos de governança (Sprint 2)
   parent_company_id?: string | null;
   is_matriz?: boolean;
   last_reviewed_at?: string | null;
   active?: boolean;
   owner_id?: string | null;
   contact_name?: string | null;
-  // Metadados
   source: 'crm' | 'erp';
   contacts?: Contact[];
   deals?: any[];
