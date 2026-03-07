@@ -417,16 +417,15 @@ export default function Customers() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Segmento</Label>
-                    <Select value={filterIndustry} onValueChange={(v) => { setFilterIndustry(v === '_all' ? '' : v); setCurrentPage(1); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_all">Todos</SelectItem>
-                        {(filterOptions?.industries || []).map((i: string) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <ClassificacaoCascade
+                    setorId={filterSetorId}
+                    segmentoId={filterSegmentoId}
+                    atividadeId={filterAtividadeId}
+                    onSetorChange={(v) => { setFilterSetorId(v); setCurrentPage(1); }}
+                    onSegmentoChange={(v) => { setFilterSegmentoId(v); setCurrentPage(1); }}
+                    onAtividadeChange={(v) => { setFilterAtividadeId(v); setCurrentPage(1); }}
+                    compact
+                  />
                 </div>
               </PopoverContent>
             </Popover>
