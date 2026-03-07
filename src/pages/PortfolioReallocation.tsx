@@ -26,7 +26,6 @@ export default function PortfolioReallocation() {
     transferCompanies,
     isTransferring,
     refetch,
-    // Paginação
     currentPage,
     setCurrentPage,
     totalItems,
@@ -37,13 +36,13 @@ export default function PortfolioReallocation() {
   const selectedCompanyData = companies?.filter(c => selectedCompanies.has(c.company_id)) || [];
 
   const handleConfirmTransfer = (
-    toUserId: string,
+    toSalesRepId: string,
     transferContacts: boolean,
     transferDeals: boolean,
     reason: string
   ) => {
-    // Construir mapa de sources para cada empresa selecionada
-    // Precisamos buscar de todas as páginas, então usamos o cache se disponível
+    const targetSeller = sellers?.find(s => s.id === toSalesRepId);
+
     const companySources: Record<string, 'crm' | 'erp'> = {};
     companies?.forEach(c => {
       if (selectedCompanies.has(c.company_id)) {
@@ -53,7 +52,8 @@ export default function PortfolioReallocation() {
 
     transferCompanies({
       companyIds: Array.from(selectedCompanies),
-      toUserId,
+      toSalesRepId,
+      toUserId: targetSeller?.linkedUserId || null,
       transferContacts,
       transferDeals,
       reason,
@@ -63,7 +63,13 @@ export default function PortfolioReallocation() {
     setConfirmModalOpen(false);
   };
 
-  // Bloquear acesso para não-admins
+  // Converter sellers para formato esperado pelos componentes filhos
+  const sellersForComponents = sellers?.map(s => ({
+    id: s.id,
+    name: s.name,
+    role: s.type || 'interno'
+  })) || [];
+
   if (permissionsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -86,7 +92,6 @@ export default function PortfolioReallocation() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -103,17 +108,15 @@ export default function PortfolioReallocation() {
         </Button>
       </div>
 
-      {/* Filtros */}
       <ReallocationFilters
         filters={filters}
         onFiltersChange={setFilters}
         onClear={clearFilters}
         availableStates={availableStates || []}
         availableRegions={availableRegions || []}
-        sellers={sellers || []}
+        sellers={sellersForComponents}
       />
 
-      {/* Resultados */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
@@ -149,12 +152,11 @@ export default function PortfolioReallocation() {
         />
       </div>
 
-      {/* Modal de confirmação */}
       <ReallocationConfirmModal
         open={confirmModalOpen}
         onOpenChange={setConfirmModalOpen}
         selectedCompanies={selectedCompanyData}
-        sellers={sellers || []}
+        sellers={sellersForComponents}
         filterContext={filters}
         onConfirm={handleConfirmTransfer}
         isLoading={isTransferring}
