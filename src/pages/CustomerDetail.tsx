@@ -123,6 +123,7 @@ export default function CustomerDetail() {
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
   const { getNomeById } = useClassificacao();
+  const { salesReps } = useSalesReps();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
