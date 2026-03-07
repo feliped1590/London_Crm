@@ -109,26 +109,22 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Resolve o user_id do sales_rep selecionado no filtro para usar na DB function
-  const resolvedOwnerId = (() => {
-    if (filters.noOwner) return null;
-    if (!filters.salesRepId) return filters.ownerId || null;
-    const seller = sellers?.find(s => s.id === filters.salesRepId);
-    return seller?.linkedUserId || null;
-  })();
+  // Usar sales_rep_id diretamente para filtro
+  const resolvedSalesRepId = filters.salesRepId || null;
 
   // Contagem total
   const { data: totalItems = 0 } = useQuery({
-    queryKey: ['reallocation-companies-count', filters, resolvedOwnerId],
+    queryKey: ['reallocation-companies-count', filters, resolvedSalesRepId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_companies_for_reallocation_count', {
         p_states: filters.states?.length ? filters.states : null,
         p_regions: filters.regions?.length ? filters.regions : null,
-        p_owner_id: filters.noOwner ? null : (resolvedOwnerId || null),
+        p_owner_id: null,
         p_min_days_no_interaction: filters.minDaysNoInteraction || null,
         p_min_days_no_order: filters.minDaysNoOrder || null,
         p_search: filters.search || null,
-        p_no_owner: filters.noOwner || null
+        p_no_owner: filters.noOwner || null,
+        p_sales_rep_id: resolvedSalesRepId,
       });
       if (error) throw error;
       return data as number;
@@ -139,49 +135,24 @@ export function usePortfolioReallocation() {
 
   // Buscar empresas com filtros e paginação
   const { data: companies, isLoading, refetch } = useQuery({
-    queryKey: ['reallocation-companies', filters, currentPage, resolvedOwnerId],
+    queryKey: ['reallocation-companies', filters, currentPage, resolvedSalesRepId],
     queryFn: async () => {
       const offset = (currentPage - 1) * ITEMS_PER_PAGE;
       const { data, error } = await supabase.rpc('get_companies_for_reallocation', {
         p_states: filters.states?.length ? filters.states : null,
         p_regions: filters.regions?.length ? filters.regions : null,
-        p_owner_id: filters.noOwner ? null : (resolvedOwnerId || null),
+        p_owner_id: null,
         p_min_days_no_interaction: filters.minDaysNoInteraction || null,
         p_min_days_no_order: filters.minDaysNoOrder || null,
         p_search: filters.search || null,
         p_limit: ITEMS_PER_PAGE,
         p_offset: offset,
-        p_no_owner: filters.noOwner || null
+        p_no_owner: filters.noOwner || null,
+        p_sales_rep_id: resolvedSalesRepId,
       });
       if (error) throw error;
 
-      // Enriquecer com nome do vendedor comercial
-      const companiesData = data as CompanyForReallocation[];
-      
-      if (sellers?.length && companiesData?.length) {
-        // Buscar sales_rep_id das empresas retornadas
-        const companyIds = companiesData.map(c => c.company_id);
-        const { data: companyReps } = await supabase
-          .from('companies')
-          .select('id, sales_rep_id')
-          .in('id', companyIds);
-
-        const { data: allReps } = await supabase
-          .from('sales_reps')
-          .select('id, name');
-
-        const repNameMap: Record<string, string> = {};
-        allReps?.forEach(r => { repNameMap[r.id] = r.name; });
-
-        companiesData.forEach(company => {
-          const companyRep = companyReps?.find(cr => cr.id === company.company_id);
-          if (companyRep?.sales_rep_id && repNameMap[companyRep.sales_rep_id]) {
-            company.sales_rep_name = repNameMap[companyRep.sales_rep_id];
-          }
-        });
-      }
-
-      return companiesData;
+      return data as CompanyForReallocation[];
     }
   });
 

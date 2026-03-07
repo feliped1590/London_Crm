@@ -17,7 +17,7 @@ interface ReallocationFiltersProps {
   onClear: () => void;
   availableStates: string[];
   availableRegions: string[];
-  sellers: { id: string; name: string; role: string }[];
+  sellers: { id: string; name: string; type: string | null }[];
 }
 
 export function ReallocationFilters({
@@ -110,14 +110,14 @@ export function ReallocationFilters({
         <div className="space-y-2">
           <Label>Vendedor Atual</Label>
           <Select
-            value={filters.noOwner ? '__none__' : (filters.ownerId || 'all')}
+            value={filters.noOwner ? '__none__' : (filters.salesRepId || 'all')}
             onValueChange={(value) => {
               if (value === '__none__') {
-                onFiltersChange({ ...filters, noOwner: true, ownerId: undefined });
+                onFiltersChange({ ...filters, noOwner: true, salesRepId: undefined, ownerId: undefined });
               } else if (value === 'all') {
-                onFiltersChange({ ...filters, noOwner: undefined, ownerId: undefined });
+                onFiltersChange({ ...filters, noOwner: undefined, salesRepId: undefined, ownerId: undefined });
               } else {
-                onFiltersChange({ ...filters, noOwner: undefined, ownerId: value });
+                onFiltersChange({ ...filters, noOwner: undefined, salesRepId: value, ownerId: undefined });
               }
             }}
           >
@@ -131,7 +131,7 @@ export function ReallocationFilters({
               </SelectItem>
               {sellers?.map(seller => (
                 <SelectItem key={seller.id} value={seller.id}>
-                  {seller.name} ({seller.role})
+                  {seller.name}{seller.type === 'external' ? ' (Externo)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -180,9 +180,9 @@ export function ReallocationFilters({
             <span className="bg-warning/10 text-warning px-2 py-0.5 rounded">
               Sem vendedor
             </span>
-          ) : filters.ownerId ? (
+          ) : filters.salesRepId ? (
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
-              Vendedor: {sellers?.find(s => s.id === filters.ownerId)?.name}
+              Vendedor: {sellers?.find(s => s.id === filters.salesRepId)?.name}
             </span>
           ) : null}
           {filters.minDaysNoInteraction ? (

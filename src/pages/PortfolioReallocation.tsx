@@ -67,7 +67,7 @@ export default function PortfolioReallocation() {
   const sellersForComponents = sellers?.map(s => ({
     id: s.id,
     name: s.name,
-    role: s.type || 'interno'
+    type: s.type || 'interno'
   })) || [];
 
   if (permissionsLoading) {

@@ -6955,6 +6955,7 @@ export type Database = {
           last_order_at: string | null
           owner_id: string | null
           regiao: string | null
+          sales_rep_id: string | null
           source: string | null
           state: string | null
           subregiao: string | null
@@ -7027,49 +7028,97 @@ export type Database = {
           title: string
         }[]
       }
-      get_companies_for_reallocation: {
-        Args: {
-          p_limit?: number
-          p_min_days_no_interaction?: number
-          p_min_days_no_order?: number
-          p_no_owner?: boolean
-          p_offset?: number
-          p_owner_id?: string
-          p_regions?: string[]
-          p_search?: string
-          p_states?: string[]
-        }
-        Returns: {
-          city: string
-          cnpj: string
-          company_id: string
-          company_name: string
-          days_since_interaction: number
-          days_since_order: number
-          last_interaction_at: string
-          last_order_at: string
-          owner_id: string
-          owner_name: string
-          regiao: string
-          source: string
-          state: string
-          subregiao: string
-          total_order_value: number
-          total_orders: number
-        }[]
-      }
-      get_companies_for_reallocation_count: {
-        Args: {
-          p_min_days_no_interaction?: number
-          p_min_days_no_order?: number
-          p_no_owner?: boolean
-          p_owner_id?: string
-          p_regions?: string[]
-          p_search?: string
-          p_states?: string[]
-        }
-        Returns: number
-      }
+      get_companies_for_reallocation:
+        | {
+            Args: {
+              p_limit?: number
+              p_min_days_no_interaction?: number
+              p_min_days_no_order?: number
+              p_no_owner?: boolean
+              p_offset?: number
+              p_owner_id?: string
+              p_regions?: string[]
+              p_search?: string
+              p_states?: string[]
+            }
+            Returns: {
+              city: string
+              cnpj: string
+              company_id: string
+              company_name: string
+              days_since_interaction: number
+              days_since_order: number
+              last_interaction_at: string
+              last_order_at: string
+              owner_id: string
+              owner_name: string
+              regiao: string
+              source: string
+              state: string
+              subregiao: string
+              total_order_value: number
+              total_orders: number
+            }[]
+          }
+        | {
+            Args: {
+              p_limit?: number
+              p_min_days_no_interaction?: number
+              p_min_days_no_order?: number
+              p_no_owner?: boolean
+              p_offset?: number
+              p_owner_id?: string
+              p_regions?: string[]
+              p_sales_rep_id?: string
+              p_search?: string
+              p_states?: string[]
+            }
+            Returns: {
+              city: string
+              cnpj: string
+              company_id: string
+              company_name: string
+              days_since_interaction: number
+              days_since_order: number
+              last_interaction_at: string
+              last_order_at: string
+              owner_id: string
+              owner_name: string
+              regiao: string
+              sales_rep_name: string
+              source: string
+              state: string
+              subregiao: string
+              total_order_value: number
+              total_orders: number
+            }[]
+          }
+      get_companies_for_reallocation_count:
+        | {
+            Args: {
+              p_min_days_no_interaction?: number
+              p_min_days_no_order?: number
+              p_no_owner?: boolean
+              p_owner_id?: string
+              p_regions?: string[]
+              p_search?: string
+              p_states?: string[]
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_min_days_no_interaction?: number
+              p_min_days_no_order?: number
+              p_no_owner?: boolean
+              p_owner_id?: string
+              p_regions?: string[]
+              p_sales_rep_id?: string
+              p_search?: string
+              p_states?: string[]
+            }
+            Returns: number
+          }
       get_company_owner: { Args: { p_company_id: string }; Returns: string }
       get_conversion_by_stage: {
         Args: { p_end_date?: string; p_start_date?: string }

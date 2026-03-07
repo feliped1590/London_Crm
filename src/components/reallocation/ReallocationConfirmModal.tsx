@@ -26,7 +26,7 @@ interface ReallocationConfirmModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCompanies: CompanyForReallocation[];
-  sellers: { id: string; name: string; role: string }[];
+  sellers: { id: string; name: string; type: string | null }[];
   filterContext: ReallocationFilters;
   onConfirm: (
     toUserId: string,
@@ -118,7 +118,7 @@ export function ReallocationConfirmModal({
               <SelectContent>
                 {availableSellers.map(seller => (
                   <SelectItem key={seller.id} value={seller.id}>
-                    {seller.name} ({seller.role})
+                    {seller.name}{seller.type === 'external' ? ' (Externo)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>

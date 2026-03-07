@@ -66,7 +66,7 @@ export function PortfolioReallocationContent() {
   const sellersForFilter = sellers?.map(s => ({
     id: s.id,
     name: s.name,
-    role: s.type || 'interno'
+    type: s.type || 'interno'
   })) || [];
 
   return (
