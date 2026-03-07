@@ -560,7 +560,7 @@ export default function Customers() {
                           Negócios
                         </div>
                       </SortableHeader>
-                      <SortableHeader field="owner">Vendedor</SortableHeader>
+                      <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
                       <SortableHeader field="status">Status</SortableHeader>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
