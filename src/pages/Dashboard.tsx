@@ -602,9 +602,6 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         />
       </div>
 
-      {/* Insights Summary */}
-      <InsightsSummary />
-
       {/* Recent Deals and Tasks */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Deals */}
