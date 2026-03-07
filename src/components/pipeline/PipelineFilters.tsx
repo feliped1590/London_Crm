@@ -79,18 +79,16 @@ export function PipelineFilters({
         <span className="text-sm text-muted-foreground">Filtros:</span>
         
         {isAdmin ? (
-          <Select value={filterOwner} onValueChange={setFilterOwner}>
-            <SelectTrigger className="w-[200px] h-9">
-              <SelectValue placeholder="Responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mine">Meus negócios</SelectItem>
-              <SelectItem value="all">Todos</SelectItem>
-              {sellers?.map((s) => (
-                <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="w-[200px]">
+            <SearchableSelect
+              options={buildSellerOptions(sellers)}
+              value={filterOwner}
+              onChange={(v) => setFilterOwner(v || 'mine')}
+              placeholder="Responsável"
+              searchPlaceholder="Buscar vendedor..."
+              allowClear={false}
+            />
+          </div>
         ) : (
           <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">Meus negócios</span>
         )}
@@ -107,17 +105,16 @@ export function PipelineFilters({
           </SelectContent>
         </Select>
 
-        <Select value={filterCompany} onValueChange={setFilterCompany}>
-          <SelectTrigger className="w-[160px] h-9">
-            <SelectValue placeholder="Empresa" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas empresas</SelectItem>
-            {companies?.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-[200px]">
+          <SearchableSelect
+            options={buildCompanyOptions(companies)}
+            value={filterCompany}
+            onChange={(v) => setFilterCompany(v || 'all')}
+            placeholder="Empresa"
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
+        </div>
 
         <Popover>
           <PopoverTrigger asChild>
