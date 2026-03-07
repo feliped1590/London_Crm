@@ -34,6 +34,7 @@ interface PipelineFiltersProps {
   hasActiveFilters: boolean;
   isAdmin?: boolean;
   sellers?: { id: string; user_id: string; full_name: string }[] | null;
+  onCompanySearchChange?: (search: string) => void;
 }
 
 const buildCompanyOptions = (companies: { id: string; name: string }[] | undefined): SearchableSelectOption[] => [
