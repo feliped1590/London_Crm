@@ -745,29 +745,22 @@ export default function CustomerDetail() {
                     disabled={!isEditing || isErpCustomer}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="industry">{isErpCustomer ? 'Segmento' : 'Setor'}</Label>
+                <div className="col-span-2">
                   {isErpCustomer ? (
-                    <Input
-                      id="industry"
-                      value={companyForm.industry}
-                      disabled
-                    />
+                    <>
+                      <Label>Segmento (ERP)</Label>
+                      <Input value={customer.industry || customer.segmento || ''} disabled />
+                    </>
                   ) : (
-                    <Select 
-                      value={companyForm.industry} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
+                    <ClassificacaoCascade
+                      setorId={companyForm.setor_id}
+                      segmentoId={companyForm.segmento_id}
+                      atividadeId={companyForm.atividade_id}
+                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
+                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
+                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
                       disabled={!isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((i) => (
-                          <SelectItem key={i} value={i}>{i}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
                   )}
                 </div>
                 {!isErpCustomer && (
