@@ -482,7 +482,11 @@ export default function Companies() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        {company.industry && <Badge variant="secondary">{company.industry}</Badge>}
+                        {(getNomeById.atividade(company.atividade_id) || company.industry) && (
+                          <Badge variant="secondary">
+                            {getNomeById.atividade(company.atividade_id) || company.industry}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <DealStageBadges deals={company.deals || []} />

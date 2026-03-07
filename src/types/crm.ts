@@ -27,6 +27,9 @@ export interface Company {
   name: string;
   domain?: string;
   industry?: string;
+  setor_id?: string | null;
+  segmento_id?: string | null;
+  atividade_id?: string | null;
   employee_count?: string;
   annual_revenue?: string;
   phone?: string;
