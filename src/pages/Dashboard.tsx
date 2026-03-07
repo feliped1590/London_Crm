@@ -561,7 +561,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
               </div>
             ) : (
               <div className="space-y-3">
-                {recentDeals.map((deal) => (
+                {recentDeals.slice(dealsPage * PAGE_SIZE, (dealsPage + 1) * PAGE_SIZE).map((deal) => (
                   <Link
                     key={deal.id}
                     to={`/pipeline?deal=${deal.id}`}
@@ -576,6 +576,21 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
                     </Badge>
                   </Link>
                 ))}
+                {recentDeals.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {dealsPage * PAGE_SIZE + 1}-{Math.min((dealsPage + 1) * PAGE_SIZE, recentDeals.length)} de {recentDeals.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" disabled={dealsPage === 0} onClick={() => setDealsPage(p => p - 1)}>
+                        ← Anterior
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled={(dealsPage + 1) * PAGE_SIZE >= recentDeals.length} onClick={() => setDealsPage(p => p + 1)}>
+                        Próximo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
