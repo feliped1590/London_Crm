@@ -396,13 +396,12 @@ export default function Customers() {
 
                   <div className="space-y-2">
                     <Label className="text-xs">Cidade</Label>
-                    <Select value={filterCity} onValueChange={(v) => { setFilterCity(v === '_all' ? '' : v); setCurrentPage(1); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Todas" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_all">Todas</SelectItem>
-                        {(filterOptions?.cities || []).map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      className="h-8 text-sm"
+                      placeholder="Digite para filtrar..."
+                      value={filterCity}
+                      onChange={(e) => { setFilterCity(e.target.value); setCurrentPage(1); }}
+                    />
                   </div>
 
                   <div className="space-y-2">
