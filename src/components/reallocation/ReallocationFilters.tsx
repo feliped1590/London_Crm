@@ -180,9 +180,9 @@ export function ReallocationFilters({
             <span className="bg-warning/10 text-warning px-2 py-0.5 rounded">
               Sem vendedor
             </span>
-          ) : filters.ownerId ? (
+          ) : filters.salesRepId ? (
             <span className="bg-primary/10 text-primary px-2 py-0.5 rounded">
-              Vendedor: {sellers?.find(s => s.id === filters.ownerId)?.name}
+              Vendedor: {sellers?.find(s => s.id === filters.salesRepId)?.name}
             </span>
           ) : null}
           {filters.minDaysNoInteraction ? (

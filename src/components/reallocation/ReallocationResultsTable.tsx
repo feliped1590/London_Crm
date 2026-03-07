@@ -149,8 +149,7 @@ export function ReallocationResultsTable({
               const interactionVariant = getDaysBadgeVariant(company.days_since_interaction);
               const orderVariant = getDaysBadgeVariant(company.days_since_order);
               
-              // Priorizar nome do vendedor comercial sobre owner_name
-              const vendedorNome = company.sales_rep_name || company.owner_name;
+              const vendedorNome = company.sales_rep_name || 'Sem vendedor';
               
               return (
                 <TableRow 
