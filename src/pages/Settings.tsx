@@ -761,10 +761,6 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Tabelas e Aprovações
           </TabsTrigger>
-          <TabsTrigger value="sales-reps" className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Vendedores
-          </TabsTrigger>
           <TabsTrigger value="bots" className="gap-2">
             <Bot className="h-4 w-4" />
             Bots
@@ -1099,6 +1095,10 @@ export default function Settings() {
                 <RefreshCw className="h-4 w-4" />
                 Remanejamento
               </TabsTrigger>
+              <TabsTrigger value="sales-reps-sub" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Vendedores
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="portfolio-sub" className="mt-4">
@@ -1111,6 +1111,10 @@ export default function Settings() {
 
             <TabsContent value="reallocation-sub" className="mt-4">
               <PortfolioReallocationContent />
+            </TabsContent>
+
+            <TabsContent value="sales-reps-sub" className="mt-4">
+              <SalesRepsManager />
             </TabsContent>
           </Tabs>
         </TabsContent>
@@ -1145,9 +1149,6 @@ export default function Settings() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="sales-reps" className="mt-6 space-y-6">
-          <SalesRepsManager />
-        </TabsContent>
 
         <TabsContent value="bots" className="mt-6 space-y-6">
           <BotsManager />
