@@ -89,7 +89,7 @@ export function ClassificacaoCascade({
     <>
       <div>
         <Label>Setor {required && '*'}</Label>
-        <Select value={setorId || ''} onValueChange={handleSetorChange} disabled={disabled}>
+        <Select value={setorId || undefined} onValueChange={handleSetorChange} disabled={disabled}>
           <SelectTrigger className={required && !setorId ? 'border-muted-foreground/50' : ''}>
             <SelectValue placeholder="Selecione o setor" />
           </SelectTrigger>
@@ -101,7 +101,7 @@ export function ClassificacaoCascade({
       {setorId && filteredSegmentos.length > 0 && (
         <div>
           <Label>Segmento {required && '*'}</Label>
-          <Select value={segmentoId || ''} onValueChange={handleSegmentoChange} disabled={disabled}>
+          <Select value={segmentoId || undefined} onValueChange={handleSegmentoChange} disabled={disabled}>
             <SelectTrigger className={required && !segmentoId ? 'border-muted-foreground/50' : ''}>
               <SelectValue placeholder="Selecione o segmento" />
             </SelectTrigger>
@@ -114,7 +114,7 @@ export function ClassificacaoCascade({
       {segmentoId && filteredAtividades.length > 0 && (
         <div>
           <Label>Atividade {required && '*'}</Label>
-          <Select value={atividadeId || ''} onValueChange={handleAtividadeChange} disabled={disabled}>
+          <Select value={atividadeId || undefined} onValueChange={handleAtividadeChange} disabled={disabled}>
             <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
               <SelectValue placeholder="Selecione a atividade" />
             </SelectTrigger>
