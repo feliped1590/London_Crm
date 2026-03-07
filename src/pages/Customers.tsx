@@ -240,7 +240,6 @@ export default function Customers() {
     setFilterCity('');
     setFilterState('');
     setFilterOwner('');
-    setFilterIndustry('');
     setFilterSetorId(null);
     setFilterSegmentoId(null);
     setFilterAtividadeId(null);
