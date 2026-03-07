@@ -289,6 +289,60 @@ export type Database = {
           },
         ]
       }
+      atividades: {
+        Row: {
+          created_at: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          nome_legado: string | null
+          segmento_id: string
+          sort_order: number | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          nome_legado?: string | null
+          segmento_id: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          nome_legado?: string | null
+          segmento_id?: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_segmento_id_fkey"
+            columns: ["segmento_id"]
+            isOneToOne: false
+            referencedRelation: "segmentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       beneficios_fiscais: {
         Row: {
           aliquota_resultante: number | null
@@ -828,6 +882,7 @@ export type Database = {
           address_complement: string | null
           address_number: string | null
           annual_revenue: string | null
+          atividade_id: string | null
           city: string | null
           cnpj: string | null
           contact_name: string | null
@@ -867,6 +922,8 @@ export type Database = {
           regime_tributario:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          segmento_id: string | null
+          setor_id: string | null
           state: string | null
           suframa: string | null
           tenant_id: string
@@ -881,6 +938,7 @@ export type Database = {
           address_complement?: string | null
           address_number?: string | null
           annual_revenue?: string | null
+          atividade_id?: string | null
           city?: string | null
           cnpj?: string | null
           contact_name?: string | null
@@ -920,6 +978,8 @@ export type Database = {
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          segmento_id?: string | null
+          setor_id?: string | null
           state?: string | null
           suframa?: string | null
           tenant_id?: string
@@ -934,6 +994,7 @@ export type Database = {
           address_complement?: string | null
           address_number?: string | null
           annual_revenue?: string | null
+          atividade_id?: string | null
           city?: string | null
           cnpj?: string | null
           contact_name?: string | null
@@ -973,6 +1034,8 @@ export type Database = {
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          segmento_id?: string | null
+          setor_id?: string | null
           state?: string | null
           suframa?: string | null
           tenant_id?: string
@@ -982,6 +1045,13 @@ export type Database = {
           zip_code?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "companies_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "companies_legal_entity_id_fkey"
             columns: ["legal_entity_id"]
@@ -1004,6 +1074,20 @@ export type Database = {
             referencedColumns: ["company_id"]
           },
           {
+            foreignKeyName: "companies_segmento_id_fkey"
+            columns: ["segmento_id"]
+            isOneToOne: false
+            referencedRelation: "segmentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "companies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1011,6 +1095,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      companies_classification_backup: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          industry: string | null
+          name: string | null
+          segmento_legado: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          industry?: string | null
+          name?: string | null
+          segmento_legado?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          industry?: string | null
+          name?: string | null
+          segmento_legado?: string | null
+        }
+        Relationships: []
       }
       company_audit_log: {
         Row: {
@@ -5521,6 +5629,98 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      segmentos: {
+        Row: {
+          created_at: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          setor_id: string
+          sort_order: number | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          setor_id: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          setor_id?: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segmentos_setor_id_fkey"
+            columns: ["setor_id"]
+            isOneToOne: false
+            referencedRelation: "setores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "segmentos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      setores: {
+        Row: {
+          created_at: string | null
+          descricao: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          sort_order: number | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          sort_order?: number | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "setores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       split_payment_registros: {
         Row: {
