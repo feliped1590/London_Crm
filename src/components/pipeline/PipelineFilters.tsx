@@ -63,6 +63,7 @@ export function PipelineFilters({
   hasActiveFilters,
   isAdmin = false,
   sellers,
+  onCompanySearchChange,
 }: PipelineFiltersProps) {
   const clearFilters = () => {
     setFilterOwner('mine');
