@@ -82,6 +82,10 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   
+  const [dealsPage, setDealsPage] = useState(0);
+  const [tasksPage, setTasksPage] = useState(0);
+  const PAGE_SIZE = 5;
+  
   const [widgets, setWidgets] = useState<WidgetType[]>(DEFAULT_WIDGETS);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -173,6 +177,25 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
 
   const fetchDashboardData = async () => {
     try {
+      // Always filter by current user for the "Visão Geral" lists
+      const userId = user?.id;
+
+      const dealsQuery = supabase.from("deals").select("*").order("created_at", { ascending: false });
+      if (userId) dealsQuery.eq("owner_id", userId);
+
+      const tasksQuery = supabase
+        .from("tasks")
+        .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
+        .in("status", ["pendente", "em_andamento"])
+        .order("due_date", { ascending: true });
+      if (userId) tasksQuery.eq("assigned_to", userId);
+
+      const proposalsQuery = supabase.from("proposals").select("total_value").in("status", ["rascunho", "enviada", "em_analise"]);
+      if (userId) proposalsQuery.eq("created_by", userId);
+
+      const ordersQuery = supabase.from("orders").select("total_value").in("status", ["pendente", "em_producao"]);
+      if (userId) ordersQuery.eq("created_by", userId);
+
       const [
         { count: totalDeals },
         { count: totalContacts },
@@ -182,18 +205,13 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         { data: pendingProposals },
         { data: pendingOrders },
       ] = await Promise.all([
-        supabase.from("deals").select("*", { count: "exact", head: true }),
+        supabase.from("deals").select("*", { count: "exact", head: true }).eq("owner_id", userId || ''),
         supabase.from("contacts").select("*", { count: "exact", head: true }),
         supabase.from("companies").select("*", { count: "exact", head: true }),
-        supabase.from("deals").select("*").order("created_at", { ascending: false }).limit(100),
-        supabase
-          .from("tasks")
-          .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
-          .in("status", ["pendente", "em_andamento"])
-          .order("due_date", { ascending: true })
-          .limit(5),
-        supabase.from("proposals").select("total_value").in("status", ["rascunho", "enviada", "em_analise"]),
-        supabase.from("orders").select("total_value").in("status", ["pendente", "em_producao"]),
+        dealsQuery,
+        tasksQuery,
+        proposalsQuery,
+        ordersQuery,
       ]);
 
       const allDeals = deals || [];
@@ -543,7 +561,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
               </div>
             ) : (
               <div className="space-y-3">
-                {recentDeals.map((deal) => (
+                {recentDeals.slice(dealsPage * PAGE_SIZE, (dealsPage + 1) * PAGE_SIZE).map((deal) => (
                   <Link
                     key={deal.id}
                     to={`/pipeline?deal=${deal.id}`}
@@ -558,6 +576,21 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
                     </Badge>
                   </Link>
                 ))}
+                {recentDeals.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {dealsPage * PAGE_SIZE + 1}-{Math.min((dealsPage + 1) * PAGE_SIZE, recentDeals.length)} de {recentDeals.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" disabled={dealsPage === 0} onClick={() => setDealsPage(p => p - 1)}>
+                        ← Anterior
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled={(dealsPage + 1) * PAGE_SIZE >= recentDeals.length} onClick={() => setDealsPage(p => p + 1)}>
+                        Próximo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -580,7 +613,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
               </div>
             ) : (
               <div className="space-y-3">
-                {upcomingTasks.map((task) => (
+                {upcomingTasks.slice(tasksPage * PAGE_SIZE, (tasksPage + 1) * PAGE_SIZE).map((task) => (
                   <Link
                     key={task.id}
                     to={`/tasks?task=${task.id}`}
@@ -598,6 +631,21 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
                     {getPriorityBadge(task.priority)}
                   </Link>
                 ))}
+                {upcomingTasks.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {tasksPage * PAGE_SIZE + 1}-{Math.min((tasksPage + 1) * PAGE_SIZE, upcomingTasks.length)} de {upcomingTasks.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" disabled={tasksPage === 0} onClick={() => setTasksPage(p => p - 1)}>
+                        ← Anterior
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled={(tasksPage + 1) * PAGE_SIZE >= upcomingTasks.length} onClick={() => setTasksPage(p => p + 1)}>
+                        Próximo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
