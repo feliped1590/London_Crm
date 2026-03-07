@@ -15,11 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 
 type CustomerType = 'PJ' | 'PF';
 
