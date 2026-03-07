@@ -44,7 +44,6 @@ interface CustomerRow {
   cnpj: string | null;
   phone: string | null;
   email: string | null;
-  industry: string | null;
   city: string | null;
   state: string | null;
   address: string | null;
@@ -67,6 +66,9 @@ interface CustomerRow {
   last_interaction_at: string | null;
   last_order_at: string | null;
   total_count: number;
+  setor_id: string | null;
+  segmento_id: string | null;
+  atividade_id: string | null;
 }
 
 export default function Customers() {
