@@ -108,14 +108,15 @@ export function PipelineFilters({
         </Select>
 
         <div className="w-[200px]">
-          <SearchableSelect
-            options={buildCompanyOptions(companies)}
-            value={filterCompany}
-            onChange={(v) => setFilterCompany(v || 'all')}
-            placeholder="Empresa"
-            searchPlaceholder="Buscar empresa..."
-            allowClear={false}
-          />
+            <SearchableSelect
+              options={buildCompanyOptions(companies)}
+              value={filterCompany}
+              onChange={(v) => setFilterCompany(v || 'all')}
+              placeholder="Empresa"
+              searchPlaceholder="Buscar empresa..."
+              allowClear={false}
+              onSearchChange={onCompanySearchChange}
+            />
         </div>
 
         <Popover>
