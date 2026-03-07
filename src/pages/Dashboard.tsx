@@ -113,9 +113,8 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('active', true)
-        .order('first_name');
+        .select('user_id, full_name')
+        .order('full_name');
       if (error) throw error;
       return data || [];
     },
