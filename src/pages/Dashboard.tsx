@@ -391,8 +391,8 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
           <SelectItem value="mine">Meus dados</SelectItem>
           <SelectItem value="all">Todos os usuários</SelectItem>
           {teamMembers?.map((member) => (
-            <SelectItem key={member.id} value={member.id}>
-              {member.first_name} {member.last_name || ''}
+            <SelectItem key={member.user_id} value={member.user_id}>
+              {member.full_name}
             </SelectItem>
           ))}
         </SelectContent>
