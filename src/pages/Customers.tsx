@@ -103,6 +103,7 @@ export default function Customers() {
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<any>(null);
   const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
+  const [enrichOffset, setEnrichOffset] = useState(0);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
@@ -222,17 +223,34 @@ export default function Customers() {
 
   const handleRefresh = async () => { await refetch(); toast.success('Dados atualizados!'); };
 
-  const handleEnrichBatch = async () => {
+  const handleEnrichBatch = async (offset = 0) => {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: 50 },
+        body: { limit: 50, offset },
       });
       if (error) throw error;
       if (data?.success) {
         toast.success(data.message, { duration: 6000 });
-        setEnrichResult(data);
+        setEnrichResult((prev: any) => {
+          if (prev && offset > 0) {
+            // Accumulate results from multiple batches
+            return {
+              ...data,
+              enriched: prev.enriched + data.enriched,
+              failed: prev.failed + data.failed,
+              total_checked: prev.total_checked + data.total_checked,
+              details: [...(prev.details || []), ...(data.details || [])],
+            };
+          }
+          return data;
+        });
         setEnrichDialogOpen(true);
+        if (data.has_more) {
+          setEnrichOffset(data.next_offset);
+        } else {
+          setEnrichOffset(0);
+        }
         if (data.enriched > 0) {
           queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
@@ -365,7 +383,7 @@ export default function Customers() {
         </div>
         <div className="flex items-center gap-2">
           {isDeveloper && (
-            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
               <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
               {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
             </Button>
@@ -787,6 +805,19 @@ export default function Customers() {
                   </TableBody>
                 </Table>
               </ScrollArea>
+              {enrichResult.has_more && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button
+                    size="sm"
+                    onClick={() => handleEnrichBatch(enrichOffset)}
+                    disabled={isEnriching}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+                    {isEnriching ? 'Processando...' : 'Processar próximo lote'}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
