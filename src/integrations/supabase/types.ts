@@ -7024,6 +7024,7 @@ export type Database = {
           states: string[]
         }[]
       }
+      get_dashboard_card_metrics: { Args: never; Returns: Json }
       get_distinct_regions_for_reallocation: {
         Args: never
         Returns: {
