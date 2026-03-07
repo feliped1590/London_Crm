@@ -51,11 +51,8 @@ import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import type { Json } from '@/integrations/supabase/types';
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 
 const employeeCounts = [
   '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
