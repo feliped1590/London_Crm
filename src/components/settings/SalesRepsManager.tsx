@@ -12,16 +12,15 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Pencil, UserPlus, Star, Trash2 } from 'lucide-react';
 import { useSalesReps } from '@/hooks/useSalesReps';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
+
 
 export function SalesRepsManager() {
   const {
     salesReps, isLoading,
-    allUserSalesReps,
+    allUserSalesReps, tenantId,
     createSalesRep, updateSalesRep,
     linkUserSalesRep, unlinkUserSalesRep, setDefaultSalesRep,
   } = useSalesReps();
-  const { accessibleEntities } = useLegalEntities();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -46,7 +45,6 @@ export function SalesRepsManager() {
   });
 
   const handleSave = () => {
-    const tenantId = accessibleEntities?.[0]?.tenant_id;
     if (!tenantId) return;
 
     if (editingId) {

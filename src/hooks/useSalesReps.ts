@@ -27,17 +27,36 @@ export function useSalesReps() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // All sales reps (admin view)
-  const { data: salesReps, isLoading } = useQuery({
-    queryKey: ['sales_reps'],
+  // Get tenant_id from user_tenants
+  const { data: tenantId } = useQuery({
+    queryKey: ['active_tenant_id', user?.id],
     queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+      return data?.tenant_id || null;
+    },
+    enabled: !!user?.id,
+  });
+
+  // All sales reps (admin view) - filtered by tenant
+  const { data: salesReps, isLoading } = useQuery({
+    queryKey: ['sales_reps', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('sales_reps')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('name');
       if (error) throw error;
       return (data || []) as SalesRep[];
     },
+    enabled: !!tenantId,
   });
 
   // Current user's linked sales reps
@@ -135,6 +154,12 @@ export function useSalesReps() {
 
   const setDefaultSalesRep = useMutation({
     mutationFn: async ({ id, user_id }: { id: string; user_id: string }) => {
+      // First, remove default from all user's sales reps
+      await supabase
+        .from('user_sales_reps')
+        .update({ is_default: false })
+        .eq('user_id', user_id);
+      // Then set the new default
       const { error } = await supabase
         .from('user_sales_reps')
         .update({ is_default: true })
@@ -156,6 +181,7 @@ export function useSalesReps() {
     myActiveSalesReps,
     defaultSalesRepId,
     allUserSalesReps,
+    tenantId,
     createSalesRep,
     updateSalesRep,
     linkUserSalesRep,
