@@ -116,11 +116,11 @@ export default function Customers() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch profiles for owner filter dropdown
-  const { data: profiles } = useQuery({
-    queryKey: ['profiles-for-customers'],
+  // Fetch sales reps for vendor filter dropdown
+  const { data: salesRepsFilter } = useQuery({
+    queryKey: ['sales-reps-for-customers'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('user_id, full_name');
+      const { data, error } = await supabase.from('sales_reps').select('id, name').eq('active', true).order('name');
       if (error) throw error;
       return data;
     },
@@ -137,10 +137,10 @@ export default function Customers() {
         states: (row as any)?.states || [],
         cities: (row as any)?.cities || [],
         industries: (row as any)?.industries || [],
-        owners: (profiles || []).filter(p => p.full_name).map(p => ({ id: p.user_id, name: p.full_name! })),
+        owners: (salesRepsFilter || []).map(sr => ({ id: sr.id, name: sr.name })),
       };
     },
-    enabled: !!profiles,
+    enabled: !!salesRepsFilter,
   });
 
   // Map sort field to DB field
@@ -560,7 +560,7 @@ export default function Customers() {
                           Negócios
                         </div>
                       </SortableHeader>
-                      <SortableHeader field="owner">Vendedor</SortableHeader>
+                      <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
                       <SortableHeader field="status">Status</SortableHeader>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
