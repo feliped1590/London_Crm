@@ -218,7 +218,6 @@ export default function Companies() {
 
   const filteredCompanies = companies?.filter(company =>
     company.name.toLowerCase().includes(search.toLowerCase()) ||
-    company.industry?.toLowerCase().includes(search.toLowerCase()) ||
     company.email?.toLowerCase().includes(search.toLowerCase()) ||
     (company as any).cnpj?.includes(search)
   );
