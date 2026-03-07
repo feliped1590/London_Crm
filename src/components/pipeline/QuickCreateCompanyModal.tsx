@@ -27,12 +27,19 @@ export function QuickCreateCompanyModal({
 }: QuickCreateCompanyModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: initialName,
     cnpj: '',
     email: '',
     phone: '',
+  });
+
+  // Set default when loaded
+  useState(() => {
+    if (defaultSalesRepId) setSelectedSalesRepId(defaultSalesRepId);
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
