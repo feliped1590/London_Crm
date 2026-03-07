@@ -9,6 +9,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSalesReps } from '@/hooks/useSalesReps';
 
 interface QuickCreateCompanyModalProps {
   open: boolean;
