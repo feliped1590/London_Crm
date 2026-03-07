@@ -106,6 +106,31 @@ export default function Tasks() {
     enabled: !!user?.id,
   });
 
+  // Auto-open task detail when navigating with ?task=taskId
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId && tasks && tasks.length > 0) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setEditingTask(task);
+        setFormData({
+          title: task.title,
+          description: task.description || '',
+          status: task.status,
+          priority: task.priority,
+          due_date: task.due_date ? task.due_date.split('T')[0] : '',
+          due_time: task.due_time || '',
+          company_id: task.company_id,
+          contact_id: task.contact_id,
+          deal_id: task.deal_id,
+        });
+        setIsDialogOpen(true);
+        searchParams.delete('task');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, tasks]);
+
   const handleRefresh = async () => {
     await refetch();
     toast.success('Dados atualizados!');
