@@ -642,6 +642,21 @@ export default function CustomerNew() {
                   </Select>
                 </div>
               )}
+              {myActiveSalesReps.length > 0 && (
+                <div className="col-span-2">
+                  <Label>Vendedor Comercial</Label>
+                  <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {myActiveSalesReps.map(rep => (
+                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label htmlFor="phone">Telefone <span className="text-destructive">*</span></Label>
                 <Input
