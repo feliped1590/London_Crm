@@ -104,6 +104,7 @@ export default function Customers() {
   const [enrichResult, setEnrichResult] = useState<any>(null);
   const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
   const [enrichOffset, setEnrichOffset] = useState(0);
+  const [enrichBatchSize, setEnrichBatchSize] = useState(50);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
@@ -227,7 +228,7 @@ export default function Customers() {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: 50, offset },
+        body: { limit: enrichBatchSize, offset },
       });
       if (error) throw error;
       if (data?.success) {
@@ -383,10 +384,24 @@ export default function Customers() {
         </div>
         <div className="flex items-center gap-2">
           {isDeveloper && (
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
-              <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
-              {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
-            </Button>
+            <div className="flex items-center gap-1">
+              <Select value={String(enrichBatchSize)} onValueChange={(v) => setEnrichBatchSize(Number(v))}>
+                <SelectTrigger className="w-[90px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                  <SelectItem value="250">250</SelectItem>
+                  <SelectItem value="500">500</SelectItem>
+                  <SelectItem value="1000">1.000</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
+                <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+                {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+              </Button>
+            </div>
           )}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
             <Settings2 className="h-4 w-4" />
