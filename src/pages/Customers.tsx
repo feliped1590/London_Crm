@@ -753,6 +753,7 @@ export default function Customers() {
                   <TableBody>
                     {(enrichResult.details || []).map((d: any) => {
                       const fieldLabels: Record<string, string> = {
+                        name: 'Razão Social',
                         fantasia: 'Nome Fantasia',
                         address: 'Endereço',
                         address_number: 'Número',
