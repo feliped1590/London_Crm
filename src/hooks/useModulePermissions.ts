@@ -86,6 +86,7 @@ export function useModulePermissions() {
     isLoading,
     error,
     isAdmin,
+    isDeveloper: hasRoleDeveloper || false,
     canAccess,
     getAccessType,
     hasFullAccess,
