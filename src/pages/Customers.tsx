@@ -228,7 +228,7 @@ export default function Customers() {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: 50, offset },
+        body: { limit: enrichBatchSize, offset },
       });
       if (error) throw error;
       if (data?.success) {
