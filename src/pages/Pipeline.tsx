@@ -844,10 +844,14 @@ export default function Pipeline() {
   const hasActiveFilters = filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
 
   // Auto-open deal detail when navigating with ?deal=dealId
+  const [pendingDealId, setPendingDealId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('deal');
+  });
+
   useEffect(() => {
-    const dealId = searchParams.get('deal');
-    if (dealId && deals && deals.length > 0) {
-      const deal = deals.find(d => d.id === dealId);
+    if (pendingDealId && deals && deals.length > 0) {
+      const deal = deals.find(d => d.id === pendingDealId);
       if (deal) {
         setEditingDeal(deal as Deal);
         setFormData({
@@ -867,11 +871,14 @@ export default function Pipeline() {
             : {}
         );
         setIsDialogOpen(true);
-        searchParams.delete('deal');
-        setSearchParams(searchParams, { replace: true });
       }
+      setPendingDealId(null);
+      // Clean URL
+      const newParams = new URLSearchParams(window.location.search);
+      newParams.delete('deal');
+      window.history.replaceState({}, '', `${window.location.pathname}${newParams.toString() ? '?' + newParams.toString() : ''}`);
     }
-  }, [searchParams, deals]);
+  }, [pendingDealId, deals]);
 
 
   const filteredDeals = useMemo(() => {
