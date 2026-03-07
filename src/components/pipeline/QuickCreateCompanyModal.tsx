@@ -38,9 +38,9 @@ export function QuickCreateCompanyModal({
   });
 
   // Set default when loaded
-  useState(() => {
-    if (defaultSalesRepId) setSelectedSalesRepId(defaultSalesRepId);
-  });
+  useEffect(() => {
+    if (defaultSalesRepId && !selectedSalesRepId) setSelectedSalesRepId(defaultSalesRepId);
+  }, [defaultSalesRepId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
