@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
@@ -76,7 +78,7 @@ interface CustomerRow {
 export default function Customers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, isDeveloper } = useModulePermissions();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -99,6 +101,8 @@ export default function Customers() {
 
   const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichResult, setEnrichResult] = useState<any>(null);
+  const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
@@ -227,6 +231,8 @@ export default function Customers() {
       if (error) throw error;
       if (data?.success) {
         toast.success(data.message, { duration: 6000 });
+        setEnrichResult(data);
+        setEnrichDialogOpen(true);
         if (data.enriched > 0) {
           queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
@@ -358,7 +364,7 @@ export default function Customers() {
           <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {isDeveloper && (
             <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
               <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
               {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
@@ -712,6 +718,78 @@ export default function Customers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Enrichment Results Dialog */}
+      <Dialog open={enrichDialogOpen} onOpenChange={setEnrichDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Resultado do Enriquecimento</DialogTitle>
+          </DialogHeader>
+          {enrichResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{enrichResult.enriched}</p>
+                  <p className="text-xs text-muted-foreground">Atualizados</p>
+                </Card>
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-destructive">{enrichResult.failed}</p>
+                  <p className="text-xs text-muted-foreground">Com erro</p>
+                </Card>
+                <Card className="p-3 text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{enrichResult.total_checked}</p>
+                  <p className="text-xs text-muted-foreground">Verificados</p>
+                </Card>
+              </div>
+              <ScrollArea className="h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Campos Atualizados</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(enrichResult.details || []).map((d: any) => {
+                      const fieldLabels: Record<string, string> = {
+                        fantasia: 'Nome Fantasia',
+                        address: 'Endereço',
+                        address_number: 'Número',
+                        address_complement: 'Complemento',
+                        neighborhood: 'Bairro',
+                        city: 'Cidade',
+                        state: 'Estado',
+                        zip_code: 'CEP',
+                        phone: 'Telefone',
+                        email: 'E-mail',
+                      };
+                      return (
+                        <TableRow key={d.id}>
+                          <TableCell className="font-medium text-sm max-w-[200px] truncate" title={d.name}>
+                            {d.name}
+                          </TableCell>
+                          <TableCell>
+                            {d.status === 'enriched' && <Badge className="bg-green-500/10 text-green-600 border-0 text-xs">Atualizado</Badge>}
+                            {d.status === 'no_update_needed' && <Badge variant="secondary" className="text-xs">Completo</Badge>}
+                            {d.status === 'api_error' && <Badge variant="destructive" className="text-xs">Erro API</Badge>}
+                            {d.status === 'update_error' && <Badge variant="destructive" className="text-xs">Erro BD</Badge>}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {d.fields_updated.length > 0
+                              ? d.fields_updated.map((f: string) => fieldLabels[f] || f).join(', ')
+                              : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
