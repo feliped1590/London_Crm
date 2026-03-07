@@ -146,7 +146,7 @@ export default function Customers() {
 
   // Main paginated query
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -154,7 +154,6 @@ export default function Customers() {
         p_state: filterState || null,
         p_city: filterCity || null,
         p_owner_id: filterOwner || null,
-        p_industry: filterIndustry || null,
         p_setor_id: filterSetorId || null,
         p_segmento_id: filterSegmentoId || null,
         p_atividade_id: filterAtividadeId || null,
