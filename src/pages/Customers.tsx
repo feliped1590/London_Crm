@@ -333,13 +333,20 @@ export default function Customers() {
           <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
-        <Button className="gap-2" onClick={() => navigate('/customers/new')}>
-          <Plus className="h-4 w-4" />
-          Novo Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
+            <Settings2 className="h-4 w-4" />
+            Personalizar painel
+          </Button>
+          <Button className="gap-2" onClick={() => navigate('/customers/new')}>
+            <Plus className="h-4 w-4" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
 
-      <Card>
+      <CustomerDashboardCards />
+      <DashboardCardSettings open={cardSettingsOpen} onOpenChange={setCardSettingsOpen} />
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
