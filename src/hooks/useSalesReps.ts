@@ -134,7 +134,10 @@ export function useSalesReps() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all_user_sales_reps'] });
       queryClient.invalidateQueries({ queryKey: ['my_sales_reps'] });
-      toast.success('Vendedor vinculado!');
+      queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['portfolio'] });
+      toast.success('Vendedor vinculado! Clientes foram automaticamente atribuídos ao usuário.');
     },
     onError: () => toast.error('Erro ao vincular vendedor'),
   });
