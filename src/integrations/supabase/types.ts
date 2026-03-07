@@ -7182,6 +7182,18 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_portfolio_summary: {
+        Args: never
+        Returns: {
+          companies_count: number
+          contacts_count: number
+          deals_count: number
+          linked_user_id: string
+          sales_rep_id: string
+          sales_rep_name: string
+          sales_rep_type: string
+        }[]
+      }
       get_region_by_state: { Args: { state_code: string }; Returns: string }
       get_seller_performance: {
         Args: {
