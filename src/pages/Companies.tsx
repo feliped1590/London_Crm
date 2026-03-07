@@ -191,7 +191,6 @@ export default function Companies() {
     setFormData({
       name: company.name,
       domain: company.domain || '',
-      industry: company.industry || '',
       employee_count: company.employee_count || '',
       phone: company.phone || '',
       email: company.email || '',
@@ -204,6 +203,9 @@ export default function Companies() {
       cnpj: (company as any).cnpj ? formatCNPJ((company as any).cnpj) : '',
       inscricao_estadual: (company as any).inscricao_estadual || '',
       fantasia: (company as any).fantasia || '',
+      setor_id: company.setor_id || null,
+      segmento_id: company.segmento_id || null,
+      atividade_id: company.atividade_id || null,
     });
     setCustomFieldsData((company.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
