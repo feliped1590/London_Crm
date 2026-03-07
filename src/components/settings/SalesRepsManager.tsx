@@ -45,7 +45,6 @@ export function SalesRepsManager() {
   });
 
   const handleSave = () => {
-    const tenantId = accessibleEntities?.[0]?.tenant_id;
     if (!tenantId) return;
 
     if (editingId) {
