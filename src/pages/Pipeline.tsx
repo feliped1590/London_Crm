@@ -274,7 +274,7 @@ export default function Pipeline() {
 
   // Search-based company loading for FILTER bar (independent)
   const [filterCompanySearch, setFilterCompanySearch] = useState('');
-  const { data: filterCompaniesResult } = useQuery({
+  const { data: filterCompaniesRaw } = useQuery({
     queryKey: ['companies-filter-search', filterCompanySearch],
     queryFn: async () => {
       let query = supabase.from('companies').select('id, name').order('name').limit(50);
@@ -286,6 +286,25 @@ export default function Pipeline() {
       return data;
     },
   });
+
+  // Always fetch the selected filter company so it appears in the dropdown
+  const { data: selectedFilterCompanyData } = useQuery({
+    queryKey: ['company-filter-selected', filterCompany],
+    queryFn: async () => {
+      if (!filterCompany || filterCompany === 'all') return null;
+      const { data, error } = await supabase.from('companies').select('id, name').eq('id', filterCompany).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!filterCompany && filterCompany !== 'all',
+  });
+
+  const filterCompaniesResult = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    if (selectedFilterCompanyData) map.set(selectedFilterCompanyData.id, selectedFilterCompanyData);
+    (filterCompaniesRaw || []).forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [filterCompaniesRaw, selectedFilterCompanyData]);
 
   // Always fetch the currently selected company so it appears in the select
   const { data: selectedCompanyData } = useQuery({
