@@ -173,6 +173,25 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
 
   const fetchDashboardData = async () => {
     try {
+      // Always filter by current user for the "Visão Geral" lists
+      const userId = user?.id;
+
+      const dealsQuery = supabase.from("deals").select("*").order("created_at", { ascending: false });
+      if (userId) dealsQuery.eq("owner_id", userId);
+
+      const tasksQuery = supabase
+        .from("tasks")
+        .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
+        .in("status", ["pendente", "em_andamento"])
+        .order("due_date", { ascending: true });
+      if (userId) tasksQuery.eq("assigned_to", userId);
+
+      const proposalsQuery = supabase.from("proposals").select("total_value").in("status", ["rascunho", "enviada", "em_analise"]);
+      if (userId) proposalsQuery.eq("created_by", userId);
+
+      const ordersQuery = supabase.from("orders").select("total_value").in("status", ["pendente", "em_producao"]);
+      if (userId) ordersQuery.eq("created_by", userId);
+
       const [
         { count: totalDeals },
         { count: totalContacts },
@@ -182,18 +201,13 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         { data: pendingProposals },
         { data: pendingOrders },
       ] = await Promise.all([
-        supabase.from("deals").select("*", { count: "exact", head: true }),
+        supabase.from("deals").select("*", { count: "exact", head: true }).eq("owner_id", userId || ''),
         supabase.from("contacts").select("*", { count: "exact", head: true }),
         supabase.from("companies").select("*", { count: "exact", head: true }),
-        supabase.from("deals").select("*").order("created_at", { ascending: false }).limit(100),
-        supabase
-          .from("tasks")
-          .select("*, company:companies(*), contact:contacts(*), deal:deals(*)")
-          .in("status", ["pendente", "em_andamento"])
-          .order("due_date", { ascending: true })
-          .limit(5),
-        supabase.from("proposals").select("total_value").in("status", ["rascunho", "enviada", "em_analise"]),
-        supabase.from("orders").select("total_value").in("status", ["pendente", "em_producao"]),
+        dealsQuery,
+        tasksQuery,
+        proposalsQuery,
+        ordersQuery,
       ]);
 
       const allDeals = deals || [];
