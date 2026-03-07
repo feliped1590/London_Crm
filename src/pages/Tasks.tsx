@@ -42,6 +42,7 @@ const priorityConfig: Record<TaskPriority, { label: string; color: string }> = {
 export default function Tasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
