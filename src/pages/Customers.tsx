@@ -217,6 +217,29 @@ export default function Customers() {
   });
 
   const handleRefresh = async () => { await refetch(); toast.success('Dados atualizados!'); };
+
+  const handleEnrichBatch = async () => {
+    setIsEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
+        body: { limit: 50 },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast.success(data.message, { duration: 6000 });
+        if (data.enriched > 0) {
+          queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
+        }
+      } else {
+        toast.error(data?.error || 'Erro no enriquecimento');
+      }
+    } catch (err: any) {
+      toast.error('Erro ao enriquecer: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsEnriching(false);
+    }
+  };
   const handleDeleteClick = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); setCustomerToDelete(customer); setDeleteDialogOpen(true); };
   const handleConfirmDelete = () => { if (customerToDelete) deleteMutation.mutate(customerToDelete.id); };
   const handleToggleActive = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
