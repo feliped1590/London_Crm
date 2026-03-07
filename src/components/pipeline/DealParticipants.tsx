@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, Trash2, User, Eye, Edit2, Crown, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -313,18 +314,14 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Usuário</label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableUsers?.map((u) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={(availableUsers || []).map(u => ({ value: u.user_id, label: u.full_name }))}
+                value={selectedUserId || null}
+                onChange={(v) => setSelectedUserId(v || '')}
+                placeholder="Selecione um usuário"
+                searchPlaceholder="Buscar usuário..."
+                allowClear={false}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Permissão</label>

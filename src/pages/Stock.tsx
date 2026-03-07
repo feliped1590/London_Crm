@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -59,13 +60,17 @@ function StockCurrentTab() {
       <div className="flex flex-wrap gap-3 items-end">
         <div className="w-48">
           <Label className="text-xs">Empresa</Label>
-          <Select value={filters.company_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todas' },
+              ...(companies || []).map(c => ({ value: c.id, label: c.name })),
+            ]}
+            value={filters.company_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todas"
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div className="w-48">
           <Label className="text-xs">Produto</Label>
@@ -155,21 +160,25 @@ function StockMoveTab() {
       <CardContent className="space-y-4 max-w-xl">
         <div>
           <Label>Empresa *</Label>
-          <Select value={companyId} onValueChange={setCompanyId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+            value={companyId || null}
+            onChange={(v) => setCompanyId(v || '')}
+            placeholder="Selecione..."
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div>
           <Label>Produto *</Label>
-          <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.sku ? `${p.sku} - ` : ''}{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={(products || []).map(p => ({ value: p.id, label: `${p.sku ? `${p.sku} - ` : ''}${p.name}` }))}
+            value={productId || null}
+            onChange={(v) => setProductId(v || '')}
+            placeholder="Selecione..."
+            searchPlaceholder="Buscar produto..."
+            allowClear={false}
+          />
         </div>
         <div>
           <Label>Tipo *</Label>
@@ -213,23 +222,31 @@ function StockHistoryTab() {
       <div className="flex flex-wrap gap-3 items-end">
         <div className="w-44">
           <Label className="text-xs">Empresa</Label>
-          <Select value={filters.company_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todas' },
+              ...(companies || []).map(c => ({ value: c.id, label: c.name })),
+            ]}
+            value={filters.company_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todas"
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div className="w-44">
           <Label className="text-xs">Produto</Label>
-          <Select value={filters.product_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, product_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todos' },
+              ...(products || []).map(p => ({ value: p.id, label: p.name })),
+            ]}
+            value={filters.product_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, product_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todos"
+            searchPlaceholder="Buscar produto..."
+            allowClear={false}
+          />
         </div>
         <div className="w-36">
           <Label className="text-xs">Tipo</Label>

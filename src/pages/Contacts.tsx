@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -314,20 +315,13 @@ export default function Contacts() {
                 </div>
                 <div>
                   <Label htmlFor="company_id">Empresa</Label>
-                  <Select 
-                    value={formData.company_id || 'none'} 
-                    onValueChange={(v) => setFormData({ ...formData, company_id: v === 'none' ? null : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhuma</SelectItem>
-                      {companies?.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+                    value={formData.company_id || null}
+                    onChange={(v) => setFormData({ ...formData, company_id: v })}
+                    placeholder="Selecione"
+                    searchPlaceholder="Buscar empresa..."
+                  />
                 </div>
                 <div>
                   <Label htmlFor="job_title">Cargo</Label>

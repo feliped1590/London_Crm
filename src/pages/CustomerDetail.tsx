@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -890,34 +891,24 @@ export default function CustomerDetail() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
-                  <Select
-                    value={selectValue}
-                    onValueChange={(value) => {
-                      const newProfileId = value === 'none' ? null : value;
-                      
-                      // Se já existe um owner diferente do usuário atual, requer justificativa
-                      if (currentOwner && currentOwner.user_id !== user?.id) {
-                        setPendingOwnerChange(newProfileId);
-                        setShowOwnerInterventionModal(true);
-                      } else {
-                        // Sem owner atual ou é o próprio usuário - prosseguir direto
-                        assignOwnerMutation.mutate(newProfileId);
-                      }
-                    }}
-                    disabled={assignOwnerMutation.isPending}
-                  >
-                    <SelectTrigger className="w-[300px]">
-                      <SelectValue placeholder="Selecione um vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum vendedor</SelectItem>
-                      {sellers?.map((seller) => (
-                        <SelectItem key={seller.id} value={seller.id}>
-                          {seller.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="w-[300px]">
+                    <SearchableSelect
+                      options={(sellers || []).map(s => ({ value: s.id, label: s.full_name }))}
+                      value={selectValue === 'none' ? null : selectValue}
+                      onChange={(v) => {
+                        const newProfileId = v || null;
+                        if (currentOwner && currentOwner.user_id !== user?.id) {
+                          setPendingOwnerChange(newProfileId);
+                          setShowOwnerInterventionModal(true);
+                        } else {
+                          assignOwnerMutation.mutate(newProfileId);
+                        }
+                      }}
+                      placeholder="Selecione um vendedor"
+                      searchPlaceholder="Buscar vendedor..."
+                      disabled={assignOwnerMutation.isPending}
+                    />
+                  </div>
                   {currentOwner && (
                     <span className="text-sm text-muted-foreground">
                       Responsável atual: <span className="font-medium">{currentOwner.full_name}</span>
