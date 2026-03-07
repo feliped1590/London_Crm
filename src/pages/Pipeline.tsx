@@ -34,6 +34,7 @@ import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { ChecklistValidationModal } from '@/components/pipeline/ChecklistValidationModal';
 import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationModal';
