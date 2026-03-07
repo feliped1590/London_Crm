@@ -3,8 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioDelegations, type PortfolioDelegation } from '@/hooks/usePortfolioDelegations';
+import { useSalesReps } from '@/hooks/useSalesReps';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -67,11 +68,12 @@ const defaultFormData: DelegationFormData = {
 export function PortfolioDelegationManager() {
   const { user } = useAuth();
   const { allDelegations, isLoadingAll, createDelegation, updateDelegation, deleteDelegation } = usePortfolioDelegations();
+  const { salesReps, allUserSalesReps } = useSalesReps();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDelegation, setEditingDelegation] = useState<PortfolioDelegation | null>(null);
   const [formData, setFormData] = useState<DelegationFormData>(defaultFormData);
 
-  // Fetch profiles and tenant for the form
+  // Fetch profiles for the form
   const { data: profiles = [] } = useQuery({
     queryKey: ['profiles_for_delegation'],
     queryFn: async () => {
@@ -81,7 +83,6 @@ export function PortfolioDelegationManager() {
         .order('full_name');
       if (error) throw error;
 
-      // Filter out developers
       const { data: roles } = await supabase.from('user_roles').select('user_id, role');
       const devIds = new Set(roles?.filter(r => r.role === 'desenvolvedor').map(r => r.user_id) || []);
 
@@ -102,6 +103,30 @@ export function PortfolioDelegationManager() {
     },
     enabled: !!user?.id,
   });
+
+  // Criar mapa user_id → sales_rep name para exibição
+  const userToSalesRepName = (() => {
+    const map: Record<string, string> = {};
+    allUserSalesReps?.forEach(link => {
+      const rep = salesReps?.find(sr => sr.id === link.sales_rep_id);
+      if (rep && link.is_default) {
+        map[link.user_id] = rep.name;
+      }
+    });
+    // Fallback: primeiro vínculo
+    allUserSalesReps?.forEach(link => {
+      if (!map[link.user_id]) {
+        const rep = salesReps?.find(sr => sr.id === link.sales_rep_id);
+        if (rep) map[link.user_id] = rep.name;
+      }
+    });
+    return map;
+  })();
+
+  // Função para obter nome de exibição (vendedor comercial ou perfil)
+  const getDisplayName = (userId: string, fallbackName: string) => {
+    return userToSalesRepName[userId] || fallbackName;
+  };
 
   const handleOpenCreate = () => {
     setEditingDelegation(null);
@@ -125,13 +150,9 @@ export function PortfolioDelegationManager() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeTenantId) {
-      return;
-    }
+    if (!activeTenantId) return;
 
-    if (formData.manager_user_id === formData.portfolio_owner_id) {
-      return;
-    }
+    if (formData.manager_user_id === formData.portfolio_owner_id) return;
 
     if (editingDelegation) {
       updateDelegation.mutate({
@@ -157,7 +178,6 @@ export function PortfolioDelegationManager() {
     });
   };
 
-  // Available owners (exclude selected manager)
   const availableOwners = profiles.filter(p => p.user_id !== formData.manager_user_id);
   const availableManagers = profiles.filter(p => p.user_id !== formData.portfolio_owner_id);
 
@@ -167,7 +187,7 @@ export function PortfolioDelegationManager() {
         <div>
           <h2 className="text-xl font-semibold">Delegações de Carteira</h2>
           <p className="text-sm text-muted-foreground">
-            Permita que um usuário gerencie a carteira de outro sem alterar a propriedade dos registros.
+            Permita que um vendedor gerencie a carteira de outro sem alterar a propriedade dos registros.
           </p>
         </div>
         <Button onClick={handleOpenCreate} className="gap-2">
@@ -186,7 +206,7 @@ export function PortfolioDelegationManager() {
             <div className="text-center py-8 text-muted-foreground">
               <UserCheck className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>Nenhuma delegação cadastrada</p>
-              <p className="text-xs mt-1">Crie uma delegação para permitir que um gestor opere na carteira de outro vendedor.</p>
+              <p className="text-xs mt-1">Crie uma delegação para permitir que um vendedor opere na carteira de outro.</p>
             </div>
           ) : (
             <Table>
@@ -203,10 +223,10 @@ export function PortfolioDelegationManager() {
                 {allDelegations.map(delegation => (
                   <TableRow key={delegation.id}>
                     <TableCell className="font-medium">
-                      {delegation.manager_name}
+                      {getDisplayName(delegation.manager_user_id, delegation.manager_name || '')}
                     </TableCell>
                     <TableCell>
-                      {delegation.owner_name}
+                      {getDisplayName(delegation.portfolio_owner_id, delegation.owner_name || '')}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -265,7 +285,7 @@ export function PortfolioDelegationManager() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Excluir delegação?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                <strong>{delegation.manager_name}</strong> perderá acesso à carteira de <strong>{delegation.owner_name}</strong>.
+                                <strong>{getDisplayName(delegation.manager_user_id, delegation.manager_name || '')}</strong> perderá acesso à carteira de <strong>{getDisplayName(delegation.portfolio_owner_id, delegation.owner_name || '')}</strong>.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -312,7 +332,7 @@ export function PortfolioDelegationManager() {
                     <SelectContent>
                       {availableManagers.map(p => (
                         <SelectItem key={p.user_id} value={p.user_id}>
-                          {p.full_name}
+                          {getDisplayName(p.user_id, p.full_name || '')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -320,7 +340,7 @@ export function PortfolioDelegationManager() {
                 </div>
 
                 <div>
-                  <Label>Dono da Carteira</Label>
+                  <Label>Dono da Carteira (vendedor)</Label>
                   <Select
                     value={formData.portfolio_owner_id}
                     onValueChange={(v) => setFormData({ ...formData, portfolio_owner_id: v })}
@@ -331,7 +351,7 @@ export function PortfolioDelegationManager() {
                     <SelectContent>
                       {availableOwners.map(p => (
                         <SelectItem key={p.user_id} value={p.user_id}>
-                          {p.full_name}
+                          {getDisplayName(p.user_id, p.full_name || '')}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -342,7 +362,7 @@ export function PortfolioDelegationManager() {
 
             {editingDelegation && (
               <p className="text-sm text-muted-foreground">
-                <strong>{editingDelegation.manager_name}</strong> gerencia a carteira de <strong>{editingDelegation.owner_name}</strong>
+                <strong>{getDisplayName(editingDelegation.manager_user_id, editingDelegation.manager_name || '')}</strong> gerencia a carteira de <strong>{getDisplayName(editingDelegation.portfolio_owner_id, editingDelegation.owner_name || '')}</strong>
               </p>
             )}
 

@@ -27,7 +27,6 @@ interface ReallocationResultsTableProps {
   onToggleSelect: (companyId: string) => void;
   onToggleSelectAll: () => void;
   isLoading?: boolean;
-  // Paginação
   currentPage: number;
   totalPages: number;
   totalItems: number;
@@ -62,31 +61,16 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | 'ell
   const pages: (number | 'ellipsis')[] = [];
   
   if (totalPages <= 7) {
-    // Mostra todas as páginas se tiver 7 ou menos
     for (let i = 1; i <= totalPages; i++) {
       pages.push(i);
     }
   } else {
-    // Sempre mostra a primeira página
     pages.push(1);
-    
-    if (currentPage > 3) {
-      pages.push('ellipsis');
-    }
-    
-    // Páginas ao redor da atual
+    if (currentPage > 3) pages.push('ellipsis');
     const start = Math.max(2, currentPage - 1);
     const end = Math.min(totalPages - 1, currentPage + 1);
-    
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    
-    if (currentPage < totalPages - 2) {
-      pages.push('ellipsis');
-    }
-    
-    // Sempre mostra a última página
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('ellipsis');
     pages.push(totalPages);
   }
   
@@ -105,7 +89,6 @@ export function ReallocationResultsTable({
   itemsPerPage,
   onPageChange
 }: ReallocationResultsTableProps) {
-  // Verifica se todos da página atual estão selecionados
   const pageIds = companies.map(c => c.company_id);
   const allPageSelected = pageIds.length > 0 && pageIds.every(id => selectedCompanies.has(id));
   const somePageSelected = pageIds.some(id => selectedCompanies.has(id)) && !allPageSelected;
@@ -153,7 +136,7 @@ export function ReallocationResultsTable({
               </TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>UF / Região</TableHead>
-              <TableHead>Vendedor Atual</TableHead>
+              <TableHead>Vendedor</TableHead>
               <TableHead className="text-center">Últ. Atendimento</TableHead>
               <TableHead className="text-center">Últ. Venda</TableHead>
               <TableHead className="text-right">Pedidos</TableHead>
@@ -165,6 +148,9 @@ export function ReallocationResultsTable({
               const isSelected = selectedCompanies.has(company.company_id);
               const interactionVariant = getDaysBadgeVariant(company.days_since_interaction);
               const orderVariant = getDaysBadgeVariant(company.days_since_order);
+              
+              // Priorizar nome do vendedor comercial sobre owner_name
+              const vendedorNome = company.sales_rep_name || company.owner_name;
               
               return (
                 <TableRow 
@@ -220,7 +206,7 @@ export function ReallocationResultsTable({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-sm">{company.owner_name}</span>
+                    <span className="text-sm">{vendedorNome}</span>
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={interactionVariant === 'warning' ? 'secondary' : interactionVariant}>
@@ -253,7 +239,6 @@ export function ReallocationResultsTable({
         </Table>
       </div>
 
-      {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -264,9 +249,7 @@ export function ReallocationResultsTable({
               <PaginationItem>
                 <PaginationPrevious 
                   onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-                  className={cn(
-                    currentPage === 1 && "pointer-events-none opacity-50"
-                  )}
+                  className={cn(currentPage === 1 && "pointer-events-none opacity-50")}
                 />
               </PaginationItem>
               
@@ -288,9 +271,7 @@ export function ReallocationResultsTable({
               <PaginationItem>
                 <PaginationNext 
                   onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-                  className={cn(
-                    currentPage === totalPages && "pointer-events-none opacity-50"
-                  )}
+                  className={cn(currentPage === totalPages && "pointer-events-none opacity-50")}
                 />
               </PaginationItem>
             </PaginationContent>

@@ -32,17 +32,18 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { usePortfolio, useUsers, UserPortfolio, PortfolioItem } from '@/hooks/usePortfolio';
+import { useSalesReps } from '@/hooks/useSalesReps';
 import { TransferModal } from './TransferModal';
 
-const roleLabels: Record<string, string> = {
-  admin: 'Administrador',
-  vendedor: 'Vendedor',
-  atendente: 'Atendente'
+const typeLabels: Record<string, string> = {
+  interno: 'Interno',
+  representante: 'Representante',
 };
 
 export function PortfolioManager() {
   const { portfolios, isLoadingPortfolios, transfers, isLoadingTransfers, transferItems, isTransferring } = usePortfolio();
   const { data: users } = useUsers();
+  const { salesReps } = useSalesReps();
 
   const [activeTab, setActiveTab] = useState('portfolios');
   const [selectedPortfolio, setSelectedPortfolio] = useState<UserPortfolio | null>(null);
@@ -67,6 +68,13 @@ export function PortfolioManager() {
     if (!selectedPortfolio) return [];
     return selectedPortfolio[entityTab];
   }, [selectedPortfolio, entityTab]);
+
+  // Sales reps disponíveis para transferência (exclui o atual)
+  const availableSalesReps = useMemo(() => {
+    return salesReps
+      ?.filter(sr => sr.active && sr.id !== selectedPortfolio?.salesRepId)
+      .map(sr => ({ id: sr.id, name: sr.name, role: sr.type || 'interno' })) || [];
+  }, [salesReps, selectedPortfolio]);
 
   const handleOpenManage = (portfolio: UserPortfolio) => {
     setSelectedPortfolio(portfolio);
@@ -107,11 +115,11 @@ export function PortfolioManager() {
     setSelectedItems(new Set(allIds));
   };
 
-  const handleTransferConfirm = (toUserId: string, transferRelated: boolean, notes?: string) => {
+  const handleTransferConfirm = (toSalesRepId: string, transferRelated: boolean, notes?: string) => {
     transferItems({
       items: selectedItemsArray,
-      fromUserId: selectedPortfolio?.userId || null,
-      toUserId,
+      fromSalesRepId: selectedPortfolio?.salesRepId || null,
+      toSalesRepId,
       transferRelated,
       notes
     }, {
@@ -125,7 +133,7 @@ export function PortfolioManager() {
 
   const allCurrentSelected = currentItems.length > 0 && currentItems.every(item => selectedItems.has(item.id));
 
-  // Criar mapa de usuários para exibição no histórico
+  // Mapa de nomes para histórico (users + sales_reps)
   const usersMap = useMemo(() => {
     const map: Record<string, string> = {};
     users?.forEach(u => { map[u.id] = u.name; });
@@ -159,7 +167,7 @@ export function PortfolioManager() {
             {portfolios?.map(portfolio => {
               const totalItems = portfolio.companies.length + portfolio.contacts.length + portfolio.deals.length;
               return (
-                <Card key={portfolio.userId} className="hover:shadow-md transition-shadow">
+                <Card key={portfolio.salesRepId} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -167,9 +175,9 @@ export function PortfolioManager() {
                           <User className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">{portfolio.userName}</CardTitle>
+                          <CardTitle className="text-base">{portfolio.salesRepName}</CardTitle>
                           <Badge variant="outline" className="mt-1">
-                            {roleLabels[portfolio.userRole] || portfolio.userRole}
+                            {typeLabels[portfolio.salesRepType || 'interno'] || portfolio.salesRepType}
                           </Badge>
                         </div>
                       </div>
@@ -285,7 +293,7 @@ export function PortfolioManager() {
         <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
-              Carteira de: {selectedPortfolio?.userName}
+              Carteira de: {selectedPortfolio?.salesRepName}
             </DialogTitle>
           </DialogHeader>
 
@@ -372,9 +380,9 @@ export function PortfolioManager() {
         open={transferModalOpen}
         onOpenChange={setTransferModalOpen}
         items={selectedItemsArray}
-        fromUserId={selectedPortfolio?.userId || null}
-        fromUserName={selectedPortfolio?.userName || ''}
-        users={users || []}
+        fromUserId={selectedPortfolio?.salesRepId || null}
+        fromUserName={selectedPortfolio?.salesRepName || ''}
+        users={availableSalesReps}
         onConfirm={handleTransferConfirm}
         isLoading={isTransferring}
       />
