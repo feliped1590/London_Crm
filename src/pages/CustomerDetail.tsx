@@ -930,8 +930,47 @@ export default function CustomerDetail() {
               </Card>
             );
           })()}
+
+          {/* Admin: Assign user */}
+          {isAdmin && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Usuário
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4">
+                  <div className="w-[300px]">
+                    <SearchableSelect
+                      options={(sellers || []).map(s => ({ value: s.id, label: s.full_name }))}
+                      value={selectValue === 'none' ? null : selectValue}
+                      onChange={(v) => {
+                        const newProfileId = v || null;
+                        if (currentOwner && currentOwner.user_id !== user?.id) {
+                          setPendingOwnerChange(newProfileId);
+                          setShowOwnerInterventionModal(true);
+                        } else {
+                          assignOwnerMutation.mutate(newProfileId);
+                        }
+                      }}
+                      placeholder="Selecione um usuário"
+                      searchPlaceholder="Buscar usuário..."
+                      disabled={assignOwnerMutation.isPending}
+                    />
+                  </div>
+                  {currentOwner && (
+                    <span className="text-sm text-muted-foreground">
+                      Atual: <span className="font-medium">{currentOwner.full_name}</span>
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           
-          {/* Modal de justificativa para alteração de vendedor responsável */}
+          {/* Modal de justificativa para alteração de usuário */}
           <AdminInterventionModal
             open={showOwnerInterventionModal}
             onOpenChange={(open) => {
