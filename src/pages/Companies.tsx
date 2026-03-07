@@ -145,7 +145,6 @@ export default function Companies() {
     setFormData({
       name: '',
       domain: '',
-      industry: '',
       employee_count: '',
       phone: '',
       email: '',
@@ -158,6 +157,9 @@ export default function Companies() {
       cnpj: '',
       inscricao_estadual: '',
       fantasia: '',
+      setor_id: null,
+      segmento_id: null,
+      atividade_id: null,
     });
     setCustomFieldsData({});
     setEditingCompany(null);
