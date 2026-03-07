@@ -36,6 +36,17 @@ interface PipelineFiltersProps {
   sellers?: { id: string; user_id: string; full_name: string }[] | null;
 }
 
+const buildCompanyOptions = (companies: { id: string; name: string }[] | undefined): SearchableSelectOption[] => [
+  { value: 'all', label: 'Todas empresas' },
+  ...(companies || []).map(c => ({ value: c.id, label: c.name })),
+];
+
+const buildSellerOptions = (sellers: { id: string; user_id: string; full_name: string }[] | null | undefined): SearchableSelectOption[] => [
+  { value: 'mine', label: 'Meus negócios' },
+  { value: 'all', label: 'Todos' },
+  ...(sellers || []).map(s => ({ value: s.user_id, label: s.full_name })),
+];
+
 export function PipelineFilters({
   filterOwner,
   setFilterOwner,
