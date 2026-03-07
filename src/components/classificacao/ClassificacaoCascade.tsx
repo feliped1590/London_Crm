@@ -101,7 +101,7 @@ export function ClassificacaoCascade({
       {setorId && filteredSegmentos.length > 0 && (
         <div>
           <Label>Segmento {required && '*'}</Label>
-          <Select value={segmentoId || ''} onValueChange={handleSegmentoChange} disabled={disabled}>
+          <Select value={segmentoId || undefined} onValueChange={handleSegmentoChange} disabled={disabled}>
             <SelectTrigger className={required && !segmentoId ? 'border-muted-foreground/50' : ''}>
               <SelectValue placeholder="Selecione o segmento" />
             </SelectTrigger>
