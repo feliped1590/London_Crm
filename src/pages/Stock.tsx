@@ -222,23 +222,31 @@ function StockHistoryTab() {
       <div className="flex flex-wrap gap-3 items-end">
         <div className="w-44">
           <Label className="text-xs">Empresa</Label>
-          <Select value={filters.company_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todas' },
+              ...(companies || []).map(c => ({ value: c.id, label: c.name })),
+            ]}
+            value={filters.company_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todas"
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div className="w-44">
           <Label className="text-xs">Produto</Label>
-          <Select value={filters.product_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, product_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todos' },
+              ...(products || []).map(p => ({ value: p.id, label: p.name })),
+            ]}
+            value={filters.product_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, product_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todos"
+            searchPlaceholder="Buscar produto..."
+            allowClear={false}
+          />
         </div>
         <div className="w-36">
           <Label className="text-xs">Tipo</Label>
