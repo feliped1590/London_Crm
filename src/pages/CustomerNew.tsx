@@ -16,6 +16,7 @@ import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpj
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useSalesReps } from '@/hooks/useSalesReps';
 
 type CustomerType = 'PJ' | 'PF';
 
