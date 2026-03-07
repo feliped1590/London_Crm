@@ -17,7 +17,7 @@ interface ReallocationFiltersProps {
   onClear: () => void;
   availableStates: string[];
   availableRegions: string[];
-  sellers: { id: string; name: string; role: string }[];
+  sellers: { id: string; name: string; type: string | null }[];
 }
 
 export function ReallocationFilters({
