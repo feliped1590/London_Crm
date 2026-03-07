@@ -145,15 +145,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [companiesRaw, orderCompanyData, selectedOrderCompany]);
 
-  // Fetch contacts (limited to 500, but ensure order's contact is always included)
+  // Search-based contact loading (on-demand)
+  const [orderContactSearch, setOrderContactSearch] = useState('');
   const { data: contactsRaw } = useQuery({
-    queryKey: ['contacts-list-orders'],
+    queryKey: ['contacts-search-orders', orderContactSearch, companyId],
     queryFn: async (): Promise<Array<{ id: string; first_name: string; last_name: string | null }>> => {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('id, first_name, last_name')
-        .order('first_name')
-        .limit(500);
+      let query = supabase.from('contacts').select('id, first_name, last_name').order('first_name').limit(50);
+      if (companyId) query = query.eq('company_id', companyId);
+      if (orderContactSearch) {
+        query = query.or(`first_name.ilike.%${orderContactSearch}%,last_name.ilike.%${orderContactSearch}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
     },
@@ -176,11 +178,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   });
 
   const contacts = useMemo(() => {
-    const list = contactsRaw ?? [];
-    if (orderContactData && !list.find(c => c.id === orderContactData.id)) {
-      return [orderContactData, ...list];
-    }
-    return list;
+    const map = new Map<string, { id: string; first_name: string; last_name: string | null }>();
+    if (orderContactData) map.set(orderContactData.id, orderContactData);
+    (contactsRaw ?? []).forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).sort((a, b) => a.first_name.localeCompare(b.first_name));
   }, [contactsRaw, orderContactData]);
 
   // Fetch products
