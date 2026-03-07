@@ -313,6 +313,12 @@ export default function CustomerNew() {
       }
     }
     
+    // Telefone obrigatório
+    if (!companyForm.phone?.trim()) {
+      toast.error('Informe o telefone do cliente');
+      return;
+    }
+    
     // Setor obrigatório para todos os tipos de cliente
     if (!companyForm.setor_id) {
       toast.error('Informe o setor do cliente');
@@ -626,11 +632,12 @@ export default function CustomerNew() {
                 </div>
               )}
               <div>
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone <span className="text-destructive">*</span></Label>
                 <Input
                   id="phone"
                   value={companyForm.phone}
                   onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  required
                 />
               </div>
               <div>
