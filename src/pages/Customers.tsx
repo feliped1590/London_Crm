@@ -223,17 +223,34 @@ export default function Customers() {
 
   const handleRefresh = async () => { await refetch(); toast.success('Dados atualizados!'); };
 
-  const handleEnrichBatch = async () => {
+  const handleEnrichBatch = async (offset = 0) => {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: 50 },
+        body: { limit: 50, offset },
       });
       if (error) throw error;
       if (data?.success) {
         toast.success(data.message, { duration: 6000 });
-        setEnrichResult(data);
+        setEnrichResult((prev: any) => {
+          if (prev && offset > 0) {
+            // Accumulate results from multiple batches
+            return {
+              ...data,
+              enriched: prev.enriched + data.enriched,
+              failed: prev.failed + data.failed,
+              total_checked: prev.total_checked + data.total_checked,
+              details: [...(prev.details || []), ...(data.details || [])],
+            };
+          }
+          return data;
+        });
         setEnrichDialogOpen(true);
+        if (data.has_more) {
+          setEnrichOffset(data.next_offset);
+        } else {
+          setEnrichOffset(0);
+        }
         if (data.enriched > 0) {
           queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
