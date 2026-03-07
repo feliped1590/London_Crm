@@ -26,7 +26,7 @@ interface ReallocationConfirmModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedCompanies: CompanyForReallocation[];
-  sellers: { id: string; name: string; role: string }[];
+  sellers: { id: string; name: string; type: string | null }[];
   filterContext: ReallocationFilters;
   onConfirm: (
     toUserId: string,
