@@ -35,6 +35,7 @@ import {
   CheckCircle,
   CalendarCheck,
   ShieldCheck,
+  Shield,
   Package
 } from 'lucide-react';
 import { toast } from 'sonner';
