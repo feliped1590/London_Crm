@@ -54,8 +54,9 @@ export default function CustomerNew() {
     document: '', // CNPJ or CPF
     phone: '',
     email: '',
-    industry: '',
-    segment: '', // Segmento obrigatório
+    setor_id: null as string | null,
+    segmento_id: null as string | null,
+    atividade_id: null as string | null,
     address: '',
     city: '',
     state: '',
