@@ -82,6 +82,10 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
   const [upcomingTasks, setUpcomingTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   
+  const [dealsPage, setDealsPage] = useState(0);
+  const [tasksPage, setTasksPage] = useState(0);
+  const PAGE_SIZE = 5;
+  
   const [widgets, setWidgets] = useState<WidgetType[]>(DEFAULT_WIDGETS);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
