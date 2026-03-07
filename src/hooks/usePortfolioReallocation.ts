@@ -109,13 +109,8 @@ export function usePortfolioReallocation() {
     }
   });
 
-  // Resolve o user_id do sales_rep selecionado no filtro para usar na DB function
-  const resolvedOwnerId = (() => {
-    if (filters.noOwner) return null;
-    if (!filters.salesRepId) return filters.ownerId || null;
-    const seller = sellers?.find(s => s.id === filters.salesRepId);
-    return seller?.linkedUserId || null;
-  })();
+  // Usar sales_rep_id diretamente para filtro
+  const resolvedSalesRepId = filters.salesRepId || null;
 
   // Contagem total
   const { data: totalItems = 0 } = useQuery({
