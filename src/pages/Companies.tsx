@@ -18,14 +18,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Company = Tables<'companies'>;
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
 
 const employeeCounts = [
   '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
@@ -34,13 +31,13 @@ const employeeCounts = [
 export default function Companies() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>> & { cnpj?: string; inscricao_estadual?: string; fantasia?: string }>({
     name: '',
     domain: '',
-    industry: '',
     employee_count: '',
     phone: '',
     email: '',
@@ -53,6 +50,9 @@ export default function Companies() {
     cnpj: '',
     inscricao_estadual: '',
     fantasia: '',
+    setor_id: null,
+    segmento_id: null,
+    atividade_id: null,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
