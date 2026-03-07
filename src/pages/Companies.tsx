@@ -31,6 +31,7 @@ const employeeCounts = [
 
 export default function Companies() {
   const { user } = useAuth();
+  const { canAccessBySalesRep } = useSalesRepAccess();
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
