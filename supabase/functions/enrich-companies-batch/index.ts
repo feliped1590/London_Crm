@@ -71,14 +71,14 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const limit = Math.min(body.limit || 50, 200);
 
-    // Find companies with CNPJ (14 digits) but missing key data
-    // "name" often contains the razão social already, so we look for companies
-    // where fantasia is null OR address/city/state are missing
+    // Find companies with CNPJ (14 digits) that need enrichment:
+    // - missing fantasia/address/city/state OR
+    // - name contains asterisks (placeholder data)
     const { data: companies, error: fetchError } = await supabase
       .from('companies')
       .select('id, name, cnpj, fantasia, address, city, state, phone, email, zip_code, neighborhood, address_number, address_complement')
       .not('cnpj', 'is', null)
-      .or('fantasia.is.null,address.is.null,city.is.null,state.is.null')
+      .or('fantasia.is.null,address.is.null,city.is.null,state.is.null,name.like.*%2A*')
       .limit(limit);
 
     if (fetchError) throw fetchError;
