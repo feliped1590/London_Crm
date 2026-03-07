@@ -131,8 +131,7 @@ export function ReallocationFilters({
               </SelectItem>
               {sellers?.map(seller => (
                 <SelectItem key={seller.id} value={seller.id}>
-                  {seller.name} {seller.type === 'external' ? '(Externo)' : ''}
-                </SelectItem>
+                  {seller.name}{seller.type === 'external' ? ' (Externo)' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
