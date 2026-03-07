@@ -257,7 +257,7 @@ export default function Pipeline() {
     toast.success('Dados atualizados!');
   };
 
-  // Search-based company loading (on-demand, max 50)
+  // Search-based company loading for FORM (on-demand, max 50)
   const [companySearch, setCompanySearch] = useState('');
   const { data: companiesSearchResult } = useQuery({
     queryKey: ['companies-search', companySearch],
@@ -265,6 +265,21 @@ export default function Pipeline() {
       let query = supabase.from('companies').select('id, name, cnpj').order('name').limit(50);
       if (companySearch) {
         query = query.or(`name.ilike.%${companySearch}%,cnpj.ilike.%${companySearch}%,fantasia.ilike.%${companySearch}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Search-based company loading for FILTER bar (independent)
+  const [filterCompanySearch, setFilterCompanySearch] = useState('');
+  const { data: filterCompaniesResult } = useQuery({
+    queryKey: ['companies-filter-search', filterCompanySearch],
+    queryFn: async () => {
+      let query = supabase.from('companies').select('id, name').order('name').limit(50);
+      if (filterCompanySearch) {
+        query = query.or(`name.ilike.%${filterCompanySearch}%,fantasia.ilike.%${filterCompanySearch}%`);
       }
       const { data, error } = await query;
       if (error) throw error;
