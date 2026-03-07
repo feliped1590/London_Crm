@@ -157,22 +157,15 @@ export function SalesGoalsManager() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="user_id">Vendedor *</Label>
-                <Select
-                  value={formData.user_id}
-                  onValueChange={(v) => setFormData({ ...formData, user_id: v })}
+                <SearchableSelect
+                  options={(profiles || []).map(p => ({ value: p.user_id, label: p.full_name }))}
+                  value={formData.user_id || null}
+                  onChange={(v) => setFormData({ ...formData, user_id: v || '' })}
+                  placeholder="Selecione um vendedor"
+                  searchPlaceholder="Buscar vendedor..."
                   disabled={!!editingGoal}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um vendedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {profiles?.map((profile) => (
-                      <SelectItem key={profile.user_id} value={profile.user_id}>
-                        {profile.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  allowClear={false}
+                />
               </div>
               <div>
                 <Label htmlFor="period_type">Período *</Label>

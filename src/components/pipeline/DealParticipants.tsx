@@ -314,18 +314,14 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Usuário</label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableUsers?.map((u) => (
-                    <SelectItem key={u.user_id} value={u.user_id}>
-                      {u.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={(availableUsers || []).map(u => ({ value: u.user_id, label: u.full_name }))}
+                value={selectedUserId || null}
+                onChange={(v) => setSelectedUserId(v || '')}
+                placeholder="Selecione um usuário"
+                searchPlaceholder="Buscar usuário..."
+                allowClear={false}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Permissão</label>

@@ -200,19 +200,17 @@ export function ProspectingResultCard({ result, resultId, onSaveLead, isSaving }
             {/* Atribuir vendedor */}
             <div className="space-y-2">
               <Label htmlFor="owner">Atribuir a vendedor</Label>
-              <Select value={selectedOwner} onValueChange={setSelectedOwner}>
-                <SelectTrigger id="owner">
-                  <SelectValue placeholder="Eu mesmo (padrão)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Eu mesmo</SelectItem>
-                  {sellers?.map(seller => (
-                    <SelectItem key={seller.user_id} value={seller.user_id}>
-                      {seller.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'Eu mesmo' },
+                  ...(sellers || []).map(s => ({ value: s.user_id, label: s.full_name })),
+                ]}
+                value={selectedOwner || null}
+                onChange={(v) => setSelectedOwner(v || '')}
+                placeholder="Eu mesmo (padrão)"
+                searchPlaceholder="Buscar vendedor..."
+                allowClear={false}
+              />
             </div>
 
             {/* Criar tarefa */}

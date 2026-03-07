@@ -485,19 +485,20 @@ export default function Tasks() {
                 />
               </div>
               {isAdmin && (
-                <Select value={ownerFilter} onValueChange={setOwnerFilter}>
-                  <SelectTrigger className="w-[220px]">
-                    <User className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mine">Minhas tarefas</SelectItem>
-                    <SelectItem value="all">Todos</SelectItem>
-                    {sellers?.map((s) => (
-                      <SelectItem key={s.user_id} value={s.user_id}>{s.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="w-[220px]">
+                  <SearchableSelect
+                    options={[
+                      { value: 'mine', label: 'Minhas tarefas' },
+                      { value: 'all', label: 'Todos' },
+                      ...(sellers || []).map(s => ({ value: s.user_id, label: s.full_name })),
+                    ]}
+                    value={ownerFilter}
+                    onChange={(v) => setOwnerFilter(v || 'mine')}
+                    placeholder="Responsável"
+                    searchPlaceholder="Buscar vendedor..."
+                    allowClear={false}
+                  />
+                </div>
               )}
               <Button
                 variant="outline"
