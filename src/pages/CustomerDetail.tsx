@@ -123,6 +123,7 @@ export default function CustomerDetail() {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
+  const { canAccessBySalesRep, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
   const { salesReps } = useSalesReps();
   const queryClient = useQueryClient();
@@ -133,6 +134,10 @@ export default function CustomerDetail() {
   // State for owner change intervention modal
   const [showOwnerInterventionModal, setShowOwnerInterventionModal] = useState(false);
   const [pendingOwnerChange, setPendingOwnerChange] = useState<string | null>(null);
+  
+  // State for admin access intervention modal  
+  const [showAccessInterventionModal, setShowAccessInterventionModal] = useState(false);
+  const [adminAccessGranted, setAdminAccessGranted] = useState(false);
   
   // Company form state
   const [companyForm, setCompanyForm] = useState({
