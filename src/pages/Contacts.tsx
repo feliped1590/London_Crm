@@ -326,6 +326,7 @@ export default function Contacts() {
                     onChange={(v) => setFormData({ ...formData, company_id: v })}
                     placeholder="Selecione"
                     searchPlaceholder="Buscar empresa..."
+                    onSearchChange={setCompanySearchTerm}
                   />
                 </div>
                 <div>
