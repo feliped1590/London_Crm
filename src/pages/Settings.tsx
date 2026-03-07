@@ -1116,6 +1116,10 @@ export default function Settings() {
             <TabsContent value="reallocation-sub" className="mt-4">
               <PortfolioReallocationContent />
             </TabsContent>
+
+            <TabsContent value="sales-reps-sub" className="mt-4">
+              <SalesRepsManager />
+            </TabsContent>
           </Tabs>
         </TabsContent>
 
