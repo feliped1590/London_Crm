@@ -60,13 +60,17 @@ function StockCurrentTab() {
       <div className="flex flex-wrap gap-3 items-end">
         <div className="w-48">
           <Label className="text-xs">Empresa</Label>
-          <Select value={filters.company_id || 'all'} onValueChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' ? undefined : v }))}>
-            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: 'all', label: 'Todas' },
+              ...(companies || []).map(c => ({ value: c.id, label: c.name })),
+            ]}
+            value={filters.company_id || 'all'}
+            onChange={(v) => setFilters((f) => ({ ...f, company_id: v === 'all' || !v ? undefined : v }))}
+            placeholder="Todas"
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div className="w-48">
           <Label className="text-xs">Produto</Label>
