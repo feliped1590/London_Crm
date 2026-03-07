@@ -76,7 +76,7 @@ interface CustomerRow {
 export default function Customers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, isDeveloper } = useModulePermissions();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
