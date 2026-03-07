@@ -229,6 +229,8 @@ export default function Customers() {
       if (error) throw error;
       if (data?.success) {
         toast.success(data.message, { duration: 6000 });
+        setEnrichResult(data);
+        setEnrichDialogOpen(true);
         if (data.enriched > 0) {
           queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-card-metrics'] });
