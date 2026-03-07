@@ -114,9 +114,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Build update object only for missing fields
+      // Build update object only for missing fields or placeholder data
       const updates: Record<string, any> = {};
       const fieldsUpdated: string[] = [];
+
+      // Replace name if it contains asterisks (placeholder)
+      const nameHasAsterisks = company.name && company.name.includes('*');
+      if (nameHasAsterisks && apiData.razao_social) {
+        updates.name = apiData.razao_social;
+        fieldsUpdated.push('name');
+      }
 
       if (!company.fantasia && apiData.nome_fantasia) {
         updates.fantasia = apiData.nome_fantasia;
