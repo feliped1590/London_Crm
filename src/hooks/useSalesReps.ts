@@ -27,17 +27,36 @@ export function useSalesReps() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // All sales reps (admin view)
-  const { data: salesReps, isLoading } = useQuery({
-    queryKey: ['sales_reps'],
+  // Get tenant_id from user_tenants
+  const { data: tenantId } = useQuery({
+    queryKey: ['active_tenant_id', user?.id],
     queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+      return data?.tenant_id || null;
+    },
+    enabled: !!user?.id,
+  });
+
+  // All sales reps (admin view) - filtered by tenant
+  const { data: salesReps, isLoading } = useQuery({
+    queryKey: ['sales_reps', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('sales_reps')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('name');
       if (error) throw error;
       return (data || []) as SalesRep[];
     },
+    enabled: !!tenantId,
   });
 
   // Current user's linked sales reps
