@@ -287,19 +287,14 @@ export default function Companies() {
                     onChange={(e) => setFormData({ ...formData, inscricao_estadual: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="industry">Setor</Label>
-                  <Select value={formData.industry || ''} onValueChange={(v) => setFormData({ ...formData, industry: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {industries.map((i) => (
-                        <SelectItem key={i} value={i}>{i}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <ClassificacaoCascade
+                  setorId={formData.setor_id as string | null}
+                  segmentoId={formData.segmento_id as string | null}
+                  atividadeId={formData.atividade_id as string | null}
+                  onSetorChange={(v) => setFormData({ ...formData, setor_id: v })}
+                  onSegmentoChange={(v) => setFormData({ ...formData, segmento_id: v })}
+                  onAtividadeChange={(v) => setFormData({ ...formData, atividade_id: v })}
+                />
                 <div>
                   <Label htmlFor="employee_count">Funcionários</Label>
                   <Select value={formData.employee_count || ''} onValueChange={(v) => setFormData({ ...formData, employee_count: v })}>
