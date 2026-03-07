@@ -18,14 +18,11 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 
 type Company = Tables<'companies'>;
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
 
 const employeeCounts = [
   '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
@@ -34,13 +31,13 @@ const employeeCounts = [
 export default function Companies() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>> & { cnpj?: string; inscricao_estadual?: string; fantasia?: string }>({
     name: '',
     domain: '',
-    industry: '',
     employee_count: '',
     phone: '',
     email: '',
@@ -53,6 +50,9 @@ export default function Companies() {
     cnpj: '',
     inscricao_estadual: '',
     fantasia: '',
+    setor_id: null,
+    segmento_id: null,
+    atividade_id: null,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -145,7 +145,6 @@ export default function Companies() {
     setFormData({
       name: '',
       domain: '',
-      industry: '',
       employee_count: '',
       phone: '',
       email: '',
@@ -158,6 +157,9 @@ export default function Companies() {
       cnpj: '',
       inscricao_estadual: '',
       fantasia: '',
+      setor_id: null,
+      segmento_id: null,
+      atividade_id: null,
     });
     setCustomFieldsData({});
     setEditingCompany(null);
@@ -189,7 +191,6 @@ export default function Companies() {
     setFormData({
       name: company.name,
       domain: company.domain || '',
-      industry: company.industry || '',
       employee_count: company.employee_count || '',
       phone: company.phone || '',
       email: company.email || '',
@@ -202,6 +203,9 @@ export default function Companies() {
       cnpj: (company as any).cnpj ? formatCNPJ((company as any).cnpj) : '',
       inscricao_estadual: (company as any).inscricao_estadual || '',
       fantasia: (company as any).fantasia || '',
+      setor_id: company.setor_id || null,
+      segmento_id: company.segmento_id || null,
+      atividade_id: company.atividade_id || null,
     });
     setCustomFieldsData((company.custom_fields as Record<string, unknown>) || {});
     setIsDialogOpen(true);
@@ -214,7 +218,6 @@ export default function Companies() {
 
   const filteredCompanies = companies?.filter(company =>
     company.name.toLowerCase().includes(search.toLowerCase()) ||
-    company.industry?.toLowerCase().includes(search.toLowerCase()) ||
     company.email?.toLowerCase().includes(search.toLowerCase()) ||
     (company as any).cnpj?.includes(search)
   );
@@ -284,19 +287,14 @@ export default function Companies() {
                     onChange={(e) => setFormData({ ...formData, inscricao_estadual: e.target.value })}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="industry">Setor</Label>
-                  <Select value={formData.industry || ''} onValueChange={(v) => setFormData({ ...formData, industry: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {industries.map((i) => (
-                        <SelectItem key={i} value={i}>{i}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <ClassificacaoCascade
+                  setorId={formData.setor_id as string | null}
+                  segmentoId={formData.segmento_id as string | null}
+                  atividadeId={formData.atividade_id as string | null}
+                  onSetorChange={(v) => setFormData({ ...formData, setor_id: v })}
+                  onSegmentoChange={(v) => setFormData({ ...formData, segmento_id: v })}
+                  onAtividadeChange={(v) => setFormData({ ...formData, atividade_id: v })}
+                />
                 <div>
                   <Label htmlFor="employee_count">Funcionários</Label>
                   <Select value={formData.employee_count || ''} onValueChange={(v) => setFormData({ ...formData, employee_count: v })}>
@@ -484,7 +482,11 @@ export default function Companies() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        {company.industry && <Badge variant="secondary">{company.industry}</Badge>}
+                        {(getNomeById.atividade(company.atividade_id) || company.industry) && (
+                          <Badge variant="secondary">
+                            {getNomeById.atividade(company.atividade_id) || company.industry}
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <DealStageBadges deals={company.deals || []} />

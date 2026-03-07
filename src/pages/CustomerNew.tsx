@@ -15,11 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -58,8 +54,9 @@ export default function CustomerNew() {
     document: '', // CNPJ or CPF
     phone: '',
     email: '',
-    industry: '',
-    segment: '', // Segmento obrigatório
+    setor_id: null as string | null,
+    segmento_id: null as string | null,
+    atividade_id: null as string | null,
     address: '',
     city: '',
     state: '',
@@ -228,7 +225,9 @@ export default function CustomerNew() {
         cnpj: customerType === 'PJ' ? documentClean : null,
         phone: companyForm.phone || null,
         email: companyForm.email || null,
-        industry: companyForm.industry || null,
+        setor_id: companyForm.setor_id || null,
+        segmento_id: companyForm.segmento_id || null,
+        atividade_id: companyForm.atividade_id || null,
         address: companyForm.address || null,
         city: companyForm.city || null,
         state: companyForm.state || null,
@@ -237,7 +236,6 @@ export default function CustomerNew() {
         legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
         custom_fields: { 
           tipo_cliente: customerType,
-          segmento: companyForm.segment,
         } as Json,
       };
 
@@ -315,9 +313,9 @@ export default function CustomerNew() {
       }
     }
     
-    // Segmento obrigatório para todos os tipos de cliente
-    if (!companyForm.segment) {
-      toast.error('Informe o segmento do cliente');
+    // Setor obrigatório para todos os tipos de cliente
+    if (!companyForm.setor_id) {
+      toast.error('Informe o setor do cliente');
       return;
     }
     
@@ -569,42 +567,16 @@ export default function CustomerNew() {
                       onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })}
                     />
                   </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <Label htmlFor="industry">Setor</Label>
-                    <Select 
-                      value={companyForm.industry} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((i) => (
-                          <SelectItem key={i} value={i}>{i}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="col-span-2">
-                    <Label htmlFor="segment">Segmento *</Label>
-                    <Select 
-                      value={companyForm.segment} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, segment: v })}
-                    >
-                      <SelectTrigger className={!companyForm.segment ? 'border-muted-foreground/50' : ''}>
-                        <SelectValue placeholder="Selecione o segmento (obrigatório)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="industria">Indústria</SelectItem>
-                        <SelectItem value="comercio">Comércio</SelectItem>
-                        <SelectItem value="servicos">Serviços</SelectItem>
-                        <SelectItem value="agronegocio">Agronegócio</SelectItem>
-                        <SelectItem value="construcao">Construção Civil</SelectItem>
-                        <SelectItem value="distribuidor">Distribuidor</SelectItem>
-                        <SelectItem value="varejo">Varejo</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ClassificacaoCascade
+                      setorId={companyForm.setor_id}
+                      segmentoId={companyForm.segmento_id}
+                      atividadeId={companyForm.atividade_id}
+                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
+                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
+                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
+                      required
+                    />
                   </div>
                 </>
               ) : (
@@ -620,25 +592,15 @@ export default function CustomerNew() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <Label htmlFor="segment_pf">Segmento *</Label>
-                    <Select 
-                      value={companyForm.segment} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, segment: v })}
-                    >
-                      <SelectTrigger className={!companyForm.segment ? 'border-muted-foreground/50' : ''}>
-                        <SelectValue placeholder="Selecione o segmento (obrigatório)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="industria">Indústria</SelectItem>
-                        <SelectItem value="comercio">Comércio</SelectItem>
-                        <SelectItem value="servicos">Serviços</SelectItem>
-                        <SelectItem value="agronegocio">Agronegócio</SelectItem>
-                        <SelectItem value="construcao">Construção Civil</SelectItem>
-                        <SelectItem value="distribuidor">Distribuidor</SelectItem>
-                        <SelectItem value="varejo">Varejo</SelectItem>
-                        <SelectItem value="outros">Outros</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <ClassificacaoCascade
+                      setorId={companyForm.setor_id}
+                      segmentoId={companyForm.segmento_id}
+                      atividadeId={companyForm.atividade_id}
+                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
+                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
+                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
+                      required
+                    />
                   </div>
                 </>
               )}

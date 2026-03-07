@@ -51,11 +51,8 @@ import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import type { Json } from '@/integrations/supabase/types';
-
-const industries = [
-  'Tecnologia', 'Saúde', 'Finanças', 'Educação', 'Varejo', 
-  'Manufatura', 'Serviços', 'Construção', 'Logística', 'Outros'
-];
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 
 const employeeCounts = [
   '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
@@ -95,6 +92,9 @@ interface UnifiedCustomer {
   email: string | null;
   website: string | null;
   industry: string | null;
+  setor_id?: string | null;
+  segmento_id?: string | null;
+  atividade_id?: string | null;
   employee_count: string | null;
   address: string | null;
   city: string | null;
@@ -102,18 +102,15 @@ interface UnifiedCustomer {
   country: string | null;
   notes: string | null;
   custom_fields: Json | null;
-  // Campos específicos ERP
   regiao?: string | null;
   segmento?: string | null;
   tipo_pessoa?: string | null;
-  // Campos de governança (Sprint 2)
   parent_company_id?: string | null;
   is_matriz?: boolean;
   last_reviewed_at?: string | null;
   active?: boolean;
   owner_id?: string | null;
   contact_name?: string | null;
-  // Metadados
   source: 'crm' | 'erp';
   contacts?: Contact[];
   deals?: any[];
@@ -125,6 +122,7 @@ export default function CustomerDetail() {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
+  const { getNomeById } = useClassificacao();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
@@ -143,13 +141,15 @@ export default function CustomerDetail() {
     phone: '',
     email: '',
     website: '',
-    industry: '',
     employee_count: '',
     address: '',
     city: '',
     state: '',
     country: 'Brasil',
     notes: '',
+    setor_id: null as string | null,
+    segmento_id: null as string | null,
+    atividade_id: null as string | null,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -515,13 +515,15 @@ export default function CustomerDetail() {
       phone: customer.phone || '',
       email: customer.email || '',
       website: customer.website || '',
-      industry: customer.industry || '',
       employee_count: customer.employee_count || '',
       address: customer.address || '',
       city: customer.city || '',
       state: customer.state || '',
       country: customer.country || 'Brasil',
       notes: customer.notes || '',
+      setor_id: customer.setor_id || null,
+      segmento_id: customer.segmento_id || null,
+      atividade_id: customer.atividade_id || null,
     });
     setCustomFieldsData((customer.custom_fields as Record<string, unknown>) || {});
   }
@@ -582,7 +584,9 @@ export default function CustomerDetail() {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {customer.cnpj && <span>{formatCNPJ(customer.cnpj)}</span>}
-                {customer.industry && <span>• {customer.industry}</span>}
+                {(getNomeById.atividade(customer.atividade_id || null) || customer.industry) && (
+                  <span>• {getNomeById.atividade(customer.atividade_id || null) || customer.industry}</span>
+                )}
                 {customer.city && customer.state && (
                   <span>• {customer.city}/{customer.state}</span>
                 )}
@@ -741,29 +745,22 @@ export default function CustomerDetail() {
                     disabled={!isEditing || isErpCustomer}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="industry">{isErpCustomer ? 'Segmento' : 'Setor'}</Label>
+                <div className="col-span-2">
                   {isErpCustomer ? (
-                    <Input
-                      id="industry"
-                      value={companyForm.industry}
-                      disabled
-                    />
+                    <>
+                      <Label>Segmento (ERP)</Label>
+                      <Input value={customer.industry || customer.segmento || ''} disabled />
+                    </>
                   ) : (
-                    <Select 
-                      value={companyForm.industry} 
-                      onValueChange={(v) => setCompanyForm({ ...companyForm, industry: v })}
+                    <ClassificacaoCascade
+                      setorId={companyForm.setor_id}
+                      segmentoId={companyForm.segmento_id}
+                      atividadeId={companyForm.atividade_id}
+                      onSetorChange={(v) => setCompanyForm({ ...companyForm, setor_id: v, segmento_id: null, atividade_id: null })}
+                      onSegmentoChange={(v) => setCompanyForm({ ...companyForm, segmento_id: v, atividade_id: null })}
+                      onAtividadeChange={(v) => setCompanyForm({ ...companyForm, atividade_id: v })}
                       disabled={!isEditing}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {industries.map((i) => (
-                          <SelectItem key={i} value={i}>{i}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
                   )}
                 </div>
                 {!isErpCustomer && (

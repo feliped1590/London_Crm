@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -88,9 +89,12 @@ export default function Customers() {
   const [filterState, setFilterState] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [filterIndustry, setFilterIndustry] = useState('');
+  const [filterSetorId, setFilterSetorId] = useState<string | null>(null);
+  const [filterSegmentoId, setFilterSegmentoId] = useState<string | null>(null);
+  const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const activeFiltersCount = [filterCity, filterState, filterOwner, filterIndustry].filter(Boolean).length;
+  const activeFiltersCount = [filterCity, filterState, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
   useEffect(() => {
@@ -141,7 +145,7 @@ export default function Customers() {
 
   // Main paginated query
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterIndustry, dbSortField, sortDirection, currentPage],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterIndustry, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -150,6 +154,9 @@ export default function Customers() {
         p_city: filterCity || null,
         p_owner_id: filterOwner || null,
         p_industry: filterIndustry || null,
+        p_setor_id: filterSetorId || null,
+        p_segmento_id: filterSegmentoId || null,
+        p_atividade_id: filterAtividadeId || null,
         p_sort_field: dbSortField,
         p_sort_dir: sortDirection,
         p_limit: ITEMS_PER_PAGE,
@@ -234,6 +241,9 @@ export default function Customers() {
     setFilterState('');
     setFilterOwner('');
     setFilterIndustry('');
+    setFilterSetorId(null);
+    setFilterSegmentoId(null);
+    setFilterAtividadeId(null);
     setCurrentPage(1);
   };
 
@@ -407,16 +417,15 @@ export default function Customers() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Segmento</Label>
-                    <Select value={filterIndustry} onValueChange={(v) => { setFilterIndustry(v === '_all' ? '' : v); setCurrentPage(1); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_all">Todos</SelectItem>
-                        {(filterOptions?.industries || []).map((i: string) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <ClassificacaoCascade
+                    setorId={filterSetorId}
+                    segmentoId={filterSegmentoId}
+                    atividadeId={filterAtividadeId}
+                    onSetorChange={(v) => { setFilterSetorId(v); setCurrentPage(1); }}
+                    onSegmentoChange={(v) => { setFilterSegmentoId(v); setCurrentPage(1); }}
+                    onAtividadeChange={(v) => { setFilterAtividadeId(v); setCurrentPage(1); }}
+                    compact
+                  />
                 </div>
               </PopoverContent>
             </Popover>
