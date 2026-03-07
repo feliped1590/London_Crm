@@ -154,6 +154,12 @@ export function useSalesReps() {
 
   const setDefaultSalesRep = useMutation({
     mutationFn: async ({ id, user_id }: { id: string; user_id: string }) => {
+      // First, remove default from all user's sales reps
+      await supabase
+        .from('user_sales_reps')
+        .update({ is_default: false })
+        .eq('user_id', user_id);
+      // Then set the new default
       const { error } = await supabase
         .from('user_sales_reps')
         .update({ is_default: true })
