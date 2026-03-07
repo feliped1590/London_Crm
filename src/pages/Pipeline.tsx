@@ -224,19 +224,6 @@ export default function Pipeline() {
     }
   }, [searchParams, currentPipelineId, stages]);
 
-  // Auto-open deal detail when navigating with ?deal=dealId
-  useEffect(() => {
-    const dealId = searchParams.get('deal');
-    if (dealId && deals && deals.length > 0) {
-      const deal = deals.find(d => d.id === dealId);
-      if (deal) {
-        handleEdit(deal as Deal);
-        searchParams.delete('deal');
-        setSearchParams(searchParams, { replace: true });
-      }
-    }
-  }, [searchParams, deals]);
-
   // Fetch sellers for admin owner filter
   const { data: sellers } = useQuery({
     queryKey: ['sellers-for-pipeline'],
