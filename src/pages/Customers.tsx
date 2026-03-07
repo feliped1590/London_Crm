@@ -97,6 +97,7 @@ export default function Customers() {
   const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
