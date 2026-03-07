@@ -864,6 +864,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
             placeholder="Selecione uma empresa"
             searchPlaceholder="Buscar empresa..."
             disabled={!canEdit}
+            onSearchChange={setOrderCompanySearch}
           />
         </div>
         <div className="space-y-2">
@@ -875,6 +876,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
             placeholder="Selecione um contato"
             searchPlaceholder="Buscar contato..."
             disabled={!canEdit}
+            onSearchChange={setOrderContactSearch}
           />
         </div>
       </div>

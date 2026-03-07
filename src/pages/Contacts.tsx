@@ -68,10 +68,15 @@ export default function Contacts() {
     toast.success('Dados atualizados!');
   };
 
+  const [companySearchTerm, setCompanySearchTerm] = useState('');
   const { data: companies } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['companies-search-contacts', companySearchTerm],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      let query = supabase.from('companies').select('id, name').order('name').limit(50);
+      if (companySearchTerm) {
+        query = query.or(`name.ilike.%${companySearchTerm}%,fantasia.ilike.%${companySearchTerm}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as Pick<Company, 'id' | 'name'>[];
     },
