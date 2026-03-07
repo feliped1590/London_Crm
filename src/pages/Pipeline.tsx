@@ -842,8 +842,38 @@ export default function Pipeline() {
 
   // Filtered deals
   const hasActiveFilters = filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
-  
-  
+
+  // Auto-open deal detail when navigating with ?deal=dealId
+  useEffect(() => {
+    const dealId = searchParams.get('deal');
+    if (dealId && deals && deals.length > 0) {
+      const deal = deals.find(d => d.id === dealId);
+      if (deal) {
+        setEditingDeal(deal as Deal);
+        setFormData({
+          name: deal.name,
+          value: deal.value || 0,
+          stage: deal.stage,
+          probability: deal.probability || 10,
+          expected_close_date: deal.expected_close_date || '',
+          company_id: deal.company_id,
+          contact_id: deal.contact_id,
+          notes: deal.notes || '',
+          legal_entity_id: (deal as any).legal_entity_id || effectiveLegalEntityId,
+        } as any);
+        setCustomFieldsData(
+          typeof deal.custom_fields === 'object' && deal.custom_fields !== null
+            ? (deal.custom_fields as Record<string, unknown>)
+            : {}
+        );
+        setIsDialogOpen(true);
+        searchParams.delete('deal');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, deals]);
+
+
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
       // Filter by pipeline - deals sem pipeline_id são considerados do pipeline padrão

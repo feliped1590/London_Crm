@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ const priorityConfig: Record<TaskPriority, { label: string; color: string }> = {
 export default function Tasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
@@ -103,6 +105,31 @@ export default function Tasks() {
     refetchOnMount: 'always',
     enabled: !!user?.id,
   });
+
+  // Auto-open task detail when navigating with ?task=taskId
+  useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId && tasks && tasks.length > 0) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setEditingTask(task);
+        setFormData({
+          title: task.title,
+          description: task.description || '',
+          status: task.status,
+          priority: task.priority,
+          due_date: task.due_date ? task.due_date.split('T')[0] : '',
+          due_time: task.due_time || '',
+          company_id: task.company_id,
+          contact_id: task.contact_id,
+          deal_id: task.deal_id,
+        });
+        setIsDialogOpen(true);
+        searchParams.delete('task');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, tasks]);
 
   const handleRefresh = async () => {
     await refetch();
