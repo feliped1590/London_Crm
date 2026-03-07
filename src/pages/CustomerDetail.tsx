@@ -553,6 +553,91 @@ export default function CustomerDetail() {
     );
   }
 
+  // Access control: check if user can access this customer by sales_rep_id
+  const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
+  const customerSalesRep = salesReps?.find(sr => sr.id === customerSalesRepId);
+  const hasAccess = canAccessBySalesRep(customerSalesRepId);
+  
+  // Admin without direct access needs intervention authorization
+  if (!hasAccess && isSalesRepAdmin && !adminAccessGranted) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/customers')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-xl font-semibold">{customer.fantasia || customer.name}</h2>
+        </div>
+        <Card className="border-amber-200 dark:border-amber-800">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
+              <Shield className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+            </div>
+            <h3 className="text-lg font-semibold">Autorização Necessária</h3>
+            <p className="text-muted-foreground max-w-md">
+              Este cliente pertence ao vendedor <strong>{customerSalesRep?.name || 'outro vendedor'}</strong>. 
+              Como administrador, você pode acessar mediante justificativa.
+            </p>
+            <Button onClick={() => setShowAccessInterventionModal(true)}>
+              Solicitar Acesso
+            </Button>
+          </CardContent>
+        </Card>
+        <AdminInterventionModal
+          open={showAccessInterventionModal}
+          onOpenChange={setShowAccessInterventionModal}
+          clientName={customer.fantasia || customer.name}
+          clientOwnerName={customerSalesRep?.name || 'Vendedor não identificado'}
+          actionDescription="Acessar dados"
+          onConfirm={(justification) => {
+            logIntervention({
+              actionType: 'access_foreign_client',
+              entityType: 'company',
+              entityId: customer.id,
+              entityName: customer.name,
+              clientId: customer.id,
+              clientName: customer.name,
+              clientOwnerId: customerSalesRepId,
+              clientOwnerName: customerSalesRep?.name,
+              justification,
+            });
+            setAdminAccessGranted(true);
+            setShowAccessInterventionModal(false);
+            toast.success('Acesso autorizado e registrado.');
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Non-admin without access: block entirely
+  if (!hasAccess && !isSalesRepAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/customers')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h2 className="text-xl font-semibold">Acesso Restrito</h2>
+        </div>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+            </div>
+            <h3 className="text-lg font-semibold">Você não tem permissão para acessar este cliente</h3>
+            <p className="text-muted-foreground max-w-md">
+              Este cliente pertence a um vendedor comercial que não está vinculado à sua conta.
+            </p>
+            <Button variant="outline" onClick={() => navigate('/customers')}>
+              Voltar para Clientes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const isErpCustomer = customer.source === 'erp';
   const contacts = customer.contacts || [];
   const deals = customer.deals || [];
