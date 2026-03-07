@@ -171,10 +171,14 @@ function StockMoveTab() {
         </div>
         <div>
           <Label>Produto *</Label>
-          <Select value={productId} onValueChange={setProductId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {products?.map((p) => <SelectItem key={p.id} value={p.id}>{p.sku ? `${p.sku} - ` : ''}{p.name}</SelectItem>)}
+          <SearchableSelect
+            options={(products || []).map(p => ({ value: p.id, label: `${p.sku ? `${p.sku} - ` : ''}${p.name}` }))}
+            value={productId || null}
+            onChange={(v) => setProductId(v || '')}
+            placeholder="Selecione..."
+            searchPlaceholder="Buscar produto..."
+            allowClear={false}
+          />
             </SelectContent>
           </Select>
         </div>
