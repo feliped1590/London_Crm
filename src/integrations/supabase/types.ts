@@ -6260,6 +6260,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_dashboard_cards: {
+        Row: {
+          card_key: string
+          created_at: string
+          enabled: boolean
+          id: string
+          position: number
+          user_id: string
+        }
+        Insert: {
+          card_key: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          position?: number
+          user_id: string
+        }
+        Update: {
+          card_key?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          position?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_dashboard_configs: {
         Row: {
           created_at: string
