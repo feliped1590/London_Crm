@@ -34,6 +34,7 @@ interface PipelineFiltersProps {
   hasActiveFilters: boolean;
   isAdmin?: boolean;
   sellers?: { id: string; user_id: string; full_name: string }[] | null;
+  onCompanySearchChange?: (search: string) => void;
 }
 
 const buildCompanyOptions = (companies: { id: string; name: string }[] | undefined): SearchableSelectOption[] => [
@@ -62,6 +63,7 @@ export function PipelineFilters({
   hasActiveFilters,
   isAdmin = false,
   sellers,
+  onCompanySearchChange,
 }: PipelineFiltersProps) {
   const clearFilters = () => {
     setFilterOwner('mine');
@@ -106,14 +108,15 @@ export function PipelineFilters({
         </Select>
 
         <div className="w-[200px]">
-          <SearchableSelect
-            options={buildCompanyOptions(companies)}
-            value={filterCompany}
-            onChange={(v) => setFilterCompany(v || 'all')}
-            placeholder="Empresa"
-            searchPlaceholder="Buscar empresa..."
-            allowClear={false}
-          />
+            <SearchableSelect
+              options={buildCompanyOptions(companies)}
+              value={filterCompany}
+              onChange={(v) => setFilterCompany(v || 'all')}
+              placeholder="Empresa"
+              searchPlaceholder="Buscar empresa..."
+              allowClear={false}
+              onSearchChange={onCompanySearchChange}
+            />
         </div>
 
         <Popover>

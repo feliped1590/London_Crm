@@ -257,7 +257,7 @@ export default function Pipeline() {
     toast.success('Dados atualizados!');
   };
 
-  // Search-based company loading (on-demand, max 50)
+  // Search-based company loading for FORM (on-demand, max 50)
   const [companySearch, setCompanySearch] = useState('');
   const { data: companiesSearchResult } = useQuery({
     queryKey: ['companies-search', companySearch],
@@ -271,6 +271,40 @@ export default function Pipeline() {
       return data;
     },
   });
+
+  // Search-based company loading for FILTER bar (independent)
+  const [filterCompanySearch, setFilterCompanySearch] = useState('');
+  const { data: filterCompaniesRaw } = useQuery({
+    queryKey: ['companies-filter-search', filterCompanySearch],
+    queryFn: async () => {
+      let query = supabase.from('companies').select('id, name').order('name').limit(50);
+      if (filterCompanySearch) {
+        query = query.or(`name.ilike.%${filterCompanySearch}%,fantasia.ilike.%${filterCompanySearch}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Always fetch the selected filter company so it appears in the dropdown
+  const { data: selectedFilterCompanyData } = useQuery({
+    queryKey: ['company-filter-selected', filterCompany],
+    queryFn: async () => {
+      if (!filterCompany || filterCompany === 'all') return null;
+      const { data, error } = await supabase.from('companies').select('id, name').eq('id', filterCompany).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!filterCompany && filterCompany !== 'all',
+  });
+
+  const filterCompaniesResult = useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    if (selectedFilterCompanyData) map.set(selectedFilterCompanyData.id, selectedFilterCompanyData);
+    (filterCompaniesRaw || []).forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [filterCompaniesRaw, selectedFilterCompanyData]);
 
   // Always fetch the currently selected company so it appears in the select
   const { data: selectedCompanyData } = useQuery({
@@ -1333,10 +1367,11 @@ export default function Pipeline() {
         setFilterDateFrom={setFilterDateFrom}
         filterDateTo={filterDateTo}
         setFilterDateTo={setFilterDateTo}
-        companies={companiesSearchResult}
+        companies={filterCompaniesResult}
         hasActiveFilters={hasActiveFilters}
         isAdmin={isAdmin}
         sellers={sellers}
+        onCompanySearchChange={setFilterCompanySearch}
       />
 
       {/* Email Dialog */}
