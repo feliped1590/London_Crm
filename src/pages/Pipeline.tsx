@@ -919,6 +919,10 @@ export default function Pipeline() {
 
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
+      // Filter by sales rep access - user can only see deals of companies linked to their sales reps
+      const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
+      if (!canAccessBySalesRep(companySalesRepId)) return false;
+
       // Filter by pipeline - deals sem pipeline_id são considerados do pipeline padrão
       const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;
       if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;
@@ -949,7 +953,7 @@ export default function Pipeline() {
       
       return true;
     }) || [];
-  }, [deals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, user?.id, currentPipelineId, defaultPipeline?.id]);
+  }, [deals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep]);
 
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
