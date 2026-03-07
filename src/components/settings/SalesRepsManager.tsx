@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Pencil, UserPlus, Star, Trash2 } from 'lucide-react';
 import { useSalesReps } from '@/hooks/useSalesReps';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
+
 
 export function SalesRepsManager() {
   const {
