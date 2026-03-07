@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSalesReps } from '@/hooks/useSalesReps';
 
 interface QuickCreateCompanyModalProps {
   open: boolean;
@@ -25,13 +27,20 @@ export function QuickCreateCompanyModal({
 }: QuickCreateCompanyModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: initialName,
     cnpj: '',
     email: '',
     phone: '',
   });
+
+  // Set default when loaded
+  useEffect(() => {
+    if (defaultSalesRepId && !selectedSalesRepId) setSelectedSalesRepId(defaultSalesRepId);
+  }, [defaultSalesRepId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +58,7 @@ export function QuickCreateCompanyModal({
         phone: formData.phone || null,
         created_by: user?.id,
         owner_id: user?.id,
+        sales_rep_id: selectedSalesRepId || null,
       }).select('id').single();
 
       if (error) throw error;
@@ -120,6 +130,19 @@ export function QuickCreateCompanyModal({
               placeholder="(00) 0000-0000"
             />
           </div>
+          {myActiveSalesReps.length > 0 && (
+            <div>
+              <Label>Vendedor Comercial</Label>
+              <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {myActiveSalesReps.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

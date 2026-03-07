@@ -16,6 +16,7 @@ import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpj
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useSalesReps } from '@/hooks/useSalesReps';
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -25,6 +26,15 @@ export default function CustomerNew() {
   const queryClient = useQueryClient();
   const { accessibleEntities: legalEntities, effectiveEntityId } = useLegalEntities();
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
+  const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
+  const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
+
+  // Set default sales rep when loaded
+  useEffect(() => {
+    if (defaultSalesRepId && !selectedSalesRepId) {
+      setSelectedSalesRepId(defaultSalesRepId);
+    }
+  }, [defaultSalesRepId]);
   
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
@@ -234,6 +244,7 @@ export default function CustomerNew() {
         created_by: user?.id,
         owner_id: user?.id,
         legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
+        sales_rep_id: selectedSalesRepId || null,
         custom_fields: { 
           tipo_cliente: customerType,
         } as Json,
@@ -626,6 +637,21 @@ export default function CustomerNew() {
                         <SelectItem key={le.id} value={le.id}>
                           {le.name} — {formatCNPJ(le.cnpj)}
                         </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {myActiveSalesReps.length > 0 && (
+                <div className="col-span-2">
+                  <Label>Vendedor Comercial</Label>
+                  <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {myActiveSalesReps.map(rep => (
+                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

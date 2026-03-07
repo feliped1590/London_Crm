@@ -53,6 +53,7 @@ import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import type { Json } from '@/integrations/supabase/types';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useClassificacao } from '@/hooks/useClassificacao';
+import { useSalesReps } from '@/hooks/useSalesReps';
 
 const employeeCounts = [
   '1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'
@@ -122,6 +123,7 @@ export default function CustomerDetail() {
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
   const { getNomeById } = useClassificacao();
+  const { salesReps } = useSalesReps();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
@@ -913,6 +915,63 @@ export default function CustomerDetail() {
               </CardContent>
             </Card>
           )}
+
+          {/* Sales Rep info */}
+          {(() => {
+            const salesRepId = (customer as any)?.sales_rep_id;
+            const salesRep = salesRepId ? salesReps?.find(r => r.id === salesRepId) : null;
+            return (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Users className="h-5 w-5" />
+                    Vendedor Comercial
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {salesRep ? (
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                        {salesRep.name[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium">{salesRep.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {salesRep.type === 'representante' ? 'Representante' : 'Interno'}
+                          {salesRep.phone && ` • ${salesRep.phone}`}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum vendedor comercial vinculado</p>
+                  )}
+                  {isAdmin && isEditing && (
+                    <div className="mt-3">
+                      <Select
+                        value={salesRepId || ''}
+                        onValueChange={async (v) => {
+                          const { error } = await supabase
+                            .from('companies')
+                            .update({ sales_rep_id: v || null })
+                            .eq('id', id);
+                          if (error) { toast.error('Erro ao atualizar'); return; }
+                          queryClient.invalidateQueries({ queryKey: ['customer', id] });
+                          toast.success('Vendedor comercial atualizado!');
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {salesReps?.filter(r => r.active).map(r => (
+                            <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
           
           {/* Modal de justificativa para alteração de vendedor responsável */}
           <AdminInterventionModal

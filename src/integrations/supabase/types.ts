@@ -921,6 +921,7 @@ export type Database = {
           regime_tributario:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          sales_rep_id: string | null
           segmento_id: string | null
           setor_id: string | null
           state: string | null
@@ -976,6 +977,7 @@ export type Database = {
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          sales_rep_id?: string | null
           segmento_id?: string | null
           setor_id?: string | null
           state?: string | null
@@ -1031,6 +1033,7 @@ export type Database = {
           regime_tributario?:
             | Database["public"]["Enums"]["regime_tributario"]
             | null
+          sales_rep_id?: string | null
           segmento_id?: string | null
           setor_id?: string | null
           state?: string | null
@@ -1069,6 +1072,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "company_activity_summary"
             referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "companies_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "companies_segmento_id_fkey"
@@ -5627,6 +5637,47 @@ export type Database = {
         }
         Relationships: []
       }
+      sales_reps: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          tenant_id: string
+          type: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          tenant_id: string
+          type?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          tenant_id?: string
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_reps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segmentos: {
         Row: {
           created_at: string | null
@@ -6488,6 +6539,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_sales_reps: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          sales_rep_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          sales_rep_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          sales_rep_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sales_reps_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_tenants: {
         Row: {

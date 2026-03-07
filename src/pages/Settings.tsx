@@ -36,6 +36,7 @@ import { LegalEntityPermissionsManager } from '@/components/settings/LegalEntity
 import { PortfolioReallocationContent } from '@/components/settings/PortfolioReallocationContent';
 import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
+import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
@@ -760,6 +761,10 @@ export default function Settings() {
             <ClipboardCheck className="h-4 w-4" />
             Tabelas e Aprovações
           </TabsTrigger>
+          <TabsTrigger value="sales-reps" className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Vendedores
+          </TabsTrigger>
           <TabsTrigger value="bots" className="gap-2">
             <Bot className="h-4 w-4" />
             Bots
@@ -1138,6 +1143,10 @@ export default function Settings() {
               <OrderApprovalRulesManager />
             </TabsContent>
           </Tabs>
+        </TabsContent>
+
+        <TabsContent value="sales-reps" className="mt-6 space-y-6">
+          <SalesRepsManager />
         </TabsContent>
 
         <TabsContent value="bots" className="mt-6 space-y-6">
