@@ -225,7 +225,9 @@ export default function CustomerNew() {
         cnpj: customerType === 'PJ' ? documentClean : null,
         phone: companyForm.phone || null,
         email: companyForm.email || null,
-        industry: companyForm.industry || null,
+        setor_id: companyForm.setor_id || null,
+        segmento_id: companyForm.segmento_id || null,
+        atividade_id: companyForm.atividade_id || null,
         address: companyForm.address || null,
         city: companyForm.city || null,
         state: companyForm.state || null,
@@ -234,7 +236,6 @@ export default function CustomerNew() {
         legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
         custom_fields: { 
           tipo_cliente: customerType,
-          segmento: companyForm.segment,
         } as Json,
       };
 
