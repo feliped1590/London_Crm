@@ -515,13 +515,15 @@ export default function CustomerDetail() {
       phone: customer.phone || '',
       email: customer.email || '',
       website: customer.website || '',
-      industry: customer.industry || '',
       employee_count: customer.employee_count || '',
       address: customer.address || '',
       city: customer.city || '',
       state: customer.state || '',
       country: customer.country || 'Brasil',
       notes: customer.notes || '',
+      setor_id: customer.setor_id || null,
+      segmento_id: customer.segmento_id || null,
+      atividade_id: customer.atividade_id || null,
     });
     setCustomFieldsData((customer.custom_fields as Record<string, unknown>) || {});
   }
