@@ -232,7 +232,6 @@ export default function CustomerDetail() {
           phone: erpData.telefone || erpData.celular,
           email: erpData.emails?.[0] || null,
           website: null,
-          industry: erpData.segmento,
           employee_count: null,
           address: fullAddress || null,
           city: localAddress?.cidade || null,
