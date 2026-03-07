@@ -632,11 +632,12 @@ export default function CustomerNew() {
                 </div>
               )}
               <div>
-                <Label htmlFor="phone">Telefone</Label>
+                <Label htmlFor="phone">Telefone <span className="text-destructive">*</span></Label>
                 <Input
                   id="phone"
                   value={companyForm.phone}
                   onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  required
                 />
               </div>
               <div>
