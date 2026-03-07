@@ -613,7 +613,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
               </div>
             ) : (
               <div className="space-y-3">
-                {upcomingTasks.map((task) => (
+                {upcomingTasks.slice(tasksPage * PAGE_SIZE, (tasksPage + 1) * PAGE_SIZE).map((task) => (
                   <Link
                     key={task.id}
                     to={`/tasks?task=${task.id}`}
@@ -631,6 +631,21 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
                     {getPriorityBadge(task.priority)}
                   </Link>
                 ))}
+                {upcomingTasks.length > PAGE_SIZE && (
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {tasksPage * PAGE_SIZE + 1}-{Math.min((tasksPage + 1) * PAGE_SIZE, upcomingTasks.length)} de {upcomingTasks.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" disabled={tasksPage === 0} onClick={() => setTasksPage(p => p - 1)}>
+                        ← Anterior
+                      </Button>
+                      <Button variant="ghost" size="sm" disabled={(tasksPage + 1) * PAGE_SIZE >= upcomingTasks.length} onClick={() => setTasksPage(p => p + 1)}>
+                        Próximo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
