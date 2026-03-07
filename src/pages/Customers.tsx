@@ -347,6 +347,8 @@ export default function Customers() {
 
       <CustomerDashboardCards />
       <DashboardCardSettings open={cardSettingsOpen} onOpenChange={setCardSettingsOpen} />
+
+      <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
