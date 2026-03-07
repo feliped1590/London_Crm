@@ -48,10 +48,10 @@ export function CustomerDashboardCards() {
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-medium truncate">{def.label}</span>
               </div>
-              <p className="text-2xl font-bold text-foreground truncate">
+              <p className="text-2xl font-bold text-foreground truncate" title={data?.value ?? '—'}>
                 {data?.value ?? '—'}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-xs text-muted-foreground truncate" title={data?.subtitle ?? ''}>
                 {data?.subtitle ?? ''}
               </p>
             </CardContent>
