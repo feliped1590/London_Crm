@@ -107,10 +107,14 @@ export default function Tasks() {
   });
 
   // Auto-open task detail when navigating with ?task=taskId
+  const [pendingTaskId, setPendingTaskId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('task');
+  });
+
   useEffect(() => {
-    const taskId = searchParams.get('task');
-    if (taskId && tasks && tasks.length > 0) {
-      const task = tasks.find(t => t.id === taskId);
+    if (pendingTaskId && tasks && tasks.length > 0) {
+      const task = tasks.find(t => t.id === pendingTaskId);
       if (task) {
         setEditingTask(task);
         setFormData({
@@ -125,11 +129,14 @@ export default function Tasks() {
           deal_id: task.deal_id,
         });
         setIsDialogOpen(true);
-        searchParams.delete('task');
-        setSearchParams(searchParams, { replace: true });
       }
+      setPendingTaskId(null);
+      // Clean URL
+      const newParams = new URLSearchParams(window.location.search);
+      newParams.delete('task');
+      window.history.replaceState({}, '', `${window.location.pathname}${newParams.toString() ? '?' + newParams.toString() : ''}`);
     }
-  }, [searchParams, tasks]);
+  }, [pendingTaskId, tasks]);
 
   const handleRefresh = async () => {
     await refetch();
