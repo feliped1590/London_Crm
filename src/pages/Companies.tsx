@@ -218,11 +218,14 @@ export default function Companies() {
     setFormData({ ...formData, cnpj: formatted });
   };
 
-  const filteredCompanies = companies?.filter(company =>
-    company.name.toLowerCase().includes(search.toLowerCase()) ||
-    company.email?.toLowerCase().includes(search.toLowerCase()) ||
-    (company as any).cnpj?.includes(search)
-  );
+  const filteredCompanies = companies?.filter(company => {
+    // Sales rep access restriction
+    if (!canAccessBySalesRep(company.sales_rep_id)) return false;
+    
+    return company.name.toLowerCase().includes(search.toLowerCase()) ||
+      company.email?.toLowerCase().includes(search.toLowerCase()) ||
+      (company as any).cnpj?.includes(search);
+  });
 
   const getSyncStatus = (company: any) => {
     if (company.iniflex_id) {
