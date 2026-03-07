@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { usePortfolio, useUsers, UserPortfolio, PortfolioItem } from '@/hooks/usePortfolio';
+import { usePortfolio, usePortfolioItems, useUsers, UserPortfolio } from '@/hooks/usePortfolio';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { TransferModal } from './TransferModal';
 
@@ -48,26 +48,20 @@ export function PortfolioManager() {
   const [activeTab, setActiveTab] = useState('portfolios');
   const [selectedPortfolio, setSelectedPortfolio] = useState<UserPortfolio | null>(null);
   const [manageDialogOpen, setManageDialogOpen] = useState(false);
-  const [entityTab, setEntityTab] = useState<'companies' | 'contacts' | 'deals'>('companies');
+  const [entityTab, setEntityTab] = useState<'company' | 'contact' | 'deal'>('company');
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [transferModalOpen, setTransferModalOpen] = useState(false);
 
+  // Lazy-load items for the selected portfolio + entity type
+  const { data: currentItems = [], isLoading: isLoadingItems } = usePortfolioItems(
+    selectedPortfolio?.salesRepId || null,
+    entityTab
+  );
+
   // Itens selecionados como array
   const selectedItemsArray = useMemo(() => {
-    if (!selectedPortfolio) return [];
-    const allItems = [
-      ...selectedPortfolio.companies,
-      ...selectedPortfolio.contacts,
-      ...selectedPortfolio.deals
-    ];
-    return allItems.filter(item => selectedItems.has(item.id));
-  }, [selectedPortfolio, selectedItems]);
-
-  // Itens do tipo atual
-  const currentItems = useMemo(() => {
-    if (!selectedPortfolio) return [];
-    return selectedPortfolio[entityTab];
-  }, [selectedPortfolio, entityTab]);
+    return currentItems.filter(item => selectedItems.has(item.id));
+  }, [currentItems, selectedItems]);
 
   // Sales reps disponíveis para transferência (exclui o atual)
   const availableSalesReps = useMemo(() => {
@@ -79,7 +73,7 @@ export function PortfolioManager() {
   const handleOpenManage = (portfolio: UserPortfolio) => {
     setSelectedPortfolio(portfolio);
     setSelectedItems(new Set());
-    setEntityTab('companies');
+    setEntityTab('company');
     setManageDialogOpen(true);
   };
 
@@ -103,16 +97,6 @@ export function PortfolioManager() {
       }
     });
     setSelectedItems(newSelected);
-  };
-
-  const handleSelectAll = () => {
-    if (!selectedPortfolio) return;
-    const allIds = [
-      ...selectedPortfolio.companies,
-      ...selectedPortfolio.contacts,
-      ...selectedPortfolio.deals
-    ].map(i => i.id);
-    setSelectedItems(new Set(allIds));
   };
 
   const handleTransferConfirm = (toSalesRepId: string, transferRelated: boolean, notes?: string) => {
@@ -140,6 +124,13 @@ export function PortfolioManager() {
     return map;
   }, [users]);
 
+  // Helper to get count for current entity tab
+  const getEntityCount = (portfolio: UserPortfolio, type: 'company' | 'contact' | 'deal') => {
+    if (type === 'company') return portfolio.companiesCount;
+    if (type === 'contact') return portfolio.contactsCount;
+    return portfolio.dealsCount;
+  };
+
   if (isLoadingPortfolios) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -165,7 +156,7 @@ export function PortfolioManager() {
         <TabsContent value="portfolios" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {portfolios?.map(portfolio => {
-              const totalItems = portfolio.companies.length + portfolio.contacts.length + portfolio.deals.length;
+              const totalItems = portfolio.companiesCount + portfolio.contactsCount + portfolio.dealsCount;
               return (
                 <Card key={portfolio.salesRepId} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
@@ -190,21 +181,21 @@ export function PortfolioManager() {
                           <Building2 className="h-4 w-4" />
                           Empresas
                         </span>
-                        <span className="font-medium">{portfolio.companies.length}</span>
+                        <span className="font-medium">{portfolio.companiesCount.toLocaleString('pt-BR')}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <Users className="h-4 w-4" />
                           Contatos
                         </span>
-                        <span className="font-medium">{portfolio.contacts.length}</span>
+                        <span className="font-medium">{portfolio.contactsCount.toLocaleString('pt-BR')}</span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="flex items-center gap-2 text-muted-foreground">
                           <Briefcase className="h-4 w-4" />
                           Negócios
                         </span>
-                        <span className="font-medium">{portfolio.deals.length}</span>
+                        <span className="font-medium">{portfolio.dealsCount.toLocaleString('pt-BR')}</span>
                       </div>
                     </div>
                     <Button
@@ -297,19 +288,19 @@ export function PortfolioManager() {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs value={entityTab} onValueChange={(v) => setEntityTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={entityTab} onValueChange={(v) => { setEntityTab(v as any); setSelectedItems(new Set()); }} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="w-full justify-start">
-              <TabsTrigger value="companies" className="gap-2">
+              <TabsTrigger value="company" className="gap-2">
                 <Building2 className="h-4 w-4" />
-                Empresas ({selectedPortfolio?.companies.length || 0})
+                Empresas ({selectedPortfolio ? selectedPortfolio.companiesCount.toLocaleString('pt-BR') : 0})
               </TabsTrigger>
-              <TabsTrigger value="contacts" className="gap-2">
+              <TabsTrigger value="contact" className="gap-2">
                 <Users className="h-4 w-4" />
-                Contatos ({selectedPortfolio?.contacts.length || 0})
+                Contatos ({selectedPortfolio ? selectedPortfolio.contactsCount.toLocaleString('pt-BR') : 0})
               </TabsTrigger>
-              <TabsTrigger value="deals" className="gap-2">
+              <TabsTrigger value="deal" className="gap-2">
                 <Briefcase className="h-4 w-4" />
-                Negócios ({selectedPortfolio?.deals.length || 0})
+                Negócios ({selectedPortfolio ? selectedPortfolio.dealsCount.toLocaleString('pt-BR') : 0})
               </TabsTrigger>
             </TabsList>
 
@@ -319,16 +310,20 @@ export function PortfolioManager() {
                   id="selectAllCurrent"
                   checked={allCurrentSelected}
                   onCheckedChange={handleSelectAllCurrent}
-                  disabled={currentItems.length === 0}
+                  disabled={currentItems.length === 0 || isLoadingItems}
                 />
                 <label htmlFor="selectAllCurrent" className="text-sm cursor-pointer">
-                  Selecionar todos ({currentItems.length})
+                  Selecionar todos ({currentItems.length.toLocaleString('pt-BR')})
                 </label>
               </div>
 
               <ScrollArea className="h-[300px] border rounded-lg">
-                {currentItems.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                {isLoadingItems ? (
+                  <div className="flex items-center justify-center h-full py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : currentItems.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-muted-foreground py-8">
                     Nenhum item nesta categoria
                   </div>
                 ) : (
@@ -356,13 +351,6 @@ export function PortfolioManager() {
               {selectedItems.size} item(ns) selecionado(s)
             </span>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={handleSelectAll}
-                disabled={!selectedPortfolio}
-              >
-                Selecionar Tudo
-              </Button>
               <Button
                 onClick={() => setTransferModalOpen(true)}
                 disabled={selectedItems.size === 0}
