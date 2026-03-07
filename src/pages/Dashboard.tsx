@@ -54,7 +54,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { InsightsSummary } from "@/components/insights/InsightsSummary";
+
 import { GoalProgressWidget } from "@/components/dashboard/GoalProgressWidget";
 import { toast } from "sonner";
 import {
