@@ -245,7 +245,7 @@ export default function Pipeline() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
-        .select('*, companies(name), contacts(first_name, last_name, email)')
+        .select('*, companies(name, sales_rep_id), contacts(first_name, last_name, email)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
