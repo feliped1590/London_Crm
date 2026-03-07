@@ -181,6 +181,7 @@ export function useSalesReps() {
     myActiveSalesReps,
     defaultSalesRepId,
     allUserSalesReps,
+    tenantId,
     createSalesRep,
     updateSalesRep,
     linkUserSalesRep,
