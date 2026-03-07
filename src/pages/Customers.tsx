@@ -358,6 +358,12 @@ export default function Customers() {
           <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichBatch} disabled={isEnriching}>
+              <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+              {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
             <Settings2 className="h-4 w-4" />
             Personalizar painel
