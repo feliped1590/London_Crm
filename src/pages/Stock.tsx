@@ -160,12 +160,14 @@ function StockMoveTab() {
       <CardContent className="space-y-4 max-w-xl">
         <div>
           <Label>Empresa *</Label>
-          <Select value={companyId} onValueChange={setCompanyId}>
-            <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-            <SelectContent>
-              {companies?.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+            value={companyId || null}
+            onChange={(v) => setCompanyId(v || '')}
+            placeholder="Selecione..."
+            searchPlaceholder="Buscar empresa..."
+            allowClear={false}
+          />
         </div>
         <div>
           <Label>Produto *</Label>
