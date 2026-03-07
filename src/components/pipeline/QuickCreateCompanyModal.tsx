@@ -130,6 +130,19 @@ export function QuickCreateCompanyModal({
               placeholder="(00) 0000-0000"
             />
           </div>
+          {myActiveSalesReps.length > 0 && (
+            <div>
+              <Label>Vendedor Comercial</Label>
+              <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {myActiveSalesReps.map(r => (
+                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
