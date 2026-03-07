@@ -141,13 +141,15 @@ export default function CustomerDetail() {
     phone: '',
     email: '',
     website: '',
-    industry: '',
     employee_count: '',
     address: '',
     city: '',
     state: '',
     country: 'Brasil',
     notes: '',
+    setor_id: null as string | null,
+    segmento_id: null as string | null,
+    atividade_id: null as string | null,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
