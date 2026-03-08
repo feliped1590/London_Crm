@@ -89,22 +89,43 @@ Deno.serve(async (req) => {
     const limit = Math.min(body.limit || 50, 200);
     const offset = body.offset || 0;
     const mode = body.mode || 'enrich'; // 'enrich' or 'scan'
+    const salesRepId = body.sales_rep_id || null;
+    const prioritizeAsterisks = body.prioritize_asterisks !== false; // default true
 
     // Fetch companies with valid CNPJ in pages
-    const { data: companies, error: fetchError } = await supabase
+    let query = supabase
       .from('companies')
       .select('id, name, cnpj, fantasia, address, city, state, phone, email, zip_code, neighborhood, address_number, address_complement')
       .not('cnpj', 'is', null)
       .order('name', { ascending: true })
       .range(offset, offset + limit * 3 - 1); // Fetch more to filter down
 
+    if (salesRepId) {
+      query = query.eq('sales_rep_id', salesRepId);
+    }
+
+    const { data: companies, error: fetchError } = await query;
+
     if (fetchError) throw fetchError;
 
     // Filter: valid CNPJ (14 digits) AND needs enrichment
-    const eligible = (companies || []).filter(c => {
+    let eligible = (companies || []).filter(c => {
       const digits = c.cnpj?.replace(/\D/g, '') || '';
       return digits.length === 14 && needsEnrichment(c);
-    }).slice(0, limit);
+    });
+
+    // Prioritize companies with asterisks in name/fantasia
+    if (prioritizeAsterisks) {
+      eligible.sort((a, b) => {
+        const aHasAsterisk = hasPlaceholder(a.name) || hasPlaceholder(a.fantasia);
+        const bHasAsterisk = hasPlaceholder(b.name) || hasPlaceholder(b.fantasia);
+        if (aHasAsterisk && !bHasAsterisk) return -1;
+        if (!aHasAsterisk && bHasAsterisk) return 1;
+        return 0;
+      });
+    }
+
+    eligible = eligible.slice(0, limit);
 
     const totalScanned = companies?.length || 0;
     const hasMore = totalScanned >= limit * 3; // More pages available

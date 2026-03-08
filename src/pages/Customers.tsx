@@ -107,6 +107,8 @@ export default function Customers() {
   const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
   const [enrichOffset, setEnrichOffset] = useState(0);
   const [enrichBatchSize, setEnrichBatchSize] = useState(50);
+  const [enrichSalesRepId, setEnrichSalesRepId] = useState<string>('all');
+  const [enrichPrioritizeAsterisks, setEnrichPrioritizeAsterisks] = useState(true);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
@@ -236,7 +238,12 @@ export default function Customers() {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: enrichBatchSize, offset },
+        body: { 
+          limit: enrichBatchSize, 
+          offset,
+          sales_rep_id: enrichSalesRepId !== 'all' ? enrichSalesRepId : undefined,
+          prioritize_asterisks: enrichPrioritizeAsterisks,
+        },
       });
       if (error) throw error;
       if (data?.success) {
@@ -393,6 +400,17 @@ export default function Customers() {
         <div className="flex items-center gap-2">
           {isDeveloper && (
             <div className="flex items-center gap-1">
+              <Select value={enrichSalesRepId} onValueChange={(v) => setEnrichSalesRepId(v)}>
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue placeholder="Vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos vendedores</SelectItem>
+                  {(salesRepsFilter || []).map(sr => (
+                    <SelectItem key={sr.id} value={sr.id}>{sr.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={String(enrichBatchSize)} onValueChange={(v) => setEnrichBatchSize(Number(v))}>
                 <SelectTrigger className="w-[90px] h-8 text-xs">
                   <SelectValue />
@@ -405,6 +423,23 @@ export default function Customers() {
                   <SelectItem value="1000">1.000</SelectItem>
                 </SelectContent>
               </Select>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={enrichPrioritizeAsterisks ? "default" : "outline"} 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-xs font-bold"
+                      onClick={() => setEnrichPrioritizeAsterisks(!enrichPrioritizeAsterisks)}
+                    >
+                      *
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{enrichPrioritizeAsterisks ? 'Priorizando clientes com asteriscos (*)' : 'Sem priorização por asteriscos'}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
                 <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
                 {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
