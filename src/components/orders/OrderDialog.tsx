@@ -338,7 +338,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     }
     // Auto-fill carrier for new orders when company changes
     if (open && !order && companyId) {
-      autoFillCarrier(companyId);
+      autoFillFromCompany(companyId);
     }
   }, [open, order, activeLegalEntityId]);
 
