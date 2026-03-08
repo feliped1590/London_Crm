@@ -57,6 +57,17 @@ serve(async (req) => {
       console.error('Error fetching items:', itemsError);
     }
 
+    // Fetch carrier if present
+    let carrierData: any = null;
+    if (proposal.carrier_id) {
+      const { data: cd } = await supabase
+        .from('carriers')
+        .select('id, name, trade_name, cnpj, phone')
+        .eq('id', proposal.carrier_id)
+        .maybeSingle();
+      carrierData = cd;
+    }
+
     const legalEntity = proposal.deal?.legal_entity || null;
     const ipiMode = proposal.ipi_mode || 'destacar';
     const showIpi = ipiMode !== 'isento';
@@ -315,6 +326,40 @@ serve(async (req) => {
           </div>
           ` : ''}
         </div>
+
+        <!-- TRANSPORTE (condicional) -->
+        ${(carrierData || proposal.freight_type) ? `
+        <div class="section">
+          <div class="section-title">Transporte</div>
+          <div class="client-grid">
+            ${carrierData ? `
+            <div class="client-box">
+              <div class="label">Transportadora</div>
+              <div class="name">${carrierData.trade_name || carrierData.name}</div>
+              ${carrierData.cnpj ? `<div class="detail">CNPJ: ${carrierData.cnpj}</div>` : ''}
+              ${carrierData.phone ? `<div class="detail">Tel: ${carrierData.phone}</div>` : ''}
+            </div>
+            ` : ''}
+            <div class="client-box">
+              <div class="label">Frete</div>
+              <div class="name">${proposal.freight_type || '-'}</div>
+              ${proposal.freight_type === 'CIF' ? '<div class="detail">Frete por conta do vendedor</div>' : ''}
+              ${proposal.freight_type === 'FOB' ? '<div class="detail">Frete por conta do cliente</div>' : ''}
+              ${proposal.freight_type === 'REDESPACHO' ? '<div class="detail">Transporte combinado</div>' : ''}
+            </div>
+          </div>
+          ${proposal.delivery_same_as_company === false ? `
+          <div class="client-box" style="margin-top: 10px;">
+            <div class="label">Endereço de Entrega</div>
+            ${proposal.delivery_name ? `<div class="name">${proposal.delivery_name}</div>` : ''}
+            ${proposal.delivery_address ? `<div class="detail">${proposal.delivery_address}${proposal.delivery_number ? ', ' + proposal.delivery_number : ''}</div>` : ''}
+            ${proposal.delivery_neighborhood ? `<div class="detail">${proposal.delivery_neighborhood}</div>` : ''}
+            ${proposal.delivery_city ? `<div class="detail">${proposal.delivery_city}${proposal.delivery_state ? ' / ' + proposal.delivery_state : ''}${proposal.delivery_zip_code ? ' - CEP: ' + proposal.delivery_zip_code : ''}</div>` : ''}
+            ${proposal.delivery_contact ? `<div class="detail">Contato: ${proposal.delivery_contact}</div>` : ''}
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
 
         <!-- TABELA DE ITENS -->
         <div class="section">

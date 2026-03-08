@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle, ShieldAlert, ChevronsUpDown, Search } from 'lucide-react';
+import { SearchableSelect } from '@/components/ui/searchable-select';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, Lock, AlertCircle, ShieldAlert, ChevronsUpDown, Search, Truck, MapPin } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -88,6 +89,40 @@ export function ProposalDialog({
   const [approvalExpires, setApprovalExpires] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
 
+  // Logistics state
+  const [carrierId, setCarrierId] = useState('');
+  const [freightType, setFreightType] = useState('');
+  const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
+  const [deliveryFields, setDeliveryFields] = useState({
+    name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '',
+  });
+
+  // Carrier search
+  const [carrierSearch, setCarrierSearch] = useState('');
+  const { data: carriersRaw } = useQuery({
+    queryKey: ['carriers-search-proposal', carrierSearch],
+    queryFn: async () => {
+      let query = supabase.from('carriers').select('id, name, trade_name').eq('active', true).order('name').limit(50);
+      if (carrierSearch) query = query.ilike('name', `%${carrierSearch}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const carrierOptions = useMemo(() => {
+    return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
+  }, [carriersRaw]);
+
+  // Auto-fill carrier from company default
+  const autoFillCarrier = useCallback(async (compId: string) => {
+    if (!compId) return;
+    const { data } = await supabase.from('companies').select('default_carrier_id').eq('id', compId).maybeSingle();
+    if (data?.default_carrier_id) {
+      setCarrierId(data.default_carrier_id);
+    }
+  }, []);
+
   // Price override modal states (for admin authorization)
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
@@ -116,6 +151,20 @@ export function ProposalDialog({
         status: proposal.status,
         ipi_mode: (proposal as any).ipi_mode || 'destacar',
       });
+      // Logistics
+      setCarrierId((proposal as any).carrier_id || '');
+      setFreightType((proposal as any).freight_type || '');
+      setDeliverySameAsCompany((proposal as any).delivery_same_as_company !== false);
+      setDeliveryFields({
+        name: (proposal as any).delivery_name || '',
+        address: (proposal as any).delivery_address || '',
+        number: (proposal as any).delivery_number || '',
+        neighborhood: (proposal as any).delivery_neighborhood || '',
+        city: (proposal as any).delivery_city || '',
+        state: (proposal as any).delivery_state || '',
+        zip_code: (proposal as any).delivery_zip_code || '',
+        contact: (proposal as any).delivery_contact || '',
+      });
     } else {
       // Default validity date: 30 days from now
       const defaultValidity = new Date();
@@ -129,6 +178,14 @@ export function ProposalDialog({
         ipi_mode: 'destacar',
       });
       setItems([]);
+      setCarrierId('');
+      setFreightType('');
+      setDeliverySameAsCompany(true);
+      setDeliveryFields({ name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '' });
+      // Auto-fill carrier from company
+      if (companyId) {
+        autoFillCarrier(companyId);
+      }
     }
   }, [proposal, open]);
 
@@ -218,6 +275,17 @@ export function ProposalDialog({
           ipi_mode: formData.ipi_mode,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
+          carrier_id: carrierId || null,
+          freight_type: freightType || null,
+          delivery_same_as_company: deliverySameAsCompany,
+          delivery_name: !deliverySameAsCompany ? deliveryFields.name || null : null,
+          delivery_address: !deliverySameAsCompany ? deliveryFields.address || null : null,
+          delivery_number: !deliverySameAsCompany ? deliveryFields.number || null : null,
+          delivery_neighborhood: !deliverySameAsCompany ? deliveryFields.neighborhood || null : null,
+          delivery_city: !deliverySameAsCompany ? deliveryFields.city || null : null,
+          delivery_state: !deliverySameAsCompany ? deliveryFields.state || null : null,
+          delivery_zip_code: !deliverySameAsCompany ? deliveryFields.zip_code || null : null,
+          delivery_contact: !deliverySameAsCompany ? deliveryFields.contact || null : null,
         } as any)
         .select()
         .single();
@@ -292,6 +360,17 @@ export function ProposalDialog({
           ipi_mode: formData.ipi_mode,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
+          carrier_id: carrierId || null,
+          freight_type: freightType || null,
+          delivery_same_as_company: deliverySameAsCompany,
+          delivery_name: !deliverySameAsCompany ? deliveryFields.name || null : null,
+          delivery_address: !deliverySameAsCompany ? deliveryFields.address || null : null,
+          delivery_number: !deliverySameAsCompany ? deliveryFields.number || null : null,
+          delivery_neighborhood: !deliverySameAsCompany ? deliveryFields.neighborhood || null : null,
+          delivery_city: !deliverySameAsCompany ? deliveryFields.city || null : null,
+          delivery_state: !deliverySameAsCompany ? deliveryFields.state || null : null,
+          delivery_zip_code: !deliverySameAsCompany ? deliveryFields.zip_code || null : null,
+          delivery_contact: !deliverySameAsCompany ? deliveryFields.contact || null : null,
         })
         .eq('id', proposal.id);
 
@@ -372,6 +451,18 @@ export function ProposalDialog({
         ipi_mode: proposalData.ipi_mode || 'destacar',
         subtotal_products: proposalData.subtotal_products || 0,
         total_ipi: proposalData.total_ipi || 0,
+        // Copy logistics from proposal
+        carrier_id: proposalData.carrier_id || null,
+        freight_type: proposalData.freight_type || null,
+        delivery_same_as_company: proposalData.delivery_same_as_company ?? true,
+        delivery_name: proposalData.delivery_name || null,
+        delivery_address: proposalData.delivery_address || null,
+        delivery_number: proposalData.delivery_number || null,
+        delivery_neighborhood: proposalData.delivery_neighborhood || null,
+        delivery_city: proposalData.delivery_city || null,
+        delivery_state: proposalData.delivery_state || null,
+        delivery_zip_code: proposalData.delivery_zip_code || null,
+        delivery_contact: proposalData.delivery_contact || null,
       } as any)
       .select()
       .single();
@@ -1174,6 +1265,94 @@ export function ProposalDialog({
                     <span className="text-muted-foreground font-medium">Valor Total:</span>
                     <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
                   </div>
+                </div>
+              </div>
+
+              {/* ===== LOGÍSTICA ===== */}
+              <div className="space-y-4 border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Logística</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Transportadora</Label>
+                    <SearchableSelect
+                      options={carrierOptions}
+                      value={carrierId || null}
+                      onChange={(v) => setCarrierId(v || '')}
+                      placeholder="Selecione uma transportadora"
+                      searchPlaceholder="Buscar transportadora..."
+                      onSearchChange={setCarrierSearch}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de Frete</Label>
+                    <Select value={freightType} onValueChange={setFreightType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de frete" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+                        <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+                        <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-semibold">Endereço de Entrega</Label>
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" checked={deliverySameAsCompany} onChange={() => setDeliverySameAsCompany(true)} />
+                      <span className="text-sm">Mesmo endereço do cliente</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" checked={!deliverySameAsCompany} onChange={() => setDeliverySameAsCompany(false)} />
+                      <span className="text-sm">Outro endereço</span>
+                    </label>
+                  </div>
+                  {!deliverySameAsCompany && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Nome do Local</Label>
+                        <Input value={deliveryFields.name} onChange={(e) => setDeliveryFields(f => ({ ...f, name: e.target.value }))} placeholder="Ex: CD São Paulo" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Endereço</Label>
+                        <Input value={deliveryFields.address} onChange={(e) => setDeliveryFields(f => ({ ...f, address: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Número</Label>
+                        <Input value={deliveryFields.number} onChange={(e) => setDeliveryFields(f => ({ ...f, number: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Bairro</Label>
+                        <Input value={deliveryFields.neighborhood} onChange={(e) => setDeliveryFields(f => ({ ...f, neighborhood: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cidade</Label>
+                        <Input value={deliveryFields.city} onChange={(e) => setDeliveryFields(f => ({ ...f, city: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Estado</Label>
+                        <Input value={deliveryFields.state} onChange={(e) => setDeliveryFields(f => ({ ...f, state: e.target.value }))} maxLength={2} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">CEP</Label>
+                        <Input value={deliveryFields.zip_code} onChange={(e) => setDeliveryFields(f => ({ ...f, zip_code: e.target.value }))} />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Contato no Local</Label>
+                        <Input value={deliveryFields.contact} onChange={(e) => setDeliveryFields(f => ({ ...f, contact: e.target.value }))} placeholder="Nome e telefone do contato" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
