@@ -151,6 +151,20 @@ export function ProposalDialog({
         status: proposal.status,
         ipi_mode: (proposal as any).ipi_mode || 'destacar',
       });
+      // Logistics
+      setCarrierId((proposal as any).carrier_id || '');
+      setFreightType((proposal as any).freight_type || '');
+      setDeliverySameAsCompany((proposal as any).delivery_same_as_company !== false);
+      setDeliveryFields({
+        name: (proposal as any).delivery_name || '',
+        address: (proposal as any).delivery_address || '',
+        number: (proposal as any).delivery_number || '',
+        neighborhood: (proposal as any).delivery_neighborhood || '',
+        city: (proposal as any).delivery_city || '',
+        state: (proposal as any).delivery_state || '',
+        zip_code: (proposal as any).delivery_zip_code || '',
+        contact: (proposal as any).delivery_contact || '',
+      });
     } else {
       // Default validity date: 30 days from now
       const defaultValidity = new Date();
@@ -164,6 +178,14 @@ export function ProposalDialog({
         ipi_mode: 'destacar',
       });
       setItems([]);
+      setCarrierId('');
+      setFreightType('');
+      setDeliverySameAsCompany(true);
+      setDeliveryFields({ name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '' });
+      // Auto-fill carrier from company
+      if (companyId) {
+        autoFillCarrier(companyId);
+      }
     }
   }, [proposal, open]);
 
