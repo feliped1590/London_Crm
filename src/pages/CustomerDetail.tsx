@@ -832,7 +832,11 @@ export default function CustomerDetail() {
                       setorId={companyForm.setor_id}
                       segmentoId={companyForm.segmento_id}
                       atividadeId={companyForm.atividade_id}
-                      onSetorChange={(v) => setCompanyForm(prev => ({ ...prev, setor_id: v, segmento_id: null, atividade_id: null }))}
+                      onSetorChange={(v) => {
+                        const setorNome = v ? setores.find(s => s.id === v)?.nome : null;
+                        const isIndustria = setorNome?.toLowerCase() === 'indústria';
+                        setCompanyForm(prev => ({ ...prev, setor_id: v, segmento_id: null, atividade_id: null, contribuinte_ipi: isIndustria ? true : prev.contribuinte_ipi }));
+                      }}
                       onSegmentoChange={(v) => setCompanyForm(prev => ({ ...prev, segmento_id: v, atividade_id: null }))}
                       onAtividadeChange={(v) => setCompanyForm(prev => ({ ...prev, atividade_id: v }))}
                       disabled={!isEditing}
