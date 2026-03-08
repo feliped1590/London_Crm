@@ -339,7 +339,7 @@ export default function Products() {
         aliquota_pis: data.aliquota_pis || null,
         aliquota_cofins: data.aliquota_cofins || null,
         tipo_produto_fiscal: data.tipo_produto_fiscal || null,
-        ncm_validated_at: null,
+        ncm_validated_at: data.ncm_validated_at || null,
         // Campos ERP Projedata
         tipo_item: data.tipo_item || null,
         tipo_ficha: data.tipo_ficha || null,
