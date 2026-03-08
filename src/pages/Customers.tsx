@@ -73,6 +73,7 @@ interface CustomerRow {
   total_count: number;
   setor_id: string | null;
   segmento_id: string | null;
+  contribuinte_ipi: boolean;
   atividade_id: string | null;
 }
 
