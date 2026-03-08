@@ -747,7 +747,13 @@ export default function Products() {
                           });
                         }}
                         productDescription={`${formData.name} ${formData.description || ''}`}
-                        onValidationChange={setNcmValidation}
+                        onValidationChange={(result) => {
+                          setNcmValidation(result);
+                          // Only set ncm_validated_at on real validation
+                          if (result) {
+                            setFormData(prev => ({ ...prev, ncm_validated_at: new Date().toISOString() }));
+                          }
+                        }}
                       />
                     </div>
                     {/* Descrição */}
