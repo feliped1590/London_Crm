@@ -192,14 +192,15 @@ export default function Orders() {
                <Table className="min-w-[900px]">
                  <TableHeader>
                    <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Entrega Prevista</TableHead>
-                  <TableHead>Valor Total</TableHead>
-                  <TableHead>Data Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                   <TableHead>Número</TableHead>
+                   <TableHead>Empresa</TableHead>
+                   <TableHead>Transportadora</TableHead>
+                   <TableHead>Frete</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Entrega Prevista</TableHead>
+                   <TableHead>Valor Total</TableHead>
+                   <TableHead>Data Criação</TableHead>
+                   <TableHead className="text-right">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
