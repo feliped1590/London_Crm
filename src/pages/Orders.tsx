@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, User, Calendar, Plus, Edit, RefreshCw, FileText, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, Building2, User, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
