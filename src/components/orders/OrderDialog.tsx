@@ -58,7 +58,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const { isAdmin } = useModulePermissions();
   const { getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
   const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
-  const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
   
   const isEditMode = !!order;
   
@@ -79,6 +78,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
+
+  const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
+
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
