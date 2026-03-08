@@ -33,6 +33,7 @@ import Insights from "./pages/Insights";
 import PricingTables from "./pages/PricingTables";
 import Prospecting from "./pages/Prospecting";
 import Stock from "./pages/Stock";
+import Carriers from "./pages/Carriers";
 import ImportCompanies from "./pages/ImportCompanies";
 
 import Help from "./pages/Help";
