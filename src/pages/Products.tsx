@@ -36,6 +36,7 @@ import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
+import { generateProductDescription } from '@/utils/products/generateProductDescription';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -173,6 +174,26 @@ export default function Products() {
 
   const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
   const [formTab, setFormTab] = useState('geral');
+  const [isAutoDescription, setIsAutoDescription] = useState(true);
+
+  // Resolve lookup label by id
+  const getLookupLabel = (items: { id: string; label: string }[], id?: string) => {
+    if (!id) return undefined;
+    return items.find((i) => i.id === id)?.label;
+  };
+
+  // Recalcula a descrição inteligente
+  const recalcularDescricao = (data: typeof formData) => {
+    return generateProductDescription({
+      family: getLookupLabel(familias.items, data.family_id),
+      group: getLookupLabel(grupos.items, data.grupo_id),
+      subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
+      productClass: getLookupLabel(classes.items, data.class_id),
+      width: data.width,
+      length: data.length,
+      thickness: data.thickness,
+    });
+  };
 
   // Recalcula o fator milheiro quando os valores mudam
   const recalcularFatorMilheiro = (data: typeof formData) => {
@@ -427,6 +448,7 @@ export default function Products() {
     setIsDialogOpen(false);
     setNcmValidation(null);
     setFormTab('geral');
+    setIsAutoDescription(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -485,6 +507,7 @@ export default function Products() {
     });
     setIsDialogOpen(true);
     setFormTab('geral');
+    setIsAutoDescription(false);
   };
 
   // Helper to get pricing info for a product
@@ -639,8 +662,11 @@ export default function Products() {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Descrição do produto"
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          setIsAutoDescription(false);
+                        }}
+                        placeholder="Descrição do produto (gerada automaticamente)"
                         required
                       />
                     </div>
@@ -678,7 +704,11 @@ export default function Products() {
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, family_id: v === 'none' ? undefined : v })}
+                        onValueChange={(v) => {
+                          const updated = { ...formData, family_id: v === 'none' ? undefined : v };
+                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a família" />
@@ -716,7 +746,11 @@ export default function Products() {
                           <Label htmlFor="grupo">Grupo</Label>
                           <Select
                             value={formData.grupo_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
+                            onValueChange={(v) => {
+                              const updated = { ...formData, grupo_id: v === 'none' ? undefined : v };
+                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              setFormData(updated);
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
@@ -733,7 +767,11 @@ export default function Products() {
                           <Label htmlFor="subgrupo">Subgrupo</Label>
                           <Select
                             value={formData.subgrupo_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
+                            onValueChange={(v) => {
+                              const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
+                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              setFormData(updated);
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
@@ -750,7 +788,11 @@ export default function Products() {
                           <Label htmlFor="classe">Classe</Label>
                           <Select
                             value={formData.class_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, class_id: v === 'none' ? undefined : v })}
+                            onValueChange={(v) => {
+                              const updated = { ...formData, class_id: v === 'none' ? undefined : v };
+                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              setFormData(updated);
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
@@ -782,6 +824,7 @@ export default function Products() {
                               const newWidth = parseFloat(e.target.value) || 0;
                               const newData = { ...formData, width: newWidth };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
@@ -799,6 +842,7 @@ export default function Products() {
                               const newLength = parseFloat(e.target.value) || 0;
                               const newData = { ...formData, length: newLength };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
@@ -816,6 +860,7 @@ export default function Products() {
                               const newThickness = parseFloat(e.target.value) || 0;
                               const newData = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
                             placeholder="Em micras"
