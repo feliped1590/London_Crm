@@ -658,7 +658,7 @@ export default function CustomerNew() {
                 </div>
               )}
               <div>
-                <Label htmlFor="phone">Telefone <span className="text-destructive">*</span></Label>
+                <Label htmlFor="phone">Telefone *</Label>
                 <Input
                   id="phone"
                   value={companyForm.phone}
