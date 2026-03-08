@@ -575,58 +575,8 @@ export default function CustomerDetail() {
   const hasAccess = canAccessBySalesRep(customerSalesRepId);
   const requiresIntervention = needsAdminIntervention(customerSalesRepId);
   
-  // Admin without direct link needs intervention authorization
-  if (requiresIntervention && !adminAccessGranted) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/customers')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h2 className="text-xl font-semibold">{customer.fantasia || customer.name}</h2>
-        </div>
-        <Card className="border-amber-200 dark:border-amber-800">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900">
-              <Shield className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h3 className="text-lg font-semibold">Autorização Necessária</h3>
-            <p className="text-muted-foreground max-w-md">
-              Este cliente pertence ao vendedor comercial <strong>{customerSalesRep?.name || 'não identificado'}</strong>
-              {salesRepOwnerName && <>, que está sendo administrado pelo usuário <strong>{salesRepOwnerName}</strong></>}.
-              {' '}Como administrador, você pode acessar mediante justificativa.
-            </p>
-            <Button onClick={() => setShowAccessInterventionModal(true)}>
-              Solicitar Acesso
-            </Button>
-          </CardContent>
-        </Card>
-        <AdminInterventionModal
-          open={showAccessInterventionModal}
-          onOpenChange={setShowAccessInterventionModal}
-          clientName={customer.fantasia || customer.name}
-          clientOwnerName={customerSalesRep?.name || 'Vendedor não identificado'}
-          actionDescription="Acessar dados"
-          onConfirm={(justification) => {
-            logIntervention({
-              actionType: 'access_foreign_client',
-              entityType: 'company',
-              entityId: customer.id,
-              entityName: customer.name,
-              clientId: customer.id,
-              clientName: customer.name,
-              clientOwnerId: customerSalesRepId,
-              clientOwnerName: customerSalesRep?.name,
-              justification,
-            });
-            setAdminAccessGranted(true);
-            setShowAccessInterventionModal(false);
-            toast.success('Acesso autorizado e registrado.');
-          }}
-        />
-      </div>
-    );
-  }
+  // Admin intervention is no longer required to VIEW customer details.
+  // Intervention modal will be triggered only on specific actions (create/move deal, create/edit order).
 
   // Non-admin without access: block entirely
   if (!hasAccess && !isSalesRepAdmin) {
