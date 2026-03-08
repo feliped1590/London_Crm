@@ -1577,10 +1577,10 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
           Transportadora e frete pré-selecionados em novas propostas e pedidos
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Transportadora</Label>
-          <div className="w-[300px]">
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Transportadora</Label>
             <SearchableSelect
               options={carrierOptions}
               value={defaultCarrierId || null}
@@ -1591,10 +1591,8 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
               onSearchChange={setCarrierSearch}
             />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Tipo de Frete</Label>
-          <div className="w-[300px]">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipo de Frete</Label>
             <Select value={defaultFreightType || ''} onValueChange={(v) => updateFreightMutation.mutate(v || null)} disabled={!isEditing}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de frete padrão" />
