@@ -58,6 +58,17 @@ serve(async (req) => {
       console.error("Error fetching items:", itemsError);
     }
 
+    // Fetch carrier if present
+    let carrierData: any = null;
+    if (order.carrier_id) {
+      const { data: cd } = await supabase
+        .from('carriers')
+        .select('id, name, trade_name, cnpj, phone')
+        .eq('id', order.carrier_id)
+        .maybeSingle();
+      carrierData = cd;
+    }
+
     let emitterEntity = order.legal_entity;
     if (!emitterEntity) {
       const { data: defaultEntity } = await supabase
