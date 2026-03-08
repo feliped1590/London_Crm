@@ -113,6 +113,7 @@ interface UnifiedCustomer {
   is_matriz?: boolean;
   last_reviewed_at?: string | null;
   active?: boolean;
+  contribuinte_ipi?: boolean;
   owner_id?: string | null;
   contact_name?: string | null;
   source: 'crm' | 'erp';

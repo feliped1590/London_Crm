@@ -153,7 +153,6 @@ export default function Customers() {
     switch (sortField) {
       case 'name': return 'name';
       case 'created_at': return 'created_at';
-      case 'status': return 'status';
       case 'owner': return 'owner';
       default: return 'name';
     }
