@@ -697,18 +697,6 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Descrição */}
-                    <div className="col-span-2">
-                      <Label htmlFor="name">Descrição *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Descrição do produto"
-                        required
-                      />
-                    </div>
-
                     {/* Classificação Complementar */}
                     <div className="col-span-2 pt-2">
                       <h3 className="text-sm font-medium text-muted-foreground mb-3">Classificação Complementar</h3>
@@ -765,6 +753,18 @@ export default function Products() {
                           </Select>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Descrição */}
+                    <div className="col-span-2">
+                      <Label htmlFor="name">Descrição *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Descrição do produto"
+                        required
+                      />
                     </div>
 
                     {/* Dimensões */}
