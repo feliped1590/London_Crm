@@ -1,4 +1,16 @@
-import { Product, calcularFatorMilheiro } from '@/types/products';
+import { calcularFatorMilheiro } from '@/types/products';
+
+/**
+ * Dados mínimos do produto necessários para o cálculo de preço por fator KG.
+ */
+interface PackagingPricingInput {
+  unit_measure?: string | null;
+  unit_price?: number | null;
+  fator_kg?: number | null;
+  width?: number | null;
+  length?: number | null;
+  thickness?: number | null;
+}
 
 /**
  * Calcula o preço base de um produto de embalagem usando fator KG.
@@ -6,7 +18,7 @@ import { Product, calcularFatorMilheiro } from '@/types/products';
  *
  * Hierarquia: Tabela de preço → Fator KG → unit_price padrão
  */
-export function calculatePackagingPrice(product: Product): number {
+export function calculatePackagingPrice(product: PackagingPricingInput): number {
   if (!product) return 0;
 
   const fatorKg = product.fator_kg || 0;
