@@ -31,6 +31,7 @@ import {
 } from '@/types/products';
 import { ApprovalLinkModal } from './ApprovalLinkModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
+import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -56,6 +57,7 @@ export function ProposalDialog({
   const { isAdmin } = useModulePermissions();
   const { getTableForEntity, getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
   const isEditing = !!proposal;
+  const { companyFiscalData } = useCompanyFiscal(companyId);
 
   // Get linked pricing table based on company or contact (legacy method)
   const linkedPricingTableFromEntity = companyId 
@@ -151,6 +153,22 @@ export function ProposalDialog({
       setItems(existingItems);
     }
   }, [existingItems]);
+
+  // Recalculate IPI rates when company fiscal data changes
+  useEffect(() => {
+    if (!companyFiscalData || items.length === 0) return;
+    setItems(prev =>
+      prev.map(item => {
+        if (!item.product) return item;
+        return {
+          ...item,
+          ipi_rate: companyFiscalData.contribuinte_ipi
+            ? (item.product as any)?.aliquota_ipi || 0
+            : 0,
+        };
+      })
+    );
+  }, [companyFiscalData]);
 
   // Fetch deal to get legal_entity_id
   const { data: dealData } = useQuery({
@@ -496,7 +514,10 @@ export function ProposalDialog({
       }
     }
 
-    const ipiRate = product.aliquota_ipi || 0;
+    const isContribuinteIpi = companyId && companyFiscalData
+      ? companyFiscalData.contribuinte_ipi
+      : true;
+    const ipiRate = isContribuinteIpi ? (product.aliquota_ipi || 0) : 0;
 
     setItems([
       ...items,

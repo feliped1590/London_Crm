@@ -29,6 +29,7 @@ import { Order, OrderItem, OrderStatus, IpiMode, ipiModeConfig, orderStatusConfi
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
+import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 
 interface OrderDialogProps {
   open: boolean;
@@ -77,6 +78,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
+
+  const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
+
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
@@ -285,6 +289,24 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     }
   }, [open]);
 
+  // Recalculate IPI rates when company fiscal data changes
+  useEffect(() => {
+    if (!companyFiscalData || items.length === 0) return;
+    setItems(prev =>
+      prev.map(item => {
+        if (!item.product_id) return item;
+        const product = products?.find(p => p.id === item.product_id);
+        if (!product) return item;
+        return {
+          ...item,
+          ipi_rate: companyFiscalData.contribuinte_ipi
+            ? (product as any).aliquota_ipi || 0
+            : 0,
+        };
+      })
+    );
+  }, [companyFiscalData]);
+
   // IPI calculation helpers
   const calculateIpiValue = (subtotalItem: number, ipiRate: number, mode: IpiMode) => {
     if (mode === 'isento' || ipiRate <= 0) return 0;
@@ -360,7 +382,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       unit_price: unitPrice,
       subtotal: unitPrice,
       discount_percent: discountPercent,
-      ipi_rate: (product as any).aliquota_ipi || 0,
+      ipi_rate: (companyId && companyFiscalData)
+        ? (companyFiscalData.contribuinte_ipi ? ((product as any).aliquota_ipi || 0) : 0)
+        : ((product as any).aliquota_ipi || 0),
       width: product.width || undefined,
       length: product.length || undefined,
       thickness: product.thickness || undefined,
