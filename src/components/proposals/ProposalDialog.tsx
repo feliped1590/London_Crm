@@ -163,7 +163,7 @@ export function ProposalDialog({
         return {
           ...item,
           ipi_rate: companyFiscalData.contribuinte_ipi
-            ? item.product.aliquota_ipi || 0
+            ? (item.product as any)?.aliquota_ipi || 0
             : 0,
         };
       })
