@@ -289,6 +289,24 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     }
   }, [open]);
 
+  // Recalculate IPI rates when company fiscal data changes
+  useEffect(() => {
+    if (!companyFiscalData || items.length === 0) return;
+    setItems(prev =>
+      prev.map(item => {
+        if (!item.product_id) return item;
+        const product = products?.find(p => p.id === item.product_id);
+        if (!product) return item;
+        return {
+          ...item,
+          ipi_rate: companyFiscalData.contribuinte_ipi
+            ? (product as any).aliquota_ipi || 0
+            : 0,
+        };
+      })
+    );
+  }, [companyFiscalData]);
+
   // IPI calculation helpers
   const calculateIpiValue = (subtotalItem: number, ipiRate: number, mode: IpiMode) => {
     if (mode === 'isento' || ipiRate <= 0) return 0;

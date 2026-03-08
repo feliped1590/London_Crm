@@ -154,6 +154,22 @@ export function ProposalDialog({
     }
   }, [existingItems]);
 
+  // Recalculate IPI rates when company fiscal data changes
+  useEffect(() => {
+    if (!companyFiscalData || items.length === 0) return;
+    setItems(prev =>
+      prev.map(item => {
+        if (!item.product) return item;
+        return {
+          ...item,
+          ipi_rate: companyFiscalData.contribuinte_ipi
+            ? item.product.aliquota_ipi || 0
+            : 0,
+        };
+      })
+    );
+  }, [companyFiscalData]);
+
   // Fetch deal to get legal_entity_id
   const { data: dealData } = useQuery({
     queryKey: ['deal_legal_entity', dealId],
