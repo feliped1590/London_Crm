@@ -326,6 +326,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       });
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
+      if (preSelectedCompanyId) {
+        setCompanyId(preSelectedCompanyId);
+      }
     }
     // Auto-fill carrier for new orders when company changes
     if (open && !order && companyId) {
