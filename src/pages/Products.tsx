@@ -23,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -160,6 +160,7 @@ export default function Products() {
     aliquota_pis: undefined as number | undefined,
     aliquota_cofins: undefined as number | undefined,
     tipo_produto_fiscal: undefined as TipoProdutoFiscal | undefined,
+    ncm_validated_at: null as string | null,
     // Campos ERP Projedata
     tipo_item: '',
     tipo_ficha: undefined as number | undefined,
@@ -173,6 +174,7 @@ export default function Products() {
   });
 
   const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
+  const [ncmOfficialIpi, setNcmOfficialIpi] = useState<number | null>(null);
   const [formTab, setFormTab] = useState('geral');
   const [isAutoDescription, setIsAutoDescription] = useState(true);
 
@@ -337,7 +339,7 @@ export default function Products() {
         aliquota_pis: data.aliquota_pis || null,
         aliquota_cofins: data.aliquota_cofins || null,
         tipo_produto_fiscal: data.tipo_produto_fiscal || null,
-        ncm_validated_at: data.ncm_code ? new Date().toISOString() : null,
+        ncm_validated_at: data.ncm_validated_at || null,
         // Campos ERP Projedata
         tipo_item: data.tipo_item || null,
         tipo_ficha: data.tipo_ficha || null,
@@ -434,6 +436,7 @@ export default function Products() {
       aliquota_pis: undefined,
       aliquota_cofins: undefined,
       tipo_produto_fiscal: undefined,
+      ncm_validated_at: null,
       tipo_item: '',
       tipo_ficha: undefined,
       erp_grupo: '',
@@ -447,6 +450,7 @@ export default function Products() {
     setEditingProduct(null);
     setIsDialogOpen(false);
     setNcmValidation(null);
+    setNcmOfficialIpi(null);
     setFormTab('geral');
     setIsAutoDescription(true);
   };
@@ -574,6 +578,7 @@ export default function Products() {
       aliquota_pis: product.aliquota_pis,
       aliquota_cofins: product.aliquota_cofins,
       tipo_produto_fiscal: product.tipo_produto_fiscal,
+      ncm_validated_at: product.ncm_validated_at || null,
       tipo_item: product.tipo_item || '',
       tipo_ficha: product.tipo_ficha,
       erp_grupo: product.erp_grupo || '',
@@ -587,6 +592,16 @@ export default function Products() {
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
+    setNcmOfficialIpi(null);
+    // Load official IPI from NCM if product has ncm_id
+    if (product.ncm_id) {
+      supabase.from('ncm_codes').select('aliquota_ipi_oficial').eq('id', product.ncm_id).single()
+        .then(({ data }) => {
+          if (data?.aliquota_ipi_oficial != null) {
+            setNcmOfficialIpi(data.aliquota_ipi_oficial);
+          }
+        });
+    }
   };
 
   // Helper to get pricing info for a product
@@ -724,15 +739,24 @@ export default function Products() {
                       <NCMSelector
                         value={formData.ncm_code}
                         onChange={(ncmCode, ncm) => {
+                          const officialIpi = ncm?.aliquota_ipi_oficial ?? null;
+                          setNcmOfficialIpi(officialIpi);
+                          const shouldAutoFill = !formData.aliquota_ipi && officialIpi != null;
                           setFormData({ 
                             ...formData, 
                             ncm_code: ncmCode,
                             ncm_id: ncm?.id,
-                            aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
+                            ...(shouldAutoFill ? { aliquota_ipi: officialIpi } : {}),
                           });
                         }}
                         productDescription={`${formData.name} ${formData.description || ''}`}
-                        onValidationChange={setNcmValidation}
+                        onValidationChange={(result) => {
+                          setNcmValidation(result);
+                          // Only set ncm_validated_at on real validation
+                          if (result) {
+                            setFormData(prev => ({ ...prev, ncm_validated_at: new Date().toISOString() }));
+                          }
+                        }}
                       />
                     </div>
                     {/* Descrição */}
@@ -1086,6 +1110,19 @@ export default function Products() {
                 </TabsContent>
 
                 <TabsContent value="fiscal" className="space-y-4 mt-4">
+
+                  {/* Alerta de divergência IPI */}
+                  {ncmOfficialIpi != null && formData.aliquota_ipi != null && formData.aliquota_ipi !== ncmOfficialIpi && (
+                    <div className="flex items-start gap-2 rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700 p-3 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium text-yellow-800 dark:text-yellow-400">Divergência de alíquota de IPI</p>
+                        <p className="text-yellow-700 dark:text-yellow-500">
+                          A alíquota de IPI deste produto ({formData.aliquota_ipi}%) diverge da alíquota oficial da TIPI para o NCM selecionado ({ncmOfficialIpi}%).
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Dados Fiscais */}
                   <FiscalSuggestionsCard
