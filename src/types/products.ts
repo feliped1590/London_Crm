@@ -2,7 +2,13 @@ import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
 export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
+export type OrderType = 'producao' | 'pronta_entrega';
 export type IpiMode = 'destacar' | 'incluso' | 'isento';
+
+export const orderTypeConfig: Record<OrderType, { label: string; color: string }> = {
+  producao: { label: 'Produção', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
+  pronta_entrega: { label: 'Pronta Entrega', color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800' },
+};
 
 export const ipiModeConfig: Record<IpiMode, { label: string; description: string }> = {
   destacar: { label: 'Destacar IPI', description: 'IPI calculado e somado ao total' },
