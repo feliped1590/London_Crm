@@ -364,6 +364,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOriginalItems([]);
       setSelectedProductId('');
       setLegalEntityId('');
+      setOrderType('producao');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
       setCarrierId('');
