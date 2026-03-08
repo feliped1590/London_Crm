@@ -147,6 +147,7 @@ export interface Order {
   company_id?: string;
   contact_id?: string;
   status: OrderStatus;
+  order_type?: OrderType;
   delivery_date?: string;
   total_value?: number;
   ipi_mode?: IpiMode;
