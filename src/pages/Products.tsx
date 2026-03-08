@@ -451,17 +451,87 @@ export default function Products() {
     setIsAutoDescription(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+
+  const checkDuplicateProduct = async (): Promise<boolean> => {
+    // Build filter for the combination: family + grupo + subgrupo + class + dimensions
+    let query = supabase
+      .from('products')
+      .select('id, sku, name')
+      .eq('active', true);
+
+    // Handle nullable fields - use .is(null) for undefined, .eq for values
+    if (formData.family_id) {
+      query = query.eq('family_id', formData.family_id);
+    } else {
+      query = query.is('family_id', null);
+    }
+    if (formData.grupo_id) {
+      query = query.eq('grupo_id', formData.grupo_id);
+    } else {
+      query = query.is('grupo_id', null);
+    }
+    if (formData.subgrupo_id) {
+      query = query.eq('subgrupo_id', formData.subgrupo_id);
+    } else {
+      query = query.is('subgrupo_id', null);
+    }
+    if (formData.class_id) {
+      query = query.eq('class_id', formData.class_id);
+    } else {
+      query = query.is('class_id', null);
+    }
+
+    // Dimensions
+    const w = formData.width || 0;
+    const l = formData.length || 0;
+    const t = formData.thickness || 0;
+    query = query.eq('width', w).eq('length', l).eq('thickness', t);
+
+    // Exclude current product when editing
+    if (editingProduct) {
+      query = query.neq('id', editingProduct.id);
+    }
+
+    query = query.limit(1);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Erro ao verificar duplicidade:', error);
+      return false; // Don't block on error
+    }
+
+    if (data && data.length > 0) {
+      const existing = data[0];
+      toast.error(
+        `Produto duplicado! Já existe um produto ativo com a mesma estrutura: ${existing.sku} - ${existing.name}`,
+        { duration: 6000 }
+      );
+      return true;
+    }
+
+    return false;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.sku || !formData.name) {
       toast.error('SKU e Nome são obrigatórios');
       return;
     }
 
-    if (editingProduct) {
-      updateMutation.mutate({ id: editingProduct.id, ...formData });
-    } else {
-      createMutation.mutate(formData);
+    setIsCheckingDuplicate(true);
+    try {
+      const isDuplicate = await checkDuplicateProduct();
+      if (isDuplicate) return;
+
+      if (editingProduct) {
+        updateMutation.mutate({ id: editingProduct.id, ...formData });
+      } else {
+        createMutation.mutate(formData);
+      }
+    } finally {
+      setIsCheckingDuplicate(false);
     }
   };
 
