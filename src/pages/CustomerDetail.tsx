@@ -172,6 +172,7 @@ export default function CustomerDetail() {
     setor_id: null as string | null,
     segmento_id: null as string | null,
     atividade_id: null as string | null,
+    contribuinte_ipi: false,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
