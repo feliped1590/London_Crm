@@ -546,6 +546,7 @@ export default function CustomerDetail() {
       setor_id: customer.setor_id || null,
       segmento_id: customer.segmento_id || null,
       atividade_id: customer.atividade_id || null,
+      contribuinte_ipi: customer.contribuinte_ipi ?? false,
     });
     setCustomFieldsData((customer.custom_fields as Record<string, unknown>) || {});
   }
