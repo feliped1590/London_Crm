@@ -651,6 +651,17 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Código */}
+                    <div>
+                      <Label htmlFor="sku">Código *</Label>
+                      <Input
+                        id="sku"
+                        value={formData.sku}
+                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                        placeholder="Ex: BOB-001"
+                        required
+                      />
+                    </div>
                     {/* Família */}
                     <div>
                       <Label htmlFor="familia">Família</Label>
@@ -668,17 +679,6 @@ export default function Products() {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    {/* Código */}
-                    <div>
-                      <Label htmlFor="sku">Código *</Label>
-                      <Input
-                        id="sku"
-                        value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                        placeholder="Ex: BOB-001"
-                        required
-                      />
                     </div>
                     {/* Unidade */}
                     <div>
