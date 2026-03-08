@@ -662,8 +662,11 @@ export default function Products() {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Descrição do produto"
+                        onChange={(e) => {
+                          setFormData({ ...formData, name: e.target.value });
+                          setIsAutoDescription(false);
+                        }}
+                        placeholder="Descrição do produto (gerada automaticamente)"
                         required
                       />
                     </div>
