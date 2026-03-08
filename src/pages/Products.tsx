@@ -173,6 +173,7 @@ export default function Products() {
   });
 
   const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
+  const [ncmOfficialIpi, setNcmOfficialIpi] = useState<number | null>(null);
   const [formTab, setFormTab] = useState('geral');
   const [isAutoDescription, setIsAutoDescription] = useState(true);
 
