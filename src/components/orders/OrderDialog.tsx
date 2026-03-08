@@ -58,6 +58,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   const { isAdmin } = useModulePermissions();
   const { getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
   const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
+  const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
   
   const isEditMode = !!order;
   
