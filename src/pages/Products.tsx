@@ -1091,6 +1091,19 @@ export default function Products() {
 
                 <TabsContent value="fiscal" className="space-y-4 mt-4">
 
+                  {/* Alerta de divergência IPI */}
+                  {ncmOfficialIpi != null && formData.aliquota_ipi != null && formData.aliquota_ipi !== ncmOfficialIpi && (
+                    <div className="flex items-start gap-2 rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700 p-3 text-sm">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium text-yellow-800 dark:text-yellow-400">Divergência de alíquota de IPI</p>
+                        <p className="text-yellow-700 dark:text-yellow-500">
+                          A alíquota de IPI deste produto ({formData.aliquota_ipi}%) diverge da alíquota oficial da TIPI para o NCM selecionado ({ncmOfficialIpi}%).
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Dados Fiscais */}
                   <FiscalSuggestionsCard
                     data={{
