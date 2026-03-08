@@ -767,7 +767,11 @@ export default function Products() {
                           <Label htmlFor="subgrupo">Subgrupo</Label>
                           <Select
                             value={formData.subgrupo_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
+                            onValueChange={(v) => {
+                              const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
+                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              setFormData(updated);
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
