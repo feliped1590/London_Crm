@@ -57,6 +57,17 @@ serve(async (req) => {
       console.error('Error fetching items:', itemsError);
     }
 
+    // Fetch carrier if present
+    let carrierData: any = null;
+    if (proposal.carrier_id) {
+      const { data: cd } = await supabase
+        .from('carriers')
+        .select('id, name, trade_name, cnpj, phone')
+        .eq('id', proposal.carrier_id)
+        .maybeSingle();
+      carrierData = cd;
+    }
+
     const legalEntity = proposal.deal?.legal_entity || null;
     const ipiMode = proposal.ipi_mode || 'destacar';
     const showIpi = ipiMode !== 'isento';
