@@ -304,6 +304,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
+      // Logistics
+      setCarrierId((order as any).carrier_id || '');
+      setFreightType((order as any).freight_type || '');
+      setDeliverySameAsCompany((order as any).delivery_same_as_company !== false);
+      setDeliveryFields({
+        name: (order as any).delivery_name || '',
+        address: (order as any).delivery_address || '',
+        number: (order as any).delivery_number || '',
+        neighborhood: (order as any).delivery_neighborhood || '',
+        city: (order as any).delivery_city || '',
+        state: (order as any).delivery_state || '',
+        zip_code: (order as any).delivery_zip_code || '',
+        contact: (order as any).delivery_contact || '',
+      });
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
     }
