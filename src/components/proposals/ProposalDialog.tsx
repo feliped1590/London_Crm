@@ -1268,6 +1268,94 @@ export function ProposalDialog({
                 </div>
               </div>
 
+              {/* ===== LOGÍSTICA ===== */}
+              <div className="space-y-4 border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Truck className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Logística</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Transportadora</Label>
+                    <SearchableSelect
+                      options={carrierOptions}
+                      value={carrierId || null}
+                      onChange={(v) => setCarrierId(v || '')}
+                      placeholder="Selecione uma transportadora"
+                      searchPlaceholder="Buscar transportadora..."
+                      onSearchChange={setCarrierSearch}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Tipo de Frete</Label>
+                    <Select value={freightType} onValueChange={setFreightType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de frete" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+                        <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+                        <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Delivery Address */}
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-semibold">Endereço de Entrega</Label>
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" checked={deliverySameAsCompany} onChange={() => setDeliverySameAsCompany(true)} />
+                      <span className="text-sm">Mesmo endereço do cliente</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" checked={!deliverySameAsCompany} onChange={() => setDeliverySameAsCompany(false)} />
+                      <span className="text-sm">Outro endereço</span>
+                    </label>
+                  </div>
+                  {!deliverySameAsCompany && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Nome do Local</Label>
+                        <Input value={deliveryFields.name} onChange={(e) => setDeliveryFields(f => ({ ...f, name: e.target.value }))} placeholder="Ex: CD São Paulo" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Endereço</Label>
+                        <Input value={deliveryFields.address} onChange={(e) => setDeliveryFields(f => ({ ...f, address: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Número</Label>
+                        <Input value={deliveryFields.number} onChange={(e) => setDeliveryFields(f => ({ ...f, number: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Bairro</Label>
+                        <Input value={deliveryFields.neighborhood} onChange={(e) => setDeliveryFields(f => ({ ...f, neighborhood: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cidade</Label>
+                        <Input value={deliveryFields.city} onChange={(e) => setDeliveryFields(f => ({ ...f, city: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Estado</Label>
+                        <Input value={deliveryFields.state} onChange={(e) => setDeliveryFields(f => ({ ...f, state: e.target.value }))} maxLength={2} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">CEP</Label>
+                        <Input value={deliveryFields.zip_code} onChange={(e) => setDeliveryFields(f => ({ ...f, zip_code: e.target.value }))} />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <Label className="text-xs">Contato no Local</Label>
+                        <Input value={deliveryFields.contact} onChange={(e) => setDeliveryFields(f => ({ ...f, contact: e.target.value }))} placeholder="Nome e telefone do contato" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Observations */}
               <div>
                 <Label htmlFor="observations">Observações</Label>
