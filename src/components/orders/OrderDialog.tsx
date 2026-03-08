@@ -763,7 +763,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
-          subtotal_products: calculateSubtotalProducts(),
+          order_type: orderType,
           total_ipi: calculateTotalIpi(),
           carrier_id: carrierId || null,
           freight_type: freightType || null,
