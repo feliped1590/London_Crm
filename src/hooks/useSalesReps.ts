@@ -150,7 +150,7 @@ export function useSalesReps() {
       queryClient.invalidateQueries({ queryKey: ['portfolio'] });
       toast.success('Vendedor vinculado! Clientes foram automaticamente atribuídos ao usuário.');
     },
-    onError: () => toast.error('Erro ao vincular vendedor'),
+    onError: (error: any) => toast.error(error?.message || 'Erro ao vincular vendedor'),
   });
 
   const unlinkUserSalesRep = useMutation({
