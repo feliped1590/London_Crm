@@ -1,7 +1,7 @@
 import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
-export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
+export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'em_faturamento' | 'faturado' | 'entregue' | 'cancelado';
 export type OrderType = 'producao' | 'pronta_entrega';
 export type IpiMode = 'destacar' | 'incluso' | 'isento';
 
@@ -205,6 +205,7 @@ export const orderStatusConfig: Record<OrderStatus, { label: string; color: stri
   pendente: { label: 'Pendente', color: 'bg-slate-500' },
   em_producao: { label: 'Em Produção', color: 'bg-blue-500' },
   produzido: { label: 'Produzido', color: 'bg-cyan-500' },
+  em_faturamento: { label: 'Em Faturamento', color: 'bg-orange-500' },
   faturado: { label: 'Faturado', color: 'bg-yellow-500' },
   entregue: { label: 'Entregue', color: 'bg-green-500' },
   cancelado: { label: 'Cancelado', color: 'bg-red-500' },

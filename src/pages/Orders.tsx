@@ -48,7 +48,7 @@ export default function Orders() {
         .limit(200);
 
       if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus as OrderStatus);
+        query = query.eq('status', filterStatus as any);
       }
 
       const { data, error } = await query;
