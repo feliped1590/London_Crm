@@ -436,6 +436,7 @@ export default function Products() {
       aliquota_pis: undefined,
       aliquota_cofins: undefined,
       tipo_produto_fiscal: undefined,
+      ncm_validated_at: null,
       tipo_item: '',
       tipo_ficha: undefined,
       erp_grupo: '',
