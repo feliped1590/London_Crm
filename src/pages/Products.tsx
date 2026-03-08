@@ -578,6 +578,7 @@ export default function Products() {
       aliquota_pis: product.aliquota_pis,
       aliquota_cofins: product.aliquota_cofins,
       tipo_produto_fiscal: product.tipo_produto_fiscal,
+      ncm_validated_at: product.ncm_validated_at || null,
       tipo_item: product.tipo_item || '',
       tipo_ficha: product.tipo_ficha,
       erp_grupo: product.erp_grupo || '',
