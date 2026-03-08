@@ -605,7 +605,7 @@ export default function Customers() {
                         </div>
                       </SortableHeader>
                       <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
-                      <SortableHeader field="status">Status</SortableHeader>
+                      <TableHead>IPI</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
