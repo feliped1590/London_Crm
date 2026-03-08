@@ -57,6 +57,7 @@ export function ProposalDialog({
   const { isAdmin } = useModulePermissions();
   const { getTableForEntity, getApplicableTable, calculatePrice, validatePriceAgainstTable, pricingTables } = usePricingTables();
   const isEditing = !!proposal;
+  const { companyFiscalData } = useCompanyFiscal(companyId);
 
   // Get linked pricing table based on company or contact (legacy method)
   const linkedPricingTableFromEntity = companyId 
