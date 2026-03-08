@@ -807,6 +807,18 @@ export default function CustomerDetail() {
                     disabled={!isEditing || isErpCustomer}
                   />
                 </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="contribuinte_ipi" className="text-sm font-medium">Contribuinte de IPI</Label>
+                    <p className="text-xs text-muted-foreground">Define se o cliente é contribuinte do IPI</p>
+                  </div>
+                  <Switch
+                    id="contribuinte_ipi"
+                    checked={companyForm.contribuinte_ipi}
+                    onCheckedChange={(checked) => setCompanyForm({ ...companyForm, contribuinte_ipi: checked })}
+                    disabled={!isEditing || isErpCustomer}
+                  />
+                </div>
                 <div className="col-span-2">
                   {isErpCustomer ? (
                     <>
