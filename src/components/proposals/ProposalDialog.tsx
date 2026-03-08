@@ -31,6 +31,7 @@ import {
 } from '@/types/products';
 import { ApprovalLinkModal } from './ApprovalLinkModal';
 import { PriceOverrideModal } from './PriceOverrideModal';
+import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 
 interface ProposalDialogProps {
   open: boolean;

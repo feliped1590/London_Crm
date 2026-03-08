@@ -29,6 +29,7 @@ import { Order, OrderItem, OrderStatus, IpiMode, ipiModeConfig, orderStatusConfi
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
+import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 
 interface OrderDialogProps {
   open: boolean;
