@@ -316,6 +316,10 @@ export function CreditAnalysisTab({ companyId, companyName, cnpj }: CreditAnalys
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="documentos" className="mt-6">
+          <CreditDocumentsTab companyId={companyId} />
+        </TabsContent>
       </Tabs>
 
       <CreditUpdateModal
