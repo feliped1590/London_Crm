@@ -173,16 +173,26 @@ export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTab
       {/* Tabela de Pedidos */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Histórico de Pedidos
-          </CardTitle>
-          <CardDescription>
-            {source === 'crm' 
-              ? 'Pedidos registrados no CRM'
-              : 'Pedidos sincronizados do ERP Iniflex'
-            }
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Histórico de Pedidos
+              </CardTitle>
+              <CardDescription>
+                {source === 'crm' 
+                  ? 'Pedidos registrados no CRM'
+                  : 'Pedidos sincronizados do ERP Iniflex'
+                }
+              </CardDescription>
+            </div>
+            {source === 'crm' && (
+              <Button size="sm" className="gap-2" onClick={() => setIsCreateOrderOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Novo Pedido
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!orders || orders.length === 0 ? (
