@@ -704,7 +704,11 @@ export default function Products() {
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, family_id: v === 'none' ? undefined : v })}
+                        onValueChange={(v) => {
+                          const updated = { ...formData, family_id: v === 'none' ? undefined : v };
+                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a família" />
