@@ -107,6 +107,8 @@ export default function Customers() {
   const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
   const [enrichOffset, setEnrichOffset] = useState(0);
   const [enrichBatchSize, setEnrichBatchSize] = useState(50);
+  const [enrichSalesRepId, setEnrichSalesRepId] = useState<string>('all');
+  const [enrichPrioritizeAsterisks, setEnrichPrioritizeAsterisks] = useState(true);
   const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
 
   // Debounce search
