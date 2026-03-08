@@ -1541,7 +1541,7 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
     return Array.from(map.values()).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
   }, [carriers, currentCarrier]);
 
-  const updateMutation = useMutation({
+  const updateCarrierMutation = useMutation({
     mutationFn: async (carrierId: string | null) => {
       const { error } = await supabase.from('companies').update({ default_carrier_id: carrierId }).eq('id', companyId);
       if (error) throw error;
@@ -1553,28 +1553,58 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
     onError: () => toast.error('Erro ao atualizar transportadora padrão'),
   });
 
+  const updateFreightMutation = useMutation({
+    mutationFn: async (freightType: string | null) => {
+      const { error } = await supabase.from('companies').update({ default_freight_type: freightType } as any).eq('id', companyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', companyId] });
+      toast.success('Tipo de frete padrão atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar tipo de frete padrão'),
+  });
+
   return (
     <Card className="mt-4">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Truck className="h-5 w-5" />
-          Transportadora Padrão
+          Logística Padrão
         </CardTitle>
         <CardDescription>
-          Transportadora pré-selecionada em novas propostas e pedidos
+          Transportadora e frete pré-selecionados em novas propostas e pedidos
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="w-[300px]">
-          <SearchableSelect
-            options={carrierOptions}
-            value={defaultCarrierId || null}
-            onChange={(v) => updateMutation.mutate(v || null)}
-            placeholder="Selecione uma transportadora"
-            searchPlaceholder="Buscar transportadora..."
-            disabled={!isEditing}
-            onSearchChange={setCarrierSearch}
-          />
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Transportadora</Label>
+          <div className="w-[300px]">
+            <SearchableSelect
+              options={carrierOptions}
+              value={defaultCarrierId || null}
+              onChange={(v) => updateCarrierMutation.mutate(v || null)}
+              placeholder="Selecione uma transportadora"
+              searchPlaceholder="Buscar transportadora..."
+              disabled={!isEditing}
+              onSearchChange={setCarrierSearch}
+            />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Tipo de Frete</Label>
+          <div className="w-[300px]">
+            <Select value={defaultFreightType || ''} onValueChange={(v) => updateFreightMutation.mutate(v || null)} disabled={!isEditing}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o tipo de frete padrão" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+                <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+                <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardContent>
     </Card>

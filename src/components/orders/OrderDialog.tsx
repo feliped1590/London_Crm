@@ -918,6 +918,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   });
 
   const handleSubmit = () => {
+    // Validate carrier is required when freight type is CIF or FOB
+    if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
+      toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
+      return;
+    }
+
     // For admins: validate if there are prices out of range before submitting
     if (isAdmin) {
       const outOfRange = findNextOutOfRangeItem(0);
