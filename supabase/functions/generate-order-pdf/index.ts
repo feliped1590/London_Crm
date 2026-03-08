@@ -30,7 +30,7 @@ serve(async (req) => {
       .from("orders")
       .select(`
         *,
-        company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code),
+        company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
         legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email, logo_url)
