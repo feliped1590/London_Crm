@@ -709,6 +709,64 @@ export default function Products() {
                       />
                     </div>
 
+                    {/* Classificação Complementar */}
+                    <div className="col-span-2 pt-2">
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Classificação Complementar</h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label htmlFor="grupo">Grupo</Label>
+                          <Select
+                            value={formData.grupo_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {grupos.items.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="subgrupo">Subgrupo</Label>
+                          <Select
+                            value={formData.subgrupo_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum</SelectItem>
+                              {subgrupos.items.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="classe">Classe</Label>
+                          <Select
+                            value={formData.class_id || 'none'}
+                            onValueChange={(v) => setFormData({ ...formData, class_id: v === 'none' ? undefined : v })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhuma</SelectItem>
+                              {classes.items.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">
                       <h3 className="text-sm font-medium text-muted-foreground mb-3">Dimensões</h3>
@@ -763,64 +821,6 @@ export default function Products() {
                             }}
                             placeholder="Em micras"
                           />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Classificação complementar (colapsável) */}
-                    <div className="col-span-2 pt-2">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Classificação Complementar</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="grupo">Grupo</Label>
-                          <Select
-                            value={formData.grupo_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, grupo_id: v === 'none' ? undefined : v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {grupos.items.map((m) => (
-                                <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="subgrupo">Subgrupo</Label>
-                          <Select
-                            value={formData.subgrupo_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, subgrupo_id: v === 'none' ? undefined : v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {subgrupos.items.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor="classe">Classe</Label>
-                          <Select
-                            value={formData.class_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, class_id: v === 'none' ? undefined : v })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhuma</SelectItem>
-                              {classes.items.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                       </div>
                     </div>
