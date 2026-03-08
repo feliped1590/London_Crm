@@ -180,6 +180,7 @@ export interface OrderItem {
   subtotal_item?: number;
   total_item?: number;
   sort_order?: number;
+  calculated_price_source?: PriceSource;
   created_at: string;
   product?: Partial<Product> | { id: string; sku: string; name: string };
 }
