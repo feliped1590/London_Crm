@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useModulePermissions } from './useModulePermissions';
-import { OrderStatus } from '@/types/products';
+import { OrderStatus, OrderType } from '@/types/products';
 import { toast } from 'sonner';
 
 export interface OrderApproval {
@@ -18,17 +18,18 @@ export interface OrderApproval {
   } | null;
 }
 
-// Define the allowed transitions per role
-// Gate Comercial: Seller releases to production, Admin controls rest
-const TRANSITION_RULES: Record<OrderStatus, {
+interface TransitionRule {
   next: OrderStatus | null;
   allowedRoles: ('admin' | 'vendedor')[];
-  requiresOwnership?: boolean; // If true, vendedor can only approve their own orders
-}> = {
+  requiresOwnership?: boolean;
+}
+
+// Transition rules for PRODUÇÃO orders
+const PRODUCAO_TRANSITIONS: Record<OrderStatus, TransitionRule> = {
   pendente: {
     next: 'em_producao',
     allowedRoles: ['admin', 'vendedor'],
-    requiresOwnership: true, // Vendedor can only release their own orders
+    requiresOwnership: true,
   },
   em_producao: {
     next: 'produzido',
@@ -42,15 +43,35 @@ const TRANSITION_RULES: Record<OrderStatus, {
     next: 'entregue',
     allowedRoles: ['admin'],
   },
-  entregue: {
-    next: null, // Final state
-    allowedRoles: [],
-  },
-  cancelado: {
-    next: null, // Final state
-    allowedRoles: [],
-  },
+  em_faturamento: { next: null, allowedRoles: [] },
+  entregue: { next: null, allowedRoles: [] },
+  cancelado: { next: null, allowedRoles: [] },
 };
+
+// Transition rules for PRONTA ENTREGA orders
+const PRONTA_ENTREGA_TRANSITIONS: Record<OrderStatus, TransitionRule> = {
+  pendente: {
+    next: 'em_faturamento',
+    allowedRoles: ['admin', 'vendedor'],
+    requiresOwnership: true,
+  },
+  em_faturamento: {
+    next: 'faturado',
+    allowedRoles: ['admin'],
+  },
+  faturado: {
+    next: null, // Final state for pronta entrega
+    allowedRoles: [],
+  },
+  em_producao: { next: null, allowedRoles: [] },
+  produzido: { next: null, allowedRoles: [] },
+  entregue: { next: null, allowedRoles: [] },
+  cancelado: { next: null, allowedRoles: [] },
+};
+
+function getTransitionRules(orderType: OrderType): Record<OrderStatus, TransitionRule> {
+  return orderType === 'pronta_entrega' ? PRONTA_ENTREGA_TRANSITIONS : PRODUCAO_TRANSITIONS;
+}
 
 // Transition labels for UI
 export const TRANSITION_LABELS: Record<string, { label: string; description: string }> = {
@@ -70,12 +91,28 @@ export const TRANSITION_LABELS: Record<string, { label: string; description: str
     label: 'Confirmar Entrega',
     description: 'Confirma a entrega ao cliente',
   },
+  // Pronta Entrega transitions
+  'pendente->em_faturamento': {
+    label: 'Liberar para Faturamento',
+    description: 'Autoriza o pedido para faturamento direto',
+  },
+  'em_faturamento->faturado': {
+    label: 'Faturar Pedido',
+    description: 'Registra o faturamento do pedido',
+  },
 };
 
-export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orderCreatedBy?: string | null) {
+export function useOrderApproval(
+  orderId: string,
+  orderStatus: OrderStatus,
+  orderCreatedBy?: string | null,
+  orderType: OrderType = 'producao'
+) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const queryClient = useQueryClient();
+
+  const TRANSITION_RULES = getTransitionRules(orderType);
 
   // Fetch approval history for this order
   const { data: approvalHistory, isLoading: isLoadingHistory } = useQuery({
@@ -89,7 +126,6 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
 
       if (error) throw error;
 
-      // Fetch profiles for display
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name');
@@ -104,19 +140,15 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
     enabled: !!orderId,
   });
 
-  // Check if current user can approve the next transition
   const canApproveNextTransition = (): boolean => {
     if (!user) return false;
 
     const rule = TRANSITION_RULES[orderStatus];
     if (!rule || !rule.next) return false;
 
-    // Admin can always approve
     if (isAdmin) return true;
 
-    // Check if vendedor is allowed
     if (rule.allowedRoles.includes('vendedor')) {
-      // If ownership is required, check if user is the creator
       if (rule.requiresOwnership) {
         return orderCreatedBy === user.id;
       }
@@ -126,7 +158,6 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
     return false;
   };
 
-  // Get the next possible transition
   const getNextTransition = (): { from: OrderStatus; to: OrderStatus; label: string; description: string } | null => {
     const rule = TRANSITION_RULES[orderStatus];
     if (!rule || !rule.next) return null;
@@ -144,7 +175,6 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
     };
   };
 
-  // Approve transition mutation
   const approveMutation = useMutation({
     mutationFn: async ({ notes }: { notes?: string }) => {
       if (!user) throw new Error('Usuário não autenticado');
@@ -160,7 +190,6 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
 
       const newStatus = rule.next;
 
-      // Insert approval record
       const { error: approvalError } = await supabase
         .from('order_approvals')
         .insert({
@@ -172,14 +201,12 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
         });
 
       if (approvalError) {
-        // Check for unique constraint violation
         if (approvalError.code === '23505') {
           throw new Error('Esta transição já foi registrada anteriormente');
         }
         throw approvalError;
       }
 
-      // Update order status
       const { error: updateError } = await supabase
         .from('orders')
         .update({ status: newStatus })
@@ -203,24 +230,17 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
     },
   });
 
-  // Check if user can cancel the order
   const canCancelOrder = (): boolean => {
     if (!user) return false;
-    
-    // Only admin can cancel
     if (!isAdmin) return false;
-
-    // Can only cancel if not already cancelled or delivered
-    return orderStatus !== 'cancelado' && orderStatus !== 'entregue';
+    return orderStatus !== 'cancelado' && orderStatus !== 'entregue' && orderStatus !== 'faturado';
   };
 
-  // Cancel order mutation
   const cancelMutation = useMutation({
     mutationFn: async ({ reason }: { reason: string }) => {
       if (!user) throw new Error('Usuário não autenticado');
       if (!isAdmin) throw new Error('Apenas administradores podem cancelar pedidos');
 
-      // Insert cancellation record
       const { error: approvalError } = await supabase
         .from('order_approvals')
         .insert({
@@ -233,7 +253,6 @@ export function useOrderApproval(orderId: string, orderStatus: OrderStatus, orde
 
       if (approvalError) throw approvalError;
 
-      // Update order status
       const { error: updateError } = await supabase
         .from('orders')
         .update({ status: 'cancelado' })
