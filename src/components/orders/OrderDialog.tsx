@@ -334,13 +334,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setLegalEntityId(activeLegalEntityId || '');
       if (preSelectedCompanyId) {
         setCompanyId(preSelectedCompanyId);
+        autoFillFromCompany(preSelectedCompanyId);
       }
     }
-    // Auto-fill carrier for new orders when company changes
-    if (open && !order && companyId) {
+    // Auto-fill carrier for new orders when company changes (no preselect)
+    if (open && !order && companyId && !preSelectedCompanyId) {
       autoFillFromCompany(companyId);
     }
-  }, [open, order, activeLegalEntityId]);
+  }, [open, order, activeLegalEntityId, preSelectedCompanyId]);
 
   // Set items when existingOrderItems are loaded
   useEffect(() => {
