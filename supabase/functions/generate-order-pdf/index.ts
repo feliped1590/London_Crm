@@ -25,12 +25,11 @@ serve(async (req) => {
       );
     }
 
-    // Fetch order with related data
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(`
         *,
-        company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep:sales_reps(id, name, phone, email)),
+        company:companies(id, name, cnpj, inscricao_estadual, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
         legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email, logo_url)
@@ -46,7 +45,6 @@ serve(async (req) => {
       );
     }
 
-    // Fetch order items
     const { data: items, error: itemsError } = await supabase
       .from("order_items")
       .select(`
@@ -60,22 +58,20 @@ serve(async (req) => {
       console.error("Error fetching items:", itemsError);
     }
 
-    // If no legal_entity on the order, fetch the default (headquarters) one
     let emitterEntity = order.legal_entity;
     if (!emitterEntity) {
       const { data: defaultEntity } = await supabase
         .from("legal_entities")
-        .select("id, name, trade_name, cnpj, address, city, state, phone, email")
+        .select("id, name, trade_name, cnpj, address, city, state, phone, email, logo_url")
         .eq("active", true)
         .eq("is_headquarters", true)
         .limit(1)
         .maybeSingle();
       
       if (!defaultEntity) {
-        // Fallback: get first active legal entity
         const { data: firstEntity } = await supabase
           .from("legal_entities")
-          .select("id, name, trade_name, cnpj, address, city, state, phone, email")
+          .select("id, name, trade_name, cnpj, address, city, state, phone, email, logo_url")
           .eq("active", true)
           .order("name")
           .limit(1)
@@ -100,7 +96,6 @@ serve(async (req) => {
 
     const todayBR = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
-    // IPI logic
     const ipiMode = order.ipi_mode || 'isento';
     const showIpi = ipiMode !== 'isento';
     const ipiModeLabels: Record<string, string> = {
@@ -125,49 +120,22 @@ serve(async (req) => {
 
     const subtotalProducts = order.subtotal_products || itemsData.reduce((sum: number, i: any) => sum + (i.subtotal || 0), 0);
     const totalIpi = order.total_ipi || itemsData.reduce((sum: number, i: any) => sum + i.ipiValue, 0);
-    const colSpanBase = 6;
-    const colSpanTotal = colSpanBase + (showIpi ? 2 : 0);
 
-    const itemsHtml = itemsData
-      .map(
-        (item: any, index: number) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.sku || "-"}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.description || item.product?.name || "-"}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-          ${item.width || item.length || item.thickness ? `${item.width || "-"} x ${item.length || "-"} x ${item.thickness || "-"}` : "-"}
-        </td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unit_price)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.subtotal)}</td>
-        ${showIpi ? `
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${(item.ipiRate || 0).toFixed(2)}%</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.ipiValue)}</td>
-        ` : ''}
-      </tr>
-    `
-      )
-      .join("");
-
-    // Use legal entity info (from order or default fallback)
     const emitter = emitterEntity
       ? {
           name: emitterEntity.name || emitterEntity.trade_name,
           cnpj: emitterEntity.cnpj,
-          address: emitterEntity.address,
-          city: emitterEntity.city,
-          state: emitterEntity.state,
           phone: emitterEntity.phone,
           email: emitterEntity.email,
           logo_url: emitterEntity.logo_url,
         }
       : null;
 
-    // Get sales rep name from company (vendedor comercial)
     const sellerName = order.company?.sales_rep?.name || '';
     const sellerPhone = order.company?.sales_rep?.phone || '';
     const sellerEmail = order.company?.sales_rep?.email || '';
+
+    const companyIE = order.company?.inscricao_estadual || order.company?.state_registration || order.company?.ie || '-';
 
     const statusLabels: Record<string, string> = {
       pendente: "Pendente",
@@ -180,263 +148,308 @@ serve(async (req) => {
     };
 
     const statusColors: Record<string, string> = {
-      pendente: "#f59e0b",
-      confirmado: "#3b82f6",
-      em_producao: "#8b5cf6",
-      pronto: "#10b981",
-      enviado: "#06b6d4",
+      pendente: "#d69e2e",
+      confirmado: "#3182ce",
+      em_producao: "#805ad5",
+      pronto: "#38a169",
+      enviado: "#0891b2",
       entregue: "#059669",
-      cancelado: "#ef4444",
+      cancelado: "#e53e3e",
     };
 
     const statusLabel = statusLabels[order.status] || order.status;
-    const statusColor = statusColors[order.status] || "#6b7280";
+    const statusColor = statusColors[order.status] || "#718096";
+
+    const itemsHtml = itemsData.map((item: any, index: number) => {
+      const unitMeasure = item.unit_measure || item.product?.unit_measure || 'UN';
+      return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.product?.sku || "-"}</td>
+        <td class="desc-col">${item.description || item.product?.name || "-"}</td>
+        <td class="center">${item.width || item.length || item.thickness ? `${item.width || "-"} x ${item.length || "-"} x ${item.thickness || "-"}` : "-"}</td>
+        <td class="right">${item.quantity}</td>
+        <td class="center">${unitMeasure}</td>
+        <td class="right">${formatCurrency(item.unit_price)}</td>
+        <td class="right">${formatCurrency(item.subtotal)}</td>
+        ${showIpi ? `
+          <td class="right">${(item.ipiRate || 0).toFixed(2)}%</td>
+          <td class="right">${formatCurrency(item.ipiValue)}</td>
+        ` : ''}
+      </tr>
+    `}).join("");
 
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
+        <title>Pedido ${order.number}</title>
         <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
-            font-family: 'Helvetica', 'Arial', sans-serif; 
-            margin: 0; 
-            padding: 40px;
-            color: #1f2937;
-            font-size: 12px;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; 
+            padding: 30px 35px;
+            color: #1a1a2e;
+            font-size: 11px;
+            line-height: 1.4;
           }
+          
+          /* ===== PRINT ===== */
+          @media print {
+            body { padding: 15px 20px; }
+            .page-break { page-break-before: always; }
+          }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
+          
+          /* ===== HEADER ===== */
           .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #3b82f6;
-            padding-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2d3748;
+            margin-bottom: 20px;
           }
-          .logo img {
-            max-height: 70px;
-            width: auto;
-          }
-          .logo-text {
-            margin-top: 5px;
-            font-size: 10px;
-            color: #1e3a5f;
-            letter-spacing: 1px;
-          }
-          .order-info {
-            text-align: right;
-          }
-          .order-number {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1f2937;
-          }
-          .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            color: white;
-            font-weight: bold;
-            font-size: 11px;
-            margin-top: 5px;
-          }
-          .section {
-            margin-bottom: 30px;
-          }
+          .header-left { display: flex; align-items: center; gap: 15px; }
+          .header-logo img { max-height: 60px; width: auto; }
+          .header-company { font-size: 10px; color: #4a5568; }
+          .header-company .company-name { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+          .header-right { text-align: right; }
+          .doc-title { font-size: 16px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 1px; }
+          .doc-number { font-size: 20px; font-weight: 700; color: #2d3748; margin: 4px 0; }
+          .doc-meta { font-size: 10px; color: #4a5568; margin: 2px 0; }
+          .badge { display: inline-block; padding: 3px 10px; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+          .badge-status { color: #fff; }
+          .badge-ipi { background: #dbeafe; color: #1e40af; margin-left: 4px; }
+          .badge-delivery { background: #c6f6d5; color: #22543d; }
+          
+          /* ===== SECTIONS ===== */
+          .section { margin-bottom: 18px; }
           .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #3b82f6;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-          }
-          .info-box {
-            background: #f9fafb;
-            padding: 15px;
-            border-radius: 8px;
-          }
-          .info-label {
-            font-size: 10px;
-            color: #6b7280;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-          }
-          .info-value {
-            font-size: 12px;
-            color: #1f2937;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-          }
-          th {
-            background: #3b82f6;
-            color: white;
-            padding: 10px 8px;
-            text-align: left;
-            font-size: 11px;
-            text-transform: uppercase;
-          }
-          .total-row {
-            background: #f3f4f6;
-          }
-          .total-row td {
-            padding: 12px 8px;
-            font-weight: bold;
-            font-size: 14px;
-          }
-          .terms {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-          }
-          .terms-title {
-            font-weight: bold;
+            font-size: 11px; font-weight: 700; color: #2d3748;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            padding: 5px 10px; background: #edf2f7; border-left: 3px solid #2d3748;
             margin-bottom: 10px;
           }
+          
+          /* ===== CLIENT GRID ===== */
+          .client-grid { display: flex; gap: 15px; }
+          .client-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px; }
+          .client-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+          .client-box .name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+          .client-box .detail { font-size: 10px; color: #4a5568; margin: 2px 0; }
+          
+          /* ===== ORIGIN ===== */
+          .origin-box { background: #f0fdf4; padding: 8px 14px; border-radius: 4px; border-left: 3px solid #38a169; font-size: 11px; color: #22543d; margin-bottom: 18px; }
+          
+          /* ===== SELLER BOX ===== */
+          .seller-box { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px 12px; background: #f7fafc; display: flex; gap: 25px; align-items: center; }
+          .seller-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+          .seller-box .value { font-size: 11px; color: #1a1a2e; font-weight: 600; }
+          .seller-box .sub { font-size: 10px; color: #4a5568; }
+          
+          /* ===== TABLE ===== */
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
+          thead th {
+            background: #2d3748; color: #fff;
+            padding: 7px 6px; text-align: left;
+            font-size: 9px; text-transform: uppercase;
+            letter-spacing: 0.5px; font-weight: 600;
+          }
+          tbody tr:nth-child(even) { background: #f7fafc; }
+          tbody td { padding: 6px; border-bottom: 1px solid #e2e8f0; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: 700; }
+          .desc-col { max-width: 200px; }
+          
+          /* ===== TOTALS ===== */
+          .totals-wrapper { display: flex; justify-content: flex-end; margin-top: 12px; }
+          .totals-box {
+            min-width: 280px; border: 1px solid #e2e8f0; border-radius: 4px;
+            overflow: hidden;
+          }
+          .totals-row { display: flex; justify-content: space-between; padding: 7px 14px; font-size: 11px; }
+          .totals-row:nth-child(even) { background: #f7fafc; }
+          .totals-row.grand {
+            background: #2d3748; color: #fff;
+            font-size: 14px; font-weight: 700; padding: 10px 14px;
+          }
+          
+          /* ===== CONDITIONS ===== */
+          .conditions-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 14px; }
+          .conditions-box p { margin: 4px 0; font-size: 11px; }
+          .conditions-box strong { color: #2d3748; }
+          
+          /* ===== ACCEPTANCE ===== */
+          .acceptance { margin-top: 25px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 20px; }
+          .acceptance-title { font-size: 11px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
+          .acceptance-grid { display: flex; justify-content: space-between; gap: 30px; margin-top: 30px; }
+          .acceptance-field { flex: 1; text-align: center; }
+          .acceptance-line { border-top: 1px solid #1a1a2e; padding-top: 6px; font-size: 10px; color: #4a5568; }
+          
+          /* ===== FOOTER ===== */
           .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            text-align: center;
-            color: #6b7280;
-            font-size: 10px;
+            margin-top: 25px; padding-top: 12px;
+            border-top: 2px solid #2d3748;
+            text-align: center; font-size: 9px; color: #718096;
           }
-          .delivery-info {
-            display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-top: 10px;
-          }
+          .footer strong { color: #2d3748; font-size: 10px; }
         </style>
       </head>
       <body>
+        <!-- CABEÇALHO -->
         <div class="header">
-           <div>
+          <div class="header-left">
             ${emitter?.logo_url 
-              ? `<div class="logo"><img src="${emitter.logo_url}" alt="${emitter.name || 'Logo'}" /></div>` 
-              : `<div class="logo"><strong style="font-size: 18px;">${emitter?.name || 'CRMPro'}</strong></div>`
+              ? `<div class="header-logo"><img src="${emitter.logo_url}" alt="${emitter.name || 'Logo'}" /></div>` 
+              : ''
             }
-            ${emitter ? `<p style="font-size: 10px; color: #6b7280; margin-top: 4px;">CNPJ: ${emitter.cnpj || "-"}</p>` : ""}
+            <div class="header-company">
+              <div class="company-name">${emitter?.name || 'Empresa'}</div>
+              ${emitter?.cnpj ? `<div>CNPJ: ${emitter.cnpj}</div>` : ''}
+              ${emitter?.phone ? `<div>Tel: ${emitter.phone}</div>` : ''}
+              ${emitter?.email ? `<div>${emitter.email}</div>` : ''}
+            </div>
           </div>
-          <div class="order-info">
-            <div class="order-number">${order.number}</div>
-            <p style="color: #6b7280; margin: 5px 0;">Data: ${todayBR}</p>
-            <div class="status-badge" style="background-color: ${statusColor};">${statusLabel}</div>
-            ${order.delivery_date ? `<div class="delivery-info">Entrega: ${formatDate(order.delivery_date)}</div>` : ""}
+          <div class="header-right">
+            <div class="doc-title">Pedido de Venda</div>
+            <div class="doc-number">${order.number}</div>
+            <div class="doc-meta">Emissão: ${todayBR}</div>
+            ${order.delivery_date ? `<div class="doc-meta">Entrega: ${formatDate(order.delivery_date)}</div>` : ''}
+            ${sellerName ? `<div class="doc-meta">Vendedor: ${sellerName}</div>` : ''}
+            <span class="badge badge-status" style="background-color: ${statusColor};">${statusLabel}</span>
+            ${showIpi ? `<span class="badge badge-ipi">${ipiModeLabels[ipiMode] || ipiMode}</span>` : ''}
           </div>
         </div>
 
+        <!-- PROPOSTA DE ORIGEM -->
         ${order.proposal?.number ? `
-        <div class="section">
-          <div style="background: #f0fdf4; padding: 10px 15px; border-radius: 6px; border-left: 4px solid #22c55e;">
-            <span style="font-size: 11px; color: #15803d;"><strong>Proposta de Origem:</strong> ${order.proposal.number}</span>
-          </div>
+        <div class="origin-box">
+          <strong>Proposta de Origem:</strong> ${order.proposal.number}
         </div>
         ` : ""}
 
+        <!-- DADOS DO CLIENTE -->
         <div class="section">
           <div class="section-title">Dados do Cliente</div>
-          <div class="info-grid">
-            <div class="info-box">
-              <div class="info-label">Empresa</div>
-              <div class="info-value" style="font-weight: bold; font-size: 14px;">
-                ${order.company?.name || "Não informado"}
-              </div>
-              ${order.company?.cnpj ? `<div class="info-value">CNPJ: ${order.company.cnpj}</div>` : ""}
-              ${order.company?.address ? `<div class="info-value">${order.company.address}${order.company.address_number ? ", " + order.company.address_number : ""}</div>` : ""}
-              ${order.company?.neighborhood ? `<div class="info-value">${order.company.neighborhood}</div>` : ""}
-              ${order.company?.city ? `<div class="info-value">${order.company.city}${order.company.state ? " - " + order.company.state : ""}${order.company.zip_code ? " | CEP: " + order.company.zip_code : ""}</div>` : ""}
-              ${order.company?.phone ? `<div class="info-value">Tel: ${order.company.phone}</div>` : ""}
-              ${order.company?.email ? `<div class="info-value">${order.company.email}</div>` : ""}
+          <div class="client-grid">
+            <div class="client-box">
+              <div class="label">Empresa</div>
+              <div class="name">${order.company?.name || "Não informado"}</div>
+              ${order.company?.cnpj ? `<div class="detail">CNPJ: ${order.company.cnpj}</div>` : ""}
+              <div class="detail">IE: ${companyIE}</div>
+              ${order.company?.address ? `<div class="detail">${order.company.address}${order.company.address_number ? ", " + order.company.address_number : ""}</div>` : ""}
+              ${order.company?.neighborhood ? `<div class="detail">${order.company.neighborhood}</div>` : ""}
+              ${order.company?.city ? `<div class="detail">${order.company.city}${order.company.state ? " / " + order.company.state : ""}${order.company.zip_code ? " - CEP: " + order.company.zip_code : ""}</div>` : ""}
+              ${order.company?.phone ? `<div class="detail">Tel: ${order.company.phone}</div>` : ""}
+              ${order.company?.email ? `<div class="detail">${order.company.email}</div>` : ""}
             </div>
-            <div class="info-box">
-              <div class="info-label">Contato</div>
-              <div class="info-value" style="font-weight: bold; font-size: 14px;">
-                ${order.contact ? `${order.contact.first_name} ${order.contact.last_name || ""}` : "Não informado"}
-              </div>
-              ${order.contact?.email ? `<div class="info-value">${order.contact.email}</div>` : ""}
-              ${order.contact?.phone ? `<div class="info-value">${order.contact.phone}</div>` : ""}
+            <div class="client-box">
+              <div class="label">Contato</div>
+              <div class="name">${order.contact ? `${order.contact.first_name} ${order.contact.last_name || ""}` : "Não informado"}</div>
+              ${order.contact?.phone ? `<div class="detail">Tel: ${order.contact.phone}</div>` : ""}
+              ${order.contact?.email ? `<div class="detail">${order.contact.email}</div>` : ""}
             </div>
           </div>
+          ${sellerName ? `
+          <div class="seller-box">
+            <div>
+              <div class="label">Vendedor Responsável</div>
+              <div class="value">${sellerName}</div>
+            </div>
+            ${sellerEmail ? `<div class="sub">${sellerEmail}</div>` : ''}
+            ${sellerPhone ? `<div class="sub">Tel: ${sellerPhone}</div>` : ''}
+          </div>
+          ` : ''}
         </div>
 
+        <!-- TABELA DE ITENS -->
         <div class="section">
-          <div class="section-title">
-            Itens do Pedido
-            ${showIpi ? `<span style="display: inline-block; margin-left: 10px; background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: normal;">${ipiModeLabels[ipiMode] || ipiMode}</span>` : ''}
-          </div>
+          <div class="section-title">Itens do Pedido</div>
           <table>
             <thead>
               <tr>
-                <th style="width: 30px;">#</th>
-                <th style="width: 80px;">SKU</th>
+                <th style="width:28px;">Item</th>
+                <th style="width:70px;">Código</th>
                 <th>Descrição</th>
-                <th style="width: 100px; text-align: center;">Medidas (LxCxE)</th>
-                <th style="width: 60px; text-align: right;">Qtd</th>
-                <th style="width: 90px; text-align: right;">Preço Unit.</th>
-                <th style="width: 100px; text-align: right;">Subtotal</th>
+                <th style="width:90px;" class="center">Medidas</th>
+                <th style="width:40px;" class="right">Qtd</th>
+                <th style="width:35px;" class="center">Un</th>
+                <th style="width:80px;" class="right">Preço Unit.</th>
+                <th style="width:85px;" class="right">Subtotal</th>
                 ${showIpi ? `
-                  <th style="width: 70px; text-align: right;">IPI %</th>
-                  <th style="width: 90px; text-align: right;">IPI R$</th>
+                  <th style="width:45px;" class="right">IPI%</th>
+                  <th style="width:70px;" class="right">IPI R$</th>
                 ` : ''}
               </tr>
             </thead>
             <tbody>
               ${itemsHtml}
-              ${showIpi ? `
-              <tr class="total-row">
-                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 1px solid #d1d5db; font-size: 12px; font-weight: normal; padding: 8px;">
-                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <span>Subtotal Produtos: <strong>${formatCurrency(subtotalProducts)}</strong></span>
-                    <span>IPI Total: <strong>${formatCurrency(totalIpi)}</strong></span>
-                  </div>
-                </td>
-              </tr>
-              ` : ''}
-              <tr class="total-row">
-                <td colspan="${colSpanTotal}" style="text-align: right; border-top: 2px solid #3b82f6;">VALOR TOTAL:</td>
-                <td style="text-align: right; border-top: 2px solid #3b82f6; color: #3b82f6;" colspan="1">
-                  ${formatCurrency(order.total_value)}
-                </td>
-              </tr>
             </tbody>
           </table>
+
+          <!-- TOTAIS -->
+          <div class="totals-wrapper">
+            <div class="totals-box">
+              ${showIpi ? `
+                <div class="totals-row">
+                  <span>Subtotal Produtos:</span>
+                  <span>${formatCurrency(subtotalProducts)}</span>
+                </div>
+                <div class="totals-row">
+                  <span>IPI Total${ipiMode === 'incluso' ? ' (informativo)' : ''}:</span>
+                  <span>${formatCurrency(totalIpi)}</span>
+                </div>
+              ` : ''}
+              <div class="totals-row grand">
+                <span>VALOR TOTAL:</span>
+                <span>${formatCurrency(order.total_value)}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <!-- OBSERVAÇÕES -->
         ${order.observations ? `
-        <div class="terms">
-          <div class="terms-title">Observações</div>
-          <p>${order.observations}</p>
+        <div class="section">
+          <div class="section-title">Observações</div>
+          <div class="conditions-box">
+            <p>${order.observations}</p>
+          </div>
         </div>
         ` : ""}
 
-        ${sellerName ? `
-        <div class="section" style="margin-top: 30px;">
-          <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor Responsável:</strong> ${sellerName}</span>
-            ${sellerEmail ? `<span style="font-size: 10px; color: #1e40af; margin-left: 12px;">${sellerEmail}</span>` : ''}
-            ${sellerPhone ? `<span style="font-size: 10px; color: #1e40af; margin-left: 12px;">${sellerPhone}</span>` : ''}
+        <!-- ACEITE DO CLIENTE -->
+        <div class="acceptance">
+          <div class="acceptance-title">Aceite do Cliente</div>
+          <p style="font-size: 10px; color: #4a5568; margin-bottom: 10px;">
+            Declaro que li e concordo com todas as condições descritas neste pedido de venda.
+          </p>
+          <div class="acceptance-grid">
+            <div class="acceptance-field">
+              <div class="acceptance-line">Assinatura do Responsável</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Carimbo da Empresa</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Data: ____/____/________</div>
+            </div>
           </div>
         </div>
-        ` : ''}
 
+        <!-- RODAPÉ -->
         <div class="footer">
-          <p><strong>${emitter?.name || "FDK Personalizados"}</strong></p>
-          ${emitter?.phone ? `<p>Tel: ${emitter.phone}</p>` : ""}
-          ${emitter?.email ? `<p>${emitter.email}</p>` : ""}
-          <p style="margin-top: 10px;">Documento gerado em ${todayBR}</p>
+          <strong>${emitter?.name || 'Empresa'}</strong>
+          ${emitter?.cnpj ? ` &nbsp;|&nbsp; CNPJ: ${emitter.cnpj}` : ''}
+          ${emitter?.phone ? ` &nbsp;|&nbsp; Tel: ${emitter.phone}` : ''}
+          ${emitter?.email ? ` &nbsp;|&nbsp; ${emitter.email}` : ''}
+          <br/>
+          <span style="font-size: 8px;">Para dúvidas, entre em contato conosco. &nbsp;|&nbsp; Documento gerado em ${todayBR}</span>
         </div>
       </body>
       </html>

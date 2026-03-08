@@ -29,7 +29,7 @@ serve(async (req) => {
       .from('proposals')
       .select(`
         *,
-        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email, sales_rep:sales_reps(id, name, phone, email)),
+        company:companies(id, name, cnpj, inscricao_estadual, address, address_number, neighborhood, city, state, zip_code, phone, email, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url, phone, email))
       `)
@@ -61,12 +61,10 @@ serve(async (req) => {
     const ipiMode = proposal.ipi_mode || 'destacar';
     const showIpi = ipiMode !== 'isento';
 
-    // Get sales rep name from company
     const salesRepName = proposal.company?.sales_rep?.name || '';
     const salesRepPhone = proposal.company?.sales_rep?.phone || '';
     const salesRepEmail = proposal.company?.sales_rep?.email || '';
 
-    // Fetch seller name (user who created)
     let sellerName = '';
     if (proposal.created_by) {
       const { data: sellerProfile } = await supabase
@@ -86,10 +84,11 @@ serve(async (req) => {
 
     const formatDate = (dateStr: string | null) => {
       if (!dateStr) return '-';
-      return new Date(dateStr).toLocaleDateString('pt-BR');
+      return new Date(dateStr).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     };
 
-    // Calculate IPI for each item
+    const todayBR = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+
     const calculateIpiValue = (subtotalItem: number, ipiRate: number) => {
       if (ipiMode === 'isento' || ipiRate <= 0) return 0;
       if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
@@ -97,7 +96,6 @@ serve(async (req) => {
       return 0;
     };
 
-    // Calculate totals
     let subtotalProducts = 0;
     let totalIpi = 0;
 
@@ -115,246 +113,229 @@ serve(async (req) => {
 
     const grandTotal = ipiMode === 'destacar' ? subtotalProducts + totalIpi : subtotalProducts;
 
-    // IPI mode label
     const ipiModeLabels: Record<string, string> = {
       destacar: 'IPI Destacado',
       incluso: 'IPI Incluso no Preço',
       isento: 'Isento de IPI',
     };
 
-    const itemsHtml = processedItems.map((item: any, index: number) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${index + 1}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.product?.sku || '-'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${item.description}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: center;">
-          ${item.width || '-'} x ${item.length || '-'} x ${item.thickness || '-'}
-        </td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.unit_price)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${item.discount_percent || 0}%</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.subtotal)}</td>
-        ${showIpi ? `
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${(item.ipiRate || 0).toFixed(2)}%</td>
-          <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatCurrency(item.ipiValue)}</td>
-        ` : ''}
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: bold;">${formatCurrency(item.totalItem)}</td>
-      </tr>
-    `).join('');
+    const companyIE = proposal.company?.inscricao_estadual || proposal.company?.state_registration || proposal.company?.ie || '-';
 
-    const totalColSpan = showIpi ? 10 : 8;
+    const itemsHtml = processedItems.map((item: any, index: number) => {
+      const unitMeasure = item.unit_measure || item.product?.unit_measure || 'UN';
+      return `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.product?.sku || '-'}</td>
+        <td class="desc-col">${item.description}</td>
+        <td class="center">${item.width || item.length || item.thickness ? `${item.width || '-'} x ${item.length || '-'} x ${item.thickness || '-'}` : '-'}</td>
+        <td class="right">${item.quantity}</td>
+        <td class="center">${unitMeasure}</td>
+        <td class="right">${formatCurrency(item.unit_price)}</td>
+        <td class="right">${item.discount_percent || 0}%</td>
+        <td class="right">${formatCurrency(item.subtotal)}</td>
+        ${showIpi ? `
+          <td class="right">${(item.ipiRate || 0).toFixed(2)}%</td>
+          <td class="right">${formatCurrency(item.ipiValue)}</td>
+        ` : ''}
+        <td class="right bold">${formatCurrency(item.totalItem)}</td>
+      </tr>
+    `}).join('');
 
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
+        <title>Proposta ${proposal.number}</title>
         <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
           body { 
-            font-family: 'Helvetica', 'Arial', sans-serif; 
-            margin: 0; 
-            padding: 40px;
-            color: #1f2937;
-            font-size: 12px;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; 
+            padding: 30px 35px;
+            color: #1a1a2e;
+            font-size: 11px;
+            line-height: 1.4;
           }
+          
+          /* ===== PRINT ===== */
+          @media print {
+            body { padding: 15px 20px; }
+            .page-break { page-break-before: always; }
+          }
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+          thead { display: table-header-group; }
+          
+          /* ===== HEADER ===== */
           .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #3b82f6;
-            padding-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2d3748;
+            margin-bottom: 20px;
           }
-          .logo img {
-            max-height: 70px;
-            width: auto;
-          }
-          .proposal-info {
-            text-align: right;
-          }
-          .proposal-number {
-            font-size: 18px;
-            font-weight: bold;
-            color: #1f2937;
-          }
-          .section {
-            margin-bottom: 30px;
-          }
+          .header-left { display: flex; align-items: center; gap: 15px; }
+          .header-logo img { max-height: 60px; width: auto; }
+          .header-company { font-size: 10px; color: #4a5568; }
+          .header-company .company-name { font-size: 15px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+          .header-right { text-align: right; }
+          .doc-title { font-size: 16px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 1px; }
+          .doc-number { font-size: 20px; font-weight: 700; color: #2d3748; margin: 4px 0; }
+          .doc-meta { font-size: 10px; color: #4a5568; margin: 2px 0; }
+          .badge { display: inline-block; padding: 3px 10px; border-radius: 3px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+          .badge-validity { background: #fef3c7; color: #92400e; }
+          .badge-ipi { background: #dbeafe; color: #1e40af; margin-left: 4px; }
+          
+          /* ===== SECTIONS ===== */
+          .section { margin-bottom: 18px; }
           .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #3b82f6;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          }
-          .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-          }
-          .info-box {
-            background: #f9fafb;
-            padding: 15px;
-            border-radius: 8px;
-          }
-          .info-label {
-            font-size: 10px;
-            color: #6b7280;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-          }
-          .info-value {
-            font-size: 12px;
-            color: #1f2937;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-          }
-          th {
-            background: #3b82f6;
-            color: white;
-            padding: 10px 8px;
-            text-align: left;
-            font-size: 11px;
-            text-transform: uppercase;
-          }
-          .total-section {
-            margin-top: 15px;
-            display: flex;
-            justify-content: flex-end;
-          }
-          .total-box {
-            background: #f3f4f6;
-            padding: 15px 20px;
-            border-radius: 8px;
-            min-width: 280px;
-          }
-          .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
-            font-size: 12px;
-          }
-          .total-row.grand {
-            border-top: 2px solid #3b82f6;
-            margin-top: 6px;
-            padding-top: 8px;
-            font-size: 16px;
-            font-weight: bold;
-          }
-          .total-row.grand .total-value {
-            color: #3b82f6;
-          }
-          .terms {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 8px;
-            margin-top: 30px;
-          }
-          .terms-title {
-            font-weight: bold;
+            font-size: 11px; font-weight: 700; color: #2d3748;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            padding: 5px 10px; background: #edf2f7; border-left: 3px solid #2d3748;
             margin-bottom: 10px;
           }
+          
+          /* ===== CLIENT GRID ===== */
+          .client-grid { display: flex; gap: 15px; }
+          .client-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px; }
+          .client-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
+          .client-box .name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+          .client-box .detail { font-size: 10px; color: #4a5568; margin: 2px 0; }
+          
+          /* ===== SELLER BOX ===== */
+          .seller-box { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px 12px; background: #f7fafc; display: flex; gap: 25px; align-items: center; }
+          .seller-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+          .seller-box .value { font-size: 11px; color: #1a1a2e; font-weight: 600; }
+          .seller-box .sub { font-size: 10px; color: #4a5568; }
+          
+          /* ===== TABLE ===== */
+          table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
+          thead th {
+            background: #2d3748; color: #fff;
+            padding: 7px 6px; text-align: left;
+            font-size: 9px; text-transform: uppercase;
+            letter-spacing: 0.5px; font-weight: 600;
+          }
+          tbody tr:nth-child(even) { background: #f7fafc; }
+          tbody td { padding: 6px; border-bottom: 1px solid #e2e8f0; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: 700; }
+          .desc-col { max-width: 180px; }
+          
+          /* ===== TOTALS ===== */
+          .totals-wrapper { display: flex; justify-content: flex-end; margin-top: 12px; }
+          .totals-box {
+            min-width: 280px; border: 1px solid #e2e8f0; border-radius: 4px;
+            overflow: hidden;
+          }
+          .totals-row { display: flex; justify-content: space-between; padding: 7px 14px; font-size: 11px; }
+          .totals-row:nth-child(even) { background: #f7fafc; }
+          .totals-row.grand {
+            background: #2d3748; color: #fff;
+            font-size: 14px; font-weight: 700; padding: 10px 14px;
+          }
+          
+          /* ===== CONDITIONS ===== */
+          .conditions-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 14px; }
+          .conditions-box p { margin: 4px 0; font-size: 11px; }
+          .conditions-box strong { color: #2d3748; }
+          
+          /* ===== ACCEPTANCE ===== */
+          .acceptance { margin-top: 25px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 20px; }
+          .acceptance-title { font-size: 11px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
+          .acceptance-grid { display: flex; justify-content: space-between; gap: 30px; margin-top: 30px; }
+          .acceptance-field { flex: 1; text-align: center; }
+          .acceptance-line { border-top: 1px solid #1a1a2e; padding-top: 6px; font-size: 10px; color: #4a5568; }
+          
+          /* ===== FOOTER ===== */
           .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e5e7eb;
-            text-align: center;
-            color: #6b7280;
-            font-size: 10px;
+            margin-top: 25px; padding-top: 12px;
+            border-top: 2px solid #2d3748;
+            text-align: center; font-size: 9px; color: #718096;
           }
-          .validity {
-            display: inline-block;
-            background: #fef3c7;
-            color: #92400e;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-top: 10px;
-          }
-          .ipi-mode-badge {
-            display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: bold;
-            margin-top: 6px;
-          }
+          .footer strong { color: #2d3748; font-size: 10px; }
         </style>
       </head>
       <body>
+        <!-- CABEÇALHO -->
         <div class="header">
-          <div>
+          <div class="header-left">
             ${legalEntity?.logo_url 
-              ? `<div class="logo"><img src="${legalEntity.logo_url}" alt="${legalEntity.name || 'Logo'}" /></div>` 
-              : `<div class="logo"><strong style="font-size: 18px;">${legalEntity?.name || 'CRMPro'}</strong></div>`
+              ? `<div class="header-logo"><img src="${legalEntity.logo_url}" alt="${legalEntity.name || 'Logo'}" /></div>` 
+              : ''
             }
-            ${legalEntity ? `<p style="font-size: 10px; color: #6b7280; margin-top: 4px;">CNPJ: ${legalEntity.cnpj || "-"}</p>` : ""}
+            <div class="header-company">
+              <div class="company-name">${legalEntity?.name || 'Empresa'}</div>
+              ${legalEntity?.cnpj ? `<div>CNPJ: ${legalEntity.cnpj}</div>` : ''}
+              ${legalEntity?.phone ? `<div>Tel: ${legalEntity.phone}</div>` : ''}
+              ${legalEntity?.email ? `<div>${legalEntity.email}</div>` : ''}
+            </div>
           </div>
-          <div class="proposal-info">
-            <div class="proposal-number">${proposal.number}</div>
-            <p style="color: #6b7280; margin: 5px 0;">Data: ${formatDate(proposal.created_at)}</p>
-            <div class="validity">Válida até: ${formatDate(proposal.validity_date)}</div>
-            ${showIpi ? `<div class="ipi-mode-badge">${ipiModeLabels[ipiMode] || ipiMode}</div>` : ''}
+          <div class="header-right">
+            <div class="doc-title">Proposta Comercial</div>
+            <div class="doc-number">${proposal.number}</div>
+            <div class="doc-meta">Emissão: ${formatDate(proposal.created_at)}</div>
+            <div class="doc-meta">Validade: ${formatDate(proposal.validity_date)}</div>
+            ${salesRepName ? `<div class="doc-meta">Vendedor: ${salesRepName}</div>` : ''}
+            ${showIpi ? `<span class="badge badge-ipi">${ipiModeLabels[ipiMode] || ipiMode}</span>` : ''}
           </div>
         </div>
 
+        <!-- DADOS DO CLIENTE -->
         <div class="section">
           <div class="section-title">Dados do Cliente</div>
-          <div class="info-grid">
-            <div class="info-box">
-              <div class="info-label">Empresa</div>
-              <div class="info-value" style="font-weight: bold; font-size: 14px;">
-                ${proposal.company?.name || 'Não informado'}
-              </div>
-              ${proposal.company?.cnpj ? `<div class="info-value">CNPJ: ${proposal.company.cnpj}</div>` : ''}
-              ${proposal.company?.address ? `<div class="info-value">${proposal.company.address}${proposal.company?.address_number ? ', ' + proposal.company.address_number : ''}</div>` : ''}
-              ${proposal.company?.city ? `<div class="info-value">${proposal.company.city}${proposal.company.state ? ' - ' + proposal.company.state : ''}</div>` : ''}
+          <div class="client-grid">
+            <div class="client-box">
+              <div class="label">Empresa</div>
+              <div class="name">${proposal.company?.name || 'Não informado'}</div>
+              ${proposal.company?.cnpj ? `<div class="detail">CNPJ: ${proposal.company.cnpj}</div>` : ''}
+              <div class="detail">IE: ${companyIE}</div>
+              ${proposal.company?.address ? `<div class="detail">${proposal.company.address}${proposal.company.address_number ? ', ' + proposal.company.address_number : ''}</div>` : ''}
+              ${proposal.company?.neighborhood ? `<div class="detail">${proposal.company.neighborhood}</div>` : ''}
+              ${proposal.company?.city ? `<div class="detail">${proposal.company.city}${proposal.company.state ? ' / ' + proposal.company.state : ''}${proposal.company.zip_code ? ' - CEP: ' + proposal.company.zip_code : ''}</div>` : ''}
             </div>
-            <div class="info-box">
-              <div class="info-label">Contato</div>
-              <div class="info-value" style="font-weight: bold; font-size: 14px;">
-                ${proposal.contact ? `${proposal.contact.first_name} ${proposal.contact.last_name || ''}` : 'Não informado'}
-              </div>
-              ${proposal.contact?.email ? `<div class="info-value">${proposal.contact.email}</div>` : ''}
-              ${proposal.contact?.phone ? `<div class="info-value">${proposal.contact.phone}</div>` : ''}
+            <div class="client-box">
+              <div class="label">Contato</div>
+              <div class="name">${proposal.contact ? `${proposal.contact.first_name} ${proposal.contact.last_name || ''}` : 'Não informado'}</div>
+              ${proposal.contact?.phone ? `<div class="detail">Tel: ${proposal.contact.phone}</div>` : ''}
+              ${proposal.contact?.email ? `<div class="detail">${proposal.contact.email}</div>` : ''}
             </div>
           </div>
           ${salesRepName ? `
-          <div style="margin-top: 15px;">
-            <div class="info-box">
-              <div class="info-label">Vendedor Responsável</div>
-              <div class="info-value" style="font-weight: bold; font-size: 14px;">${salesRepName}</div>
-              ${salesRepEmail ? `<div class="info-value">${salesRepEmail}</div>` : ''}
-              ${salesRepPhone ? `<div class="info-value">${salesRepPhone}</div>` : ''}
+          <div class="seller-box">
+            <div>
+              <div class="label">Vendedor Responsável</div>
+              <div class="value">${salesRepName}</div>
             </div>
+            ${salesRepEmail ? `<div class="sub">${salesRepEmail}</div>` : ''}
+            ${salesRepPhone ? `<div class="sub">Tel: ${salesRepPhone}</div>` : ''}
           </div>
           ` : ''}
         </div>
 
+        <!-- TABELA DE ITENS -->
         <div class="section">
           <div class="section-title">Itens da Proposta</div>
           <table>
             <thead>
               <tr>
-                <th style="width: 30px;">#</th>
-                <th style="width: 80px;">SKU</th>
+                <th style="width:28px;">Item</th>
+                <th style="width:70px;">Código</th>
                 <th>Descrição</th>
-                <th style="width: 100px; text-align: center;">Medidas (LxCxE)</th>
-                <th style="width: 50px; text-align: right;">Qtd</th>
-                <th style="width: 85px; text-align: right;">Preço Unit.</th>
-                <th style="width: 50px; text-align: right;">Desc.</th>
-                <th style="width: 90px; text-align: right;">Subtotal</th>
+                <th style="width:90px;" class="center">Medidas</th>
+                <th style="width:40px;" class="right">Qtd</th>
+                <th style="width:35px;" class="center">Un</th>
+                <th style="width:80px;" class="right">Preço Unit.</th>
+                <th style="width:45px;" class="right">Desc%</th>
+                <th style="width:80px;" class="right">Subtotal</th>
                 ${showIpi ? `
-                  <th style="width: 55px; text-align: right;">IPI %</th>
-                  <th style="width: 80px; text-align: right;">IPI R$</th>
+                  <th style="width:45px;" class="right">IPI%</th>
+                  <th style="width:70px;" class="right">IPI R$</th>
                 ` : ''}
-                <th style="width: 95px; text-align: right;">Total</th>
+                <th style="width:85px;" class="right">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -362,49 +343,77 @@ serve(async (req) => {
             </tbody>
           </table>
 
-          <div class="total-section">
-            <div class="total-box">
-              <div class="total-row">
+          <!-- TOTAIS -->
+          <div class="totals-wrapper">
+            <div class="totals-box">
+              <div class="totals-row">
                 <span>Subtotal Produtos:</span>
                 <span>${formatCurrency(subtotalProducts)}</span>
               </div>
               ${showIpi ? `
-                <div class="total-row">
+                <div class="totals-row">
                   <span>IPI Total${ipiMode === 'incluso' ? ' (informativo)' : ''}:</span>
                   <span>${formatCurrency(totalIpi)}</span>
                 </div>
               ` : ''}
-              <div class="total-row grand">
+              <div class="totals-row grand">
                 <span>VALOR TOTAL:</span>
-                <span class="total-value">${formatCurrency(grandTotal)}</span>
+                <span>${formatCurrency(grandTotal)}</span>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- CONDIÇÕES COMERCIAIS -->
         ${(proposal.payment_terms || proposal.delivery_terms || proposal.observations) ? `
-        <div class="terms">
-          <div class="terms-title">Condições Comerciais</div>
-          ${proposal.payment_terms ? `<p><strong>Pagamento:</strong> ${proposal.payment_terms}</p>` : ''}
-          ${proposal.delivery_terms ? `<p><strong>Prazo de Entrega:</strong> ${proposal.delivery_terms}</p>` : ''}
-          ${proposal.observations ? `<p><strong>Observações:</strong> ${proposal.observations}</p>` : ''}
-        </div>
-        ` : ''}
-
-        ${sellerName ? `
-        <div class="section" style="margin-top: 30px;">
-          <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor:</strong> ${sellerName}</span>
+        <div class="section">
+          <div class="section-title">Condições Comerciais</div>
+          <div class="conditions-box">
+            ${proposal.payment_terms ? `<p><strong>Condição de Pagamento:</strong> ${proposal.payment_terms}</p>` : ''}
+            ${proposal.delivery_terms ? `<p><strong>Prazo de Entrega:</strong> ${proposal.delivery_terms}</p>` : ''}
+            ${proposal.observations ? `<p><strong>Observações:</strong> ${proposal.observations}</p>` : ''}
           </div>
         </div>
         ` : ''}
 
+        ${sellerName ? `
+        <div class="section">
+          <div class="seller-box">
+            <div>
+              <div class="label">Elaborado por</div>
+              <div class="value">${sellerName}</div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- ACEITE DO CLIENTE -->
+        <div class="acceptance">
+          <div class="acceptance-title">Aceite do Cliente</div>
+          <p style="font-size: 10px; color: #4a5568; margin-bottom: 10px;">
+            Declaro que li e concordo com todas as condições descritas nesta proposta comercial.
+          </p>
+          <div class="acceptance-grid">
+            <div class="acceptance-field">
+              <div class="acceptance-line">Assinatura do Responsável</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Carimbo da Empresa</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Data: ____/____/________</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RODAPÉ -->
         <div class="footer">
-          <p><strong>${legalEntity?.name || 'CRMPro'}</strong></p>
-          ${legalEntity?.cnpj ? `<p>CNPJ: ${legalEntity.cnpj}</p>` : ''}
-          ${legalEntity?.phone ? `<p>Tel: ${legalEntity.phone}</p>` : ''}
-          ${legalEntity?.email ? `<p>${legalEntity.email}</p>` : ''}
-          <p>Para dúvidas, entre em contato conosco.</p>
+          <strong>${legalEntity?.name || 'Empresa'}</strong>
+          ${legalEntity?.cnpj ? ` &nbsp;|&nbsp; CNPJ: ${legalEntity.cnpj}` : ''}
+          ${legalEntity?.phone ? ` &nbsp;|&nbsp; Tel: ${legalEntity.phone}` : ''}
+          ${legalEntity?.email ? ` &nbsp;|&nbsp; ${legalEntity.email}` : ''}
+          <br/>
+          <span style="font-size: 8px;">Para dúvidas, entre em contato conosco. &nbsp;|&nbsp; Documento gerado em ${todayBR}</span>
         </div>
       </body>
       </html>
