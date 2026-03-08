@@ -677,10 +677,10 @@ export default function Customers() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {customer.active ? (
-                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0">Ativo</Badge>
+                          {customer.contribuinte_ipi ? (
+                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0">Sim</Badge>
                           ) : (
-                            <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativo</Badge>
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">Não</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
