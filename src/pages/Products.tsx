@@ -842,6 +842,7 @@ export default function Products() {
                               const newLength = parseFloat(e.target.value) || 0;
                               const newData = { ...formData, length: newLength };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
