@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck } from 'lucide-react';
+import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
@@ -255,23 +256,42 @@ export default function Orders() {
                              </div>
                            )}
                          </TableCell>
-                         <TableCell>
-                           {(carrierName || freightType) ? (
-                             <div className="flex items-center gap-1.5">
-                               <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                               {carrierName && (
-                                 <span className="text-sm font-medium truncate max-w-[120px]">{carrierName}</span>
-                               )}
-                               {freightType && (
-                                 <Badge variant="outline" className={`text-xs font-semibold ${freightBadgeStyles[freightType] || ''}`}>
-                                   {freightType}
-                                 </Badge>
-                               )}
-                             </div>
-                           ) : (
-                             <span className="text-muted-foreground text-sm">—</span>
-                           )}
-                         </TableCell>
+                          <TableCell>
+                            {(carrierName || freightType) ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-1.5 cursor-default">
+                                      {freightType === 'REDESPACHO' ? (
+                                        <RefreshCcw className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                                      ) : (
+                                        <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                      )}
+                                      {carrierName && (
+                                        <span className="text-sm font-medium truncate max-w-[120px]">{carrierName}</span>
+                                      )}
+                                      {freightType && (
+                                        <Badge variant="outline" className={`text-xs font-semibold ${freightBadgeStyles[freightType] || ''}`}>
+                                          {freightType}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs space-y-1">
+                                    {carrierName && <p><span className="text-muted-foreground">Transportadora:</span> {carrierName}</p>}
+                                    {freightType && <p><span className="text-muted-foreground">Frete:</span> {freightType}</p>}
+                                    {(order as any).delivery_same_as_company === false && (order as any).delivery_city ? (
+                                      <p><span className="text-muted-foreground">Entrega:</span> {(order as any).delivery_city}{(order as any).delivery_state ? `/${(order as any).delivery_state}` : ''}</p>
+                                    ) : (
+                                      <p><span className="text-muted-foreground">Entrega:</span> Mesmo endereço do cliente</p>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
                          <TableCell>
                            <Badge className={orderStatusConfig[order.status].color}>
                              {orderStatusConfig[order.status].label}
