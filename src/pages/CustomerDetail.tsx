@@ -1506,8 +1506,8 @@ export default function CustomerDetail() {
   );
 }
 
-// Subcomponent: Default Carrier
-function DefaultCarrierCard({ companyId, defaultCarrierId, isEditing }: { companyId: string; defaultCarrierId?: string | null; isEditing: boolean }) {
+// Subcomponent: Default Carrier & Freight
+function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, isEditing }: { companyId: string; defaultCarrierId?: string | null; defaultFreightType?: string | null; isEditing: boolean }) {
   const queryClient = useQueryClient();
   const [carrierSearch, setCarrierSearch] = useState('');
 
