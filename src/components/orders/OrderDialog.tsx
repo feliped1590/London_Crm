@@ -1392,6 +1392,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 orderId={order!.id} 
                 orderStatus={order!.status} 
                 orderCreatedBy={order!.created_by}
+                orderType={(order!.order_type as OrderType) || 'producao'}
               />
               
               {/* Approval Timeline */}

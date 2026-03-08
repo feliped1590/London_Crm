@@ -90,7 +90,7 @@ export function OrderApprovalActions({
   }
 
   // Final states - no actions
-  if (orderStatus === 'entregue' || orderStatus === 'cancelado') {
+  if (orderStatus === 'entregue' || orderStatus === 'cancelado' || (orderType === 'pronta_entrega' && orderStatus === 'faturado')) {
     return null;
   }
 
