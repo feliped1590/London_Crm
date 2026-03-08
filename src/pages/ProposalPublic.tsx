@@ -41,6 +41,12 @@ interface ProposalData {
     address: string | null;
     city: string | null;
     state: string | null;
+    sales_rep: {
+      id: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+    } | null;
   } | null;
   contact: {
     first_name: string;

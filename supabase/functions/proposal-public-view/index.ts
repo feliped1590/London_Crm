@@ -90,7 +90,7 @@ serve(async (req) => {
         approval_token_expires_at,
         approved_at,
         legal_entity_id,
-        company:companies(id, name, cnpj, address, city, state, phone, email),
+        company:companies(id, name, cnpj, address, city, state, phone, email, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         legal_entity:legal_entities(id, name, trade_name, cnpj, logo_url, phone, email, address, city, state)
       `)
