@@ -317,6 +317,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
+      setOrderType((order as any).order_type || 'producao');
       // Logistics
       setCarrierId((order as any).carrier_id || '');
       setFreightType((order as any).freight_type || '');
