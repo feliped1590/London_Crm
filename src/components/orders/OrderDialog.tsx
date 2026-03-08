@@ -1005,7 +1005,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <SearchableSelect
             options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
             value={companyId || null}
-            onChange={(v) => setCompanyId(v || '')}
+            onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v); }}
             placeholder="Selecione uma empresa"
             searchPlaceholder="Buscar empresa..."
             disabled={!canEdit}
