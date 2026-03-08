@@ -33,7 +33,8 @@ export default function Orders() {
           *,
           company:companies(id, name),
           contact:contacts(id, first_name, last_name),
-          proposal:proposals(id, number)
+          proposal:proposals(id, number),
+          carrier:carriers(id, name, trade_name)
         `)
         .order('created_at', { ascending: false })
         .limit(200);
