@@ -865,6 +865,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           total_value: calculateTotal(),
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
+          order_type: orderType,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
           carrier_id: carrierId || null,
