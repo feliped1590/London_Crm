@@ -245,8 +245,8 @@ export function useOrderApproval(
         .from('order_approvals')
         .insert({
           order_id: orderId,
-          from_status: orderStatus,
-          to_status: 'cancelado',
+          from_status: orderStatus as any,
+          to_status: 'cancelado' as any,
           approved_by: user.id,
           notes: reason,
         });
@@ -255,7 +255,7 @@ export function useOrderApproval(
 
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: 'cancelado' })
+        .update({ status: 'cancelado' as any })
         .eq('id', orderId);
 
       if (updateError) throw updateError;
