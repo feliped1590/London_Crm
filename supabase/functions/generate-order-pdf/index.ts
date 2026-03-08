@@ -164,16 +164,10 @@ serve(async (req) => {
         }
       : null;
 
-    // Fetch seller name
-    let sellerName = '';
-    if (order.created_by) {
-      const { data: sellerProfile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', order.created_by)
-        .maybeSingle();
-      sellerName = sellerProfile?.full_name || '';
-    }
+    // Get sales rep name from company (vendedor comercial)
+    const sellerName = order.company?.sales_rep?.name || '';
+    const sellerPhone = order.company?.sales_rep?.phone || '';
+    const sellerEmail = order.company?.sales_rep?.email || '';
 
     const statusLabels: Record<string, string> = {
       pendente: "Pendente",
