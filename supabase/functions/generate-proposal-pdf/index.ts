@@ -61,7 +61,12 @@ serve(async (req) => {
     const ipiMode = proposal.ipi_mode || 'destacar';
     const showIpi = ipiMode !== 'isento';
 
-    // Fetch seller name
+    // Get sales rep name from company
+    const salesRepName = proposal.company?.sales_rep?.name || '';
+    const salesRepPhone = proposal.company?.sales_rep?.phone || '';
+    const salesRepEmail = proposal.company?.sales_rep?.email || '';
+
+    // Fetch seller name (user who created)
     let sellerName = '';
     if (proposal.created_by) {
       const { data: sellerProfile } = await supabase
