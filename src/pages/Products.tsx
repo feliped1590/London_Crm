@@ -617,6 +617,22 @@ export default function Products() {
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
+                    {/* NCM */}
+                    <div className="col-span-2">
+                      <NCMSelector
+                        value={formData.ncm_code}
+                        onChange={(ncmCode, ncm) => {
+                          setFormData({ 
+                            ...formData, 
+                            ncm_code: ncmCode,
+                            ncm_id: ncm?.id,
+                            aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
+                          });
+                        }}
+                        productDescription={`${formData.name} ${formData.description || ''}`}
+                        onValidationChange={setNcmValidation}
+                      />
+                    </div>
                     {/* Tipo */}
                     <div>
                       <Label htmlFor="tipo">Tipo *</Label>
@@ -690,22 +706,6 @@ export default function Products() {
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Descrição do produto"
                         required
-                      />
-                    </div>
-                    {/* NCM */}
-                    <div className="col-span-2">
-                      <NCMSelector
-                        value={formData.ncm_code}
-                        onChange={(ncmCode, ncm) => {
-                          setFormData({ 
-                            ...formData, 
-                            ncm_code: ncmCode,
-                            ncm_id: ncm?.id,
-                            aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
-                          });
-                        }}
-                        productDescription={`${formData.name} ${formData.description || ''}`}
-                        onValidationChange={setNcmValidation}
                       />
                     </div>
 
