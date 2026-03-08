@@ -86,7 +86,7 @@ export function ClassificacaoCascade({
   }
 
   return (
-    <>
+    <div className="grid grid-cols-3 gap-4">
       <div>
         <Label>Setor {required && '*'}</Label>
         <Select value={setorId || undefined} onValueChange={handleSetorChange} disabled={disabled}>
@@ -98,32 +98,36 @@ export function ClassificacaoCascade({
           </SelectContent>
         </Select>
       </div>
-      {setorId && filteredSegmentos.length > 0 && (
-        <div>
-          <Label>Segmento {required && '*'}</Label>
-          <Select value={segmentoId || undefined} onValueChange={handleSegmentoChange} disabled={disabled}>
-            <SelectTrigger className={required && !segmentoId ? 'border-muted-foreground/50' : ''}>
-              <SelectValue placeholder="Selecione o segmento" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredSegmentos.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      {segmentoId && filteredAtividades.length > 0 && (
-        <div>
-          <Label>Atividade {required && '*'}</Label>
-          <Select value={atividadeId || undefined} onValueChange={handleAtividadeChange} disabled={disabled}>
-            <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
-              <SelectValue placeholder="Selecione a atividade" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredAtividades.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-    </>
+      <div>
+        <Label>Segmento {required && '*'}</Label>
+        <Select
+          value={segmentoId || undefined}
+          onValueChange={handleSegmentoChange}
+          disabled={disabled || !setorId || filteredSegmentos.length === 0}
+        >
+          <SelectTrigger className={required && !segmentoId ? 'border-muted-foreground/50' : ''}>
+            <SelectValue placeholder={setorId ? 'Selecione o segmento' : 'Selecione o setor primeiro'} />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredSegmentos.map(s => <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>Atividade {required && '*'}</Label>
+        <Select
+          value={atividadeId || undefined}
+          onValueChange={handleAtividadeChange}
+          disabled={disabled || !segmentoId || filteredAtividades.length === 0}
+        >
+          <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
+            <SelectValue placeholder={segmentoId ? 'Selecione a atividade' : 'Selecione o segmento primeiro'} />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredAtividades.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 }
