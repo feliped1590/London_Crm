@@ -39,7 +39,7 @@ import {
 const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
-type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
+type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 interface CustomerRow {
