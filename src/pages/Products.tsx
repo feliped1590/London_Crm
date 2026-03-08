@@ -788,7 +788,11 @@ export default function Products() {
                           <Label htmlFor="classe">Classe</Label>
                           <Select
                             value={formData.class_id || 'none'}
-                            onValueChange={(v) => setFormData({ ...formData, class_id: v === 'none' ? undefined : v })}
+                            onValueChange={(v) => {
+                              const updated = { ...formData, class_id: v === 'none' ? undefined : v };
+                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              setFormData(updated);
+                            }}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione" />
