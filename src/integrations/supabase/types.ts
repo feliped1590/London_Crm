@@ -961,6 +961,7 @@ export type Database = {
           created_by: string | null
           custom_fields: Json | null
           default_carrier_id: string | null
+          default_freight_type: string | null
           domain: string | null
           email: string | null
           employee_count: string | null
@@ -1018,6 +1019,7 @@ export type Database = {
           created_by?: string | null
           custom_fields?: Json | null
           default_carrier_id?: string | null
+          default_freight_type?: string | null
           domain?: string | null
           email?: string | null
           employee_count?: string | null
@@ -1075,6 +1077,7 @@ export type Database = {
           created_by?: string | null
           custom_fields?: Json | null
           default_carrier_id?: string | null
+          default_freight_type?: string | null
           domain?: string | null
           email?: string | null
           employee_count?: string | null
