@@ -80,7 +80,7 @@ export function AdminInterventionModal({
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-800 dark:text-amber-200">
               <strong>{actionDescription}</strong> para o cliente{' '}
-              <strong>{clientName}</strong>, que pertence ao vendedor{' '}
+              <strong>{clientName}</strong>, que pertence ao vendedor comercial{' '}
               <strong>{clientOwnerName}</strong>.
             </AlertDescription>
           </Alert>
