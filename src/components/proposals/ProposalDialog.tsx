@@ -498,7 +498,10 @@ export function ProposalDialog({
       }
     }
 
-    const ipiRate = product.aliquota_ipi || 0;
+    const isContribuinteIpi = companyId && companyFiscalData
+      ? companyFiscalData.contribuinte_ipi
+      : true;
+    const ipiRate = isContribuinteIpi ? (product.aliquota_ipi || 0) : 0;
 
     setItems([
       ...items,
