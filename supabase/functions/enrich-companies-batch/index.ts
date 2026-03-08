@@ -89,14 +89,22 @@ Deno.serve(async (req) => {
     const limit = Math.min(body.limit || 50, 200);
     const offset = body.offset || 0;
     const mode = body.mode || 'enrich'; // 'enrich' or 'scan'
+    const salesRepId = body.sales_rep_id || null;
+    const prioritizeAsterisks = body.prioritize_asterisks !== false; // default true
 
     // Fetch companies with valid CNPJ in pages
-    const { data: companies, error: fetchError } = await supabase
+    let query = supabase
       .from('companies')
       .select('id, name, cnpj, fantasia, address, city, state, phone, email, zip_code, neighborhood, address_number, address_complement')
       .not('cnpj', 'is', null)
       .order('name', { ascending: true })
       .range(offset, offset + limit * 3 - 1); // Fetch more to filter down
+
+    if (salesRepId) {
+      query = query.eq('sales_rep_id', salesRepId);
+    }
+
+    const { data: companies, error: fetchError } = await query;
 
     if (fetchError) throw fetchError;
 
