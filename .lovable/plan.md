@@ -1,70 +1,42 @@
 
 
-## Plano: Alerta de Tarefas Pendentes no Login
+# Plano: Campo Contribuinte IPI no cadastro + coluna IPI na listagem
 
-### 1. Migração SQL — RPC + Índice
+## Resumo
 
-Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
-- Usa `date_trunc('day', now())` para comparações sem timezone issues
-- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
-- Filtra `status != 'done'` e `assigned_to = p_user_id`
+Duas alterações:
+1. Adicionar campo "Contribuinte de IPI" (switch Sim/Não) na aba Dados do `CustomerDetail.tsx`
+2. Na listagem de clientes (`Customers.tsx`), substituir a coluna "Status" pela coluna "IPI", mostrando "Sim" ou "Não" conforme `contribuinte_ipi`
 
-Criar índice composto:
-```sql
-CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
-ON public.tasks (assigned_to, status, due_date);
-```
+## Alterações
 
-### 2. Hook `useLoginTaskAlert`
+### 1. `CustomerDetail.tsx` — Campo editável de Contribuinte IPI
 
-Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
-- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
-- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
-- Se alert habilitado, chama RPC `check_pending_tasks`
-- Se total > 0, abre modal com delay de ~800ms + fade-in
-- Se som habilitado, toca audio com try/catch no `.play()`
-- Retorna estado do modal e dados para o componente
+- Adicionar `contribuinte_ipi: false` ao `companyForm` state (linha 157)
+- Inicializar com `customer.contribuinte_ipi ?? false` (linha 530)
+- Adicionar um campo Switch na aba Dados, após Inscrição Estadual (após linha 805):
+  ```
+  Contribuinte de IPI: [Switch Sim/Não]
+  ```
+- O campo já será salvo automaticamente via `handleSaveCompany` (que faz spread de `companyForm`)
+- Importar `Switch` de `@/components/ui/switch`
 
-### 3. Componente `TaskAlertModal`
+### 2. RPC `search_customers_paginated` — Adicionar `contribuinte_ipi` ao retorno
 
-Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
-- Dialog com animação suave (fade-in com delay)
-- Exibe contagens de tarefas vencidas e vencendo hoje
-- Botão "Ver Tarefas" → navega para `/tasks`
-- Botão "Fechar"
-- Design discreto e profissional
+- Migration SQL para recriar a função adicionando `contribuinte_ipi boolean` na tabela de retorno e `c.contribuinte_ipi` no SELECT
 
-### 4. Som de Notificação
+### 3. `Customers.tsx` — Substituir coluna Status por IPI
 
-Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
+- Adicionar `contribuinte_ipi: boolean` ao `CustomerRow` interface
+- No header da tabela, trocar `<SortableHeader field="status">Status</SortableHeader>` por `IPI`
+- Na célula, substituir o badge Ativo/Inativo por:
+  - `contribuinte_ipi = true` → Badge "Sim" (verde)
+  - `contribuinte_ipi = false` → Badge "Não" (cinza)
+- Remover `'status'` do `SortField` type (já que a coluna sumiu)
+- O filtro de status (Ativos/Inativos/Todos) no topo continua funcionando normalmente — apenas a coluna visual muda
 
-### 5. Configuração no Settings (Notificações)
-
-Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
-- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
-- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
-- Persiste via upsert em `system_settings` key `task_alert_config`
-
-### 6. Integração no Login
-
-No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
-
-Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
-
-### Arquivos Criados/Editados
-
-| Ação | Arquivo |
-|------|---------|
-| Criar | Migração SQL (RPC + índice) |
-| Criar | `src/hooks/useLoginTaskAlert.ts` |
-| Criar | `src/components/tasks/TaskAlertModal.tsx` |
-| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
-| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
-
-### Performance
-
-- Índice composto garante query eficiente
-- Hook executa apenas 1x por sessão (sessionStorage)
-- Delay de 800ms não bloqueia carregamento do dashboard
-- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
+## O que NÃO muda
+- O filtro de status (Select Ativos/Inativos/Todos) permanece
+- As ações de ativar/desativar cliente permanecem nos botões de ação
+- Nenhuma edge function ou PDF é alterado
 
