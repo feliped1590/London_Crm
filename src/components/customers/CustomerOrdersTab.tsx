@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, TrendingUp } from 'lucide-react';
+import { Package, TrendingUp, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { OrderDialog } from '@/components/orders/OrderDialog';
 
 interface CustomerOrdersTabProps {
   companyId: string;
@@ -43,6 +46,8 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTabProps) {
+  const queryClient = useQueryClient();
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   // Buscar pedidos CRM (tabela orders)
   const { data: crmOrders, isLoading: loadingCrm } = useQuery({
     queryKey: ['customer-orders-crm', companyId],
@@ -168,16 +173,26 @@ export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTab
       {/* Tabela de Pedidos */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Histórico de Pedidos
-          </CardTitle>
-          <CardDescription>
-            {source === 'crm' 
-              ? 'Pedidos registrados no CRM'
-              : 'Pedidos sincronizados do ERP Iniflex'
-            }
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Histórico de Pedidos
+              </CardTitle>
+              <CardDescription>
+                {source === 'crm' 
+                  ? 'Pedidos registrados no CRM'
+                  : 'Pedidos sincronizados do ERP Iniflex'
+                }
+              </CardDescription>
+            </div>
+            {source === 'crm' && (
+              <Button size="sm" className="gap-2" onClick={() => setIsCreateOrderOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Novo Pedido
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!orders || orders.length === 0 ? (
@@ -235,6 +250,16 @@ export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTab
           )}
         </CardContent>
       </Card>
+
+      {/* Create Order Dialog */}
+      <OrderDialog
+        open={isCreateOrderOpen}
+        onOpenChange={setIsCreateOrderOpen}
+        preSelectedCompanyId={companyId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+        }}
+      />
     </div>
   );
 }

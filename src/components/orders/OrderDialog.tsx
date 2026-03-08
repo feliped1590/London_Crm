@@ -37,6 +37,7 @@ interface OrderDialogProps {
   onOpenChange: (open: boolean) => void;
   order?: Order | null; // If passed, it's edit mode; otherwise, create mode
   onSuccess?: () => void;
+  preSelectedCompanyId?: string | null;
 }
 
 interface OrderItemDraft {
@@ -54,7 +55,7 @@ interface OrderItemDraft {
   calculated_price_source?: 'TABLE' | 'FACTOR_KG' | 'MANUAL';
 }
 
-export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
@@ -325,6 +326,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       });
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
+      if (preSelectedCompanyId) {
+        setCompanyId(preSelectedCompanyId);
+      }
     }
     // Auto-fill carrier for new orders when company changes
     if (open && !order && companyId) {
