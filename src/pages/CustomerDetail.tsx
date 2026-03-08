@@ -124,7 +124,7 @@ export default function CustomerDetail() {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
-  const { canAccessBySalesRep, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
+  const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
   const { salesReps } = useSalesReps();
   const queryClient = useQueryClient();
@@ -558,9 +558,10 @@ export default function CustomerDetail() {
   const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const customerSalesRep = salesReps?.find(sr => sr.id === customerSalesRepId);
   const hasAccess = canAccessBySalesRep(customerSalesRepId);
+  const requiresIntervention = needsAdminIntervention(customerSalesRepId);
   
-  // Admin without direct access needs intervention authorization
-  if (!hasAccess && isSalesRepAdmin && !adminAccessGranted) {
+  // Admin without direct link needs intervention authorization
+  if (requiresIntervention && !adminAccessGranted) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
