@@ -109,10 +109,23 @@ Deno.serve(async (req) => {
     if (fetchError) throw fetchError;
 
     // Filter: valid CNPJ (14 digits) AND needs enrichment
-    const eligible = (companies || []).filter(c => {
+    let eligible = (companies || []).filter(c => {
       const digits = c.cnpj?.replace(/\D/g, '') || '';
       return digits.length === 14 && needsEnrichment(c);
-    }).slice(0, limit);
+    });
+
+    // Prioritize companies with asterisks in name/fantasia
+    if (prioritizeAsterisks) {
+      eligible.sort((a, b) => {
+        const aHasAsterisk = hasPlaceholder(a.name) || hasPlaceholder(a.fantasia);
+        const bHasAsterisk = hasPlaceholder(b.name) || hasPlaceholder(b.fantasia);
+        if (aHasAsterisk && !bHasAsterisk) return -1;
+        if (!aHasAsterisk && bHasAsterisk) return 1;
+        return 0;
+      });
+    }
+
+    eligible = eligible.slice(0, limit);
 
     const totalScanned = companies?.length || 0;
     const hasMore = totalScanned >= limit * 3; // More pages available
