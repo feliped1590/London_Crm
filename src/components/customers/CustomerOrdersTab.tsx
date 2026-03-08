@@ -46,6 +46,8 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTabProps) {
+  const queryClient = useQueryClient();
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   // Buscar pedidos CRM (tabela orders)
   const { data: crmOrders, isLoading: loadingCrm } = useQuery({
     queryKey: ['customer-orders-crm', companyId],
