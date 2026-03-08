@@ -725,11 +725,14 @@ export default function Products() {
                       <NCMSelector
                         value={formData.ncm_code}
                         onChange={(ncmCode, ncm) => {
+                          const officialIpi = ncm?.aliquota_ipi_oficial ?? null;
+                          setNcmOfficialIpi(officialIpi);
+                          const shouldAutoFill = !formData.aliquota_ipi && officialIpi != null;
                           setFormData({ 
                             ...formData, 
                             ncm_code: ncmCode,
                             ncm_id: ncm?.id,
-                            aliquota_ipi: ncm?.aliquota_ipi_oficial ?? formData.aliquota_ipi,
+                            ...(shouldAutoFill ? { aliquota_ipi: officialIpi } : {}),
                           });
                         }}
                         productDescription={`${formData.name} ${formData.description || ''}`}
