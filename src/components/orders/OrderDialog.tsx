@@ -113,15 +113,21 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
   }, [carriersRaw]);
 
-  // Auto-fill carrier and freight type from company defaults
-  const autoFillCarrier = useCallback(async (compId: string) => {
+  // Auto-fill carrier, freight type and IPI mode from company defaults
+  const autoFillFromCompany = useCallback(async (compId: string) => {
     if (!compId) return;
-    const { data } = await supabase.from('companies').select('default_carrier_id, default_freight_type').eq('id', compId).maybeSingle();
+    const { data } = await supabase.from('companies').select('default_carrier_id, default_freight_type, contribuinte_ipi').eq('id', compId).maybeSingle();
     if (data?.default_carrier_id) {
       setCarrierId(data.default_carrier_id);
     }
     if (data?.default_freight_type) {
       setFreightType(data.default_freight_type);
+    }
+    // Set IPI mode based on customer's contribuinte_ipi flag
+    if (data && data.contribuinte_ipi === false) {
+      setIpiMode('isento');
+    } else if (data && data.contribuinte_ipi === true) {
+      setIpiMode('destacar');
     }
   }, []);
 
@@ -332,7 +338,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     }
     // Auto-fill carrier for new orders when company changes
     if (open && !order && companyId) {
-      autoFillCarrier(companyId);
+      autoFillFromCompany(companyId);
     }
   }, [open, order, activeLegalEntityId]);
 
@@ -999,7 +1005,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <SearchableSelect
             options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
             value={companyId || null}
-            onChange={(v) => setCompanyId(v || '')}
+            onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v); }}
             placeholder="Selecione uma empresa"
             searchPlaceholder="Buscar empresa..."
             disabled={!canEdit}
