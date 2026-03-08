@@ -448,6 +448,7 @@ export default function Products() {
     setEditingProduct(null);
     setIsDialogOpen(false);
     setNcmValidation(null);
+    setNcmOfficialIpi(null);
     setFormTab('geral');
     setIsAutoDescription(true);
   };
