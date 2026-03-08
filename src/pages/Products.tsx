@@ -1230,8 +1230,8 @@ export default function Products() {
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {editingProduct ? 'Atualizar' : 'Criar'}
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || isCheckingDuplicate}>
+                  {isCheckingDuplicate ? 'Verificando...' : editingProduct ? 'Atualizar' : 'Criar'}
                 </Button>
               </div>
             </form>
