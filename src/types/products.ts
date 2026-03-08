@@ -1,7 +1,7 @@
 import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
-export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'faturado' | 'entregue' | 'cancelado';
+export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'em_faturamento' | 'faturado' | 'entregue' | 'cancelado';
 export type OrderType = 'producao' | 'pronta_entrega';
 export type IpiMode = 'destacar' | 'incluso' | 'isento';
 
