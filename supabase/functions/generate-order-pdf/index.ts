@@ -30,7 +30,7 @@ serve(async (req) => {
       .from("orders")
       .select(`
         *,
-        company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code),
+        company:companies(id, name, cnpj, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
         legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email, logo_url)
@@ -164,16 +164,10 @@ serve(async (req) => {
         }
       : null;
 
-    // Fetch seller name
-    let sellerName = '';
-    if (order.created_by) {
-      const { data: sellerProfile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', order.created_by)
-        .maybeSingle();
-      sellerName = sellerProfile?.full_name || '';
-    }
+    // Get sales rep name from company (vendedor comercial)
+    const sellerName = order.company?.sales_rep?.name || '';
+    const sellerPhone = order.company?.sales_rep?.phone || '';
+    const sellerEmail = order.company?.sales_rep?.email || '';
 
     const statusLabels: Record<string, string> = {
       pendente: "Pendente",
@@ -431,7 +425,9 @@ serve(async (req) => {
         ${sellerName ? `
         <div class="section" style="margin-top: 30px;">
           <div style="background: #f0f9ff; padding: 12px 16px; border-radius: 6px; border-left: 4px solid #3b82f6;">
-            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor:</strong> ${sellerName}</span>
+            <span style="font-size: 11px; color: #1e40af;"><strong>Vendedor Responsável:</strong> ${sellerName}</span>
+            ${sellerEmail ? `<span style="font-size: 10px; color: #1e40af; margin-left: 12px;">${sellerEmail}</span>` : ''}
+            ${sellerPhone ? `<span style="font-size: 10px; color: #1e40af; margin-left: 12px;">${sellerPhone}</span>` : ''}
           </div>
         </div>
         ` : ''}
