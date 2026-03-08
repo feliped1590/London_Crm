@@ -832,6 +832,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           ipi_mode: ipiMode,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
+          carrier_id: carrierId || null,
+          freight_type: freightType || null,
+          delivery_same_as_company: deliverySameAsCompany,
+          delivery_name: !deliverySameAsCompany ? deliveryFields.name || null : null,
+          delivery_address: !deliverySameAsCompany ? deliveryFields.address || null : null,
+          delivery_number: !deliverySameAsCompany ? deliveryFields.number || null : null,
+          delivery_neighborhood: !deliverySameAsCompany ? deliveryFields.neighborhood || null : null,
+          delivery_city: !deliverySameAsCompany ? deliveryFields.city || null : null,
+          delivery_state: !deliverySameAsCompany ? deliveryFields.state || null : null,
+          delivery_zip_code: !deliverySameAsCompany ? deliveryFields.zip_code || null : null,
+          delivery_contact: !deliverySameAsCompany ? deliveryFields.contact || null : null,
         })
         .eq('id', order.id);
 
