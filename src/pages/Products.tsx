@@ -160,6 +160,7 @@ export default function Products() {
     aliquota_pis: undefined as number | undefined,
     aliquota_cofins: undefined as number | undefined,
     tipo_produto_fiscal: undefined as TipoProdutoFiscal | undefined,
+    ncm_validated_at: null as string | null,
     // Campos ERP Projedata
     tipo_item: '',
     tipo_ficha: undefined as number | undefined,
