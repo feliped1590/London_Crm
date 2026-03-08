@@ -1023,15 +1023,6 @@ export default function CustomerDetail() {
             );
           })()}
 
-          {/* Default Carrier */}
-          {!isErpCustomer && (
-            <DefaultCarrierCard 
-              companyId={id!} 
-              defaultCarrierId={(customer as any)?.default_carrier_id}
-              defaultFreightType={(customer as any)?.default_freight_type}
-              isEditing={isEditing} 
-            />
-          )}
 
           {/* Admin: Assign user */}
           {isAdmin && (
