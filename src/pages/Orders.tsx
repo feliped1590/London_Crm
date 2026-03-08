@@ -256,7 +256,14 @@ export default function Orders() {
                                {order.company.name}
                              </div>
                            )}
-                         </TableCell>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const ot = (order as any).order_type as OrderType || 'producao';
+                              const cfg = orderTypeConfig[ot];
+                              return <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>;
+                            })()}
+                          </TableCell>
                           <TableCell>
                             {(carrierName || freightType) ? (
                               <TooltipProvider>
