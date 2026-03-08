@@ -26,6 +26,7 @@ import {
 } from '@/hooks/useCreditAnalysis';
 import { CreditUpdateModal } from './CreditUpdateModal';
 import { CreditAuditHistory } from './CreditAuditHistory';
+import { CreditDocumentsTab } from './CreditDocumentsTab';
 
 interface CreditAnalysisTabProps {
   companyId: string;
