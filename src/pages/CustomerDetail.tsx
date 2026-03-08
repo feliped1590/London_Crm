@@ -126,8 +126,21 @@ export default function CustomerDetail() {
   const { logIntervention } = usePortfolioGovernance();
   const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
-  const { salesReps } = useSalesReps();
+  const { salesReps, allUserSalesReps } = useSalesReps();
   const queryClient = useQueryClient();
+
+  // Fetch profiles to resolve user names for sales rep owners
+  const { data: profilesMap } = useQuery({
+    queryKey: ['profiles_map_for_access'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      const map: Record<string, string> = {};
+      (data || []).forEach((p: any) => { map[p.user_id] = p.full_name || 'Usuário'; });
+      return map;
+    },
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
@@ -557,6 +570,8 @@ export default function CustomerDetail() {
   // Access control: check if user can access this customer by sales_rep_id
   const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const customerSalesRep = salesReps?.find(sr => sr.id === customerSalesRepId);
+  const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
+  const salesRepOwnerName = salesRepUserLink ? (profilesMap?.[salesRepUserLink.user_id] || 'Usuário') : null;
   const hasAccess = canAccessBySalesRep(customerSalesRepId);
   const requiresIntervention = needsAdminIntervention(customerSalesRepId);
   
@@ -577,8 +592,9 @@ export default function CustomerDetail() {
             </div>
             <h3 className="text-lg font-semibold">Autorização Necessária</h3>
             <p className="text-muted-foreground max-w-md">
-              Este cliente pertence ao vendedor <strong>{customerSalesRep?.name || 'outro vendedor'}</strong>. 
-              Como administrador, você pode acessar mediante justificativa.
+              Este cliente pertence ao vendedor comercial <strong>{customerSalesRep?.name || 'não identificado'}</strong>
+              {salesRepOwnerName && <>, que está sendo administrado pelo usuário <strong>{salesRepOwnerName}</strong></>}.
+              {' '}Como administrador, você pode acessar mediante justificativa.
             </p>
             <Button onClick={() => setShowAccessInterventionModal(true)}>
               Solicitar Acesso

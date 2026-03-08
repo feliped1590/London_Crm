@@ -124,6 +124,17 @@ export function useSalesReps() {
 
   const linkUserSalesRep = useMutation({
     mutationFn: async ({ user_id, sales_rep_id, is_default }: { user_id: string; sales_rep_id: string; is_default?: boolean }) => {
+      // Check if sales rep is already linked to another user
+      const { data: existing } = await supabase
+        .from('user_sales_reps')
+        .select('id, user_id')
+        .eq('sales_rep_id', sales_rep_id)
+        .maybeSingle();
+      
+      if (existing && existing.user_id !== user_id) {
+        throw new Error('Este vendedor comercial já está vinculado a outro usuário. Remova o vínculo anterior antes de criar um novo.');
+      }
+
       const { error } = await supabase.from('user_sales_reps').insert({
         user_id,
         sales_rep_id,
@@ -139,7 +150,7 @@ export function useSalesReps() {
       queryClient.invalidateQueries({ queryKey: ['portfolio'] });
       toast.success('Vendedor vinculado! Clientes foram automaticamente atribuídos ao usuário.');
     },
-    onError: () => toast.error('Erro ao vincular vendedor'),
+    onError: (error: any) => toast.error(error?.message || 'Erro ao vincular vendedor'),
   });
 
   const unlinkUserSalesRep = useMutation({
