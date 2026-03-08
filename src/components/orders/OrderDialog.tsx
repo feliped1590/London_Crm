@@ -981,18 +981,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
           <div className="flex gap-2">
-            <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Selecione um produto" />
-              </SelectTrigger>
-              <SelectContent>
-                {products?.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.sku} - {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={selectedProductId}
+              onValueChange={setSelectedProductId}
+              placeholder="Buscar produto por nome ou SKU..."
+              searchPlaceholder="Digite para buscar..."
+              emptyMessage="Nenhum produto encontrado"
+              className="flex-1"
+              onSearchChange={setProductSearch}
+              options={(products ?? []).map((product) => ({
+                value: product.id,
+                label: `${product.sku} - ${product.name}`,
+              }))}
+            />
             <Button onClick={addProductToItems} disabled={!selectedProductId}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar
