@@ -128,7 +128,7 @@ export default function CustomerDetail() {
   const { isAdmin } = useModulePermissions();
   const { logIntervention } = usePortfolioGovernance();
   const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
-  const { getNomeById } = useClassificacao();
+  const { getNomeById, setores } = useClassificacao();
   const { salesReps, allUserSalesReps } = useSalesReps();
   const queryClient = useQueryClient();
 
