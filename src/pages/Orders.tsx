@@ -256,23 +256,42 @@ export default function Orders() {
                              </div>
                            )}
                          </TableCell>
-                         <TableCell>
-                           {(carrierName || freightType) ? (
-                             <div className="flex items-center gap-1.5">
-                               <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                               {carrierName && (
-                                 <span className="text-sm font-medium truncate max-w-[120px]">{carrierName}</span>
-                               )}
-                               {freightType && (
-                                 <Badge variant="outline" className={`text-xs font-semibold ${freightBadgeStyles[freightType] || ''}`}>
-                                   {freightType}
-                                 </Badge>
-                               )}
-                             </div>
-                           ) : (
-                             <span className="text-muted-foreground text-sm">—</span>
-                           )}
-                         </TableCell>
+                          <TableCell>
+                            {(carrierName || freightType) ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center gap-1.5 cursor-default">
+                                      {freightType === 'REDESPACHO' ? (
+                                        <RefreshCcw className="h-3.5 w-3.5 text-orange-500 flex-shrink-0" />
+                                      ) : (
+                                        <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                      )}
+                                      {carrierName && (
+                                        <span className="text-sm font-medium truncate max-w-[120px]">{carrierName}</span>
+                                      )}
+                                      {freightType && (
+                                        <Badge variant="outline" className={`text-xs font-semibold ${freightBadgeStyles[freightType] || ''}`}>
+                                          {freightType}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs space-y-1">
+                                    {carrierName && <p><span className="text-muted-foreground">Transportadora:</span> {carrierName}</p>}
+                                    {freightType && <p><span className="text-muted-foreground">Frete:</span> {freightType}</p>}
+                                    {order.delivery_same_as_company === false && order.delivery_city ? (
+                                      <p><span className="text-muted-foreground">Entrega:</span> {order.delivery_city}{order.delivery_state ? `/${order.delivery_state}` : ''}</p>
+                                    ) : (
+                                      <p><span className="text-muted-foreground">Entrega:</span> Mesmo endereço do cliente</p>
+                                    )}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
                          <TableCell>
                            <Badge className={orderStatusConfig[order.status].color}>
                              {orderStatusConfig[order.status].label}
