@@ -633,6 +633,17 @@ export default function Products() {
                         onValidationChange={setNcmValidation}
                       />
                     </div>
+                    {/* Descrição */}
+                    <div className="col-span-2">
+                      <Label htmlFor="name">Descrição *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Descrição do produto"
+                        required
+                      />
+                    </div>
                     {/* Tipo */}
                     <div>
                       <Label htmlFor="tipo">Tipo *</Label>
@@ -753,18 +764,6 @@ export default function Products() {
                           </Select>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Descrição */}
-                    <div className="col-span-2">
-                      <Label htmlFor="name">Descrição *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Descrição do produto"
-                        required
-                      />
                     </div>
 
                     {/* Dimensões */}
