@@ -983,7 +983,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           <div className="flex gap-2">
             <SearchableSelect
               value={selectedProductId}
-              onChange={setSelectedProductId}
+              onChange={(v) => setSelectedProductId(v || '')}
               placeholder="Buscar produto por nome ou SKU..."
               searchPlaceholder="Digite para buscar..."
               emptyMessage="Nenhum produto encontrado"
