@@ -789,6 +789,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           length: item.length,
           thickness: item.thickness,
           sort_order: index,
+          calculated_price_source: item.calculated_price_source || 'MANUAL',
         };
       });
 
