@@ -7725,6 +7725,7 @@ export type Database = {
         | "pendente"
         | "em_producao"
         | "produzido"
+        | "em_faturamento"
         | "faturado"
         | "entregue"
         | "cancelado"
@@ -7986,6 +7987,7 @@ export const Constants = {
         "pendente",
         "em_producao",
         "produzido",
+        "em_faturamento",
         "faturado",
         "entregue",
         "cancelado",
