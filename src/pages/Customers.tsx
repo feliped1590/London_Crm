@@ -39,7 +39,7 @@ import {
 const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
-type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'status' | 'created_at';
+type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 interface CustomerRow {
@@ -73,6 +73,7 @@ interface CustomerRow {
   total_count: number;
   setor_id: string | null;
   segmento_id: string | null;
+  contribuinte_ipi: boolean;
   atividade_id: string | null;
 }
 
@@ -152,7 +153,6 @@ export default function Customers() {
     switch (sortField) {
       case 'name': return 'name';
       case 'created_at': return 'created_at';
-      case 'status': return 'status';
       case 'owner': return 'owner';
       default: return 'name';
     }
@@ -604,7 +604,7 @@ export default function Customers() {
                         </div>
                       </SortableHeader>
                       <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
-                      <SortableHeader field="status">Status</SortableHeader>
+                      <TableHead>IPI</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -676,10 +676,10 @@ export default function Customers() {
                           )}
                         </TableCell>
                         <TableCell>
-                          {customer.active ? (
-                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0">Ativo</Badge>
+                          {customer.contribuinte_ipi ? (
+                            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-0">Sim</Badge>
                           ) : (
-                            <Badge variant="secondary" className="bg-muted text-muted-foreground">Inativo</Badge>
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground">Não</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">

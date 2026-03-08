@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
@@ -111,6 +113,7 @@ interface UnifiedCustomer {
   is_matriz?: boolean;
   last_reviewed_at?: string | null;
   active?: boolean;
+  contribuinte_ipi?: boolean;
   owner_id?: string | null;
   contact_name?: string | null;
   source: 'crm' | 'erp';
@@ -171,6 +174,7 @@ export default function CustomerDetail() {
     setor_id: null as string | null,
     segmento_id: null as string | null,
     atividade_id: null as string | null,
+    contribuinte_ipi: false,
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -544,6 +548,7 @@ export default function CustomerDetail() {
       setor_id: customer.setor_id || null,
       segmento_id: customer.segmento_id || null,
       atividade_id: customer.atividade_id || null,
+      contribuinte_ipi: customer.contribuinte_ipi ?? false,
     });
     setCustomFieldsData((customer.custom_fields as Record<string, unknown>) || {});
   }
@@ -801,6 +806,18 @@ export default function CustomerDetail() {
                     id="inscricao_estadual"
                     value={companyForm.inscricao_estadual}
                     onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })}
+                    disabled={!isEditing || isErpCustomer}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="contribuinte_ipi" className="text-sm font-medium">Contribuinte de IPI</Label>
+                    <p className="text-xs text-muted-foreground">Define se o cliente é contribuinte do IPI</p>
+                  </div>
+                  <Switch
+                    id="contribuinte_ipi"
+                    checked={companyForm.contribuinte_ipi}
+                    onCheckedChange={(checked) => setCompanyForm({ ...companyForm, contribuinte_ipi: checked })}
                     disabled={!isEditing || isErpCustomer}
                   />
                 </div>
