@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Upload } from 'lucide-react';
 import { 
   RefreshCw, 
   TrendingUp, 
@@ -26,6 +27,7 @@ import {
 } from '@/hooks/useCreditAnalysis';
 import { CreditUpdateModal } from './CreditUpdateModal';
 import { CreditAuditHistory } from './CreditAuditHistory';
+import { CreditDocumentsTab } from './CreditDocumentsTab';
 
 interface CreditAnalysisTabProps {
   companyId: string;
@@ -183,6 +185,10 @@ export function CreditAnalysisTab({ companyId, companyName, cnpj }: CreditAnalys
             <History className="h-4 w-4" />
             Histórico de Consultas
           </TabsTrigger>
+          <TabsTrigger value="documentos" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Documentos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumo" className="space-y-6 mt-6">
@@ -308,6 +314,10 @@ export function CreditAnalysisTab({ companyId, companyName, cnpj }: CreditAnalys
               <CreditAuditHistory records={auditHistory || []} isLoading={loadingAudit} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="documentos" className="mt-6">
+          <CreditDocumentsTab companyId={companyId} />
         </TabsContent>
       </Tabs>
 
