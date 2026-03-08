@@ -38,7 +38,8 @@ import {
   CalendarCheck,
   ShieldCheck,
   Shield,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
