@@ -126,8 +126,21 @@ export default function CustomerDetail() {
   const { logIntervention } = usePortfolioGovernance();
   const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
-  const { salesReps } = useSalesReps();
+  const { salesReps, allUserSalesReps } = useSalesReps();
   const queryClient = useQueryClient();
+
+  // Fetch profiles to resolve user names for sales rep owners
+  const { data: profilesMap } = useQuery({
+    queryKey: ['profiles_map_for_access'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      const map: Record<string, string> = {};
+      (data || []).forEach((p: any) => { map[p.user_id] = p.full_name || 'Usuário'; });
+      return map;
+    },
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
