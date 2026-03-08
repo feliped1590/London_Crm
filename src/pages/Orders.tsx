@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -7,18 +7,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, User, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck } from 'lucide-react';
+import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 
+const freightBadgeStyles: Record<string, string> = {
+  CIF: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  FOB: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800',
+  REDESPACHO: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+};
+
 export default function Orders() {
   const queryClient = useQueryClient();
   const { isAdmin } = useModulePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCarrier, setFilterCarrier] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
@@ -50,6 +57,20 @@ export default function Orders() {
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  // Distinct carriers from loaded orders for filter dropdown
+  const carrierFilterOptions = useMemo(() => {
+    if (!orders) return [];
+    const map = new Map<string, string>();
+    orders.forEach((o: any) => {
+      if (o.carrier) {
+        map.set(o.carrier.id, o.carrier.trade_name || o.carrier.name);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
 
   const handleRefresh = async () => {
     await refetch();
@@ -89,16 +110,19 @@ export default function Orders() {
     }
   };
 
-  // Check if user can edit a specific order
   const canEditOrder = (order: Order) => {
     if (order.status === 'pendente') return true;
     return isAdmin;
   };
 
-  const filteredOrders = orders?.filter((o) =>
-    o.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOrders = orders?.filter((o) => {
+    const matchesSearch =
+      o.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCarrier =
+      filterCarrier === 'all' || (o as any).carrier?.id === filterCarrier;
+    return matchesSearch && matchesCarrier;
+  });
 
   const getStatusStats = () => {
     if (!orders) return [];
@@ -176,6 +200,18 @@ export default function Orders() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filterCarrier} onValueChange={setFilterCarrier}>
+              <SelectTrigger className="w-[200px]">
+                <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Transportadora" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Transportadoras</SelectItem>
+                {carrierFilterOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -194,8 +230,7 @@ export default function Orders() {
                    <TableRow>
                    <TableHead>Número</TableHead>
                    <TableHead>Empresa</TableHead>
-                   <TableHead>Transportadora</TableHead>
-                   <TableHead>Frete</TableHead>
+                   <TableHead>Logística</TableHead>
                    <TableHead>Status</TableHead>
                    <TableHead>Entrega Prevista</TableHead>
                    <TableHead>Valor Total</TableHead>
@@ -204,80 +239,84 @@ export default function Orders() {
                    </TableRow>
                  </TableHeader>
                  <TableBody>
-                   {filteredOrders.map((order) => (
-                     <TableRow key={order.id}>
-                    <TableCell className="font-mono font-medium">{order.number}</TableCell>
-                     <TableCell>
-                       {order.company && (
-                         <div className="flex items-center gap-2">
-                           <Building2 className="h-4 w-4 text-muted-foreground" />
-                           {order.company.name}
-                         </div>
-                       )}
-                     </TableCell>
-                     <TableCell>
-                       {(order as any).carrier ? (
-                         <div className="flex items-center gap-2">
-                           <Truck className="h-4 w-4 text-muted-foreground" />
-                           <span className="text-sm">{(order as any).carrier.trade_name || (order as any).carrier.name}</span>
-                         </div>
-                       ) : (
-                         <span className="text-muted-foreground text-sm">—</span>
-                       )}
-                     </TableCell>
-                     <TableCell>
-                       {(order as any).freight_type ? (
-                         <Badge variant="outline" className="text-xs">
-                           {(order as any).freight_type}
-                         </Badge>
-                       ) : (
-                         <span className="text-muted-foreground text-sm">—</span>
-                       )}
-                     </TableCell>
-                    <TableCell>
-                      <Badge className={orderStatusConfig[order.status].color}>
-                        {orderStatusConfig[order.status].label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {order.delivery_date && (
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {formatDate(order.delivery_date)}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium">{formatCurrency(order.total_value || 0)}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(order.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {canEditOrder(order) && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEditOrder(order)}
-                            title="Editar pedido"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleGeneratePdf(order)}
-                          disabled={generatingPdfId === order.id}
-                          title="Gerar PDF"
-                        >
-                          {generatingPdfId === order.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <FileText className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                     </TableRow>
-                   ))}
+                   {filteredOrders.map((order) => {
+                     const carrier = (order as any).carrier;
+                     const freightType = (order as any).freight_type;
+                     const carrierName = carrier?.trade_name || carrier?.name;
+
+                     return (
+                       <TableRow key={order.id}>
+                         <TableCell className="font-mono font-medium">{order.number}</TableCell>
+                         <TableCell>
+                           {order.company && (
+                             <div className="flex items-center gap-2">
+                               <Building2 className="h-4 w-4 text-muted-foreground" />
+                               {order.company.name}
+                             </div>
+                           )}
+                         </TableCell>
+                         <TableCell>
+                           {(carrierName || freightType) ? (
+                             <div className="flex items-center gap-1.5">
+                               <Truck className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                               {carrierName && (
+                                 <span className="text-sm font-medium truncate max-w-[120px]">{carrierName}</span>
+                               )}
+                               {freightType && (
+                                 <Badge variant="outline" className={`text-xs font-semibold ${freightBadgeStyles[freightType] || ''}`}>
+                                   {freightType}
+                                 </Badge>
+                               )}
+                             </div>
+                           ) : (
+                             <span className="text-muted-foreground text-sm">—</span>
+                           )}
+                         </TableCell>
+                         <TableCell>
+                           <Badge className={orderStatusConfig[order.status].color}>
+                             {orderStatusConfig[order.status].label}
+                           </Badge>
+                         </TableCell>
+                         <TableCell>
+                           {order.delivery_date && (
+                             <div className="flex items-center gap-2">
+                               <Calendar className="h-4 w-4 text-muted-foreground" />
+                               {formatDate(order.delivery_date)}
+                             </div>
+                           )}
+                         </TableCell>
+                         <TableCell className="font-medium">{formatCurrency(order.total_value || 0)}</TableCell>
+                         <TableCell className="text-muted-foreground">{formatDate(order.created_at)}</TableCell>
+                         <TableCell className="text-right">
+                           <div className="flex items-center justify-end gap-1">
+                             {canEditOrder(order) && (
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 onClick={() => handleEditOrder(order)}
+                                 title="Editar pedido"
+                               >
+                                 <Edit className="h-4 w-4" />
+                               </Button>
+                             )}
+                             <Button 
+                               variant="ghost" 
+                               size="icon" 
+                               onClick={() => handleGeneratePdf(order)}
+                               disabled={generatingPdfId === order.id}
+                               title="Gerar PDF"
+                             >
+                               {generatingPdfId === order.id ? (
+                                 <Loader2 className="h-4 w-4 animate-spin" />
+                               ) : (
+                                 <FileText className="h-4 w-4" />
+                               )}
+                             </Button>
+                           </div>
+                         </TableCell>
+                       </TableRow>
+                     );
+                   })}
                  </TableBody>
                </Table>
              </div>
