@@ -110,6 +110,8 @@ export interface Proposal {
   items?: ProposalItem[];
 }
 
+export type PriceSource = 'TABLE' | 'FACTOR_KG' | 'MANUAL';
+
 export interface ProposalItem {
   id: string;
   proposal_id: string;
@@ -127,6 +129,7 @@ export interface ProposalItem {
   subtotal_item?: number;
   total_item?: number;
   sort_order?: number;
+  calculated_price_source?: PriceSource;
   created_at: string;
   product?: Partial<Product> | { id: string; sku: string; name: string };
 }
