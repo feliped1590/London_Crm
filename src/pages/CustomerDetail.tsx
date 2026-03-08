@@ -592,8 +592,9 @@ export default function CustomerDetail() {
             </div>
             <h3 className="text-lg font-semibold">Autorização Necessária</h3>
             <p className="text-muted-foreground max-w-md">
-              Este cliente pertence ao vendedor <strong>{customerSalesRep?.name || 'outro vendedor'}</strong>. 
-              Como administrador, você pode acessar mediante justificativa.
+              Este cliente pertence ao vendedor comercial <strong>{customerSalesRep?.name || 'não identificado'}</strong>
+              {salesRepOwnerName && <>, que está sendo administrado pelo usuário <strong>{salesRepOwnerName}</strong></>}.
+              {' '}Como administrador, você pode acessar mediante justificativa.
             </p>
             <Button onClick={() => setShowAccessInterventionModal(true)}>
               Solicitar Acesso
