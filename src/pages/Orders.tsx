@@ -11,7 +11,7 @@ import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileT
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
+import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 
