@@ -238,7 +238,12 @@ export default function Customers() {
     setIsEnriching(true);
     try {
       const { data, error } = await supabase.functions.invoke('enrich-companies-batch', {
-        body: { limit: enrichBatchSize, offset },
+        body: { 
+          limit: enrichBatchSize, 
+          offset,
+          sales_rep_id: enrichSalesRepId !== 'all' ? enrichSalesRepId : undefined,
+          prioritize_asterisks: enrichPrioritizeAsterisks,
+        },
       });
       if (error) throw error;
       if (data?.success) {
