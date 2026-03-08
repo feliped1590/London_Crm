@@ -32,6 +32,7 @@ import { NCMSelector } from '@/components/products/NCMSelector';
 import { FiscalSuggestionsCard } from '@/components/products/FiscalSuggestionsCard';
 import { NCMCode, NCMSemanticValidation, TipoProdutoFiscal } from '@/types/fiscal';
 import { Product, calcularFatorMilheiro } from '@/types/products';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
