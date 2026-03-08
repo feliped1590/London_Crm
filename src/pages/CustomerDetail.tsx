@@ -1016,7 +1016,8 @@ export default function CustomerDetail() {
           {!isErpCustomer && (
             <DefaultCarrierCard 
               companyId={id!} 
-              defaultCarrierId={(customer as any)?.default_carrier_id} 
+              defaultCarrierId={(customer as any)?.default_carrier_id}
+              defaultFreightType={(customer as any)?.default_freight_type}
               isEditing={isEditing} 
             />
           )}

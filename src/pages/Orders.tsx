@@ -207,22 +207,33 @@ export default function Orders() {
                    {filteredOrders.map((order) => (
                      <TableRow key={order.id}>
                     <TableCell className="font-mono font-medium">{order.number}</TableCell>
-                    <TableCell>
-                      {order.company && (
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {order.company.name}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {order.contact && (
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {order.contact.first_name} {order.contact.last_name}
-                        </div>
-                      )}
-                    </TableCell>
+                     <TableCell>
+                       {order.company && (
+                         <div className="flex items-center gap-2">
+                           <Building2 className="h-4 w-4 text-muted-foreground" />
+                           {order.company.name}
+                         </div>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       {(order as any).carrier ? (
+                         <div className="flex items-center gap-2">
+                           <Truck className="h-4 w-4 text-muted-foreground" />
+                           <span className="text-sm">{(order as any).carrier.trade_name || (order as any).carrier.name}</span>
+                         </div>
+                       ) : (
+                         <span className="text-muted-foreground text-sm">—</span>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       {(order as any).freight_type ? (
+                         <Badge variant="outline" className="text-xs">
+                           {(order as any).freight_type}
+                         </Badge>
+                       ) : (
+                         <span className="text-muted-foreground text-sm">—</span>
+                       )}
+                     </TableCell>
                     <TableCell>
                       <Badge className={orderStatusConfig[order.status].color}>
                         {orderStatusConfig[order.status].label}
