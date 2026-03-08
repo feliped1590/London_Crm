@@ -321,6 +321,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
     }
+    // Auto-fill carrier for new orders when company changes
+    if (open && !order && companyId) {
+      autoFillCarrier(companyId);
+    }
   }, [open, order, activeLegalEntityId]);
 
   // Set items when existingOrderItems are loaded
