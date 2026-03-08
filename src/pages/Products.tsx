@@ -507,6 +507,7 @@ export default function Products() {
     });
     setIsDialogOpen(true);
     setFormTab('geral');
+    setIsAutoDescription(false);
   };
 
   // Helper to get pricing info for a product
