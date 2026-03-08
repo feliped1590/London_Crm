@@ -449,7 +449,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     } else {
       // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
       const packagingPrice = calculatePackagingPrice(product);
-      if (packagingPrice !== (product.unit_price || 0) && product.fator_kg) {
+      if (packagingPrice !== (product.unit_price || 0) && (product as any).fator_kg) {
         priceSource = 'FACTOR_KG';
       }
       unitPrice = packagingPrice;
