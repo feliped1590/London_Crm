@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { usePricingTables } from '@/hooks/usePricingTables';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import {
   Proposal,
@@ -606,6 +607,9 @@ export function ProposalDialog({
       if (rule?.discount_percent) {
         discountPercent = rule.discount_percent;
       }
+    } else {
+      // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
+      unitPrice = calculatePackagingPrice(product);
     }
 
     const isContribuinteIpi = companyId && companyFiscalData

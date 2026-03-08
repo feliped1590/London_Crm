@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { usePricingTables } from '@/hooks/usePricingTables';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
@@ -442,6 +443,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       if (rule?.discount_percent) {
         discountPercent = rule.discount_percent;
       }
+    } else {
+      // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
+      unitPrice = calculatePackagingPrice(product);
     }
 
     const newItem: OrderItemDraft = {
