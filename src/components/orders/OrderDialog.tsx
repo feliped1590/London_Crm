@@ -92,6 +92,33 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+
+  // Carrier search for logistics
+  const [carrierSearch, setCarrierSearch] = useState('');
+  const { data: carriersRaw } = useQuery({
+    queryKey: ['carriers-search-dialog', carrierSearch],
+    queryFn: async () => {
+      let query = supabase.from('carriers').select('id, name, trade_name').eq('active', true).order('name').limit(50);
+      if (carrierSearch) query = query.ilike('name', `%${carrierSearch}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const carrierOptions = useMemo(() => {
+    return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
+  }, [carriersRaw]);
+
+  // Auto-fill carrier from company default
+  const autoFillCarrier = useCallback(async (compId: string) => {
+    if (!compId) return;
+    const { data } = await supabase.from('companies').select('default_carrier_id').eq('id', compId).maybeSingle();
+    if (data?.default_carrier_id) {
+      setCarrierId(data.default_carrier_id);
+    }
+  }, []);
+
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
   // IMPORTANT: useRef to avoid race condition between onConfirm -> onOpenChange(false)
   // (state updates are async and could cause a false revert)
