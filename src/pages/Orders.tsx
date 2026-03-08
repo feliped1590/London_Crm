@@ -280,8 +280,8 @@ export default function Orders() {
                                   <TooltipContent side="bottom" className="text-xs space-y-1">
                                     {carrierName && <p><span className="text-muted-foreground">Transportadora:</span> {carrierName}</p>}
                                     {freightType && <p><span className="text-muted-foreground">Frete:</span> {freightType}</p>}
-                                    {order.delivery_same_as_company === false && order.delivery_city ? (
-                                      <p><span className="text-muted-foreground">Entrega:</span> {order.delivery_city}{order.delivery_state ? `/${order.delivery_state}` : ''}</p>
+                                    {(order as any).delivery_same_as_company === false && (order as any).delivery_city ? (
+                                      <p><span className="text-muted-foreground">Entrega:</span> {(order as any).delivery_city}{(order as any).delivery_state ? `/${(order as any).delivery_state}` : ''}</p>
                                     ) : (
                                       <p><span className="text-muted-foreground">Entrega:</span> Mesmo endereço do cliente</p>
                                     )}
