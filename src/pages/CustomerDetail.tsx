@@ -905,6 +905,17 @@ export default function CustomerDetail() {
                     />
                   </div>
                 )}
+                {/* Logística Padrão - inline above address */}
+                {!isErpCustomer && (
+                  <div className="col-span-2">
+                    <DefaultCarrierCard 
+                      companyId={id!} 
+                      defaultCarrierId={(customer as any)?.default_carrier_id}
+                      defaultFreightType={(customer as any)?.default_freight_type}
+                      isEditing={isEditing} 
+                    />
+                  </div>
+                )}
                 <div className="col-span-2">
                   <Label htmlFor="address">Endereço</Label>
                   <Input
