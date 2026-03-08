@@ -407,6 +407,7 @@ export function ProposalDialog({
             subtotal_item: sub,
             total_item: totalItem,
             sort_order: index,
+            calculated_price_source: item.calculated_price_source || 'MANUAL',
           };
         });
 
