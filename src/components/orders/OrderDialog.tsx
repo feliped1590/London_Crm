@@ -55,7 +55,7 @@ interface OrderItemDraft {
   calculated_price_source?: 'TABLE' | 'FACTOR_KG' | 'MANUAL';
 }
 
-export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
