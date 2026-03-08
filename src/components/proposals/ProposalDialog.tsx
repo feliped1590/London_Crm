@@ -587,6 +587,11 @@ export function ProposalDialog({
     const { index, currentPrice, proposedPrice } = pendingPriceChange;
     const item = items[index];
 
+    // Mark confirmed BEFORE any async operation to prevent race condition
+    // with onOpenChange(false) reverting the price
+    priceChangeConfirmedRef.current = true;
+    setPriceChangeConfirmed(true);
+
     // Record the override in deal_audit_log
     try {
       await supabase.from('deal_audit_log').insert({
@@ -598,9 +603,6 @@ export function ProposalDialog({
         changed_by: user?.id,
       });
 
-      // Mark that the change was confirmed so we don't revert on close
-      priceChangeConfirmedRef.current = true;
-      setPriceChangeConfirmed(true);
       toast.success('Alteração de preço autorizada e registrada');
     } catch (error) {
       console.error('Error logging price override:', error);
