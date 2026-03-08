@@ -451,6 +451,18 @@ export function ProposalDialog({
         ipi_mode: proposalData.ipi_mode || 'destacar',
         subtotal_products: proposalData.subtotal_products || 0,
         total_ipi: proposalData.total_ipi || 0,
+        // Copy logistics from proposal
+        carrier_id: proposalData.carrier_id || null,
+        freight_type: proposalData.freight_type || null,
+        delivery_same_as_company: proposalData.delivery_same_as_company ?? true,
+        delivery_name: proposalData.delivery_name || null,
+        delivery_address: proposalData.delivery_address || null,
+        delivery_number: proposalData.delivery_number || null,
+        delivery_neighborhood: proposalData.delivery_neighborhood || null,
+        delivery_city: proposalData.delivery_city || null,
+        delivery_state: proposalData.delivery_state || null,
+        delivery_zip_code: proposalData.delivery_zip_code || null,
+        delivery_contact: proposalData.delivery_contact || null,
       } as any)
       .select()
       .single();
