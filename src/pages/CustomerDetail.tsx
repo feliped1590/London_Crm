@@ -570,6 +570,8 @@ export default function CustomerDetail() {
   // Access control: check if user can access this customer by sales_rep_id
   const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const customerSalesRep = salesReps?.find(sr => sr.id === customerSalesRepId);
+  const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
+  const salesRepOwnerName = salesRepUserLink ? (profilesMap?.[salesRepUserLink.user_id] || 'Usuário') : null;
   const hasAccess = canAccessBySalesRep(customerSalesRepId);
   const requiresIntervention = needsAdminIntervention(customerSalesRepId);
   
