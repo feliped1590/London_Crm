@@ -89,6 +89,40 @@ export function ProposalDialog({
   const [approvalExpires, setApprovalExpires] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
 
+  // Logistics state
+  const [carrierId, setCarrierId] = useState('');
+  const [freightType, setFreightType] = useState('');
+  const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
+  const [deliveryFields, setDeliveryFields] = useState({
+    name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '',
+  });
+
+  // Carrier search
+  const [carrierSearch, setCarrierSearch] = useState('');
+  const { data: carriersRaw } = useQuery({
+    queryKey: ['carriers-search-proposal', carrierSearch],
+    queryFn: async () => {
+      let query = supabase.from('carriers').select('id, name, trade_name').eq('active', true).order('name').limit(50);
+      if (carrierSearch) query = query.ilike('name', `%${carrierSearch}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const carrierOptions = useMemo(() => {
+    return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
+  }, [carriersRaw]);
+
+  // Auto-fill carrier from company default
+  const autoFillCarrier = useCallback(async (compId: string) => {
+    if (!compId) return;
+    const { data } = await supabase.from('companies').select('default_carrier_id').eq('id', compId).maybeSingle();
+    if (data?.default_carrier_id) {
+      setCarrierId(data.default_carrier_id);
+    }
+  }, []);
+
   // Price override modal states (for admin authorization)
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
