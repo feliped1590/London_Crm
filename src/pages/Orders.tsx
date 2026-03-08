@@ -229,10 +229,11 @@ export default function Orders() {
                <Table className="min-w-[900px]">
                  <TableHeader>
                    <TableRow>
-                   <TableHead>Número</TableHead>
-                   <TableHead>Empresa</TableHead>
-                   <TableHead>Logística</TableHead>
-                   <TableHead>Status</TableHead>
+                    <TableHead>Número</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Logística</TableHead>
+                    <TableHead>Status</TableHead>
                    <TableHead>Entrega Prevista</TableHead>
                    <TableHead>Valor Total</TableHead>
                    <TableHead>Data Criação</TableHead>
