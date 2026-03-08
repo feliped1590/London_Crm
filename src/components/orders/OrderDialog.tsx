@@ -344,6 +344,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setLegalEntityId('');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
+      setCarrierId('');
+      setFreightType('');
+      setDeliverySameAsCompany(true);
+      setDeliveryFields({ name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '' });
     }
   }, [open]);
 
