@@ -3822,6 +3822,7 @@ export type Database = {
           number: string
           observations: string | null
           order_date: string | null
+          order_type: string
           origin: string
           proposal_id: string | null
           status: Database["public"]["Enums"]["order_status"]
@@ -3864,6 +3865,7 @@ export type Database = {
           number: string
           observations?: string | null
           order_date?: string | null
+          order_type?: string
           origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
@@ -3906,6 +3908,7 @@ export type Database = {
           number?: string
           observations?: string | null
           order_date?: string | null
+          order_type?: string
           origin?: string
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
