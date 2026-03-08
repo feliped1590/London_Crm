@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, User, Calendar, Plus, Edit, RefreshCw, FileText, Loader2 } from 'lucide-react';
+import { Search, ShoppingCart, Building2, User, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
@@ -33,7 +33,8 @@ export default function Orders() {
           *,
           company:companies(id, name),
           contact:contacts(id, first_name, last_name),
-          proposal:proposals(id, number)
+          proposal:proposals(id, number),
+          carrier:carriers(id, name, trade_name)
         `)
         .order('created_at', { ascending: false })
         .limit(200);
@@ -191,36 +192,48 @@ export default function Orders() {
                <Table className="min-w-[900px]">
                  <TableHeader>
                    <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Entrega Prevista</TableHead>
-                  <TableHead>Valor Total</TableHead>
-                  <TableHead>Data Criação</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                   <TableHead>Número</TableHead>
+                   <TableHead>Empresa</TableHead>
+                   <TableHead>Transportadora</TableHead>
+                   <TableHead>Frete</TableHead>
+                   <TableHead>Status</TableHead>
+                   <TableHead>Entrega Prevista</TableHead>
+                   <TableHead>Valor Total</TableHead>
+                   <TableHead>Data Criação</TableHead>
+                   <TableHead className="text-right">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
                    {filteredOrders.map((order) => (
                      <TableRow key={order.id}>
                     <TableCell className="font-mono font-medium">{order.number}</TableCell>
-                    <TableCell>
-                      {order.company && (
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          {order.company.name}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {order.contact && (
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {order.contact.first_name} {order.contact.last_name}
-                        </div>
-                      )}
-                    </TableCell>
+                     <TableCell>
+                       {order.company && (
+                         <div className="flex items-center gap-2">
+                           <Building2 className="h-4 w-4 text-muted-foreground" />
+                           {order.company.name}
+                         </div>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       {(order as any).carrier ? (
+                         <div className="flex items-center gap-2">
+                           <Truck className="h-4 w-4 text-muted-foreground" />
+                           <span className="text-sm">{(order as any).carrier.trade_name || (order as any).carrier.name}</span>
+                         </div>
+                       ) : (
+                         <span className="text-muted-foreground text-sm">—</span>
+                       )}
+                     </TableCell>
+                     <TableCell>
+                       {(order as any).freight_type ? (
+                         <Badge variant="outline" className="text-xs">
+                           {(order as any).freight_type}
+                         </Badge>
+                       ) : (
+                         <span className="text-muted-foreground text-sm">—</span>
+                       )}
+                     </TableCell>
                     <TableCell>
                       <Badge className={orderStatusConfig[order.status].color}>
                         {orderStatusConfig[order.status].label}

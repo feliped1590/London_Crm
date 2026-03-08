@@ -110,12 +110,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
     return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
   }, [carriersRaw]);
 
-  // Auto-fill carrier from company default
+  // Auto-fill carrier and freight type from company defaults
   const autoFillCarrier = useCallback(async (compId: string) => {
     if (!compId) return;
-    const { data } = await supabase.from('companies').select('default_carrier_id').eq('id', compId).maybeSingle();
+    const { data } = await supabase.from('companies').select('default_carrier_id, default_freight_type').eq('id', compId).maybeSingle();
     if (data?.default_carrier_id) {
       setCarrierId(data.default_carrier_id);
+    }
+    if (data?.default_freight_type) {
+      setFreightType(data.default_freight_type);
     }
   }, []);
 
@@ -915,6 +918,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   });
 
   const handleSubmit = () => {
+    // Validate carrier is required when freight type is CIF or FOB
+    if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
+      toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
+      return;
+    }
+
     // For admins: validate if there are prices out of range before submitting
     if (isAdmin) {
       const outOfRange = findNextOutOfRangeItem(0);
