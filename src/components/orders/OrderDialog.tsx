@@ -79,6 +79,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
+  // Logistics state
+  const [carrierId, setCarrierId] = useState('');
+  const [freightType, setFreightType] = useState('');
+  const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
+  const [deliveryFields, setDeliveryFields] = useState({
+    name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '',
+  });
+
   const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
 
 
