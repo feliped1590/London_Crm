@@ -1012,6 +1012,15 @@ export default function CustomerDetail() {
             );
           })()}
 
+          {/* Default Carrier */}
+          {!isErpCustomer && (
+            <DefaultCarrierCard 
+              companyId={id!} 
+              defaultCarrierId={(customer as any)?.default_carrier_id} 
+              isEditing={isEditing} 
+            />
+          )}
+
           {/* Admin: Assign user */}
           {isAdmin && (
             <Card className="mt-4">
