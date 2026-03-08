@@ -194,7 +194,7 @@ export function ProposalDialog({
       setDeliveryFields({ name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '' });
       // Auto-fill carrier from company
       if (companyId) {
-        autoFillCarrier(companyId);
+        autoFillFromCompany(companyId);
       }
     }
   }, [proposal, open]);
