@@ -18,6 +18,7 @@ import {
   Package,
   ShoppingCart,
   Warehouse,
+  Truck,
   Lightbulb,
   LucideIcon,
   DollarSign,
