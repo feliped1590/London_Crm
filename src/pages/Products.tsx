@@ -448,6 +448,7 @@ export default function Products() {
     setIsDialogOpen(false);
     setNcmValidation(null);
     setFormTab('geral');
+    setIsAutoDescription(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
