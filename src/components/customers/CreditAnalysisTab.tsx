@@ -185,6 +185,11 @@ export function CreditAnalysisTab({ companyId, companyName, cnpj }: CreditAnalys
             <History className="h-4 w-4" />
             Histórico de Consultas
           </TabsTrigger>
+          <TabsTrigger value="documentos" className="gap-2">
+            <Upload className="h-4 w-4" />
+            Documentos
+          </TabsTrigger>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumo" className="space-y-6 mt-6">
