@@ -378,6 +378,40 @@ serve(async (req) => {
           ` : ''}
         </div>
 
+        <!-- TRANSPORTE (condicional) -->
+        ${(carrierData || order.freight_type) ? `
+        <div class="section">
+          <div class="section-title">Transporte</div>
+          <div class="client-grid">
+            ${carrierData ? `
+            <div class="client-box">
+              <div class="label">Transportadora</div>
+              <div class="name">${carrierData.trade_name || carrierData.name}</div>
+              ${carrierData.cnpj ? `<div class="detail">CNPJ: ${carrierData.cnpj}</div>` : ''}
+              ${carrierData.phone ? `<div class="detail">Tel: ${carrierData.phone}</div>` : ''}
+            </div>
+            ` : ''}
+            <div class="client-box">
+              <div class="label">Frete</div>
+              <div class="name">${order.freight_type || '-'}</div>
+              ${order.freight_type === 'CIF' ? '<div class="detail">Frete por conta do vendedor</div>' : ''}
+              ${order.freight_type === 'FOB' ? '<div class="detail">Frete por conta do cliente</div>' : ''}
+              ${order.freight_type === 'REDESPACHO' ? '<div class="detail">Transporte combinado</div>' : ''}
+            </div>
+          </div>
+          ${order.delivery_same_as_company === false ? `
+          <div class="client-box" style="margin-top: 10px;">
+            <div class="label">Endereço de Entrega</div>
+            ${order.delivery_name ? `<div class="name">${order.delivery_name}</div>` : ''}
+            ${order.delivery_address ? `<div class="detail">${order.delivery_address}${order.delivery_number ? ', ' + order.delivery_number : ''}</div>` : ''}
+            ${order.delivery_neighborhood ? `<div class="detail">${order.delivery_neighborhood}</div>` : ''}
+            ${order.delivery_city ? `<div class="detail">${order.delivery_city}${order.delivery_state ? ' / ' + order.delivery_state : ''}${order.delivery_zip_code ? ' - CEP: ' + order.delivery_zip_code : ''}</div>` : ''}
+            ${order.delivery_contact ? `<div class="detail">Contato: ${order.delivery_contact}</div>` : ''}
+          </div>
+          ` : ''}
+        </div>
+        ` : ''}
+
         <!-- TABELA DE ITENS -->
         <div class="section">
           <div class="section-title">Itens do Pedido</div>
