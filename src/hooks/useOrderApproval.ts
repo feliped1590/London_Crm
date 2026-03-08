@@ -194,8 +194,8 @@ export function useOrderApproval(
         .from('order_approvals')
         .insert({
           order_id: orderId,
-          from_status: orderStatus,
-          to_status: newStatus,
+          from_status: orderStatus as any,
+          to_status: newStatus as any,
           approved_by: user.id,
           notes: notes || null,
         });
@@ -209,7 +209,7 @@ export function useOrderApproval(
 
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ status: newStatus as any })
         .eq('id', orderId);
 
       if (updateError) throw updateError;
