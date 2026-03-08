@@ -11,7 +11,7 @@ import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileT
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Order, orderStatusConfig, OrderStatus } from '@/types/products';
+import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 
@@ -229,10 +229,11 @@ export default function Orders() {
                <Table className="min-w-[900px]">
                  <TableHeader>
                    <TableRow>
-                   <TableHead>Número</TableHead>
-                   <TableHead>Empresa</TableHead>
-                   <TableHead>Logística</TableHead>
-                   <TableHead>Status</TableHead>
+                    <TableHead>Número</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Logística</TableHead>
+                    <TableHead>Status</TableHead>
                    <TableHead>Entrega Prevista</TableHead>
                    <TableHead>Valor Total</TableHead>
                    <TableHead>Data Criação</TableHead>
@@ -255,7 +256,14 @@ export default function Orders() {
                                {order.company.name}
                              </div>
                            )}
-                         </TableCell>
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const ot = (order as any).order_type as OrderType || 'producao';
+                              const cfg = orderTypeConfig[ot];
+                              return <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>;
+                            })()}
+                          </TableCell>
                           <TableCell>
                             {(carrierName || freightType) ? (
                               <TooltipProvider>

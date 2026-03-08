@@ -26,7 +26,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
-import { Order, OrderItem, OrderStatus, IpiMode, ipiModeConfig, orderStatusConfig } from '@/types/products';
+import { Order, OrderItem, OrderStatus, OrderType, IpiMode, ipiModeConfig, orderStatusConfig, orderTypeConfig } from '@/types/products';
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
@@ -79,6 +79,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [legalEntityId, setLegalEntityId] = useState<string>('');
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
+  const [orderType, setOrderType] = useState<OrderType>('producao');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
@@ -316,6 +317,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
+      setOrderType((order as any).order_type || 'producao');
       // Logistics
       setCarrierId((order as any).carrier_id || '');
       setFreightType((order as any).freight_type || '');
@@ -362,6 +364,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOriginalItems([]);
       setSelectedProductId('');
       setLegalEntityId('');
+      setOrderType('producao');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
       setCarrierId('');
@@ -760,6 +763,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
+          order_type: orderType,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
           carrier_id: carrierId || null,
@@ -861,6 +865,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           total_value: calculateTotal(),
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
+          order_type: orderType,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
           carrier_id: carrierId || null,
@@ -1074,20 +1079,37 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </Popover>
       </div>
 
-      {/* IPI Mode Selector */}
-      <div className="space-y-2">
-        <Label>Modo IPI</Label>
-        <Select value={ipiMode} onValueChange={(v) => setIpiMode(v as IpiMode)} disabled={!canEdit}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(ipiModeConfig).map(([value, config]) => (
-              <SelectItem key={value} value={value}>{config.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs text-muted-foreground">{ipiModeConfig[ipiMode].description}</p>
+      {/* Tipo do Pedido */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Tipo do Pedido</Label>
+          <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(orderTypeConfig).map(([value, config]) => (
+                <SelectItem key={value} value={value}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* IPI Mode Selector */}
+        <div className="space-y-2">
+          <Label>Modo IPI</Label>
+          <Select value={ipiMode} onValueChange={(v) => setIpiMode(v as IpiMode)} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(ipiModeConfig).map(([value, config]) => (
+                <SelectItem key={value} value={value}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{ipiModeConfig[ipiMode].description}</p>
+        </div>
       </div>
 
       {canEdit && (
