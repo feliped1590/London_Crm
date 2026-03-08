@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Truck, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { format } from 'date-fns';
@@ -79,11 +79,46 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
+  // Logistics state
+  const [carrierId, setCarrierId] = useState('');
+  const [freightType, setFreightType] = useState('');
+  const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
+  const [deliveryFields, setDeliveryFields] = useState({
+    name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '',
+  });
+
   const { companyFiscalData } = useCompanyFiscal(companyId || undefined);
 
 
   // Price override modal states
   const [showPriceOverrideModal, setShowPriceOverrideModal] = useState(false);
+
+  // Carrier search for logistics
+  const [carrierSearch, setCarrierSearch] = useState('');
+  const { data: carriersRaw } = useQuery({
+    queryKey: ['carriers-search-dialog', carrierSearch],
+    queryFn: async () => {
+      let query = supabase.from('carriers').select('id, name, trade_name').eq('active', true).order('name').limit(50);
+      if (carrierSearch) query = query.ilike('name', `%${carrierSearch}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const carrierOptions = useMemo(() => {
+    return (carriersRaw || []).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
+  }, [carriersRaw]);
+
+  // Auto-fill carrier from company default
+  const autoFillCarrier = useCallback(async (compId: string) => {
+    if (!compId) return;
+    const { data } = await supabase.from('companies').select('default_carrier_id').eq('id', compId).maybeSingle();
+    if (data?.default_carrier_id) {
+      setCarrierId(data.default_carrier_id);
+    }
+  }, []);
+
   const [priceChangeConfirmed, setPriceChangeConfirmed] = useState(false);
   // IMPORTANT: useRef to avoid race condition between onConfirm -> onOpenChange(false)
   // (state updates are async and could cause a false revert)
@@ -269,6 +304,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
+      // Logistics
+      setCarrierId((order as any).carrier_id || '');
+      setFreightType((order as any).freight_type || '');
+      setDeliverySameAsCompany((order as any).delivery_same_as_company !== false);
+      setDeliveryFields({
+        name: (order as any).delivery_name || '',
+        address: (order as any).delivery_address || '',
+        number: (order as any).delivery_number || '',
+        neighborhood: (order as any).delivery_neighborhood || '',
+        city: (order as any).delivery_city || '',
+        state: (order as any).delivery_state || '',
+        zip_code: (order as any).delivery_zip_code || '',
+        contact: (order as any).delivery_contact || '',
+      });
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
     }
@@ -295,6 +344,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       setLegalEntityId('');
       setPendingPriceChange(null);
       setShowPriceOverrideModal(false);
+      setCarrierId('');
+      setFreightType('');
+      setDeliverySameAsCompany(true);
+      setDeliveryFields({ name: '', address: '', number: '', neighborhood: '', city: '', state: '', zip_code: '', contact: '' });
     }
   }, [open]);
 
@@ -679,6 +732,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           ipi_mode: ipiMode,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
+          carrier_id: carrierId || null,
+          freight_type: freightType || null,
+          delivery_same_as_company: deliverySameAsCompany,
+          delivery_name: !deliverySameAsCompany ? deliveryFields.name || null : null,
+          delivery_address: !deliverySameAsCompany ? deliveryFields.address || null : null,
+          delivery_number: !deliverySameAsCompany ? deliveryFields.number || null : null,
+          delivery_neighborhood: !deliverySameAsCompany ? deliveryFields.neighborhood || null : null,
+          delivery_city: !deliverySameAsCompany ? deliveryFields.city || null : null,
+          delivery_state: !deliverySameAsCompany ? deliveryFields.state || null : null,
+          delivery_zip_code: !deliverySameAsCompany ? deliveryFields.zip_code || null : null,
+          delivery_contact: !deliverySameAsCompany ? deliveryFields.contact || null : null,
         })
         .select()
         .single();
@@ -768,6 +832,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           ipi_mode: ipiMode,
           subtotal_products: calculateSubtotalProducts(),
           total_ipi: calculateTotalIpi(),
+          carrier_id: carrierId || null,
+          freight_type: freightType || null,
+          delivery_same_as_company: deliverySameAsCompany,
+          delivery_name: !deliverySameAsCompany ? deliveryFields.name || null : null,
+          delivery_address: !deliverySameAsCompany ? deliveryFields.address || null : null,
+          delivery_number: !deliverySameAsCompany ? deliveryFields.number || null : null,
+          delivery_neighborhood: !deliverySameAsCompany ? deliveryFields.neighborhood || null : null,
+          delivery_city: !deliverySameAsCompany ? deliveryFields.city || null : null,
+          delivery_state: !deliverySameAsCompany ? deliveryFields.state || null : null,
+          delivery_zip_code: !deliverySameAsCompany ? deliveryFields.zip_code || null : null,
+          delivery_contact: !deliverySameAsCompany ? deliveryFields.contact || null : null,
         })
         .eq('id', order.id);
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,7 +38,8 @@ import {
   CalendarCheck,
   ShieldCheck,
   Shield,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -1011,6 +1012,15 @@ export default function CustomerDetail() {
             );
           })()}
 
+          {/* Default Carrier */}
+          {!isErpCustomer && (
+            <DefaultCarrierCard 
+              companyId={id!} 
+              defaultCarrierId={(customer as any)?.default_carrier_id} 
+              isEditing={isEditing} 
+            />
+          )}
+
           {/* Admin: Assign user */}
           {isAdmin && (
             <Card className="mt-4">
@@ -1493,5 +1503,80 @@ export default function CustomerDetail() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Subcomponent: Default Carrier
+function DefaultCarrierCard({ companyId, defaultCarrierId, isEditing }: { companyId: string; defaultCarrierId?: string | null; isEditing: boolean }) {
+  const queryClient = useQueryClient();
+  const [carrierSearch, setCarrierSearch] = useState('');
+
+  const { data: carriers } = useQuery({
+    queryKey: ['carriers-for-default', carrierSearch],
+    queryFn: async () => {
+      let query = supabase.from('carriers').select('id, name, trade_name').eq('active', true).order('name').limit(50);
+      if (carrierSearch) query = query.ilike('name', `%${carrierSearch}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Ensure current carrier is in the list
+  const { data: currentCarrier } = useQuery({
+    queryKey: ['carrier-current', defaultCarrierId],
+    queryFn: async () => {
+      if (!defaultCarrierId) return null;
+      const { data, error } = await supabase.from('carriers').select('id, name, trade_name').eq('id', defaultCarrierId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!defaultCarrierId,
+  });
+
+  const carrierOptions = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; trade_name: string | null }>();
+    if (currentCarrier) map.set(currentCarrier.id, currentCarrier);
+    (carriers || []).forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).map(c => ({ value: c.id, label: c.trade_name ? `${c.trade_name} (${c.name})` : c.name }));
+  }, [carriers, currentCarrier]);
+
+  const updateMutation = useMutation({
+    mutationFn: async (carrierId: string | null) => {
+      const { error } = await supabase.from('companies').update({ default_carrier_id: carrierId }).eq('id', companyId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customer', companyId] });
+      toast.success('Transportadora padrão atualizada!');
+    },
+    onError: () => toast.error('Erro ao atualizar transportadora padrão'),
+  });
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Truck className="h-5 w-5" />
+          Transportadora Padrão
+        </CardTitle>
+        <CardDescription>
+          Transportadora pré-selecionada em novas propostas e pedidos
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="w-[300px]">
+          <SearchableSelect
+            options={carrierOptions}
+            value={defaultCarrierId || null}
+            onChange={(v) => updateMutation.mutate(v || null)}
+            placeholder="Selecione uma transportadora"
+            searchPlaceholder="Buscar transportadora..."
+            disabled={!isEditing}
+            onSearchChange={setCarrierSearch}
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

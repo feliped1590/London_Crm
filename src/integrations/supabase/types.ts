@@ -808,6 +808,74 @@ export type Database = {
         }
         Relationships: []
       }
+      carriers: {
+        Row: {
+          active: boolean | null
+          address: string | null
+          address_number: string | null
+          city: string | null
+          cnpj: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          ie: string | null
+          name: string
+          neighborhood: string | null
+          phone: string | null
+          state: string | null
+          tenant_id: string | null
+          trade_name: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          address?: string | null
+          address_number?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ie?: string | null
+          name: string
+          neighborhood?: string | null
+          phone?: string | null
+          state?: string | null
+          tenant_id?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          address?: string | null
+          address_number?: string | null
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          ie?: string | null
+          name?: string
+          neighborhood?: string | null
+          phone?: string | null
+          state?: string | null
+          tenant_id?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carriers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_beneficios_fiscais: {
         Row: {
           beneficio_id: string
@@ -892,6 +960,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           custom_fields: Json | null
+          default_carrier_id: string | null
           domain: string | null
           email: string | null
           employee_count: string | null
@@ -948,6 +1017,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
+          default_carrier_id?: string | null
           domain?: string | null
           email?: string | null
           employee_count?: string | null
@@ -1004,6 +1074,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
+          default_carrier_id?: string | null
           domain?: string | null
           email?: string | null
           employee_count?: string | null
@@ -1050,6 +1121,13 @@ export type Database = {
             columns: ["atividade_id"]
             isOneToOne: false
             referencedRelation: "atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_default_carrier_id_fkey"
+            columns: ["default_carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
             referencedColumns: ["id"]
           },
           {
@@ -3659,11 +3737,21 @@ export type Database = {
       orders: {
         Row: {
           approved_at: string | null
+          carrier_id: string | null
           company_id: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_contact: string | null
           delivery_date: string | null
+          delivery_name: string | null
+          delivery_neighborhood: string | null
+          delivery_number: string | null
+          delivery_same_as_company: boolean | null
+          delivery_state: string | null
+          delivery_zip_code: string | null
           erp_last_update_date: string | null
           erp_order_code: string | null
           erp_rep_code: string | null
@@ -3691,11 +3779,21 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_contact?: string | null
           delivery_date?: string | null
+          delivery_name?: string | null
+          delivery_neighborhood?: string | null
+          delivery_number?: string | null
+          delivery_same_as_company?: boolean | null
+          delivery_state?: string | null
+          delivery_zip_code?: string | null
           erp_last_update_date?: string | null
           erp_order_code?: string | null
           erp_rep_code?: string | null
@@ -3723,11 +3821,21 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_contact?: string | null
           delivery_date?: string | null
+          delivery_name?: string | null
+          delivery_neighborhood?: string | null
+          delivery_number?: string | null
+          delivery_same_as_company?: boolean | null
+          delivery_state?: string | null
+          delivery_zip_code?: string | null
           erp_last_update_date?: string | null
           erp_order_code?: string | null
           erp_rep_code?: string | null
@@ -3754,6 +3862,13 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_company_id_fkey"
             columns: ["company_id"]
@@ -5075,12 +5190,23 @@ export type Database = {
           approved_at: string | null
           approved_by_ip: string | null
           approved_by_name: string | null
+          carrier_id: string | null
           company_id: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
           deal_id: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_contact: string | null
+          delivery_name: string | null
+          delivery_neighborhood: string | null
+          delivery_number: string | null
+          delivery_same_as_company: boolean | null
+          delivery_state: string | null
           delivery_terms: string | null
+          delivery_zip_code: string | null
+          freight_type: string | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string | null
@@ -5102,12 +5228,23 @@ export type Database = {
           approved_at?: string | null
           approved_by_ip?: string | null
           approved_by_name?: string | null
+          carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           deal_id: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_contact?: string | null
+          delivery_name?: string | null
+          delivery_neighborhood?: string | null
+          delivery_number?: string | null
+          delivery_same_as_company?: boolean | null
+          delivery_state?: string | null
           delivery_terms?: string | null
+          delivery_zip_code?: string | null
+          freight_type?: string | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
@@ -5129,12 +5266,23 @@ export type Database = {
           approved_at?: string | null
           approved_by_ip?: string | null
           approved_by_name?: string | null
+          carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           deal_id?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_contact?: string | null
+          delivery_name?: string | null
+          delivery_neighborhood?: string | null
+          delivery_number?: string | null
+          delivery_same_as_company?: boolean | null
+          delivery_state?: string | null
           delivery_terms?: string | null
+          delivery_zip_code?: string | null
+          freight_type?: string | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
@@ -5151,6 +5299,13 @@ export type Database = {
           validity_date?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposals_carrier_id_fkey"
+            columns: ["carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposals_company_id_fkey"
             columns: ["company_id"]
