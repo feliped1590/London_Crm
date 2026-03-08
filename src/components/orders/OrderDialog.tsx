@@ -51,6 +51,7 @@ interface OrderItemDraft {
   width?: number;
   length?: number;
   thickness?: number;
+  calculated_price_source?: 'TABLE' | 'FACTOR_KG' | 'MANUAL';
 }
 
 export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
