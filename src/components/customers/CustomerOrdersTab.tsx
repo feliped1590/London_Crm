@@ -250,6 +250,16 @@ export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTab
           )}
         </CardContent>
       </Card>
+
+      {/* Create Order Dialog */}
+      <OrderDialog
+        open={isCreateOrderOpen}
+        onOpenChange={setIsCreateOrderOpen}
+        preSelectedCompanyId={companyId}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+        }}
+      />
     </div>
   );
 }
