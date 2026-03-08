@@ -520,15 +520,24 @@ export default function Products() {
       return;
     }
 
+    // Se preço unitário não foi informado, usar o fator milheiro calculado
+    const submitData = { ...formData };
+    if (!submitData.unit_price || submitData.unit_price === 0) {
+      const fatorMilheiro = recalcularFatorMilheiro(submitData);
+      if (fatorMilheiro > 0) {
+        submitData.unit_price = fatorMilheiro;
+      }
+    }
+
     setIsCheckingDuplicate(true);
     try {
       const isDuplicate = await checkDuplicateProduct();
       if (isDuplicate) return;
 
       if (editingProduct) {
-        updateMutation.mutate({ id: editingProduct.id, ...formData });
+        updateMutation.mutate({ id: editingProduct.id, ...submitData });
       } else {
-        createMutation.mutate(formData);
+        createMutation.mutate(submitData);
       }
     } finally {
       setIsCheckingDuplicate(false);
