@@ -32,6 +32,7 @@ import { NCMSelector } from '@/components/products/NCMSelector';
 import { FiscalSuggestionsCard } from '@/components/products/FiscalSuggestionsCard';
 import { NCMCode, NCMSemanticValidation, TipoProdutoFiscal } from '@/types/fiscal';
 import { Product, calcularFatorMilheiro } from '@/types/products';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
@@ -882,6 +883,69 @@ export default function Products() {
                               {formData.fator_milheiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </span>
                             <p className="text-xs text-muted-foreground">por milheiro</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Simulador de Preço */}
+                    {formData.fator_kg > 0 && (
+                      <div className="col-span-2 p-4 bg-accent/30 rounded-lg border border-accent">
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-primary" />
+                          Simulador de Preço
+                        </h4>
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* KG */}
+                          <div className="p-3 bg-background rounded-md border">
+                            <p className="text-xs text-muted-foreground mb-1">Preço por KG</p>
+                            <p className="text-lg font-bold text-primary">
+                              {(formData.fator_kg || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </p>
+                          </div>
+                          {/* Milheiro */}
+                          <div className="p-3 bg-background rounded-md border">
+                            <p className="text-xs text-muted-foreground mb-1">Preço por Milheiro</p>
+                            <p className="text-lg font-bold text-primary">
+                              {formData.width > 0 && formData.length > 0 && formData.thickness > 0
+                                ? formData.fator_milheiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                : <span className="text-sm font-normal text-muted-foreground">Preencha dimensões</span>
+                              }
+                            </p>
+                          </div>
+                          {/* Preço unitário base */}
+                          <div className="p-3 bg-background rounded-md border">
+                            <p className="text-xs text-muted-foreground mb-1">Preço Unitário (base)</p>
+                            <p className="text-lg font-bold">
+                              {(formData.unit_price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Preço efetivo que será usado */}
+                        <div className="mt-3 p-3 bg-primary/10 rounded-md border border-primary/20">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Preço efetivo (sem tabela de preço)
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Unidade: <span className="font-semibold">{formData.unit_measure?.toUpperCase() || 'UN'}</span>
+                                {' → '}
+                                {formData.unit_measure === 'KG' ? 'usa Fator KG' :
+                                  formData.unit_measure === 'MIL' ? 'usa Fator Milheiro' :
+                                  'usa Preço Unitário'}
+                              </p>
+                            </div>
+                            <span className="text-2xl font-bold text-primary">
+                              {calculatePackagingPrice({
+                                unit_measure: formData.unit_measure,
+                                unit_price: formData.unit_price,
+                                fator_kg: formData.fator_kg,
+                                width: formData.width,
+                                length: formData.length,
+                                thickness: formData.thickness,
+                              }).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
                           </div>
                         </div>
                       </div>

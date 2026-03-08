@@ -3634,6 +3634,7 @@ export type Database = {
       order_items: {
         Row: {
           approved_at: string | null
+          calculated_price_source: string | null
           commission_pct: number | null
           created_at: string
           delivery_date: string | null
@@ -3661,6 +3662,7 @@ export type Database = {
         }
         Insert: {
           approved_at?: string | null
+          calculated_price_source?: string | null
           commission_pct?: number | null
           created_at?: string
           delivery_date?: string | null
@@ -3688,6 +3690,7 @@ export type Database = {
         }
         Update: {
           approved_at?: string | null
+          calculated_price_source?: string | null
           commission_pct?: number | null
           created_at?: string
           delivery_date?: string | null
@@ -5113,6 +5116,7 @@ export type Database = {
       }
       proposal_items: {
         Row: {
+          calculated_price_source: string | null
           created_at: string
           description: string
           discount_percent: number | null
@@ -5132,6 +5136,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          calculated_price_source?: string | null
           created_at?: string
           description: string
           discount_percent?: number | null
@@ -5151,6 +5156,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          calculated_price_source?: string | null
           created_at?: string
           description?: string
           discount_percent?: number | null

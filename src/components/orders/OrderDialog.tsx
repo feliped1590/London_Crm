@@ -51,6 +51,7 @@ interface OrderItemDraft {
   width?: number;
   length?: number;
   thickness?: number;
+  calculated_price_source?: 'TABLE' | 'FACTOR_KG' | 'MANUAL';
 }
 
 export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialogProps) {
@@ -430,6 +431,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
 
     let unitPrice = product.unit_price || 0;
     let discountPercent = 0;
+    let priceSource: 'TABLE' | 'FACTOR_KG' | 'MANUAL' = 'MANUAL';
 
     if (applicableTable) {
       const { finalPrice, rule } = calculatePrice(
@@ -440,12 +442,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
         product.unit_price || 0
       );
       unitPrice = finalPrice;
+      priceSource = 'TABLE';
       if (rule?.discount_percent) {
         discountPercent = rule.discount_percent;
       }
     } else {
       // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
-      unitPrice = calculatePackagingPrice(product);
+      const packagingPrice = calculatePackagingPrice(product);
+      if (packagingPrice !== (product.unit_price || 0) && (product as any).fator_kg) {
+        priceSource = 'FACTOR_KG';
+      }
+      unitPrice = packagingPrice;
     }
 
     const newItem: OrderItemDraft = {
@@ -461,6 +468,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       width: product.width || undefined,
       length: product.length || undefined,
       thickness: product.thickness || undefined,
+      calculated_price_source: priceSource,
     };
 
     setItems([...items, newItem]);
@@ -781,6 +789,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           length: item.length,
           thickness: item.thickness,
           sort_order: index,
+          calculated_price_source: item.calculated_price_source || 'MANUAL',
         };
       });
 
@@ -891,6 +900,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
           length: item.length,
           thickness: item.thickness,
           sort_order: index,
+          calculated_price_source: item.calculated_price_source || 'MANUAL',
         };
       });
 
