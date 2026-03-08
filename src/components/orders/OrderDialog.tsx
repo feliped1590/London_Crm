@@ -1079,9 +1079,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </Popover>
       </div>
 
-      {/* IPI Mode Selector */}
-      <div className="space-y-2">
-        <Label>Modo IPI</Label>
+      {/* Tipo do Pedido */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Tipo do Pedido</Label>
+          <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(orderTypeConfig).map(([value, config]) => (
+                <SelectItem key={value} value={value}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* IPI Mode Selector */}
+        <div className="space-y-2">
+          <Label>Modo IPI</Label>
         <Select value={ipiMode} onValueChange={(v) => setIpiMode(v as IpiMode)} disabled={!canEdit}>
           <SelectTrigger>
             <SelectValue />
