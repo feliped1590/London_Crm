@@ -37,6 +37,7 @@ interface OrderDialogProps {
   onOpenChange: (open: boolean) => void;
   order?: Order | null; // If passed, it's edit mode; otherwise, create mode
   onSuccess?: () => void;
+  preSelectedCompanyId?: string | null;
 }
 
 interface OrderItemDraft {
