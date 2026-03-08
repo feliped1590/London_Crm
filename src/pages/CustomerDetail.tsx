@@ -905,6 +905,17 @@ export default function CustomerDetail() {
                     />
                   </div>
                 )}
+                {/* Logística Padrão - inline above address */}
+                {!isErpCustomer && (
+                  <div className="col-span-2">
+                    <DefaultCarrierCard 
+                      companyId={id!} 
+                      defaultCarrierId={(customer as any)?.default_carrier_id}
+                      defaultFreightType={(customer as any)?.default_freight_type}
+                      isEditing={isEditing} 
+                    />
+                  </div>
+                )}
                 <div className="col-span-2">
                   <Label htmlFor="address">Endereço</Label>
                   <Input
@@ -1012,15 +1023,6 @@ export default function CustomerDetail() {
             );
           })()}
 
-          {/* Default Carrier */}
-          {!isErpCustomer && (
-            <DefaultCarrierCard 
-              companyId={id!} 
-              defaultCarrierId={(customer as any)?.default_carrier_id}
-              defaultFreightType={(customer as any)?.default_freight_type}
-              isEditing={isEditing} 
-            />
-          )}
 
           {/* Admin: Assign user */}
           {isAdmin && (
@@ -1577,10 +1579,10 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
           Transportadora e frete pré-selecionados em novas propostas e pedidos
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Transportadora</Label>
-          <div className="w-[300px]">
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Transportadora</Label>
             <SearchableSelect
               options={carrierOptions}
               value={defaultCarrierId || null}
@@ -1591,10 +1593,8 @@ function DefaultCarrierCard({ companyId, defaultCarrierId, defaultFreightType, i
               onSearchChange={setCarrierSearch}
             />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Tipo de Frete</Label>
-          <div className="w-[300px]">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipo de Frete</Label>
             <Select value={defaultFreightType || ''} onValueChange={(v) => updateFreightMutation.mutate(v || null)} disabled={!isEditing}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de frete padrão" />
