@@ -7350,6 +7350,7 @@ export type Database = {
               cnpj: string
               contact_name: string
               contacts_count: number
+              contribuinte_ipi: boolean
               created_at: string
               custom_fields: Json
               deals_count: number
