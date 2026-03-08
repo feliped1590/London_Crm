@@ -29,7 +29,7 @@ serve(async (req) => {
       .from('proposals')
       .select(`
         *,
-        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email),
+        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url, phone, email))
       `)
