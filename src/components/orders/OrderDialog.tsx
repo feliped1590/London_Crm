@@ -442,6 +442,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess }: OrderDialo
       if (rule?.discount_percent) {
         discountPercent = rule.discount_percent;
       }
+    } else {
+      // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
+      unitPrice = calculatePackagingPrice(product);
     }
 
     const newItem: OrderItemDraft = {

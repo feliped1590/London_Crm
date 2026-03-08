@@ -606,6 +606,9 @@ export function ProposalDialog({
       if (rule?.discount_percent) {
         discountPercent = rule.discount_percent;
       }
+    } else {
+      // Sem tabela de preço: aplicar cálculo por fator KG (embalagens)
+      unitPrice = calculatePackagingPrice(product);
     }
 
     const isContribuinteIpi = companyId && companyFiscalData
