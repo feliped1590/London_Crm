@@ -174,6 +174,26 @@ export default function Products() {
 
   const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
   const [formTab, setFormTab] = useState('geral');
+  const [isAutoDescription, setIsAutoDescription] = useState(true);
+
+  // Resolve lookup label by id
+  const getLookupLabel = (items: { id: string; label: string }[], id?: string) => {
+    if (!id) return undefined;
+    return items.find((i) => i.id === id)?.label;
+  };
+
+  // Recalcula a descrição inteligente
+  const recalcularDescricao = (data: typeof formData) => {
+    return generateProductDescription({
+      family: getLookupLabel(familias.items, data.family_id),
+      group: getLookupLabel(grupos.items, data.grupo_id),
+      subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
+      productClass: getLookupLabel(classes.items, data.class_id),
+      width: data.width,
+      length: data.length,
+      thickness: data.thickness,
+    });
+  };
 
   // Recalcula o fator milheiro quando os valores mudam
   const recalcularFatorMilheiro = (data: typeof formData) => {
