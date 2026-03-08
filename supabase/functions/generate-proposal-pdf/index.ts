@@ -325,6 +325,16 @@ serve(async (req) => {
               ${proposal.contact?.phone ? `<div class="info-value">${proposal.contact.phone}</div>` : ''}
             </div>
           </div>
+          ${salesRepName ? `
+          <div style="margin-top: 15px;">
+            <div class="info-box">
+              <div class="info-label">Vendedor Responsável</div>
+              <div class="info-value" style="font-weight: bold; font-size: 14px;">${salesRepName}</div>
+              ${salesRepEmail ? `<div class="info-value">${salesRepEmail}</div>` : ''}
+              ${salesRepPhone ? `<div class="info-value">${salesRepPhone}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
         </div>
 
         <div class="section">
