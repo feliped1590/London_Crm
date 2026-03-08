@@ -22,18 +22,20 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { useOrderApproval } from '@/hooks/useOrderApproval';
-import { OrderStatus, orderStatusConfig } from '@/types/products';
+import { OrderStatus, OrderType, orderStatusConfig } from '@/types/products';
 
 interface OrderApprovalActionsProps {
   orderId: string;
   orderStatus: OrderStatus;
   orderCreatedBy?: string | null;
+  orderType?: OrderType;
   compact?: boolean;
 }
 
 const transitionIcons: Record<string, React.ElementType> = {
   'em_producao': Factory,
   'produzido': Package,
+  'em_faturamento': Receipt,
   'faturado': Receipt,
   'entregue': Truck,
 };
@@ -42,6 +44,7 @@ export function OrderApprovalActions({
   orderId, 
   orderStatus, 
   orderCreatedBy,
+  orderType = 'producao',
   compact = false 
 }: OrderApprovalActionsProps) {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -57,7 +60,7 @@ export function OrderApprovalActions({
     canCancelOrder,
     cancel,
     isCancelling,
-  } = useOrderApproval(orderId, orderStatus, orderCreatedBy);
+  } = useOrderApproval(orderId, orderStatus, orderCreatedBy, orderType);
 
   const nextTransition = getNextTransition();
   const TransitionIcon = nextTransition ? (transitionIcons[nextTransition.to] || ArrowRight) : ArrowRight;
