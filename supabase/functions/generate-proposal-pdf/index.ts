@@ -29,7 +29,7 @@ serve(async (req) => {
       .from('proposals')
       .select(`
         *,
-        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email),
+        company:companies(id, name, cnpj, address, address_number, neighborhood, city, state, phone, email, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         deal:deals(id, name, legal_entity:legal_entities(id, name, cnpj, logo_url, phone, email))
       `)
@@ -61,7 +61,12 @@ serve(async (req) => {
     const ipiMode = proposal.ipi_mode || 'destacar';
     const showIpi = ipiMode !== 'isento';
 
-    // Fetch seller name
+    // Get sales rep name from company
+    const salesRepName = proposal.company?.sales_rep?.name || '';
+    const salesRepPhone = proposal.company?.sales_rep?.phone || '';
+    const salesRepEmail = proposal.company?.sales_rep?.email || '';
+
+    // Fetch seller name (user who created)
     let sellerName = '';
     if (proposal.created_by) {
       const { data: sellerProfile } = await supabase
@@ -320,6 +325,16 @@ serve(async (req) => {
               ${proposal.contact?.phone ? `<div class="info-value">${proposal.contact.phone}</div>` : ''}
             </div>
           </div>
+          ${salesRepName ? `
+          <div style="margin-top: 15px;">
+            <div class="info-box">
+              <div class="info-label">Vendedor Responsável</div>
+              <div class="info-value" style="font-weight: bold; font-size: 14px;">${salesRepName}</div>
+              ${salesRepEmail ? `<div class="info-value">${salesRepEmail}</div>` : ''}
+              ${salesRepPhone ? `<div class="info-value">${salesRepPhone}</div>` : ''}
+            </div>
+          </div>
+          ` : ''}
         </div>
 
         <div class="section">

@@ -41,6 +41,12 @@ interface ProposalData {
     address: string | null;
     city: string | null;
     state: string | null;
+    sales_rep: {
+      id: string;
+      name: string;
+      phone: string | null;
+      email: string | null;
+    } | null;
   } | null;
   contact: {
     first_name: string;
@@ -367,6 +373,25 @@ export default function ProposalPublic() {
                 </div>
               </div>
             </div>
+
+            {/* Sales Rep */}
+            {proposal.company?.sales_rep && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  Vendedor Responsável
+                </div>
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <p className="font-semibold">{proposal.company.sales_rep.name}</p>
+                  {proposal.company.sales_rep.email && (
+                    <p className="text-sm text-muted-foreground">{proposal.company.sales_rep.email}</p>
+                  )}
+                  {proposal.company.sales_rep.phone && (
+                    <p className="text-sm text-muted-foreground">{proposal.company.sales_rep.phone}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
