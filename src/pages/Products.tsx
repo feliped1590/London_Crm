@@ -589,6 +589,16 @@ export default function Products() {
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
+    setNcmOfficialIpi(null);
+    // Load official IPI from NCM if product has ncm_id
+    if (product.ncm_id) {
+      supabase.from('ncm_codes').select('aliquota_ipi_oficial').eq('id', product.ncm_id).single()
+        .then(({ data }) => {
+          if (data?.aliquota_ipi_oficial != null) {
+            setNcmOfficialIpi(data.aliquota_ipi_oficial);
+          }
+        });
+    }
   };
 
   // Helper to get pricing info for a product
