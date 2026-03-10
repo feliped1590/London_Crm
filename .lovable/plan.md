@@ -1,70 +1,94 @@
 
 
-## Plano: Alerta de Tarefas Pendentes no Login
+# Diagnóstico: Inconsistência no Pipeline de Vendas
 
-### 1. Migração SQL — RPC + Índice
+---
 
-Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
-- Usa `date_trunc('day', now())` para comparações sem timezone issues
-- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
-- Filtra `status != 'done'` e `assigned_to = p_user_id`
+## Causa Raiz Identificada
 
-Criar índice composto:
-```sql
-CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
-ON public.tasks (assigned_to, status, due_date);
+O problema está na **linha 924 do `Pipeline.tsx`**, no filtro `canAccessBySalesRep()`. Este filtro verifica se a empresa do negócio possui um `sales_rep_id` vinculado ao usuário logado via tabela `user_sales_reps`.
+
+**O problema:** A maioria dos negócios da Fernanda foi criada com empresas que **não possuem `sales_rep_id`** ou possuem um `sales_rep_id` diferente do vendedor comercial vinculado a ela.
+
+---
+
+## Dados Concretos
+
+### Fernanda Cavagnari
+- **user_id:** `c3532c95-6f9a-44d6-b491-9c3b0c60fcfc`
+- **Papel:** vendedor
+- **Vendedor Comercial vinculado:** `da1dae28-9e01-427f-801f-e734ae4b975e` (FERNANDA CAVAGNARI)
+
+### Negócios da Fernanda (owner_id = dela): 17 negócios encontrados
+
+| Negócio | Empresa | `company.sales_rep_id` | Visível? |
+|---|---|---|---|
+| AMIGÃO SUPERMECADO | AMIGAO SUPERMERCADO | `da1dae28...` (correto) | **SIM** |
+| SUPERMECADO TONHÃO | SUPERMERCADO TONHAO | `da1dae28...` (correto) | **SIM** |
+| BOI GORDO | FRIGORIFICO BOI GORDO LTDA | `cca10326...` (outro!) | **NÃO** |
+| FRIMAPAR | FRIMAPAR IND. E COM. | `94367496...` (outro!) | **NÃO** |
+| TICK TITOS | (sem empresa) | `null` | **NÃO** |
+| FRIGOPESCA | (sem empresa) | `null` | **NÃO** |
+| C Vale | (sem empresa) | `null` | **NÃO** |
+| PRATICK PRO | (sem empresa) | `null` | **NÃO** |
+| PIF PAF | (sem empresa) | `null` | **NÃO** |
+| ... (mais 8) | (sem empresa) | `null` | **NÃO** |
+
+**Resultado:** Dos 17 negócios, apenas 2 aparecem para Fernanda. Os outros 15 são filtrados porque:
+1. A empresa não tem `sales_rep_id` (`null`) → `canAccessBySalesRep(null)` retorna `false` para não-admin
+2. A empresa tem um `sales_rep_id` diferente do vendedor vinculado à Fernanda
+
+### Sheli Akemi Morita
+- **user_id:** `13dcab7c-5e74-4d3b-83ba-d503d31124d3`
+- **Vendedor Comercial vinculado:** `c9432087-9a4c-451e-ad91-45384f3fbac0` (SHELI AKEMI MORITA)
+- **Empresas:** Todas possuem `sales_rep_id` correto e `owner_id` correto → **dados existem e estão consistentes**
+- **Problema de clientes não aparecendo:** Precisa investigar se é na listagem de clientes (página Customers), que pode ter filtro semelhante por `sales_rep_id`.
+
+---
+
+## Análise Técnica
+
+### Fluxo do filtro no Pipeline (linha 920-956):
+
+```text
+deals (todos via RLS) 
+  → canAccessBySalesRep(company.sales_rep_id)  ← PROBLEMA AQUI
+    → se admin: passa
+    → se sales_rep_id é null: BLOQUEIA
+    → se sales_rep_id não está em mySalesRepIds: BLOQUEIA
+  → filterOwner === 'mine' && owner_id !== user.id: filtra
 ```
 
-### 2. Hook `useLoginTaskAlert`
+### Por que funcionava antes?
+Este filtro `canAccessBySalesRep` foi adicionado recentemente como parte da implementação de governança de carteiras. Antes, o pipeline filtrava apenas por `owner_id` (linha 931). Agora há um filtro **adicional** que exige que a empresa tenha `sales_rep_id` vinculado ao usuário — mas muitos negócios foram criados **antes** dessa lógica existir, com empresas sem `sales_rep_id`.
 
-Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
-- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
-- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
-- Se alert habilitado, chama RPC `check_pending_tasks`
-- Se total > 0, abre modal com delay de ~800ms + fade-in
-- Se som habilitado, toca audio com try/catch no `.play()`
-- Retorna estado do modal e dados para o componente
+### Por que o Admin vê tudo?
+Na função `canAccessBySalesRep`, admins sempre retornam `true` (linha 34 do hook).
 
-### 3. Componente `TaskAlertModal`
+---
 
-Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
-- Dialog com animação suave (fade-in com delay)
-- Exibe contagens de tarefas vencidas e vencendo hoje
-- Botão "Ver Tarefas" → navega para `/tasks`
-- Botão "Fechar"
-- Design discreto e profissional
+## Correção Recomendada
 
-### 4. Som de Notificação
+### Opção 1 — Ajustar o filtro no frontend (recomendada)
+Modificar a lógica na linha 922-924 do `Pipeline.tsx` para que, quando o negócio pertence ao usuário (`owner_id === user.id`), o filtro de `sales_rep_id` seja **ignorado**:
 
-Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
+```typescript
+// Lógica corrigida:
+if (!isAdmin) {
+  const companySalesRepId = deal.companies?.sales_rep_id;
+  const isMyDeal = deal.owner_id === user?.id || deal.created_by === user?.id;
+  if (!isMyDeal && !canAccessBySalesRep(companySalesRepId)) return false;
+}
+```
 
-### 5. Configuração no Settings (Notificações)
+Isso garante que o dono do negócio sempre veja seus próprios negócios, independente do `sales_rep_id` da empresa.
 
-Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
-- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
-- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
-- Persiste via upsert em `system_settings` key `task_alert_config`
+### Opção 2 — Corrigir os dados (complementar)
+Atualizar o `sales_rep_id` das empresas vinculadas aos negócios da Fernanda para apontar para o vendedor comercial correto (`da1dae28...`). Isso resolveria o problema de dados, mas a Opção 1 é necessária de qualquer forma para evitar que o problema se repita.
 
-### 6. Integração no Login
+### Recomendação
+Implementar **ambas**: Opção 1 (ajuste do filtro) + Opção 2 (correção de dados). Isso corrige o bug e também normaliza os dados.
 
-No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
-
-Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
-
-### Arquivos Criados/Editados
-
-| Ação | Arquivo |
-|------|---------|
-| Criar | Migração SQL (RPC + índice) |
-| Criar | `src/hooks/useLoginTaskAlert.ts` |
-| Criar | `src/components/tasks/TaskAlertModal.tsx` |
-| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
-| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
-
-### Performance
-
-- Índice composto garante query eficiente
-- Hook executa apenas 1x por sessão (sessionStorage)
-- Delay de 800ms não bloqueia carregamento do dashboard
-- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
+### Para Sheli (clientes não aparecendo)
+Se o problema é na página de Clientes, provavelmente há um filtro semelhante usando `canAccessBySalesRep`. Como as empresas dela têm `sales_rep_id` correto, o problema pode estar em outro ponto — seria necessário confirmar em qual página exatamente os clientes não aparecem.
 
