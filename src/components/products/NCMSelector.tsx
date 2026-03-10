@@ -34,7 +34,7 @@ export function NCMSelector({
   const [searchResults, setSearchResults] = useState<NCMCode[]>([]);
   const [selectedNCM, setSelectedNCM] = useState<NCMCode | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
   const {
     searchNCM,
