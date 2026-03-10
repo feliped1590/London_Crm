@@ -73,7 +73,7 @@ export function LossReasonModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-3">
             <Label>Selecione o motivo principal *</Label>
             <RadioGroup
