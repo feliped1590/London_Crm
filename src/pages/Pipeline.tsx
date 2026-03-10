@@ -919,9 +919,10 @@ export default function Pipeline() {
 
   const filteredDeals = useMemo(() => {
     return deals?.filter(deal => {
-      // Filter by sales rep access - user can only see deals of companies linked to their sales reps
+      // Filter by sales rep access - owners always see their own deals
       const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
-      if (!canAccessBySalesRep(companySalesRepId)) return false;
+      const isMyDeal = deal.owner_id === user?.id || deal.created_by === user?.id;
+      if (!isMyDeal && !canAccessBySalesRep(companySalesRepId)) return false;
 
       // Filter by pipeline - deals sem pipeline_id são considerados do pipeline padrão
       const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;

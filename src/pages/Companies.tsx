@@ -219,8 +219,9 @@ export default function Companies() {
   };
 
   const filteredCompanies = companies?.filter(company => {
-    // Sales rep access restriction
-    if (!canAccessBySalesRep(company.sales_rep_id)) return false;
+    // Sales rep access restriction - owners always see their own companies
+    const isMyCompany = company.owner_id === user?.id || company.created_by === user?.id;
+    if (!isMyCompany && !canAccessBySalesRep(company.sales_rep_id)) return false;
     
     return company.name.toLowerCase().includes(search.toLowerCase()) ||
       company.email?.toLowerCase().includes(search.toLowerCase()) ||
