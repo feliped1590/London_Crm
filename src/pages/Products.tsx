@@ -452,7 +452,13 @@ export default function Products() {
     setNcmValidation(null);
     setNcmOfficialIpi(null);
     setFormTab('geral');
-    setIsAutoDescription(true);
+    setIsAutoDescription(false);
+  };
+
+  const checkAutoDescriptionByTipo = (tipoId: string | undefined): boolean => {
+    if (!tipoId) return false;
+    const tipoItem = tipos.items.find(t => t.id === tipoId);
+    return tipoItem?.label?.toLowerCase() === 'produto acabado';
   };
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
@@ -769,7 +775,13 @@ export default function Products() {
                           setFormData({ ...formData, name: e.target.value });
                           setIsAutoDescription(false);
                         }}
-                        placeholder="Descrição do produto (gerada automaticamente)"
+                        onBlur={() => {
+                          if (!formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
+                            setIsAutoDescription(true);
+                            setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
+                          }
+                        }}
+                        placeholder={isAutoDescription ? "Descrição do produto (gerada automaticamente)" : "Digite a descrição do produto"}
                         required
                       />
                     </div>
@@ -778,7 +790,14 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, tipo_id: v === 'none' ? undefined : v })}
+                        onValueChange={(v) => {
+                          const newTipoId = v === 'none' ? undefined : v;
+                          const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
+                          setIsAutoDescription(shouldAuto);
+                          const updated = { ...formData, tipo_id: newTipoId };
+                          if (shouldAuto) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o tipo" />
