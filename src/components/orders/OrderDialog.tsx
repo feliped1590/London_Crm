@@ -1129,8 +1129,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
               {items.map((item, index) => {
                 const product = products?.find(p => p.id === item.product_id);
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-                const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
-                const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+                const ipiVal = getItemIpiValue(item);
+                const totalItem = getItemTotal(item);
                 
                 return (
                   <TableRow key={index}>
