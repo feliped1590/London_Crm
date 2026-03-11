@@ -446,16 +446,16 @@ export default function Pipeline() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'deals'>) => {
-      const { error } = await supabase.from('deals').insert(data);
+      const { data: created, error } = await supabase.from('deals').insert(data).select('*, companies(name, sales_rep_id), contacts(first_name, last_name, email)').single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (created) => {
+      insertItemInList(queryClient, ['deals'], created);
       toast.success('Negócio criado com sucesso!');
       resetForm();
     },
     onError: (error: any) => {
-      // Check if it's a portfolio governance error (trigger block)
       const message = error?.message || '';
       if (message.includes('Este cliente pertence ao vendedor')) {
         toast.error(message, { duration: 6000 });
