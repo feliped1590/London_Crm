@@ -41,16 +41,17 @@ export function ProtectedRoute() {
   const { isFullyLoaded, canAccess, getAccessType, isAdmin } = useModulePermissions();
   const location = useLocation();
 
+  // Check auth first - redirect immediately if no user
+  if (!loading && !user) {
+    return <Navigate to="/auth" replace />;
+  }
+
   if (loading || !isFullyLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
   }
 
   // Find the module key for the current route
