@@ -725,7 +725,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: orderCalculateTotal(),
+          total_value: orderTotal,
           status: 'pendente',
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
