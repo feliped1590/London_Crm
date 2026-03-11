@@ -66,7 +66,10 @@ export function useSessionGuard() {
       }
     };
 
-    validate();
+    // Skip first validation if AppInitializer already did it
+    if (!isInitialValidationDone()) {
+      validate();
+    }
     validateTimer.current = setInterval(validate, VALIDATE_INTERVAL);
 
     return () => {
