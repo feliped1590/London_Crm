@@ -599,28 +599,21 @@ export function ProposalDialog({
       : true;
     const ipiRate = isContribuinteIpi ? (product.aliquota_ipi || 0) : 0;
 
-    setItems([
-      ...items,
-      {
-        product_id: product.id,
-        description: product.name,
-        quantity: 1,
-        unit_price: unitPrice,
-        width: product.width,
-        length: product.length,
-        thickness: product.thickness,
-        discount_percent: discountPercent,
-        subtotal: unitPrice,
-        ipi_rate: ipiRate,
-        product: product,
-        calculated_price_source: priceSource,
-      },
-    ]);
+    addItem({
+      product_id: product.id,
+      description: product.name,
+      quantity: 1,
+      unit_price: unitPrice,
+      width: product.width,
+      length: product.length,
+      thickness: product.thickness,
+      discount_percent: discountPercent,
+      subtotal: unitPrice,
+      ipi_rate: ipiRate,
+      product: product,
+      calculated_price_source: priceSource,
+    });
     setSelectedProductId('');
-  };
-
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
   };
 
   // Helper to validate price on blur - now allows editing but validates afterwards
