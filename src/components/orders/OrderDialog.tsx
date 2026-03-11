@@ -18,7 +18,7 @@ import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, Check
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
-import { calculateSubtotalProducts, calculateTotalIpi, calculateTotal } from '@/utils/pricing/totalsCalculations';
+import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
