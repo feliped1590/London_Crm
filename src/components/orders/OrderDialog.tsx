@@ -77,6 +77,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [contactId, setContactId] = useState<string>('');
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [observations, setObservations] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [legalEntityId, setLegalEntityId] = useState<string>('');
+  const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
+  const [orderType, setOrderType] = useState<OrderType>('producao');
+
   const orderItemSubtotal = useCallback((item: OrderItemDraft) => item.subtotal, []);
 
   const {
@@ -89,10 +94,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     ipiMode,
     calculateItemSubtotal: orderItemSubtotal,
   });
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [legalEntityId, setLegalEntityId] = useState<string>('');
-  const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
-  const [orderType, setOrderType] = useState<OrderType>('producao');
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
