@@ -732,7 +732,7 @@ export function ProposalDialog({
     const { index, currentPrice } = pendingPriceChange;
     const updatedItems = [...items];
     updatedItems[index].unit_price = currentPrice;
-    updatedItems[index].subtotal = calculateItemSubtotal(updatedItems[index]);
+    updatedItems[index].subtotal = proposalItemSubtotal(updatedItems[index]);
     setItems(updatedItems);
     
     // If there was a pending submit, cancel it
