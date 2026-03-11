@@ -7,13 +7,11 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
-import { getPendingChecklistItems, type ChecklistItem } from '@/hooks/useStageChecklists';
+import { getPendingChecklistItems } from '@/hooks/useStageChecklists';
 import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
-import { cleanDocument } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
 import { differenceInDays, parseISO } from 'date-fns';
-import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
-import type { SearchableSelectOption } from '@/components/ui/searchable-select';
+import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 export type Deal = Tables<'deals'>;
 export type DealStage = Tables<'deals'>['stage'];
@@ -55,7 +53,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
 
-  // ── Pipeline Stages ──────────────────────────────────────────────
+  // ── Pipeline Stages ───────────────────────────────────────────────
   const { data: pipelineStagesData } = useQuery({
     queryKey: ['pipeline_stages', currentPipelineId],
     queryFn: async () => {
@@ -142,67 +140,11 @@ export function usePipelineData(selectedPipelineId: string | null) {
     },
   });
 
-  // ── Company search (filter bar) ──────────────────────────────────
+  // ── Filter company search ────────────────────────────────────────
   const [filterCompanySearch, setFilterCompanySearch] = useState('');
-  const { data: filterCompaniesRaw } = useQuery({
-    queryKey: ['companies-filter-search', filterCompanySearch],
-    queryFn: async () => {
-      let query = supabase.from('companies').select('id, name').order('name').limit(50);
-      if (filterCompanySearch) {
-        query = query.or(`name.ilike.%${filterCompanySearch}%,fantasia.ilike.%${filterCompanySearch}%`);
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
-    },
-  });
 
-  // ── Selected company/contact queries ─────────────────────────────
-  const getSelectedCompanyQuery = (companyId: string | null | undefined) => {
-    return useQuery({
-      queryKey: ['company-selected', companyId],
-      queryFn: async () => {
-        if (!companyId) return null;
-        const { data, error } = await supabase.from('companies').select('id, name, cnpj').eq('id', companyId).maybeSingle();
-        if (error) throw error;
-        return data;
-      },
-      enabled: !!companyId,
-    });
-  };
-
+  // ── Contact search ────────────────────────────────────────────────
   const [contactSearch, setContactSearch] = useState('');
-
-  const getContactsSearch = (companyId: string | null | undefined) => {
-    return useQuery({
-      queryKey: ['contacts-search', contactSearch, companyId],
-      queryFn: async () => {
-        let query = supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').order('first_name').limit(50);
-        if (companyId) {
-          query = query.eq('company_id', companyId);
-        }
-        if (contactSearch) {
-          query = query.or(`first_name.ilike.%${contactSearch}%,last_name.ilike.%${contactSearch}%,cpf.ilike.%${contactSearch}%`);
-        }
-        const { data, error } = await query;
-        if (error) throw error;
-        return data;
-      },
-    });
-  };
-
-  const getSelectedContactQuery = (contactId: string | null | undefined) => {
-    return useQuery({
-      queryKey: ['contact-selected', contactId],
-      queryFn: async () => {
-        if (!contactId) return null;
-        const { data, error } = await supabase.from('contacts').select('id, first_name, last_name, email, phone, mobile, cpf, company_id').eq('id', contactId).maybeSingle();
-        if (error) throw error;
-        return data;
-      },
-      enabled: !!contactId,
-    });
-  };
 
   // ── Deal contacts (for kanban cards) ──────────────────────────────
   const allDealContactIds = useMemo(() => {
@@ -225,20 +167,6 @@ export function usePipelineData(selectedPipelineId: string | null) {
     },
     enabled: allDealContactIds.length > 0,
   });
-
-  // ── Filter companies (selected) ──────────────────────────────────
-  const getFilterCompanySelected = (filterCompany: string) => {
-    return useQuery({
-      queryKey: ['company-filter-selected', filterCompany],
-      queryFn: async () => {
-        if (!filterCompany || filterCompany === 'all') return null;
-        const { data, error } = await supabase.from('companies').select('id, name').eq('id', filterCompany).maybeSingle();
-        if (error) throw error;
-        return data;
-      },
-      enabled: !!filterCompany && filterCompany !== 'all',
-    });
-  };
 
   // ── Email templates ───────────────────────────────────────────────
   const { data: templates } = useQuery({
@@ -380,48 +308,6 @@ export function usePipelineData(selectedPipelineId: string | null) {
     return contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : '';
   }, [getContactInfo]);
 
-  // ── Build filter companies list ───────────────────────────────────
-  const buildFilterCompaniesList = useCallback((selectedFilterCompanyData: any) => {
-    const map = new Map<string, { id: string; name: string }>();
-    if (selectedFilterCompanyData) map.set(selectedFilterCompanyData.id, selectedFilterCompanyData);
-    (filterCompaniesRaw || []).forEach((c: any) => map.set(c.id, c));
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [filterCompaniesRaw]);
-
-  // ── Build searchable options ──────────────────────────────────────
-  const buildCompanyOptions = useCallback((selectedCompanyData: any): SearchableSelectOption[] => {
-    const map = new Map<string, SearchableSelectOption>();
-    if (selectedCompanyData) {
-      map.set(selectedCompanyData.id, {
-        value: selectedCompanyData.id,
-        label: selectedCompanyData.name,
-        searchTerms: selectedCompanyData.cnpj ? cleanDocument(selectedCompanyData.cnpj) : undefined,
-      });
-    }
-    companiesSearchResult?.forEach((c: any) => {
-      if (!map.has(c.id)) {
-        map.set(c.id, {
-          value: c.id,
-          label: c.name,
-          searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined,
-        });
-      }
-    });
-    return Array.from(map.values());
-  }, [companiesSearchResult]);
-
-  const buildContactOptions = useCallback((selectedContactData: any): SearchableSelectOption[] => {
-    const map = new Map<string, SearchableSelectOption>();
-    if (selectedContactData) {
-      map.set(selectedContactData.id, {
-        value: selectedContactData.id,
-        label: `${selectedContactData.first_name} ${selectedContactData.last_name || ''}`.trim(),
-        searchTerms: selectedContactData.cpf ? cleanDocument(selectedContactData.cpf) : undefined,
-      });
-    }
-    return Array.from(map.values());
-  }, []);
-
   // ── Filtered deals builder ────────────────────────────────────────
   const buildFilteredDeals = useCallback((
     filterOwner: string,
@@ -460,7 +346,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
     }) || [];
   }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep]);
 
-  // ── Drag & Drop handler ───────────────────────────────────────────
+  // ── Drag & Drop core handler ──────────────────────────────────────
   const handleDrop = useCallback(async (
     dealId: string,
     targetStage: DealStage,
@@ -506,9 +392,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
     if (!isAdmin && daysInStage >= SLA_CRITICAL_DAYS) {
       callbacks.setSlaModalData({
         deal: {
-          id: deal.id,
-          name: deal.name,
-          updated_at: deal.updated_at,
+          id: deal.id, name: deal.name, updated_at: deal.updated_at,
           stagnation_reason: (deal as any).stagnation_reason,
         },
         targetStage,
@@ -541,67 +425,22 @@ export function usePipelineData(selectedPipelineId: string | null) {
   }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation]);
 
   return {
-    // Auth & permissions
-    user,
-    isAdmin,
-
-    // Pipeline
-    pipelines,
-    defaultPipeline,
-    currentPipelineId,
-    stages,
-    stageConfig,
-
-    // Deals
-    deals,
-    isLoading,
-    isFetching,
-    handleRefresh,
-
-    // Sellers
+    user, isAdmin,
+    pipelines, defaultPipeline, currentPipelineId,
+    stages, stageConfig,
+    deals, isLoading, isFetching, handleRefresh,
     sellers,
-
-    // Search state
-    companySearch,
-    setCompanySearch,
-    filterCompanySearch,
-    setFilterCompanySearch,
-    contactSearch,
-    setContactSearch,
+    companySearch, setCompanySearch,
+    filterCompanySearch, setFilterCompanySearch,
+    contactSearch, setContactSearch,
     companiesSearchResult,
-
-    // Queries (need to be called in component due to hooks rules)
-    getSelectedCompanyQuery,
-    getContactsSearch,
-    getSelectedContactQuery,
-    getFilterCompanySelected,
-
-    // Templates
     templates,
-
-    // Mutations
-    createMutation,
-    updateMutation,
-    deleteMutation,
-    sendEmailMutation,
-
-    // Helpers
+    createMutation, updateMutation, deleteMutation, sendEmailMutation,
     canDeleteDeal,
-    getContactInfo,
-    getContactPhone,
-    getContactName,
-    buildFilterCompaniesList,
-    buildCompanyOptions,
-    buildContactOptions,
+    getContactInfo, getContactPhone, getContactName,
     buildFilteredDeals,
     handleDrop,
-
-    // Governance
-    requiresJustification,
-    logIntervention,
-
-    // Legal entities
-    legalEntities,
-    effectiveLegalEntityId,
+    requiresJustification, logIntervention,
+    legalEntities, effectiveLegalEntityId,
   };
 }
