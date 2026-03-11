@@ -1,0 +1,1 @@
+UPDATE legal_entities SET logo_url = '/images/logo-novafix.jpg' WHERE id = '032a2168-7c44-4f08-801e-69ea5e17f4f1';
