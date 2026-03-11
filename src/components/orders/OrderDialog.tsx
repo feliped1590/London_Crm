@@ -463,7 +463,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       calculated_price_source: priceSource,
     };
 
-    setItems([...items, newItem]);
+    addItem(newItem);
     setSelectedProductId('');
   };
 
