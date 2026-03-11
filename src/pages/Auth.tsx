@@ -196,11 +196,11 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4">
-            <Building2 className="h-8 w-8" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden mb-4">
+            <img src="/images/logo-qualyvac.jpeg" alt="Qualyvac" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-bold text-foreground">
-            CRM<span className="text-primary">Pro</span>
+            CRM <span className="text-primary">Qualyvac Group</span>
           </h1>
           <p className="text-muted-foreground mt-2">
             Sistema de gestão de relacionamento com clientes
