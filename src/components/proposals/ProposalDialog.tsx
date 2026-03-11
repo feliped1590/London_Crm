@@ -1202,7 +1202,7 @@ export function ProposalDialog({
                                 {(item.ipi_rate || 0).toFixed(2)}%
                               </TableCell>
                               <TableCell className="text-right text-xs">
-                                {formatCurrency(calculateIpiValue(calculateItemSubtotal(item), item.ipi_rate || 0, formData.ipi_mode))}
+                                {formatCurrency(calculateIpiValue(proposalItemSubtotal(item), item.ipi_rate || 0, formData.ipi_mode))}
                               </TableCell>
                             </>
                           )}
