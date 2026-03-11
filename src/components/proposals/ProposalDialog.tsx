@@ -1194,7 +1194,7 @@ export function ProposalDialog({
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-medium text-xs">
-                            {formatCurrency(calculateItemSubtotal(item))}
+                            {formatCurrency(proposalItemSubtotal(item))}
                           </TableCell>
                           {formData.ipi_mode !== 'isento' && (
                             <>
