@@ -153,7 +153,7 @@ export function AppSidebar() {
             />
           ) : (
             <span className="text-xl font-bold text-sidebar-primary-foreground">
-              CRM<span className="text-sidebar-primary">Pro</span>
+              CRM <span className="text-sidebar-primary">Qualyvac Group</span>
             </span>
           )
         )}

@@ -46,7 +46,7 @@ export function AppLayout() {
             <img src={effectiveEntity.logo_url} alt={effectiveEntity.name} className="h-7 max-w-[120px] object-contain ml-3" />
           ) : (
             <span className="text-lg font-bold ml-3">
-              CRM<span className="text-primary">Pro</span>
+              CRM <span className="text-primary">Qualyvac Group</span>
             </span>
           )}
         </header>
