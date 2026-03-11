@@ -406,17 +406,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     );
   }, [companyFiscalData]);
 
-  // IPI & totals helpers (delegated to shared utils)
-  const getOrderTotalsInput = () => ({
-    items,
-    ipiMode,
-    getSubtotal: (item: OrderItemDraft) => item.subtotal,
-    getIpiRate: (item: OrderItemDraft) => item.ipi_rate || 0,
-  });
-
-  const orderCalculateTotal = () => calculateTotal(getOrderTotalsInput());
-  const orderCalculateSubtotalProducts = () => calculateSubtotalProducts(getOrderTotalsInput());
-  const orderCalculateTotalIpi = () => calculateTotalIpi(getOrderTotalsInput());
 
   // Add product to items
   const addProductToItems = () => {
