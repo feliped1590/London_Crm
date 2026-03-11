@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
@@ -186,18 +187,22 @@ export default function Tasks() {
     (deals || []).map(d => ({ value: d.id, label: d.name })), [deals]
   );
 
+  const taskListKey = ['tasks', user?.id, isAdmin, ownerFilter];
+
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'tasks'>) => {
-      const { error } = await supabase.from('tasks').insert(data);
+      const { data: created, error } = await supabase.from('tasks').insert(data).select('*, companies(name), contacts(first_name, last_name), deals(name)').single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: (created) => {
+      insertItemInList(queryClient, taskListKey, created);
+      // Also invalidate today-tasks (analytical)
+      queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa criada com sucesso!');
       resetForm();
     },
     onError: (error: any) => {
-      // Check if it's a portfolio governance error (trigger block)
       const message = error?.message || '';
       if (message.includes('Este cliente pertence ao vendedor')) {
         toast.error(message, { duration: 6000 });
@@ -209,16 +214,17 @@ export default function Tasks() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Task> & { id: string }) => {
-      const { error } = await supabase.from('tasks').update(data).eq('id', id);
+      const { data: updated, error } = await supabase.from('tasks').update(data).eq('id', id).select('*, companies(name), contacts(first_name, last_name), deals(name)').single();
       if (error) throw error;
+      return { id, updated };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: ({ id, updated }) => {
+      updateItemInList(queryClient, taskListKey, id, updated, 'task');
+      queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa atualizada!');
       resetForm();
     },
     onError: (error: any) => {
-      // Check if it's a portfolio governance error (trigger block)
       const message = error?.message || '';
       if (message.includes('Este cliente pertence ao vendedor')) {
         toast.error(message, { duration: 6000 });
@@ -235,9 +241,14 @@ export default function Tasks() {
         completed_at: completed ? new Date().toISOString() : null,
       }).eq('id', id);
       if (error) throw error;
+      return { id, completed };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    onSuccess: ({ id, completed }) => {
+      updateItemInList(queryClient, taskListKey, id, {
+        status: completed ? 'concluida' : 'pendente',
+        completed_at: completed ? new Date().toISOString() : null,
+      } as any, 'task');
+      queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
     },
   });
 

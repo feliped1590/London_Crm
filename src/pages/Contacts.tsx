@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 
 type Contact = Tables<'contacts'>;
 type Company = Tables<'companies'>;
@@ -84,11 +85,12 @@ export default function Contacts() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'contacts'>) => {
-      const { error } = await supabase.from('contacts').insert(data);
+      const { data: created, error } = await supabase.from('contacts').insert(data).select('*, companies(name), deals(id, name, stage, value)').single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    onSuccess: (created) => {
+      insertItemInList(queryClient, ['contacts'], created);
       toast.success('Contato criado com sucesso!');
       resetForm();
     },
@@ -97,11 +99,12 @@ export default function Contacts() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Contact> & { id: string }) => {
-      const { error } = await supabase.from('contacts').update(data).eq('id', id);
+      const { data: updated, error } = await supabase.from('contacts').update(data).eq('id', id).select('*, companies(name), deals(id, name, stage, value)').single();
       if (error) throw error;
+      return { id, updated };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    onSuccess: ({ id, updated }) => {
+      updateItemInList(queryClient, ['contacts'], id, updated, 'contact');
       toast.success('Contato atualizado com sucesso!');
       resetForm();
     },
@@ -112,9 +115,10 @@ export default function Contacts() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('contacts').delete().eq('id', id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+    onSuccess: (id) => {
+      removeItemFromList(queryClient, ['contacts'], id, 'contact');
       toast.success('Contato excluído com sucesso!');
     },
     onError: () => toast.error('Erro ao excluir contato'),

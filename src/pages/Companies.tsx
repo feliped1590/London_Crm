@@ -22,6 +22,7 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 
 type Company = Tables<'companies'>;
 
@@ -79,11 +80,12 @@ export default function Companies() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'companies'>) => {
-      const { error } = await supabase.from('companies').insert(data);
+      const { data: created, error } = await supabase.from('companies').insert(data).select('*, deals(id, name, stage, value)').single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    onSuccess: (created) => {
+      insertItemInList(queryClient, ['companies'], created);
       toast.success('Empresa criada com sucesso!');
       resetForm();
     },
@@ -92,11 +94,12 @@ export default function Companies() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Company> & { id: string }) => {
-      const { error } = await supabase.from('companies').update(data).eq('id', id);
+      const { data: updated, error } = await supabase.from('companies').update(data).eq('id', id).select('*, deals(id, name, stage, value)').single();
       if (error) throw error;
+      return { id, updated };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    onSuccess: ({ id, updated }) => {
+      updateItemInList(queryClient, ['companies'], id, updated, 'company');
       toast.success('Empresa atualizada com sucesso!');
       resetForm();
     },
@@ -118,10 +121,10 @@ export default function Companies() {
         throw new Error('Você não tem permissão para excluir esta empresa');
       }
       
-      return data;
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
+    onSuccess: (id) => {
+      removeItemFromList(queryClient, ['companies'], id, 'company');
       toast.success('Empresa excluída com sucesso!');
     },
     onError: (error: Error) => toast.error(error.message || 'Erro ao excluir empresa'),

@@ -47,6 +47,7 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
@@ -445,16 +446,16 @@ export default function Pipeline() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'deals'>) => {
-      const { error } = await supabase.from('deals').insert(data);
+      const { data: created, error } = await supabase.from('deals').insert(data).select('*, companies(name, sales_rep_id), contacts(first_name, last_name, email)').single();
       if (error) throw error;
+      return created;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (created) => {
+      insertItemInList(queryClient, ['deals'], created);
       toast.success('Negócio criado com sucesso!');
       resetForm();
     },
     onError: (error: any) => {
-      // Check if it's a portfolio governance error (trigger block)
       const message = error?.message || '';
       if (message.includes('Este cliente pertence ao vendedor')) {
         toast.error(message, { duration: 6000 });
@@ -520,8 +521,10 @@ export default function Pipeline() {
         }).catch(console.error);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (_, variables) => {
+      const { id, ...data } = variables as Partial<Deal> & { id: string };
+      updateItemInList(queryClient, ['deals'], id, data, 'deal');
+      // Stage history and tasks are analytical — keep invalidation
       queryClient.invalidateQueries({ queryKey: ['deal_stage_history'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Negócio atualizado!');
@@ -547,8 +550,8 @@ export default function Pipeline() {
       const { error } = await supabase.from('deals').delete().eq('id', dealId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (_, dealId) => {
+      removeItemFromList(queryClient, ['deals'], dealId, 'deal');
       toast.success('Negócio excluído com sucesso!');
       setDeleteConfirmOpen(false);
       setDealToDelete(null);
