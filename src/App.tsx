@@ -214,7 +214,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/import-companies" element={<ImportCompanies />} />
-                <Route path="/help" element={<Help />} />
+                
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

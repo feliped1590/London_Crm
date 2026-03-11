@@ -63,7 +63,7 @@ const allNavItems: NavItem[] = [
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
   { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations', devOnly: true },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
-  { to: '/help', icon: HelpCircle, label: 'Ajuda', moduleKey: 'help' },
+  
 ];
 
 export function AppSidebar() {
