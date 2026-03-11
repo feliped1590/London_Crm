@@ -545,49 +545,17 @@ export function ProposalDialog({
     return qty * price * (1 - discount / 100);
   };
 
-  const calculateIpiValue = (subtotalItem: number, ipiRate: number, ipiMode: IpiMode) => {
-    if (ipiMode === 'isento' || ipiRate <= 0) return 0;
-    if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
-    if (ipiMode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
-    return 0;
-  };
+  // IPI & totals helpers (delegated to shared utils)
+  const getProposalTotalsInput = () => ({
+    items,
+    ipiMode: formData.ipi_mode,
+    getSubtotal: (item: Partial<ProposalItem>) => calculateItemSubtotal(item),
+    getIpiRate: (item: Partial<ProposalItem>) => item.ipi_rate || 0,
+  });
 
-  const calculateItemTotal = (subtotalItem: number, ipiValue: number, ipiMode: IpiMode) => {
-    if (ipiMode === 'destacar') return subtotalItem + ipiValue;
-    return subtotalItem; // incluso and isento: total = subtotal
-  };
-
-  const calculateTotal = () => {
-    const ipiMode = formData.ipi_mode;
-    let subtotalProducts = 0;
-    let totalIpi = 0;
-    
-    items.forEach(item => {
-      const sub = calculateItemSubtotal(item);
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
-      subtotalProducts += sub;
-      totalIpi += ipiVal;
-    });
-
-    if (ipiMode === 'destacar') return subtotalProducts + totalIpi;
-    return subtotalProducts;
-  };
-
-  const calculateTotalIpi = () => {
-    const ipiMode = formData.ipi_mode;
-    let totalIpi = 0;
-    items.forEach(item => {
-      const sub = calculateItemSubtotal(item);
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      totalIpi += calculateIpiValue(sub, ipiRate, ipiMode);
-    });
-    return totalIpi;
-  };
-
-  const calculateSubtotalProducts = () => {
-    return items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
-  };
+  const proposalCalculateTotal = () => calcTotal(getProposalTotalsInput());
+  const proposalCalculateSubtotalProducts = () => calcSubtotal(getProposalTotalsInput());
+  const proposalCalculateTotalIpi = () => calcTotalIpi(getProposalTotalsInput());
 
   const addProductToItems = () => {
     if (!selectedProductId) return;
