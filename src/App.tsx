@@ -9,6 +9,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AppInitializer } from "@/components/AppInitializer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Today from "./pages/Today";
