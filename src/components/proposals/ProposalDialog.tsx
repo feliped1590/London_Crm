@@ -1232,7 +1232,7 @@ export function ProposalDialog({
                 <div className="text-right p-4 bg-muted rounded-lg space-y-1">
                   <div className="flex justify-between gap-8 text-sm">
                     <span className="text-muted-foreground">Subtotal Produtos:</span>
-                    <span>{formatCurrency(proposalCalculateSubtotalProducts())}</span>
+                    <span>{formatCurrency(proposalSubtotalProducts)}</span>
                   </div>
                   {formData.ipi_mode !== 'isento' && (
                     <div className="flex justify-between gap-8 text-sm">
