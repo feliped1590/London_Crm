@@ -1207,12 +1207,7 @@ export function ProposalDialog({
                             </>
                           )}
                           <TableCell className="text-right font-bold text-xs">
-                            {(() => {
-                              const sub = calculateItemSubtotal(item);
-                              const ipiRate = formData.ipi_mode === 'isento' ? 0 : (item.ipi_rate || 0);
-                              const ipiVal = calculateIpiValue(sub, ipiRate, formData.ipi_mode);
-                              return formatCurrency(calculateItemTotal(sub, ipiVal, formData.ipi_mode));
-                            })()}
+                            {formatCurrency(proposalGetItemTotal(item))}
                           </TableCell>
                           <TableCell>
                             <Button
