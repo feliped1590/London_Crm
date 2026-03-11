@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Truck, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
+import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { calculateSubtotalProducts, calculateTotalIpi, calculateTotal } from '@/utils/pricing/totalsCalculations';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
