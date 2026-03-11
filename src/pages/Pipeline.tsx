@@ -1535,7 +1535,7 @@ export default function Pipeline() {
               </div>
               <ScrollArea className="flex-1 p-2">
                 <div className="space-y-2">
-                  {getStageDeals(stage).map((deal) => (
+                  {getPagedStageDeals(stage).map((deal) => (
                     <Card
                       key={deal.id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
@@ -1601,6 +1601,31 @@ export default function Pipeline() {
                   ))}
                 </div>
               </ScrollArea>
+              {getStageTotalPages(stage) > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/30 rounded-b-lg">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    disabled={getStagePage(stage) <= 1}
+                    onClick={() => setStagePages(prev => ({ ...prev, [stage]: getStagePage(stage) - 1 }))}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {getStagePage(stage)}/{getStageTotalPages(stage)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    disabled={getStagePage(stage) >= getStageTotalPages(stage)}
+                    onClick={() => setStagePages(prev => ({ ...prev, [stage]: getStagePage(stage) + 1 }))}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
