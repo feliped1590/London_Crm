@@ -18,7 +18,7 @@ import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, Check
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
-import { calculateSubtotalProducts, calculateTotalIpi, calculateTotal } from '@/utils/pricing/totalsCalculations';
+import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -77,11 +77,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [contactId, setContactId] = useState<string>('');
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [observations, setObservations] = useState('');
-  const [items, setItems] = useState<OrderItemDraft[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [legalEntityId, setLegalEntityId] = useState<string>('');
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   const [orderType, setOrderType] = useState<OrderType>('producao');
+
+  const orderItemSubtotal = useCallback((item: OrderItemDraft) => item.subtotal, []);
+
+  const {
+    items, setItems, addItem, removeItem, updateItem: hookUpdateItem,
+    subtotalProducts: orderSubtotalProducts,
+    totalIpi: orderTotalIpi,
+    total: orderTotal,
+    getItemIpiValue, getItemTotal,
+  } = useDocumentItems<OrderItemDraft>({
+    ipiMode,
+    calculateItemSubtotal: orderItemSubtotal,
+  });
   // Store original items for comparison (audit logging)
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
 
@@ -394,17 +406,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     );
   }, [companyFiscalData]);
 
-  // IPI & totals helpers (delegated to shared utils)
-  const getOrderTotalsInput = () => ({
-    items,
-    ipiMode,
-    getSubtotal: (item: OrderItemDraft) => item.subtotal,
-    getIpiRate: (item: OrderItemDraft) => item.ipi_rate || 0,
-  });
-
-  const orderCalculateTotal = () => calculateTotal(getOrderTotalsInput());
-  const orderCalculateSubtotalProducts = () => calculateSubtotalProducts(getOrderTotalsInput());
-  const orderCalculateTotalIpi = () => calculateTotalIpi(getOrderTotalsInput());
 
   // Add product to items
   const addProductToItems = () => {
@@ -462,7 +463,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       calculated_price_source: priceSource,
     };
 
-    setItems([...items, newItem]);
+    addItem(newItem);
     setSelectedProductId('');
   };
 
@@ -606,52 +607,41 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setShowPriceOverrideModal(false);
   };
 
-  // Update item
+  // Update item with pricing recalculation
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
-    const updatedItems = [...items];
-    const item = updatedItems[index];
-    
     if (field === 'quantity') {
-      item.quantity = Number(value) || 1;
-      
-      // Recalculate price based on new quantity using pricing hierarchy
-      const product = products?.find(p => p.id === item.product_id);
-      if (product) {
-        const applicableTable = getApplicableTable(
-          companyId ? 'company' : contactId ? 'contact' : null,
-          companyId || contactId || null,
-          product.id
-        );
-
-        if (applicableTable) {
-          const { finalPrice, rule } = calculatePrice(
-            applicableTable.id,
-            product.id,
-            product.tipo_id,
-            item.quantity,
-            product.unit_price || 0
+      const quantityTransform = (item: OrderItemDraft): OrderItemDraft => {
+        item.quantity = Number(value) || 1;
+        const product = products?.find(p => p.id === item.product_id);
+        if (product) {
+          const applicableTable = getApplicableTable(
+            companyId ? 'company' : contactId ? 'contact' : null,
+            companyId || contactId || null,
+            product.id
           );
-          item.unit_price = finalPrice;
-          if (rule?.discount_percent) {
-            item.discount_percent = rule.discount_percent;
+          if (applicableTable) {
+            const { finalPrice, rule } = calculatePrice(
+              applicableTable.id, product.id, product.tipo_id,
+              item.quantity, product.unit_price || 0
+            );
+            item.unit_price = finalPrice;
+            if (rule?.discount_percent) item.discount_percent = rule.discount_percent;
           }
         }
-      }
-      
-      item.subtotal = item.quantity * item.unit_price;
+        item.subtotal = item.quantity * item.unit_price;
+        return item;
+      };
+      hookUpdateItem(index, field, value, quantityTransform);
     } else if (field === 'unit_price') {
-      item.unit_price = Number(value) || 0;
-      item.subtotal = item.quantity * item.unit_price;
+      const priceTransform = (item: OrderItemDraft): OrderItemDraft => {
+        item.unit_price = Number(value) || 0;
+        item.subtotal = item.quantity * item.unit_price;
+        return item;
+      };
+      hookUpdateItem(index, field, value, priceTransform);
     } else {
-      (item as any)[field] = value;
+      hookUpdateItem(index, field, value);
     }
-    
-    setItems(updatedItems);
-  };
-
-  // Remove item
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
   };
 
   // Log item changes for audit
@@ -735,14 +725,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: orderCalculateTotal(),
+          total_value: orderTotal,
           status: 'pendente',
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
           order_type: orderType,
-          subtotal_products: orderCalculateSubtotalProducts(),
-          total_ipi: orderCalculateTotalIpi(),
+          subtotal_products: orderSubtotalProducts,
+          total_ipi: orderTotalIpi,
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -839,12 +829,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: orderCalculateTotal(),
+          total_value: orderTotal,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
           order_type: orderType,
-          subtotal_products: orderCalculateSubtotalProducts(),
-          total_ipi: orderCalculateTotalIpi(),
+          subtotal_products: orderSubtotalProducts,
+          total_ipi: orderTotalIpi,
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -1139,8 +1129,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
               {items.map((item, index) => {
                 const product = products?.find(p => p.id === item.product_id);
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-                const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
-                const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+                const ipiVal = getItemIpiValue(item);
+                const totalItem = getItemTotal(item);
                 
                 return (
                   <TableRow key={index}>
@@ -1191,17 +1181,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <div className="text-right p-4 bg-muted rounded-lg space-y-1">
             <div className="flex justify-between gap-8 text-sm">
               <span className="text-muted-foreground">Subtotal Produtos:</span>
-              <span>{formatCurrency(orderCalculateSubtotalProducts())}</span>
+              <span>{formatCurrency(orderSubtotalProducts)}</span>
             </div>
             {ipiMode !== 'isento' && (
               <div className="flex justify-between gap-8 text-sm">
                 <span className="text-muted-foreground">IPI Total {ipiMode === 'incluso' ? '(informativo)' : ''}:</span>
-                <span>{formatCurrency(orderCalculateTotalIpi())}</span>
+                <span>{formatCurrency(orderTotalIpi)}</span>
               </div>
             )}
             <div className="flex justify-between gap-8 pt-1 border-t">
               <span className="text-muted-foreground font-medium">Valor Total:</span>
-              <span className="text-2xl font-bold">{formatCurrency(orderCalculateTotal())}</span>
+              <span className="text-2xl font-bold">{formatCurrency(orderTotal)}</span>
             </div>
           </div>
         </div>
