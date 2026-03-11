@@ -402,6 +402,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     getIpiRate: (item: OrderItemDraft) => item.ipi_rate || 0,
   });
 
+  const orderCalculateTotal = () => calculateTotal(getOrderTotalsInput());
+  const orderCalculateSubtotalProducts = () => calculateSubtotalProducts(getOrderTotalsInput());
+  const orderCalculateTotalIpi = () => calculateTotalIpi(getOrderTotalsInput());
+
   // Add product to items
   const addProductToItems = () => {
     if (!selectedProductId) return;
