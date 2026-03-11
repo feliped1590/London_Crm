@@ -411,7 +411,7 @@ export function ProposalDialog({
       if (items.length > 0) {
         const ipiMode = formData.ipi_mode;
         const itemsToInsert = items.map((item, index) => {
-          const sub = calculateItemSubtotal(item);
+          const sub = proposalItemSubtotal(item);
           const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
           const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
           const totalItem = calculateItemTotal(sub, ipiVal, ipiMode);
