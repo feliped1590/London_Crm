@@ -829,7 +829,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: orderCalculateTotal(),
+          total_value: orderTotal,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
           order_type: orderType,
