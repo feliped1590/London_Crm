@@ -784,7 +784,14 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, tipo_id: v === 'none' ? undefined : v })}
+                        onValueChange={(v) => {
+                          const newTipoId = v === 'none' ? undefined : v;
+                          const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
+                          setIsAutoDescription(shouldAuto);
+                          const updated = { ...formData, tipo_id: newTipoId };
+                          if (shouldAuto) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o tipo" />
