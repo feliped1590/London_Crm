@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
-import { calculateSubtotalProducts as calcSubtotal, calculateTotalIpi as calcTotalIpi, calculateTotal as calcTotal } from '@/utils/pricing/totalsCalculations';
+import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
