@@ -959,8 +959,25 @@ export default function Pipeline() {
     }) || [];
   }, [deals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep]);
 
+  const CARDS_PER_PAGE = 5;
+  const [stagePages, setStagePages] = useState<Record<string, number>>({});
+
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
+
+  const getStagePage = (stage: DealStage) => stagePages[stage] || 1;
+  const getPagedStageDeals = (stage: DealStage) => {
+    const all = getStageDeals(stage);
+    const page = getStagePage(stage);
+    const start = (page - 1) * CARDS_PER_PAGE;
+    return all.slice(start, start + CARDS_PER_PAGE);
+  };
+  const getStageTotalPages = (stage: DealStage) => Math.max(1, Math.ceil(getStageDeals(stage).length / CARDS_PER_PAGE));
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setStagePages({});
+  }, [filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, currentPipelineId]);
 
   return (
     <div className="space-y-4 sm:space-y-6 h-full px-2 sm:px-0">
