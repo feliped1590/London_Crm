@@ -700,6 +700,7 @@ export default function Pipeline() {
           created_by: user?.id,
           owner_id: user?.id,
           pipeline_id: currentPipelineId,
+          legal_entity_id: interventionData.pendingAction.data.legal_entity_id || effectiveLegalEntityId || '',
           custom_fields: customFieldsData as Json,
         });
       }
