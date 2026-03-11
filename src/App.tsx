@@ -13,6 +13,8 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AppInitializer } from "@/components/AppInitializer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useAuth } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Today from "./pages/Today";
