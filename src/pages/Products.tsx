@@ -775,7 +775,13 @@ export default function Products() {
                           setFormData({ ...formData, name: e.target.value });
                           setIsAutoDescription(false);
                         }}
-                        placeholder="Descrição do produto (gerada automaticamente)"
+                        onBlur={() => {
+                          if (!formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
+                            setIsAutoDescription(true);
+                            setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
+                          }
+                        }}
+                        placeholder={isAutoDescription ? "Descrição do produto (gerada automaticamente)" : "Digite a descrição do produto"}
                         required
                       />
                     </div>
