@@ -554,24 +554,6 @@ export function ProposalDialog({
     toast.success('Pedido gerado automaticamente!');
   };
 
-  const calculateItemSubtotal = (item: Partial<ProposalItem>) => {
-    const qty = item.quantity || 1;
-    const price = item.unit_price || 0;
-    const discount = item.discount_percent || 0;
-    return qty * price * (1 - discount / 100);
-  };
-
-  // IPI & totals helpers (delegated to shared utils)
-  const getProposalTotalsInput = () => ({
-    items,
-    ipiMode: formData.ipi_mode,
-    getSubtotal: (item: Partial<ProposalItem>) => calculateItemSubtotal(item),
-    getIpiRate: (item: Partial<ProposalItem>) => item.ipi_rate || 0,
-  });
-
-  const proposalCalculateTotal = () => calcTotal(getProposalTotalsInput());
-  const proposalCalculateSubtotalProducts = () => calcSubtotal(getProposalTotalsInput());
-  const proposalCalculateTotalIpi = () => calcTotalIpi(getProposalTotalsInput());
 
   const addProductToItems = () => {
     if (!selectedProductId) return;
