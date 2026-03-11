@@ -1186,7 +1186,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             {ipiMode !== 'isento' && (
               <div className="flex justify-between gap-8 text-sm">
                 <span className="text-muted-foreground">IPI Total {ipiMode === 'incluso' ? '(informativo)' : ''}:</span>
-                <span>{formatCurrency(orderCalculateTotalIpi())}</span>
+                <span>{formatCurrency(orderTotalIpi)}</span>
               </div>
             )}
             <div className="flex justify-between gap-8 pt-1 border-t">
