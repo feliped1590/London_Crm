@@ -1,85 +1,70 @@
 
 
-# Plano: Supabase Realtime + Smart Cache Sync
+## Plano: Alerta de Tarefas Pendentes no Login
 
-## Resumo
+### 1. Migração SQL — RPC + Índice
 
-Criar um utilitário `realtimeManager.ts` que registra canais Supabase Realtime para `deals`, `companies` e `tasks`, e ao receber eventos `INSERT`/`UPDATE`/`DELETE` atualiza o cache React Query usando as funções do `queryCacheManager.ts` existente. Um hook `useRealtimeSync` será inicializado dentro do `AppInitializer` apenas quando há usuário autenticado.
+Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
+- Usa `date_trunc('day', now())` para comparações sem timezone issues
+- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
+- Filtra `status != 'done'` e `assigned_to = p_user_id`
 
-## Pré-requisito: Migration SQL
-
-Habilitar realtime para as 3 tabelas (hoje só `whatsapp_messages` e `app_sessions` estão habilitadas):
-
+Criar índice composto:
 ```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.deals;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.companies;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.tasks;
+CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
+ON public.tasks (assigned_to, status, due_date);
 ```
 
-## Arquitetura
+### 2. Hook `useLoginTaskAlert`
 
-```text
-AppInitializer (phase === 'ready' && user)
-  └ useRealtimeSync(queryClient)
-      ├ Canal 'crm-deals'     → postgres_changes (deals)
-      ├ Canal 'crm-companies' → postgres_changes (companies)
-      └ Canal 'crm-tasks'     → postgres_changes (tasks)
-          │
-          ├ INSERT → insertItemInList(qc, listKey, payload.new)
-          ├ UPDATE → updateItemInList(qc, listKey, id, payload.new, detailPrefix)
-          └ DELETE → removeItemFromList(qc, listKey, id, detailPrefix)
-```
+Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
+- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
+- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
+- Se alert habilitado, chama RPC `check_pending_tasks`
+- Se total > 0, abre modal com delay de ~800ms + fade-in
+- Se som habilitado, toca audio com try/catch no `.play()`
+- Retorna estado do modal e dados para o componente
 
-## Arquivos
+### 3. Componente `TaskAlertModal`
 
-### Novo: `src/lib/realtimeManager.ts`
+Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
+- Dialog com animação suave (fade-in com delay)
+- Exibe contagens de tarefas vencidas e vencendo hoje
+- Botão "Ver Tarefas" → navega para `/tasks`
+- Botão "Fechar"
+- Design discreto e profissional
 
-Funções utilitárias:
+### 4. Som de Notificação
 
-- `subscribeToTable(supabase, queryClient, config)` — cria canal para uma tabela, mapeia eventos para funções do `queryCacheManager`
-- `subscribeAll(supabase, queryClient)` — registra os 3 canais, retorna função de cleanup
-- Cada config define: `table`, `channelName`, `listQueryKey`, `detailKeyPrefix`
-- Filtragem por `user_id` do evento vs `auth.uid()` para ignorar eventos próprios (evitar double-update quando o mutation local já atualizou o cache)
+Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
 
-### Novo: `src/hooks/useRealtimeSync.ts`
+### 5. Configuração no Settings (Notificações)
 
-- Hook que chama `subscribeAll` no mount e cleanup no unmount
-- Recebe `userId` para filtrar eventos próprios
-- Só ativa quando `userId` existe
+Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
+- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
+- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
+- Persiste via upsert em `system_settings` key `task_alert_config`
 
-### Modificado: `src/components/AppInitializer.tsx`
+### 6. Integração no Login
 
-- Quando `phase === 'ready'` e `user` existe, renderizar `<RealtimeSyncProvider />` que inicializa o hook
-- Alternativa mais limpa: renderizar children normalmente e usar o hook dentro de um componente wrapper no `App.tsx` (dentro do `ProtectedRoute`)
+No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
 
-### Modificado: `src/App.tsx`
+Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
 
-- Criar componente `RealtimeSync` que usa `useRealtimeSync` e renderiza `null`
-- Inserir `<RealtimeSync />` dentro do bloco protegido (após `AppInitializer`, antes das rotas)
+### Arquivos Criados/Editados
 
-## Tratamento de eventos
+| Ação | Arquivo |
+|------|---------|
+| Criar | Migração SQL (RPC + índice) |
+| Criar | `src/hooks/useLoginTaskAlert.ts` |
+| Criar | `src/components/tasks/TaskAlertModal.tsx` |
+| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
+| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
 
-| Evento | Ação no cache |
-|--------|--------------|
-| INSERT deals | `insertItemInList(qc, ['deals'], payload.new)` |
-| UPDATE deals | `updateItemInList(qc, ['deals'], id, payload.new, 'deal')` |
-| DELETE deals | `removeItemFromList(qc, ['deals'], id, 'deal')` |
-| INSERT companies | `insertItemInList(qc, ['companies'], payload.new)` |
-| UPDATE companies | `updateItemInList(qc, ['companies'], id, payload.new, 'company')` |
-| DELETE companies | `removeItemFromList(qc, ['companies'], id, 'company')` |
-| INSERT tasks | `insertItemInList(qc, ['tasks'], payload.new)` + invalidate `['today-tasks']`, `['calendar-tasks']` |
-| UPDATE tasks | `updateItemInList(qc, ['tasks'], id, payload.new, 'task')` + invalidate `['today-tasks']`, `['calendar-tasks']` |
-| DELETE tasks | `removeItemFromList(qc, ['tasks'], id, 'task')` + invalidate `['today-tasks']`, `['calendar-tasks']` |
+### Performance
 
-Para tasks, queries derivadas (`today-tasks`, `calendar-tasks`) recebem `invalidateQueries` porque dependem de filtros de data que não podem ser resolvidos apenas com `setQueryData`.
-
-## Cleanup no logout
-
-O `AuthStateListener` já limpa o cache no `SIGNED_OUT`. Os canais realtime serão limpos pelo cleanup do `useEffect` no `useRealtimeSync` quando o componente desmonta (o que acontece automaticamente quando o `ProtectedRoute` desmonta no logout).
-
-## Proteção contra double-update
-
-Quando o próprio usuário faz uma mutation, o cache já é atualizado pelo `queryCacheManager` local. O evento realtime chegará ~100ms depois. Para evitar flicker:
-- Comparar `payload.new` com o dado já em cache — se igual, ignorar (noop)
-- Implementado via check simples no handler: se `updateItemInList` encontra o item e os dados já são iguais, não faz re-render
+- Índice composto garante query eficiente
+- Hook executa apenas 1x por sessão (sessionStorage)
+- Delay de 800ms não bloqueia carregamento do dashboard
+- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
 
