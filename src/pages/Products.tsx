@@ -452,7 +452,13 @@ export default function Products() {
     setNcmValidation(null);
     setNcmOfficialIpi(null);
     setFormTab('geral');
-    setIsAutoDescription(true);
+    setIsAutoDescription(false);
+  };
+
+  const checkAutoDescriptionByTipo = (tipoId: string | undefined): boolean => {
+    if (!tipoId) return false;
+    const tipoItem = tipos.items.find(t => t.id === tipoId);
+    return tipoItem?.label?.toLowerCase() === 'produto acabado';
   };
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
