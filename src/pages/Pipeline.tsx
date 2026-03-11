@@ -521,8 +521,10 @@ export default function Pipeline() {
         }).catch(console.error);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (_, variables) => {
+      const { id, ...data } = variables as Partial<Deal> & { id: string };
+      updateItemInList(queryClient, ['deals'], id, data, 'deal');
+      // Stage history and tasks are analytical — keep invalidation
       queryClient.invalidateQueries({ queryKey: ['deal_stage_history'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Negócio atualizado!');
