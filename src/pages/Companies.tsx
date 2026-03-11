@@ -22,6 +22,7 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 
 type Company = Tables<'companies'>;
 

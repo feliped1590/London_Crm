@@ -550,8 +550,8 @@ export default function Pipeline() {
       const { error } = await supabase.from('deals').delete().eq('id', dealId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['deals'] });
+    onSuccess: (_, dealId) => {
+      removeItemFromList(queryClient, ['deals'], dealId, 'deal');
       toast.success('Negócio excluído com sucesso!');
       setDeleteConfirmOpen(false);
       setDealToDelete(null);
