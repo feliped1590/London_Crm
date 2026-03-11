@@ -81,9 +81,15 @@ export function useModulePermissions() {
     return getAccessType(moduleKey) === 'restrito';
   };
 
+  // isFullyLoaded: true only when all 3 queries (modules + admin + developer) have completed
+  const isFullyLoaded = !isLoading 
+    && hasRoleAdmin !== undefined 
+    && hasRoleDeveloper !== undefined;
+
   return {
     permissions: permissions || [],
     isLoading,
+    isFullyLoaded,
     error,
     isAdmin,
     isDeveloper: hasRoleDeveloper || false,

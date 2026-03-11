@@ -38,10 +38,10 @@ export const useModuleAccess = () => useContext(ModuleAccessContext);
 
 export function ProtectedRoute() {
   const { user, loading } = useAuth();
-  const { isLoading: permissionsLoading, canAccess, getAccessType, isAdmin } = useModulePermissions();
+  const { isFullyLoaded, canAccess, getAccessType, isAdmin } = useModulePermissions();
   const location = useLocation();
 
-  if (loading || permissionsLoading) {
+  if (loading || !isFullyLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

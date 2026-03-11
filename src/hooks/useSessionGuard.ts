@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { isInitialValidationDone } from '@/components/AppInitializer';
 
 const SESSION_KEY = 'app_session_id';
 const VALIDATE_INTERVAL = 60_000; // 60s
@@ -65,7 +66,10 @@ export function useSessionGuard() {
       }
     };
 
-    validate();
+    // Skip first validation if AppInitializer already did it
+    if (!isInitialValidationDone()) {
+      validate();
+    }
     validateTimer.current = setInterval(validate, VALIDATE_INTERVAL);
 
     return () => {

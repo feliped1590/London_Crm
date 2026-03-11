@@ -9,6 +9,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SidebarProvider } from "@/contexts/SidebarContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { AppInitializer } from "@/components/AppInitializer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Today from "./pages/Today";
@@ -90,11 +92,13 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
       <AuthProvider>
-        <SidebarProvider>
-          <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
+        <AppInitializer>
+          <ErrorBoundary>
+            <SidebarProvider>
+              <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/proposta/:token" element={<ProposalPublic />} />
             <Route path="/" element={<Navigate to="/today" replace />} />
@@ -129,9 +133,11 @@ const App = () => (
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </TooltipProvider>
-        </SidebarProvider>
+              </Routes>
+            </TooltipProvider>
+            </SidebarProvider>
+          </ErrorBoundary>
+        </AppInitializer>
       </AuthProvider>
     </QueryClientProvider>
   </BrowserRouter>
