@@ -2,7 +2,9 @@ import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -41,15 +43,89 @@ import ImportCompanies from "./pages/ImportCompanies";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
+// Keys estruturais que devem ser persistidas no cache
+const PERSISTABLE_QUERY_KEYS = [
+  'user_modules',
+  'is_admin',
+  'is_developer',
+  'pipelines',
+  'pipeline_stages',
+  'sales_reps',
+  'legal_entities',
+  'segmentos',
+  'setores',
+  'atividades',
+  'profiles',
+  'tenant',
+];
+
+// Keys que NUNCA devem ser persistidas (sensíveis/voláteis)
+const BLOCKED_QUERY_KEYS = [
+  'session',
+  'validate',
+  'auth',
+  'app_session',
+  'whatsapp_messages',
+  'notifications',
+];
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
+      gcTime: 15 * 60 * 1000,
       retry: 1,
       refetchOnWindowFocus: false,
     },
   },
 });
+
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'CRM_QUERY_CACHE',
+  // Limitar tamanho: se serialização falhar por quota, remove silenciosamente
+  retry: ({ persistedClient, error, errorCount }) => {
+    if (errorCount > 1) {
+      // Não tenta mais, remove cache corrompido/excedido
+      window.localStorage.removeItem('CRM_QUERY_CACHE');
+      return undefined;
+    }
+    // Na primeira falha, tenta remover queries maiores
+    if (persistedClient) {
+      const queries = persistedClient.clientState.queries;
+      // Manter no máximo 30 queries persistidas (as mais recentes)
+      if (queries.length > 30) {
+        persistedClient.clientState.queries = queries
+          .sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt)
+          .slice(0, 30);
+      }
+      return persistedClient;
+    }
+    return undefined;
+  },
+});
+
+const persistOptions = {
+  persister,
+  maxAge: 10 * 60 * 1000, // 10 minutos
+  buster: 'crm-cache-v1',
+  dehydrateOptions: {
+    shouldDehydrateQuery: (query: any) => {
+      // Só persistir queries com sucesso
+      if (query.state.status !== 'success') return false;
+
+      const keyStr = JSON.stringify(query.queryKey).toLowerCase();
+
+      // Bloquear queries sensíveis/voláteis
+      if (BLOCKED_QUERY_KEYS.some(blocked => keyStr.includes(blocked))) {
+        return false;
+      }
+
+      // Persistir apenas queries estruturais (whitelist)
+      return PERSISTABLE_QUERY_KEYS.some(allowed => keyStr.includes(allowed));
+    },
+  },
+};
 
 // Componente que monitora mudanças de autenticação e limpa o cache apenas quando necessário
 function AuthStateListener() {
@@ -57,7 +133,6 @@ function AuthStateListener() {
   const previousUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Obter sessão inicial para rastrear o usuário atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       previousUserIdRef.current = session?.user?.id ?? null;
     });
@@ -67,17 +142,17 @@ function AuthStateListener() {
         const currentUserId = session?.user?.id ?? null;
         const previousUserId = previousUserIdRef.current;
 
-        // Só limpar cache se realmente mudou de usuário (não apenas restauração de sessão)
         if (event === 'SIGNED_OUT') {
-          console.log('User signed out - Clearing React Query cache');
+          console.log('User signed out - Clearing React Query cache + persisted cache');
           qc.clear();
+          window.localStorage.removeItem('CRM_QUERY_CACHE');
           previousUserIdRef.current = null;
         } else if (event === 'SIGNED_IN' && previousUserId !== currentUserId) {
-          console.log('New user signed in - Clearing React Query cache');
+          console.log('New user signed in - Clearing React Query cache + persisted cache');
           qc.clear();
+          window.localStorage.removeItem('CRM_QUERY_CACHE');
           previousUserIdRef.current = currentUserId;
         }
-        // Ignora SIGNED_IN quando é apenas restauração de sessão do mesmo usuário
       }
     );
 
@@ -89,7 +164,7 @@ function AuthStateListener() {
 
 const App = () => (
   <BrowserRouter>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <AuthStateListener />
       <AuthProvider>
         <AppInitializer>
@@ -139,7 +214,7 @@ const App = () => (
           </ErrorBoundary>
         </AppInitializer>
       </AuthProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </BrowserRouter>
 );
 
