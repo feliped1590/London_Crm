@@ -164,12 +164,20 @@ function AuthStateListener() {
   return null;
 }
 
+// Initializes realtime subscriptions when authenticated
+function RealtimeSync() {
+  const { user } = useAuth();
+  useRealtimeSync(user?.id);
+  return null;
+}
+
 const App = () => (
   <BrowserRouter>
     <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <AuthStateListener />
       <AuthProvider>
         <AppInitializer>
+          <RealtimeSync />
           <ErrorBoundary>
             <SidebarProvider>
               <TooltipProvider>
