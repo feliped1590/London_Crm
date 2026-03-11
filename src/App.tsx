@@ -92,11 +92,13 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
       <AuthProvider>
-        <SidebarProvider>
-          <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
+        <AppInitializer>
+          <ErrorBoundary>
+            <SidebarProvider>
+              <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/proposta/:token" element={<ProposalPublic />} />
             <Route path="/" element={<Navigate to="/today" replace />} />
