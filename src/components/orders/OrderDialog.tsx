@@ -607,52 +607,41 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setShowPriceOverrideModal(false);
   };
 
-  // Update item
+  // Update item with pricing recalculation
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
-    const updatedItems = [...items];
-    const item = updatedItems[index];
-    
     if (field === 'quantity') {
-      item.quantity = Number(value) || 1;
-      
-      // Recalculate price based on new quantity using pricing hierarchy
-      const product = products?.find(p => p.id === item.product_id);
-      if (product) {
-        const applicableTable = getApplicableTable(
-          companyId ? 'company' : contactId ? 'contact' : null,
-          companyId || contactId || null,
-          product.id
-        );
-
-        if (applicableTable) {
-          const { finalPrice, rule } = calculatePrice(
-            applicableTable.id,
-            product.id,
-            product.tipo_id,
-            item.quantity,
-            product.unit_price || 0
+      const quantityTransform = (item: OrderItemDraft): OrderItemDraft => {
+        item.quantity = Number(value) || 1;
+        const product = products?.find(p => p.id === item.product_id);
+        if (product) {
+          const applicableTable = getApplicableTable(
+            companyId ? 'company' : contactId ? 'contact' : null,
+            companyId || contactId || null,
+            product.id
           );
-          item.unit_price = finalPrice;
-          if (rule?.discount_percent) {
-            item.discount_percent = rule.discount_percent;
+          if (applicableTable) {
+            const { finalPrice, rule } = calculatePrice(
+              applicableTable.id, product.id, product.tipo_id,
+              item.quantity, product.unit_price || 0
+            );
+            item.unit_price = finalPrice;
+            if (rule?.discount_percent) item.discount_percent = rule.discount_percent;
           }
         }
-      }
-      
-      item.subtotal = item.quantity * item.unit_price;
+        item.subtotal = item.quantity * item.unit_price;
+        return item;
+      };
+      hookUpdateItem(index, field, value, quantityTransform);
     } else if (field === 'unit_price') {
-      item.unit_price = Number(value) || 0;
-      item.subtotal = item.quantity * item.unit_price;
+      const priceTransform = (item: OrderItemDraft): OrderItemDraft => {
+        item.unit_price = Number(value) || 0;
+        item.subtotal = item.quantity * item.unit_price;
+        return item;
+      };
+      hookUpdateItem(index, field, value, priceTransform);
     } else {
-      (item as any)[field] = value;
+      hookUpdateItem(index, field, value);
     }
-    
-    setItems(updatedItems);
-  };
-
-  // Remove item
-  const removeItem = (index: number) => {
-    setItems(items.filter((_, i) => i !== index));
   };
 
   // Log item changes for audit
