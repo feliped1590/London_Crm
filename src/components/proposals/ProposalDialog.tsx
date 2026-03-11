@@ -82,7 +82,23 @@ export function ProposalDialog({
     ipi_mode: 'destacar' as IpiMode,
   });
 
-  const [items, setItems] = useState<Partial<ProposalItem>[]>([]);
+  const proposalItemSubtotal = useCallback((item: Partial<ProposalItem>) => {
+    const qty = item.quantity || 1;
+    const price = item.unit_price || 0;
+    const discount = item.discount_percent || 0;
+    return qty * price * (1 - discount / 100);
+  }, []);
+
+  const {
+    items, setItems, addItem, removeItem, updateItem: hookUpdateItem,
+    subtotalProducts: proposalSubtotalProducts,
+    totalIpi: proposalTotalIpi,
+    total: proposalTotal,
+    getItemIpiValue: proposalGetItemIpiValue, getItemTotal: proposalGetItemTotal,
+  } = useDocumentItems<Partial<ProposalItem>>({
+    ipiMode: formData.ipi_mode,
+    calculateItemSubtotal: proposalItemSubtotal,
+  });
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [productSearchOpen, setProductSearchOpen] = useState(false);
 
