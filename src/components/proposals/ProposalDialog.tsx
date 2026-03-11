@@ -1261,7 +1261,7 @@ export function ProposalDialog({
                   )}
                   <div className="flex justify-between gap-8 pt-1 border-t">
                     <span className="text-muted-foreground font-medium">Valor Total:</span>
-                    <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+                    <span className="text-2xl font-bold">{formatCurrency(proposalCalculateTotal())}</span>
                   </div>
                 </div>
               </div>
