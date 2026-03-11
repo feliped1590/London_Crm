@@ -22,7 +22,6 @@ import {
   Lightbulb,
   LucideIcon,
   DollarSign,
-  HelpCircle,
   CalendarCheck,
   SearchCheck,
 } from 'lucide-react';
