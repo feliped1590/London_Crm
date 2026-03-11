@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
+import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { calculateSubtotalProducts as calcSubtotal, calculateTotalIpi as calcTotalIpi, calculateTotal as calcTotal } from '@/utils/pricing/totalsCalculations';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
@@ -281,10 +283,10 @@ export function ProposalDialog({
           payment_terms: formData.payment_terms || null,
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
-          total_value: calculateTotal(),
+          total_value: proposalCalculateTotal(),
           ipi_mode: formData.ipi_mode,
-          subtotal_products: calculateSubtotalProducts(),
-          total_ipi: calculateTotalIpi(),
+          subtotal_products: proposalCalculateSubtotalProducts(),
+          total_ipi: proposalCalculateTotalIpi(),
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -367,10 +369,10 @@ export function ProposalDialog({
           payment_terms: formData.payment_terms || null,
           delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null,
-          total_value: calculateTotal(),
+          total_value: proposalCalculateTotal(),
           ipi_mode: formData.ipi_mode,
-          subtotal_products: calculateSubtotalProducts(),
-          total_ipi: calculateTotalIpi(),
+          subtotal_products: proposalCalculateSubtotalProducts(),
+          total_ipi: proposalCalculateTotalIpi(),
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -543,49 +545,17 @@ export function ProposalDialog({
     return qty * price * (1 - discount / 100);
   };
 
-  const calculateIpiValue = (subtotalItem: number, ipiRate: number, ipiMode: IpiMode) => {
-    if (ipiMode === 'isento' || ipiRate <= 0) return 0;
-    if (ipiMode === 'destacar') return subtotalItem * (ipiRate / 100);
-    if (ipiMode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
-    return 0;
-  };
+  // IPI & totals helpers (delegated to shared utils)
+  const getProposalTotalsInput = () => ({
+    items,
+    ipiMode: formData.ipi_mode,
+    getSubtotal: (item: Partial<ProposalItem>) => calculateItemSubtotal(item),
+    getIpiRate: (item: Partial<ProposalItem>) => item.ipi_rate || 0,
+  });
 
-  const calculateItemTotal = (subtotalItem: number, ipiValue: number, ipiMode: IpiMode) => {
-    if (ipiMode === 'destacar') return subtotalItem + ipiValue;
-    return subtotalItem; // incluso and isento: total = subtotal
-  };
-
-  const calculateTotal = () => {
-    const ipiMode = formData.ipi_mode;
-    let subtotalProducts = 0;
-    let totalIpi = 0;
-    
-    items.forEach(item => {
-      const sub = calculateItemSubtotal(item);
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      const ipiVal = calculateIpiValue(sub, ipiRate, ipiMode);
-      subtotalProducts += sub;
-      totalIpi += ipiVal;
-    });
-
-    if (ipiMode === 'destacar') return subtotalProducts + totalIpi;
-    return subtotalProducts;
-  };
-
-  const calculateTotalIpi = () => {
-    const ipiMode = formData.ipi_mode;
-    let totalIpi = 0;
-    items.forEach(item => {
-      const sub = calculateItemSubtotal(item);
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      totalIpi += calculateIpiValue(sub, ipiRate, ipiMode);
-    });
-    return totalIpi;
-  };
-
-  const calculateSubtotalProducts = () => {
-    return items.reduce((sum, item) => sum + calculateItemSubtotal(item), 0);
-  };
+  const proposalCalculateTotal = () => calcTotal(getProposalTotalsInput());
+  const proposalCalculateSubtotalProducts = () => calcSubtotal(getProposalTotalsInput());
+  const proposalCalculateTotalIpi = () => calcTotalIpi(getProposalTotalsInput());
 
   const addProductToItems = () => {
     if (!selectedProductId) return;
@@ -1279,19 +1249,19 @@ export function ProposalDialog({
                 <div className="text-right p-4 bg-muted rounded-lg space-y-1">
                   <div className="flex justify-between gap-8 text-sm">
                     <span className="text-muted-foreground">Subtotal Produtos:</span>
-                    <span>{formatCurrency(calculateSubtotalProducts())}</span>
+                    <span>{formatCurrency(proposalCalculateSubtotalProducts())}</span>
                   </div>
                   {formData.ipi_mode !== 'isento' && (
                     <div className="flex justify-between gap-8 text-sm">
                       <span className="text-muted-foreground">
                         IPI Total {formData.ipi_mode === 'incluso' ? '(informativo)' : ''}:
                       </span>
-                      <span>{formatCurrency(calculateTotalIpi())}</span>
+                      <span>{formatCurrency(proposalCalculateTotalIpi())}</span>
                     </div>
                   )}
                   <div className="flex justify-between gap-8 pt-1 border-t">
                     <span className="text-muted-foreground font-medium">Valor Total:</span>
-                    <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+                    <span className="text-2xl font-bold">{formatCurrency(proposalCalculateTotal())}</span>
                   </div>
                 </div>
               </div>

@@ -17,6 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Truck, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
+import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { calculateSubtotalProducts, calculateTotalIpi, calculateTotal } from '@/utils/pricing/totalsCalculations';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -392,42 +394,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     );
   }, [companyFiscalData]);
 
-  // IPI calculation helpers
-  const calculateIpiValue = (subtotalItem: number, ipiRate: number, mode: IpiMode) => {
-    if (mode === 'isento' || ipiRate <= 0) return 0;
-    if (mode === 'destacar') return subtotalItem * (ipiRate / 100);
-    if (mode === 'incluso') return subtotalItem * (ipiRate / (100 + ipiRate));
-    return 0;
-  };
+  // IPI & totals helpers (delegated to shared utils)
+  const getOrderTotalsInput = () => ({
+    items,
+    ipiMode,
+    getSubtotal: (item: OrderItemDraft) => item.subtotal,
+    getIpiRate: (item: OrderItemDraft) => item.ipi_rate || 0,
+  });
 
-  const calculateItemTotal = (subtotalItem: number, ipiValue: number, mode: IpiMode) => {
-    if (mode === 'destacar') return subtotalItem + ipiValue;
-    return subtotalItem;
-  };
-
-  // Calculate total
-  const calculateTotal = () => {
-    let subtotalProducts = 0;
-    let totalIpi = 0;
-    items.forEach(item => {
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
-      subtotalProducts += item.subtotal;
-      totalIpi += ipiVal;
-    });
-    return ipiMode === 'destacar' ? subtotalProducts + totalIpi : subtotalProducts;
-  };
-
-  const calculateSubtotalProducts = () => items.reduce((sum, item) => sum + item.subtotal, 0);
-
-  const calculateTotalIpi = () => {
-    let totalIpi = 0;
-    items.forEach(item => {
-      const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
-      totalIpi += calculateIpiValue(item.subtotal, ipiRate, ipiMode);
-    });
-    return totalIpi;
-  };
+  const orderCalculateTotal = () => calculateTotal(getOrderTotalsInput());
+  const orderCalculateSubtotalProducts = () => calculateSubtotalProducts(getOrderTotalsInput());
+  const orderCalculateTotalIpi = () => calculateTotalIpi(getOrderTotalsInput());
 
   // Add product to items
   const addProductToItems = () => {
@@ -758,14 +735,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: calculateTotal(),
+          total_value: orderCalculateTotal(),
           status: 'pendente',
           created_by: user?.id,
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
           order_type: orderType,
-          subtotal_products: calculateSubtotalProducts(),
-          total_ipi: calculateTotalIpi(),
+          subtotal_products: orderCalculateSubtotalProducts(),
+          total_ipi: orderCalculateTotalIpi(),
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -862,12 +839,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           contact_id: contactId || null,
           delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
           observations,
-          total_value: calculateTotal(),
+          total_value: orderCalculateTotal(),
           legal_entity_id: legalEntityId || null,
           ipi_mode: ipiMode,
           order_type: orderType,
-          subtotal_products: calculateSubtotalProducts(),
-          total_ipi: calculateTotalIpi(),
+          subtotal_products: orderCalculateSubtotalProducts(),
+          total_ipi: orderCalculateTotalIpi(),
           carrier_id: carrierId || null,
           freight_type: freightType || null,
           delivery_same_as_company: deliverySameAsCompany,
@@ -1214,17 +1191,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <div className="text-right p-4 bg-muted rounded-lg space-y-1">
             <div className="flex justify-between gap-8 text-sm">
               <span className="text-muted-foreground">Subtotal Produtos:</span>
-              <span>{formatCurrency(calculateSubtotalProducts())}</span>
+              <span>{formatCurrency(orderCalculateSubtotalProducts())}</span>
             </div>
             {ipiMode !== 'isento' && (
               <div className="flex justify-between gap-8 text-sm">
                 <span className="text-muted-foreground">IPI Total {ipiMode === 'incluso' ? '(informativo)' : ''}:</span>
-                <span>{formatCurrency(calculateTotalIpi())}</span>
+                <span>{formatCurrency(orderCalculateTotalIpi())}</span>
               </div>
             )}
             <div className="flex justify-between gap-8 pt-1 border-t">
               <span className="text-muted-foreground font-medium">Valor Total:</span>
-              <span className="text-2xl font-bold">{formatCurrency(calculateTotal())}</span>
+              <span className="text-2xl font-bold">{formatCurrency(orderCalculateTotal())}</span>
             </div>
           </div>
         </div>
