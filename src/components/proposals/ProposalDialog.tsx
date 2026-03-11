@@ -776,7 +776,7 @@ export function ProposalDialog({
       }
     }
     
-    updatedItems[index].subtotal = calculateItemSubtotal(updatedItems[index]);
+    updatedItems[index].subtotal = proposalItemSubtotal(updatedItems[index]);
     setItems(updatedItems);
   };
 
