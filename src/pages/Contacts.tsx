@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 
 type Contact = Tables<'contacts'>;
 type Company = Tables<'companies'>;
