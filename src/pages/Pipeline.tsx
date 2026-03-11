@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Calendar, Building2, User, GripVertical, Mail, Send, FileText, History, MessageCircle, LayoutGrid, List, Users, RefreshCw, StickyNote, Activity, Zap, AlertTriangle, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
@@ -959,8 +959,25 @@ export default function Pipeline() {
     }) || [];
   }, [deals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep]);
 
+  const CARDS_PER_PAGE = 5;
+  const [stagePages, setStagePages] = useState<Record<string, number>>({});
+
   const getStageDeals = (stage: DealStage) => filteredDeals.filter(d => d.stage === stage);
   const getStageTotal = (stage: DealStage) => getStageDeals(stage).reduce((sum, d) => sum + (d.value || 0), 0);
+
+  const getStagePage = (stage: DealStage) => stagePages[stage] || 1;
+  const getPagedStageDeals = (stage: DealStage) => {
+    const all = getStageDeals(stage);
+    const page = getStagePage(stage);
+    const start = (page - 1) * CARDS_PER_PAGE;
+    return all.slice(start, start + CARDS_PER_PAGE);
+  };
+  const getStageTotalPages = (stage: DealStage) => Math.max(1, Math.ceil(getStageDeals(stage).length / CARDS_PER_PAGE));
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setStagePages({});
+  }, [filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo, currentPipelineId]);
 
   return (
     <div className="space-y-4 sm:space-y-6 h-full px-2 sm:px-0">
@@ -1518,7 +1535,7 @@ export default function Pipeline() {
               </div>
               <ScrollArea className="flex-1 p-2">
                 <div className="space-y-2">
-                  {getStageDeals(stage).map((deal) => (
+                  {getPagedStageDeals(stage).map((deal) => (
                     <Card
                       key={deal.id}
                       className="cursor-pointer hover:shadow-md transition-shadow"
@@ -1584,6 +1601,31 @@ export default function Pipeline() {
                   ))}
                 </div>
               </ScrollArea>
+              {getStageTotalPages(stage) > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/30 rounded-b-lg">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    disabled={getStagePage(stage) <= 1}
+                    onClick={() => setStagePages(prev => ({ ...prev, [stage]: getStagePage(stage) - 1 }))}
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {getStagePage(stage)}/{getStageTotalPages(stage)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    disabled={getStagePage(stage) >= getStageTotalPages(stage)}
+                    onClick={() => setStagePages(prev => ({ ...prev, [stage]: getStagePage(stage) + 1 }))}
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>
