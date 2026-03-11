@@ -1239,7 +1239,7 @@ export function ProposalDialog({
                       <span className="text-muted-foreground">
                         IPI Total {formData.ipi_mode === 'incluso' ? '(informativo)' : ''}:
                       </span>
-                      <span>{formatCurrency(proposalCalculateTotalIpi())}</span>
+                      <span>{formatCurrency(proposalTotalIpi)}</span>
                     </div>
                   )}
                   <div className="flex justify-between gap-8 pt-1 border-t">
