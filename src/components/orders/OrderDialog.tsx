@@ -1191,7 +1191,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <div className="text-right p-4 bg-muted rounded-lg space-y-1">
             <div className="flex justify-between gap-8 text-sm">
               <span className="text-muted-foreground">Subtotal Produtos:</span>
-              <span>{formatCurrency(calculateSubtotalProducts())}</span>
+              <span>{formatCurrency(orderCalculateSubtotalProducts())}</span>
             </div>
             {ipiMode !== 'isento' && (
               <div className="flex justify-between gap-8 text-sm">
