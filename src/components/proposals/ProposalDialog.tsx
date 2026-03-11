@@ -647,7 +647,7 @@ export function ProposalDialog({
       toast.error('Preço revertido. Apenas administradores podem alterar preços fora da tabela.');
       const updatedItems = [...items];
       updatedItems[index].unit_price = validation.expectedPrice;
-      updatedItems[index].subtotal = calculateItemSubtotal({ ...updatedItems[index], unit_price: validation.expectedPrice });
+      updatedItems[index].subtotal = proposalItemSubtotal({ ...updatedItems[index], unit_price: validation.expectedPrice });
       setItems(updatedItems);
       return;
     }
