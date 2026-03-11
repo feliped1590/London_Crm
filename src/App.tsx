@@ -42,7 +42,7 @@ import Stock from "./pages/Stock";
 import Carriers from "./pages/Carriers";
 import ImportCompanies from "./pages/ImportCompanies";
 
-import Help from "./pages/Help";
+
 import NotFound from "./pages/NotFound";
 
 // Keys estruturais que devem ser persistidas no cache
