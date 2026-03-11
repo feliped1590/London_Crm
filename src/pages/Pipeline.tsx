@@ -47,6 +47,7 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
+import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { formatCNPJ, formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
