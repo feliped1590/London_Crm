@@ -77,7 +77,18 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [contactId, setContactId] = useState<string>('');
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [observations, setObservations] = useState('');
-  const [items, setItems] = useState<OrderItemDraft[]>([]);
+  const orderItemSubtotal = useCallback((item: OrderItemDraft) => item.subtotal, []);
+
+  const {
+    items, setItems, addItem, removeItem, updateItem: hookUpdateItem,
+    subtotalProducts: orderSubtotalProducts,
+    totalIpi: orderTotalIpi,
+    total: orderTotal,
+    getItemIpiValue, getItemTotal,
+  } = useDocumentItems<OrderItemDraft>({
+    ipiMode,
+    calculateItemSubtotal: orderItemSubtotal,
+  });
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [legalEntityId, setLegalEntityId] = useState<string>('');
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
