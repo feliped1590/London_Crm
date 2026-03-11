@@ -42,7 +42,7 @@ import Stock from "./pages/Stock";
 import Carriers from "./pages/Carriers";
 import ImportCompanies from "./pages/ImportCompanies";
 
-import Help from "./pages/Help";
+
 import NotFound from "./pages/NotFound";
 
 // Keys estruturais que devem ser persistidas no cache
@@ -214,7 +214,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/import-companies" element={<ImportCompanies />} />
-                <Route path="/help" element={<Help />} />
+                
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
