@@ -185,7 +185,7 @@ export default function Pipeline() {
         searchTerms: selectedCompanyData.cnpj ? cleanDocument(selectedCompanyData.cnpj) : undefined,
       });
     }
-    companiesSearchResult?.forEach((c: any) => {
+    companiesSearchResult?.forEach((c: { id: string; name: string; cnpj?: string | null }) => {
       if (!map.has(c.id)) {
         map.set(c.id, { value: c.id, label: c.name, searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined });
       }
