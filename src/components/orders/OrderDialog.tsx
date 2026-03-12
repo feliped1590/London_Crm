@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History } from 'lucide-react';
+import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
