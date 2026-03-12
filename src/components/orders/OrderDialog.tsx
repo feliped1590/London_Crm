@@ -324,7 +324,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   // --- Price Validation (shared) ---
   const priceValidation = usePriceValidation({
-    items, setItems, products: products as any,
+    items, setItems, products,
     companyId: companyId || null, contactId: contactId || null,
     calculateItemSubtotal: orderItemSubtotal, isEditMode,
     onSubmitCreate: () => createOrderMutation.mutate(),

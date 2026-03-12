@@ -217,7 +217,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
 
   // --- Price Validation (after products query) ---
   const priceValidation = usePriceValidation({
-    items, setItems, products: products as any,
+    items, setItems, products,
     companyId: companyId || null, contactId: contactId || null,
     calculateItemSubtotal: proposalItemSubtotal, isEditMode: isEditing,
     onSubmitCreate: () => createProposalMutation.mutate(),
