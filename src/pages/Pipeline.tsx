@@ -231,7 +231,7 @@ export default function Pipeline() {
         name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
         expected_close_date: '', company_id: newDealCompanyId, contact_id: null, notes: '',
         pipeline_id: currentPipelineId, legal_entity_id: effectiveLegalEntityId,
-      } as any);
+      });
       setCustomFieldsData({});
       setIsDialogOpen(true);
       searchParams.delete('newDeal');
