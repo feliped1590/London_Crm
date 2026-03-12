@@ -223,15 +223,6 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     onSubmitCreate: () => createProposalMutation.mutate(),
     onSubmitUpdate: () => updateProposalMutation.mutate(),
   });
-    queryKey: ['proposal_items', proposal?.id],
-    queryFn: async () => {
-      if (!proposal) return [];
-      const { data, error } = await supabase.from('proposal_items').select('*, product:products(id, sku, name)').eq('proposal_id', proposal.id).order('sort_order');
-      if (error) throw error;
-      return data as ProposalItem[];
-    },
-    enabled: !!proposal,
-  });
 
   // --- Effects ---
   useEffect(() => {
