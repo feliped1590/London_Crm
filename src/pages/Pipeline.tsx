@@ -372,7 +372,7 @@ export default function Pipeline() {
 
   const handleSendEmail = () => {
     if (!emailTargetDeal || !emailData.subject || !emailData.body) { toast.error('Preencha todos os campos'); return; }
-    const contact = (emailTargetDeal as any).contacts;
+    const contact = emailTargetDeal.contact_id ? contactsSearchResult?.find(c => c.id === emailTargetDeal.contact_id) : null;
     if (!contact?.email) { toast.error('Contato não possui email'); return; }
     sendEmailMutation.mutate({
       to_email: contact.email, subject: emailData.subject, body: emailData.body,
