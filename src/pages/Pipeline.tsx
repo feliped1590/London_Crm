@@ -307,7 +307,7 @@ export default function Pipeline() {
     executeSubmit(cleanedFormData);
   };
 
-  const executeSubmit = (cleanedFormData: any) => {
+  const executeSubmit = (cleanedFormData: Record<string, unknown>) => {
     if (editingDeal) {
       updateMutation.mutate({ id: editingDeal.id, ...cleanedFormData, custom_fields: customFieldsData as Json });
     } else {
