@@ -7,6 +7,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'luc
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import type { ImportCompanyRow } from '@/types/imports';
 
 // Normaliza cabeçalho: remove acentos, lowercase, remove não-alfanuméricos
 function normalizeHeader(str: string): string {
