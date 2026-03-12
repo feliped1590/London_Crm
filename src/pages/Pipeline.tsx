@@ -276,7 +276,7 @@ export default function Pipeline() {
       probability: deal.probability || 10, expected_close_date: deal.expected_close_date || '',
       company_id: deal.company_id, contact_id: deal.contact_id, notes: deal.notes || '',
       legal_entity_id: deal.legal_entity_id || effectiveLegalEntityId,
-    } as any);
+    } as Partial<TablesInsert<'deals'>>);
     setCustomFieldsData(
       typeof deal.custom_fields === 'object' && deal.custom_fields !== null
         ? (deal.custom_fields as Record<string, unknown>) : {}
