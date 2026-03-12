@@ -62,7 +62,7 @@ interface ImportResult {
 
 export default function ImportCompanies() {
   const [file, setFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsedRows, setParsedRows] = useState<ImportCompanyRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult | null>(null);
