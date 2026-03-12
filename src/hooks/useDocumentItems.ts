@@ -58,10 +58,10 @@ export function useDocumentItems<T extends Record<string, any>>(
    * use `setItems` diretamente ou passe um `transform` opcional.
    */
   const updateItem = useCallback(
-    <K extends keyof T & string>(
+    (
       index: number,
-      field: K,
-      value: T[K],
+      field: keyof T & string,
+      value: unknown,
       /** Transformação adicional após setar o campo (ex: recalcular preço) */
       transform?: (item: T) => T,
     ) => {
