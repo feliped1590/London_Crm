@@ -165,23 +165,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return Array.from(map.values()).sort((a, b) => a.first_name.localeCompare(b.first_name));
   }, [contactsRaw, orderContactData]);
 
-  type ProductItem = {
-    id: string; sku: string; name: string; tipo_id: string | null;
-    unit_price: number | null; width: number | null; length: number | null;
-    thickness: number | null; aliquota_ipi: number | null;
-  };
-
   const [productSearch, setProductSearch] = useState('');
   const { data: products } = useQuery({
     queryKey: ['products-active-search', productSearch],
-    queryFn: async (): Promise<ProductItem[]> => {
+    queryFn: async (): Promise<ProductLookup[]> => {
       let query = supabase.from('products')
         .select('id, sku, name, tipo_id, unit_price, width, length, thickness, aliquota_ipi')
         .eq('active', true).order('name').limit(50);
       if (productSearch.trim()) query = query.or(`name.ilike.%${productSearch.trim()}%,sku.ilike.%${productSearch.trim()}%`);
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []) as unknown as ProductItem[];
+      return (data ?? []) as unknown as ProductLookup[];
     },
   });
 
