@@ -263,7 +263,7 @@ export default function Pipeline() {
       name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
       expected_close_date: '', company_id: null, contact_id: null, notes: '',
       legal_entity_id: effectiveLegalEntityId,
-    } as any);
+    });
     setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
