@@ -184,15 +184,6 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     onError: () => toast.error('Erro ao atualizar proposta'),
   });
 
-  // --- Price Validation ---
-  const priceValidation = usePriceValidation({
-    items, setItems, products: products as any,
-    companyId: companyId || null, contactId: contactId || null,
-    calculateItemSubtotal: proposalItemSubtotal, isEditMode: isEditing,
-    onSubmitCreate: () => createProposalMutation.mutate(),
-    onSubmitUpdate: () => updateProposalMutation.mutate(),
-  });
-
   // --- Queries ---
   const { data: dealData } = useQuery({
     queryKey: ['deal_legal_entity', dealId],
@@ -214,6 +205,24 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   });
 
   const { data: existingItems } = useQuery({
+    queryKey: ['proposal_items', proposal?.id],
+    queryFn: async () => {
+      if (!proposal) return [];
+      const { data, error } = await supabase.from('proposal_items').select('*, product:products(id, sku, name)').eq('proposal_id', proposal.id).order('sort_order');
+      if (error) throw error;
+      return data as ProposalItem[];
+    },
+    enabled: !!proposal,
+  });
+
+  // --- Price Validation (after products query) ---
+  const priceValidation = usePriceValidation({
+    items, setItems, products: products as any,
+    companyId: companyId || null, contactId: contactId || null,
+    calculateItemSubtotal: proposalItemSubtotal, isEditMode: isEditing,
+    onSubmitCreate: () => createProposalMutation.mutate(),
+    onSubmitUpdate: () => updateProposalMutation.mutate(),
+  });
     queryKey: ['proposal_items', proposal?.id],
     queryFn: async () => {
       if (!proposal) return [];
