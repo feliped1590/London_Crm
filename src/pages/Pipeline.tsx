@@ -315,7 +315,7 @@ export default function Pipeline() {
         ...cleanedFormData, name: formData.name || '',
         created_by: user?.id, owner_id: user?.id,
         pipeline_id: currentPipelineId,
-        legal_entity_id: cleanedFormData.legal_entity_id || effectiveLegalEntityId || '',
+        legal_entity_id: (cleanedFormData.legal_entity_id as string) || effectiveLegalEntityId || '',
         custom_fields: customFieldsData as Json,
       });
     }
