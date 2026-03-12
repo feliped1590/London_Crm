@@ -202,7 +202,7 @@ export default function Pipeline() {
         searchTerms: selectedContactData.cpf ? cleanDocument(selectedContactData.cpf) : undefined,
       });
     }
-    contactsSearchResult?.forEach((c: any) => {
+    contactsSearchResult?.forEach((c: { id: string; first_name: string; last_name?: string | null; cpf?: string | null }) => {
       if (!map.has(c.id)) {
         map.set(c.id, {
           value: c.id,
