@@ -8,12 +8,12 @@ export interface ProductLookup {
   id: string;
   sku: string;
   name: string;
-  tipo_id: string | null;
-  unit_price: number | null;
-  width: number | null;
-  length: number | null;
-  thickness: number | null;
-  aliquota_ipi: number | null;
+  tipo_id?: string | null;
+  unit_price?: number | null;
+  width?: number | null;
+  length?: number | null;
+  thickness?: number | null;
+  aliquota_ipi?: number | null;
   fator_kg?: number | null;
 }
 
