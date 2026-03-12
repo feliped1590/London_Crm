@@ -126,7 +126,7 @@ export default function ImportCompanies() {
         }
 
         return mappedRow;
-      }).filter((r) => r.name && r.cnpj);
+      }).filter((r): r is ImportCompanyRow => !!(r.name && r.cnpj));
 
       setValidationErrors(errors);
       setParsedRows(mapped);
