@@ -104,7 +104,7 @@ export default function Pipeline() {
   const [interventionModalOpen, setInterventionModalOpen] = useState(false);
   const [interventionData, setInterventionData] = useState<{
     clientName: string; clientOwnerName: string; actionDescription: string;
-    pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: any };
+    pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: Record<string, unknown> };
     clientId: string; clientOwnerId: string;
   } | null>(null);
 
@@ -185,7 +185,7 @@ export default function Pipeline() {
         searchTerms: selectedCompanyData.cnpj ? cleanDocument(selectedCompanyData.cnpj) : undefined,
       });
     }
-    companiesSearchResult?.forEach((c: any) => {
+    companiesSearchResult?.forEach((c: { id: string; name: string; cnpj?: string | null }) => {
       if (!map.has(c.id)) {
         map.set(c.id, { value: c.id, label: c.name, searchTerms: c.cnpj ? cleanDocument(c.cnpj) : undefined });
       }
@@ -202,7 +202,7 @@ export default function Pipeline() {
         searchTerms: selectedContactData.cpf ? cleanDocument(selectedContactData.cpf) : undefined,
       });
     }
-    contactsSearchResult?.forEach((c: any) => {
+    contactsSearchResult?.forEach((c: { id: string; first_name: string; last_name?: string | null; cpf?: string | null }) => {
       if (!map.has(c.id)) {
         map.set(c.id, {
           value: c.id,
@@ -231,7 +231,7 @@ export default function Pipeline() {
         name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
         expected_close_date: '', company_id: newDealCompanyId, contact_id: null, notes: '',
         pipeline_id: currentPipelineId, legal_entity_id: effectiveLegalEntityId,
-      } as any);
+      });
       setCustomFieldsData({});
       setIsDialogOpen(true);
       searchParams.delete('newDeal');
@@ -263,7 +263,7 @@ export default function Pipeline() {
       name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
       expected_close_date: '', company_id: null, contact_id: null, notes: '',
       legal_entity_id: effectiveLegalEntityId,
-    } as any);
+    });
     setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
@@ -275,8 +275,8 @@ export default function Pipeline() {
       name: deal.name, value: deal.value || 0, stage: deal.stage,
       probability: deal.probability || 10, expected_close_date: deal.expected_close_date || '',
       company_id: deal.company_id, contact_id: deal.contact_id, notes: deal.notes || '',
-      legal_entity_id: (deal as any).legal_entity_id || effectiveLegalEntityId,
-    } as any);
+      legal_entity_id: deal.legal_entity_id || effectiveLegalEntityId,
+    } as Partial<TablesInsert<'deals'>>);
     setCustomFieldsData(
       typeof deal.custom_fields === 'object' && deal.custom_fields !== null
         ? (deal.custom_fields as Record<string, unknown>) : {}
@@ -307,7 +307,7 @@ export default function Pipeline() {
     executeSubmit(cleanedFormData);
   };
 
-  const executeSubmit = (cleanedFormData: any) => {
+  const executeSubmit = (cleanedFormData: Record<string, unknown>) => {
     if (editingDeal) {
       updateMutation.mutate({ id: editingDeal.id, ...cleanedFormData, custom_fields: customFieldsData as Json });
     } else {
@@ -315,7 +315,7 @@ export default function Pipeline() {
         ...cleanedFormData, name: formData.name || '',
         created_by: user?.id, owner_id: user?.id,
         pipeline_id: currentPipelineId,
-        legal_entity_id: cleanedFormData.legal_entity_id || effectiveLegalEntityId || '',
+        legal_entity_id: (cleanedFormData.legal_entity_id as string) || effectiveLegalEntityId || '',
         custom_fields: customFieldsData as Json,
       });
     }
@@ -366,13 +366,13 @@ export default function Pipeline() {
   const handleTemplateSelect = (templateId: string) => {
     if (templateId === 'none') { setSelectedTemplateId(null); return; }
     setSelectedTemplateId(templateId);
-    const template = templates?.find((t: any) => t.id === templateId);
+    const template = templates?.find((t: { id: string; subject: string; body: string }) => t.id === templateId);
     if (template) setEmailData({ subject: template.subject, body: template.body });
   };
 
   const handleSendEmail = () => {
     if (!emailTargetDeal || !emailData.subject || !emailData.body) { toast.error('Preencha todos os campos'); return; }
-    const contact = (emailTargetDeal as any).contacts;
+    const contact = emailTargetDeal.contact_id ? contactsSearchResult?.find(c => c.id === emailTargetDeal.contact_id) : null;
     if (!contact?.email) { toast.error('Contato não possui email'); return; }
     sendEmailMutation.mutate({
       to_email: contact.email, subject: emailData.subject, body: emailData.body,

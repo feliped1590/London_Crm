@@ -7,6 +7,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'luc
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import type { ImportCompanyRow } from '@/types/imports';
 
 // Normaliza cabeçalho: remove acentos, lowercase, remove não-alfanuméricos
 function normalizeHeader(str: string): string {
@@ -61,7 +62,7 @@ interface ImportResult {
 
 export default function ImportCompanies() {
   const [file, setFile] = useState<File | null>(null);
-  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [parsedRows, setParsedRows] = useState<ImportCompanyRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<ImportResult | null>(null);
@@ -82,7 +83,7 @@ export default function ImportCompanies() {
       const data = await selectedFile.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: '' });
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' });
 
       if (jsonData.length === 0) {
         toast.error('Arquivo vazio ou sem dados válidos.');
@@ -108,7 +109,7 @@ export default function ImportCompanies() {
       // Mapear dados usando dicionário inteligente
       const errors: { row: number; message: string }[] = [];
       const mapped = jsonData.map((row, index) => {
-        const mappedRow: Record<string, any> = {};
+        const mappedRow: Record<string, string> = {};
         for (const [originalHeader, dbField] of Object.entries(headerToDbField)) {
           if (dbField === 'abertura_cnpj') continue; // campo informativo, não salvar
           const val = row[originalHeader];
@@ -125,7 +126,7 @@ export default function ImportCompanies() {
         }
 
         return mappedRow;
-      }).filter((r) => r.name && r.cnpj);
+      }).filter((r): r is ImportCompanyRow => !!(r.name && r.cnpj));
 
       setValidationErrors(errors);
       setParsedRows(mapped);
@@ -178,8 +179,8 @@ export default function ImportCompanies() {
           totalSkipped += data.skipped || 0;
           if (data.errors) allErrors.push(...data.errors);
         }
-      } catch (err: any) {
-        allErrors.push(`Lote ${i + 1}: ${err.message}`);
+      } catch (err: unknown) {
+        allErrors.push(`Lote ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
       }
 
       setProgress(Math.round(((i + 1) / totalBatches) * 100));

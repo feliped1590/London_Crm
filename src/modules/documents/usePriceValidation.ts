@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { toast } from 'sonner';
+import type { DocumentItemBase, ProductLookup } from '@/types/documents';
 
 export interface PendingPriceChange {
   index: number;
@@ -13,19 +14,22 @@ export interface PendingPriceChange {
   pricingTableName: string;
 }
 
-interface UsePriceValidationOptions {
-  items: any[];
-  setItems: React.Dispatch<React.SetStateAction<any[]>>;
-  products: any[] | undefined;
+interface UsePriceValidationOptions<TItem extends DocumentItemBase, TProduct extends ProductLookup> {
+  items: TItem[];
+  setItems: React.Dispatch<React.SetStateAction<TItem[]>>;
+  products: TProduct[] | undefined;
   companyId: string | null;
   contactId: string | null;
-  calculateItemSubtotal: (item: any) => number;
+  calculateItemSubtotal: (item: TItem) => number;
   isEditMode: boolean;
   onSubmitCreate: () => void;
   onSubmitUpdate: () => void;
 }
 
-export function usePriceValidation(options: UsePriceValidationOptions) {
+export function usePriceValidation<
+  TItem extends DocumentItemBase = DocumentItemBase,
+  TProduct extends ProductLookup = ProductLookup,
+>(options: UsePriceValidationOptions<TItem, TProduct>) {
   const {
     items, setItems, products, companyId, contactId,
     calculateItemSubtotal, isEditMode, onSubmitCreate, onSubmitUpdate,
@@ -87,8 +91,8 @@ export function usePriceValidation(options: UsePriceValidationOptions) {
     if (!isAdmin) {
       toast.error('Preço revertido. Apenas administradores podem alterar preços fora da tabela.');
       const updatedItems = [...items];
-      updatedItems[index].unit_price = validation.expectedPrice;
-      updatedItems[index].subtotal = calculateItemSubtotal({ ...updatedItems[index], unit_price: validation.expectedPrice });
+      (updatedItems[index] as DocumentItemBase).unit_price = validation.expectedPrice;
+      (updatedItems[index] as DocumentItemBase).subtotal = calculateItemSubtotal({ ...updatedItems[index], unit_price: validation.expectedPrice } as TItem);
       setItems(updatedItems);
       return;
     }
@@ -126,15 +130,15 @@ export function usePriceValidation(options: UsePriceValidationOptions) {
         else onSubmitCreate();
       }
     }
-    return justification; // Pass through for caller-specific audit logging
+    return justification;
   }, [pendingPriceChange, pendingSubmit, findNextOutOfRangeItem, isEditMode, onSubmitCreate, onSubmitUpdate]);
 
   const handlePriceOverrideCancel = useCallback(() => {
     if (!pendingPriceChange) return;
     const { index, currentPrice } = pendingPriceChange;
     const updatedItems = [...items];
-    updatedItems[index].unit_price = currentPrice;
-    updatedItems[index].subtotal = calculateItemSubtotal({ ...updatedItems[index], unit_price: currentPrice });
+    (updatedItems[index] as DocumentItemBase).unit_price = currentPrice;
+    (updatedItems[index] as DocumentItemBase).subtotal = calculateItemSubtotal({ ...updatedItems[index], unit_price: currentPrice } as TItem);
     setItems(updatedItems);
 
     if (pendingSubmit) {
@@ -157,10 +161,10 @@ export function usePriceValidation(options: UsePriceValidationOptions) {
         setPendingPriceChange(outOfRange);
         setPendingSubmit(true);
         setShowPriceOverrideModal(true);
-        return false; // Interrupted
+        return false;
       }
     }
-    return true; // OK to proceed
+    return true;
   }, [isAdmin, findNextOutOfRangeItem]);
 
   const getPriceOverrideModalProps = useCallback(() => ({
