@@ -44,20 +44,6 @@ interface OrderDialogProps {
   preSelectedCompanyId?: string | null;
 }
 
-interface OrderItemDraft {
-  id?: string;
-  product_id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  subtotal: number;
-  discount_percent: number;
-  ipi_rate: number;
-  width?: number;
-  length?: number;
-  thickness?: number;
-  calculated_price_source?: 'TABLE' | 'FACTOR_KG' | 'MANUAL';
-}
 
 export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId }: OrderDialogProps) {
   const queryClient = useQueryClient();
