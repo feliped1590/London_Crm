@@ -668,8 +668,8 @@ export function ProposalDialog({
   };
 
   // Direct item update without authorization check
-  const updateItemDirect = (index: number, field: keyof ProposalItem, value: any) => {
-    hookUpdateItem(index, field as string, value);
+  const updateItemDirect = (index: number, field: keyof ProposalItem & string, value: any) => {
+    hookUpdateItem(index, field, value);
   };
 
   // Handle price override confirmation from admin
