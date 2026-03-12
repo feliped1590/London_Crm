@@ -179,8 +179,8 @@ export default function ImportCompanies() {
           totalSkipped += data.skipped || 0;
           if (data.errors) allErrors.push(...data.errors);
         }
-      } catch (err: any) {
-        allErrors.push(`Lote ${i + 1}: ${err.message}`);
+      } catch (err: unknown) {
+        allErrors.push(`Lote ${i + 1}: ${err instanceof Error ? err.message : String(err)}`);
       }
 
       setProgress(Math.round(((i + 1) / totalBatches) * 100));

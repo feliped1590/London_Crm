@@ -5,6 +5,7 @@ import {
   updateItemInList,
   removeItemFromList,
 } from './queryCacheManager';
+import type { RealtimeRecord } from '@/types/realtime';
 
 interface TableSubscriptionConfig {
   table: string;
@@ -49,33 +50,31 @@ function subscribeToTable(
       'postgres_changes',
       { event: '*', schema: 'public', table: config.table },
       (payload) => {
-        // Skip events triggered by the current user's own mutations
-        // to avoid double-updates (local cache was already updated)
-        const record = (payload.new as any) || (payload.old as any);
+        const record = (payload.new as RealtimeRecord | null) || (payload.old as RealtimeRecord | null);
         const eventUserId =
           record?.owner_id || record?.created_by || record?.assigned_to;
-        
-        // For INSERT/UPDATE from the same user, check if cache already has latest data
+
         if (payload.eventType === 'UPDATE' && eventUserId === currentUserId) {
-          const existing = qc.getQueryData<any[]>(config.listQueryKey);
+          const existing = qc.getQueryData<RealtimeRecord[]>(config.listQueryKey);
           if (existing) {
-            const cached = existing.find((item) => item.id === (payload.new as any)?.id);
-            if (cached && cached.updated_at === (payload.new as any)?.updated_at) {
-              return; // Already up to date, skip
+            const newRecord = payload.new as RealtimeRecord | null;
+            const cached = existing.find((item) => item.id === newRecord?.id);
+            if (cached && cached.updated_at === newRecord?.updated_at) {
+              return;
             }
           }
         }
 
         switch (payload.eventType) {
           case 'INSERT': {
-            const newItem = payload.new as any;
+            const newItem = payload.new as RealtimeRecord | null;
             if (newItem?.id) {
               insertItemInList(qc, config.listQueryKey, newItem);
             }
             break;
           }
           case 'UPDATE': {
-            const updated = payload.new as any;
+            const updated = payload.new as RealtimeRecord | null;
             if (updated?.id) {
               updateItemInList(
                 qc,
@@ -88,7 +87,7 @@ function subscribeToTable(
             break;
           }
           case 'DELETE': {
-            const deleted = payload.old as any;
+            const deleted = payload.old as RealtimeRecord | null;
             if (deleted?.id) {
               removeItemFromList(
                 qc,
@@ -101,7 +100,6 @@ function subscribeToTable(
           }
         }
 
-        // Invalidate derived queries (e.g. today-tasks, calendar-tasks)
         if (config.invalidateKeys) {
           config.invalidateKeys.forEach((key) => {
             qc.invalidateQueries({ queryKey: key });
