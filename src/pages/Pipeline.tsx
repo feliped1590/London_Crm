@@ -275,7 +275,7 @@ export default function Pipeline() {
       name: deal.name, value: deal.value || 0, stage: deal.stage,
       probability: deal.probability || 10, expected_close_date: deal.expected_close_date || '',
       company_id: deal.company_id, contact_id: deal.contact_id, notes: deal.notes || '',
-      legal_entity_id: (deal as any).legal_entity_id || effectiveLegalEntityId,
+      legal_entity_id: deal.legal_entity_id || effectiveLegalEntityId,
     } as any);
     setCustomFieldsData(
       typeof deal.custom_fields === 'object' && deal.custom_fields !== null
