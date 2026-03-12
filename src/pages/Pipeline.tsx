@@ -366,7 +366,7 @@ export default function Pipeline() {
   const handleTemplateSelect = (templateId: string) => {
     if (templateId === 'none') { setSelectedTemplateId(null); return; }
     setSelectedTemplateId(templateId);
-    const template = templates?.find((t: any) => t.id === templateId);
+    const template = templates?.find((t: { id: string; subject: string; body: string }) => t.id === templateId);
     if (template) setEmailData({ subject: template.subject, body: template.body });
   };
 
