@@ -40,7 +40,7 @@ export function usePriceValidation(options: UsePriceValidationOptions) {
   const [pendingSubmit, setPendingSubmit] = useState(false);
   const [pendingPriceChange, setPendingPriceChange] = useState<PendingPriceChange | null>(null);
 
-  const getEntityParams = useCallback(() => ({
+  const getEntityParams = useCallback((): { entityType: 'company' | 'contact' | null; entityId: string | null } => ({
     entityType: companyId ? 'company' : contactId ? 'contact' : null,
     entityId: companyId || contactId || null,
   }), [companyId, contactId]);
