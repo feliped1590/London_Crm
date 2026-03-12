@@ -109,7 +109,7 @@ export default function ImportCompanies() {
       // Mapear dados usando dicionário inteligente
       const errors: { row: number; message: string }[] = [];
       const mapped = jsonData.map((row, index) => {
-        const mappedRow: Record<string, any> = {};
+        const mappedRow: Record<string, string> = {};
         for (const [originalHeader, dbField] of Object.entries(headerToDbField)) {
           if (dbField === 'abertura_cnpj') continue; // campo informativo, não salvar
           const val = row[originalHeader];
