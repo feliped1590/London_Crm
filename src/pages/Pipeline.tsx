@@ -104,7 +104,7 @@ export default function Pipeline() {
   const [interventionModalOpen, setInterventionModalOpen] = useState(false);
   const [interventionData, setInterventionData] = useState<{
     clientName: string; clientOwnerName: string; actionDescription: string;
-    pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: any };
+    pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: Record<string, unknown> };
     clientId: string; clientOwnerId: string;
   } | null>(null);
 
