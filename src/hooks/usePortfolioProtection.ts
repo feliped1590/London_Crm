@@ -94,7 +94,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
       // Also check orders
       const { data: orderDetail } = await supabase
         .from('orders')
-        .select('created_at, order_number')
+        .select('created_at, number')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(1)
