@@ -29,7 +29,7 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useModulePermissions();
-  const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
+  const { hasDirectAccess, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
   const { salesReps, allUserSalesReps } = useSalesReps();
 
@@ -96,31 +96,14 @@ export default function CustomerDetail() {
     );
   }
 
-  // Access control
+  // Access control - all can view, only owner/admin can edit
   const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
-  const hasAccess = canAccessBySalesRep(customerSalesRepId);
+  const canEdit = isSalesRepAdmin || hasDirectAccess(customerSalesRepId) || !customerSalesRepId;
+  const isOtherSellerCustomer = !canEdit && !!customerSalesRepId;
 
-  if (!hasAccess && !isSalesRepAdmin) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/customers')}><ArrowLeft className="h-5 w-5" /></Button>
-          <h2 className="text-xl font-semibold">Acesso Restrito</h2>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
-              <AlertCircle className="h-8 w-8 text-destructive" />
-            </div>
-            <h3 className="text-lg font-semibold">Você não tem permissão para acessar este cliente</h3>
-            <p className="text-muted-foreground max-w-md">Este cliente pertence a um vendedor comercial que não está vinculado à sua conta.</p>
-            <Button variant="outline" onClick={() => navigate('/customers')}>Voltar para Clientes</Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Find owner name from sales reps
+  const ownerSalesRep = salesReps?.find(sr => sr.id === customerSalesRepId);
 
   const isErpCustomer = customer.source === 'erp';
   const contacts = customer.contacts || [];
@@ -175,7 +158,7 @@ export default function CustomerDetail() {
               </Button>
             </div>
           )}
-          {!isErpCustomer && (
+          {!isErpCustomer && canEdit && (
             isEditing ? (
               <>
                 <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
@@ -199,6 +182,19 @@ export default function CustomerDetail() {
           <div>
             <p className="text-sm font-medium text-foreground">Cliente sincronizado do ERP</p>
             <p className="text-sm text-muted-foreground">Os dados deste cliente são gerenciados pelo ERP Iniflex e não podem ser editados aqui.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Other seller's customer notice */}
+      {isOtherSellerCustomer && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+          <ShieldCheck className="h-5 w-5 text-amber-600" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
+            </p>
+            <p className="text-sm text-muted-foreground">Você pode visualizar os dados deste cliente, mas apenas o vendedor responsável pode editá-los.</p>
           </div>
         </div>
       )}

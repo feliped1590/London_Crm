@@ -81,7 +81,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isDeveloper } = useModulePermissions();
-  const { mySalesRepIds, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
+  const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,14 +158,9 @@ export default function Customers() {
     }
   }, [sortField]);
 
-  // Main paginated query
-  const allowedSalesRepIds = useMemo(() => {
-    if (isSalesRepAdmin) return null; // null = no restriction
-    return Array.from(mySalesRepIds);
-  }, [isSalesRepAdmin, mySalesRepIds]);
-
+  // Main paginated query - all users see all customers
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage, allowedSalesRepIds],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -180,7 +175,7 @@ export default function Customers() {
         p_sort_dir: sortDirection,
         p_limit: ITEMS_PER_PAGE,
         p_offset: (currentPage - 1) * ITEMS_PER_PAGE,
-        p_allowed_sales_rep_ids: allowedSalesRepIds,
+        p_allowed_sales_rep_ids: null,
       } as any);
       if (error) throw error;
       return data as CustomerRow[];
@@ -670,7 +665,14 @@ export default function Customers() {
                         </TableCell>
                         <TableCell>
                           {customer.owner_name ? (
-                            <span className="text-sm">{customer.owner_name}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm">{customer.owner_name}</span>
+                              {!isSalesRepAdmin && !hasDirectAccess((customer as any).sales_rep_id || null) && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-600">
+                                  Outro vendedor
+                                </Badge>
+                              )}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
