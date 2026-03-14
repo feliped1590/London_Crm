@@ -443,11 +443,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     }
   };
 
+  // Portfolio protection
+  const {
+    isBlocked: isPortfolioBlocked,
+    protectionInfo,
+    showProtectionModal,
+    setShowProtectionModal,
+    checkAccess,
+    isLoaded: protectionLoaded,
+  } = usePortfolioProtection(companyId || undefined);
+
   const handleSubmit = () => {
     if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
       toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
       return;
     }
+    // Check portfolio protection before submitting
+    if (!checkAccess()) return;
     if (!priceValidation.validateBeforeSubmit()) return;
     if (isEditMode) updateOrderMutation.mutate();
     else createOrderMutation.mutate();
