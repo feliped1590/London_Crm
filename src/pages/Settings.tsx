@@ -746,12 +746,6 @@ export default function Settings() {
             <TrendingUp className="h-4 w-4" />
             Metas
           </TabsTrigger>
-          {(isAdmin || isDeveloper) && (
-            <TabsTrigger value="produtividade" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Produtividade
-            </TabsTrigger>
-          )}
           <TabsTrigger value="permissions" className="gap-2">
             <Lock className="h-4 w-4" />
             Usuários e Permissões
