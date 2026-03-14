@@ -47,6 +47,36 @@ export default function CustomerDetail() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleEnrichCompany = async () => {
+    if (!customer?.cnpj) {
+      toast.error('Cliente não possui CNPJ cadastrado');
+      return;
+    }
+    setIsEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-company-single', {
+        body: { company_id: id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        if (data.fields_updated?.length > 0) {
+          toast.success(`${data.message}\nCampos: ${data.fields_updated.join(', ')}`, { duration: 6000 });
+          queryClient.invalidateQueries({ queryKey: ['customer', id] });
+        } else {
+          toast.info(data.message);
+        }
+      } else {
+        toast.error(data?.error || 'Erro ao enriquecer dados');
+      }
+    } catch (err: any) {
+      toast.error('Erro: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsEnriching(false);
+    }
+  };
 
   // Check for pending transfer request
   const { data: pendingTransfer } = useQuery({
