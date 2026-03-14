@@ -468,6 +468,7 @@ export default function Customers() {
         </div>
       </div>
 
+      <LifecyclePanel />
       <CustomerDashboardCards />
       <DashboardCardSettings open={cardSettingsOpen} onOpenChange={setCardSettingsOpen} />
 
