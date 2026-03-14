@@ -271,30 +271,50 @@ export default function Reports() {
 
         {/* Operational Reports Tab */}
         <TabsContent value="operacional" className="space-y-6">
-          <OperationalReportsTab />
+          <div className="flex justify-end">
+            <ExportPDFButton containerId="report-operacional" title="Relatório Operacional" />
+          </div>
+          <div id="report-operacional">
+            <OperationalReportsTab />
+          </div>
         </TabsContent>
 
         {/* Sales Funnel Tab */}
         <TabsContent value="funnel" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SalesFunnelChart />
-            <PipelineVelocityCard />
+          <div className="flex justify-end">
+            <ExportPDFButton containerId="report-funnel" title="Funil de Vendas" />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <LossReasonsChart />
+          <div id="report-funnel">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <SalesFunnelChart />
+              <PipelineVelocityCard />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              <LossReasonsChart />
+            </div>
           </div>
         </TabsContent>
 
         {/* BI Advanced Tab - Only for authorized users */}
         {canAccessBI && (
           <TabsContent value="bi" className="space-y-6">
-            <BIAdvancedTab />
+            <div className="flex justify-end">
+              <ExportPDFButton containerId="report-bi" title="BI Avançado" />
+            </div>
+            <div id="report-bi">
+              <BIAdvancedTab />
+            </div>
           </TabsContent>
         )}
 
         {isAdmin && (
           <TabsContent value="produtividade" className="space-y-6">
-            <SellerProductivityReport />
+            <div className="flex justify-end">
+              <ExportPDFButton containerId="report-produtividade" title="Produtividade Comercial" />
+            </div>
+            <div id="report-produtividade">
+              <SellerProductivityReport />
+            </div>
           </TabsContent>
         )}
 
