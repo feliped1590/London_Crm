@@ -123,7 +123,7 @@ export default function Customers() {
   const [enrichBatchSize, setEnrichBatchSize] = useState(50);
   const [enrichSalesRepId, setEnrichSalesRepId] = useState<string>('all');
   const [enrichPrioritizeAsterisks, setEnrichPrioritizeAsterisks] = useState(true);
-  const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
+  const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, filterLifecycle].filter(Boolean).length;
 
   // Debounce search
   useEffect(() => {
