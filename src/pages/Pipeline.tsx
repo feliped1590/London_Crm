@@ -110,6 +110,14 @@ export default function Pipeline() {
     clientId: string; clientOwnerId: string;
   } | null>(null);
 
+  // Portfolio protection for deals
+  const {
+    protectionInfo,
+    showProtectionModal,
+    setShowProtectionModal,
+    checkAccess: checkPortfolioAccess,
+  } = usePortfolioProtection(formData.company_id || undefined);
+
   // ── Queries that depend on form state (must be at component level) ──
   const { data: selectedCompanyData } = useQuery({
     queryKey: ['company-selected', formData.company_id],
