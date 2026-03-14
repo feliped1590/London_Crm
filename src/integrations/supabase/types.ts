@@ -7527,7 +7527,9 @@ export type Database = {
           interaction_score: number
           notes: number
           orders: number
+          participation_percent: number
           proposals: number
+          rank_position: number
           seller_id: string
           seller_name: string
           stage_changes: number
