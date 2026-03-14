@@ -4,6 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 
+/** Number of days without activity to consider a client inactive */
+export const INACTIVITY_TRANSFER_DAYS = 60;
+
 export interface PortfolioProtectionInfo {
   isBlocked: boolean;
   ownerSalesRepId: string | null;
@@ -16,6 +19,10 @@ export interface PortfolioProtectionInfo {
   } | null;
   companyId: string;
   companyName: string;
+  /** Days since last interaction, null if no activity */
+  daysSinceLastActivity: number | null;
+  /** Whether the client is considered inactive (> INACTIVITY_TRANSFER_DAYS or no activity) */
+  isInactive: boolean;
 }
 
 export function usePortfolioProtection(companyId: string | undefined) {
@@ -52,13 +59,12 @@ export function usePortfolioProtection(companyId: string | undefined) {
     enabled: !!companyId,
   });
 
-  // Get last activity using company_activity_summary (considers activities, tasks, emails, whatsapp, deals)
+  // Get last activity using company_activity_summary
   const { data: lastActivity } = useQuery({
     queryKey: ['company_last_activity', companyId],
     queryFn: async () => {
       if (!companyId) return null;
 
-      // Get last_interaction_at from the unified view
       const { data: summary } = await supabase
         .from('company_activity_summary')
         .select('last_interaction_at, company_created_at')
@@ -68,7 +74,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
       const lastInteraction = summary?.last_interaction_at;
       const companyCreated = summary?.company_created_at;
 
-      // If last_interaction_at equals company created_at, there's no real activity
       if (!lastInteraction || lastInteraction === companyCreated) {
         return null;
       }
@@ -82,7 +87,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
         .limit(1)
         .maybeSingle();
 
-      // Also check deals
       const { data: dealDetail } = await supabase
         .from('deals')
         .select('created_at, name')
@@ -91,7 +95,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
         .limit(1)
         .maybeSingle();
 
-      // Also check orders
       const { data: orderDetail } = await supabase
         .from('orders')
         .select('created_at, number')
@@ -100,7 +103,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
         .limit(1)
         .maybeSingle();
 
-      // Pick the most recent between activity, deal and order
       const actDate = activityDetail?.created_at ? new Date(activityDetail.created_at).getTime() : 0;
       const dealDate = dealDetail?.created_at ? new Date(dealDetail.created_at).getTime() : 0;
       const orderDate = orderDetail?.created_at ? new Date(orderDetail.created_at).getTime() : 0;
@@ -126,7 +128,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
       }
 
       if (activityDetail) {
-        // Get creator name
         let userName: string | null = null;
         if (activityDetail.created_by) {
           const { data: profile } = await supabase
@@ -144,7 +145,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
         };
       }
 
-      // Fallback: show the interaction date from the view
       return {
         date: lastInteraction,
         userName: null,
@@ -159,11 +159,18 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const companySalesRepName = (companyInfo as any)?.sales_reps?.name || null;
   const companyDisplayName = (companyInfo as any)?.fantasia || (companyInfo as any)?.name || '';
 
+  // Calculate inactivity
+  const daysSinceLastActivity = lastActivity?.date
+    ? Math.floor((Date.now() - new Date(lastActivity.date).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const isInactive = daysSinceLastActivity === null || daysSinceLastActivity > INACTIVITY_TRANSFER_DAYS;
+
   // Determine if user is blocked
   const isBlocked = (() => {
     if (isAdmin) return false;
-    if (!companySalesRepId) return false; // No sales rep assigned, allow
-    if (!mySalesRepIds || mySalesRepIds.length === 0) return true; // User has no reps
+    if (!companySalesRepId) return false;
+    if (!mySalesRepIds || mySalesRepIds.length === 0) return true;
     return !mySalesRepIds.includes(companySalesRepId);
   })();
 
@@ -174,12 +181,10 @@ export function usePortfolioProtection(companyId: string | undefined) {
     lastActivity: lastActivity || null,
     companyId: companyId || '',
     companyName: companyDisplayName,
+    daysSinceLastActivity,
+    isInactive,
   };
 
-  /**
-   * Call this before any write action (create note, activity, task).
-   * Returns true if action is allowed, false if blocked (modal shown).
-   */
   const checkAccess = useCallback((): boolean => {
     if (!isBlocked) return true;
     setShowProtectionModal(true);
