@@ -100,7 +100,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
           date: dealDetail.created_at,
           userName: null,
           type: 'Negócio criado',
-          subject: dealDetail.title,
+          subject: dealDetail.name,
         };
       }
 
