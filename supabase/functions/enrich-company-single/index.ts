@@ -110,47 +110,47 @@ Deno.serve(async (req) => {
     const updates: Record<string, any> = {};
     const fieldsUpdated: string[] = [];
 
-    if (shouldUpdate(company.name) && apiData.razao_social) {
+    if (shouldUpdate(company.name) && isUsefulValue(apiData.razao_social)) {
       updates.name = apiData.razao_social;
       fieldsUpdated.push('Razão Social');
     }
-    if (shouldUpdate(company.fantasia) && apiData.nome_fantasia) {
+    if (shouldUpdate(company.fantasia) && isUsefulValue(apiData.nome_fantasia)) {
       updates.fantasia = apiData.nome_fantasia;
       fieldsUpdated.push('Nome Fantasia');
     }
-    if (shouldUpdate(company.address) && apiData.logradouro) {
+    if (shouldUpdate(company.address) && isUsefulValue(apiData.logradouro)) {
       updates.address = apiData.logradouro;
       fieldsUpdated.push('Endereço');
     }
-    if (shouldUpdate(company.address_number) && apiData.numero) {
+    if (shouldUpdate(company.address_number) && isUsefulValue(apiData.numero)) {
       updates.address_number = apiData.numero;
       fieldsUpdated.push('Número');
     }
-    if (shouldUpdate(company.address_complement) && apiData.complemento) {
+    if (shouldUpdate(company.address_complement) && isUsefulValue(apiData.complemento)) {
       updates.address_complement = apiData.complemento;
       fieldsUpdated.push('Complemento');
     }
-    if (shouldUpdate(company.neighborhood) && apiData.bairro) {
+    if (shouldUpdate(company.neighborhood) && isUsefulValue(apiData.bairro)) {
       updates.neighborhood = apiData.bairro;
       fieldsUpdated.push('Bairro');
     }
-    if (shouldUpdate(company.city) && apiData.municipio) {
+    if (shouldUpdate(company.city) && isUsefulValue(apiData.municipio)) {
       updates.city = apiData.municipio;
       fieldsUpdated.push('Cidade');
     }
-    if (shouldUpdate(company.state) && apiData.uf) {
+    if (shouldUpdate(company.state) && isUsefulValue(apiData.uf)) {
       updates.state = apiData.uf;
       fieldsUpdated.push('UF');
     }
-    if (shouldUpdate(company.zip_code) && apiData.cep) {
+    if (shouldUpdate(company.zip_code) && isUsefulValue(apiData.cep)) {
       updates.zip_code = apiData.cep?.replace(/\D/g, '');
       fieldsUpdated.push('CEP');
     }
-    if (shouldUpdate(company.phone) && apiData.ddd_telefone_1) {
+    if (shouldUpdate(company.phone) && isUsefulValue(apiData.ddd_telefone_1)) {
       updates.phone = apiData.ddd_telefone_1?.replace(/\D/g, '');
       fieldsUpdated.push('Telefone');
     }
-    if (shouldUpdate(company.email) && apiData.email) {
+    if (shouldUpdate(company.email) && isUsefulValue(apiData.email)) {
       updates.email = apiData.email;
       fieldsUpdated.push('E-mail');
     }
