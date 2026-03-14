@@ -85,7 +85,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
       // Also check deals
       const { data: dealDetail } = await supabase
         .from('deals')
-        .select('created_at, title')
+        .select('created_at, name')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(1)
