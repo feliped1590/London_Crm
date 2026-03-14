@@ -26,7 +26,7 @@ export function TransferRequestModal({
 }: TransferRequestModalProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { mySalesRepIds } = useSalesReps();
+  
   const [reason, setReason] = useState('');
 
   // Get the requester's default sales rep
