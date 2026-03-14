@@ -7,6 +7,23 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 /** Number of days without activity to consider a client inactive */
 export const INACTIVITY_TRANSFER_DAYS = 60;
 
+/** Hook to get the CRM go-live date from system_settings */
+function useCrmGoLiveDate() {
+  return useQuery({
+    queryKey: ['crm_go_live_date'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'crm_config')
+        .maybeSingle();
+      const dateStr = (data?.value as any)?.crm_go_live_date;
+      return dateStr ? new Date(dateStr) : null;
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+}
+
 export interface PortfolioProtectionInfo {
   isBlocked: boolean;
   ownerSalesRepId: string | null;
