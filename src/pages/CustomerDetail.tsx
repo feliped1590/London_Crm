@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building2, User, Save, Pencil,
   TrendingUp, Clock, FileText, Users, Database,
-  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight,
+  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X,
 } from 'lucide-react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
@@ -27,6 +27,7 @@ import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
+import { toast } from 'sonner';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -60,6 +61,24 @@ export default function CustomerDetail() {
       return data;
     },
     enabled: !!id,
+  });
+
+  const transferQueryClient = useQueryClient();
+  const cancelTransferMutation = useMutation({
+    mutationFn: async () => {
+      if (!pendingTransfer) return;
+      const { error } = await supabase
+        .from('customer_transfer_requests' as any)
+        .update({ status: 'cancelled' })
+        .eq('id', (pendingTransfer as any).id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Solicitação cancelada');
+      transferQueryClient.invalidateQueries({ queryKey: ['pending_transfer', id] });
+      transferQueryClient.invalidateQueries({ queryKey: ['transfer_requests'] });
+    },
+    onError: () => toast.error('Erro ao cancelar solicitação'),
   });
 
   // Company form state
@@ -220,10 +239,22 @@ export default function CustomerDetail() {
           </div>
           <div className="flex items-center gap-2">
             {pendingTransfer ? (
-              <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
-                <Clock className="h-3 w-3" />
-                Transferência pendente
-              </Badge>
+              <>
+                <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
+                  <Clock className="h-3 w-3" />
+                  Transferência pendente
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-destructive"
+                  onClick={() => cancelTransferMutation.mutate()}
+                  disabled={cancelTransferMutation.isPending}
+                >
+                  <X className="h-3 w-3" />
+                  Cancelar
+                </Button>
+              </>
             ) : (
               <Button
                 variant="outline"
