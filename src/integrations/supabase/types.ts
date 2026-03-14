@@ -7799,110 +7799,58 @@ export type Database = {
         }
         Returns: Json
       }
-      search_customers_paginated:
-        | {
-            Args: {
-              p_atividade_id?: string
-              p_city?: string
-              p_limit?: number
-              p_offset?: number
-              p_owner_id?: string
-              p_search?: string
-              p_segmento_id?: string
-              p_setor_id?: string
-              p_sort_dir?: string
-              p_sort_field?: string
-              p_state?: string
-              p_status?: string
-            }
-            Returns: {
-              active: boolean
-              address: string
-              atividade_id: string
-              city: string
-              cnpj: string
-              contact_name: string
-              contacts_count: number
-              contribuinte_ipi: boolean
-              created_at: string
-              custom_fields: Json
-              deals_count: number
-              deals_lost_count: number
-              deals_open_count: number
-              deals_total_value: number
-              deals_won_count: number
-              email: string
-              fantasia: string
-              id: string
-              last_interaction_at: string
-              last_order_at: string
-              name: string
-              owner_id: string
-              owner_name: string
-              phone: string
-              primary_contact_email: string
-              primary_contact_job_title: string
-              primary_contact_mobile: string
-              primary_contact_name: string
-              regiao: string
-              segmento_id: string
-              setor_id: string
-              state: string
-              total_count: number
-            }[]
-          }
-        | {
-            Args: {
-              p_allowed_sales_rep_ids?: string[]
-              p_atividade_id?: string
-              p_city?: string
-              p_limit?: number
-              p_offset?: number
-              p_owner_id?: string
-              p_search?: string
-              p_segmento_id?: string
-              p_setor_id?: string
-              p_sort_dir?: string
-              p_sort_field?: string
-              p_state?: string
-              p_status?: string
-            }
-            Returns: {
-              active: boolean
-              address: string
-              atividade_id: string
-              city: string
-              cnpj: string
-              contact_name: string
-              contacts_count: number
-              contribuinte_ipi: boolean
-              created_at: string
-              custom_fields: Json
-              deals_count: number
-              deals_lost_count: number
-              deals_open_count: number
-              deals_total_value: number
-              deals_won_count: number
-              email: string
-              fantasia: string
-              id: string
-              last_interaction_at: string
-              last_order_at: string
-              name: string
-              owner_id: string
-              owner_name: string
-              phone: string
-              primary_contact_email: string
-              primary_contact_job_title: string
-              primary_contact_mobile: string
-              primary_contact_name: string
-              regiao: string
-              segmento_id: string
-              setor_id: string
-              state: string
-              total_count: number
-            }[]
-          }
+      search_customers_paginated: {
+        Args: {
+          p_allowed_sales_rep_ids?: string[]
+          p_atividade_id?: string
+          p_city?: string
+          p_limit?: number
+          p_offset?: number
+          p_owner_id?: string
+          p_search?: string
+          p_segmento_id?: string
+          p_setor_id?: string
+          p_sort_dir?: string
+          p_sort_field?: string
+          p_state?: string
+          p_status?: string
+        }
+        Returns: {
+          active: boolean
+          address: string
+          atividade_id: string
+          city: string
+          cnpj: string
+          contact_name: string
+          contacts_count: number
+          contribuinte_ipi: boolean
+          created_at: string
+          custom_fields: Json
+          deals_count: number
+          deals_lost_count: number
+          deals_open_count: number
+          deals_total_value: number
+          deals_won_count: number
+          email: string
+          fantasia: string
+          id: string
+          last_interaction_at: string
+          last_order_at: string
+          name: string
+          owner_id: string
+          owner_name: string
+          phone: string
+          primary_contact_email: string
+          primary_contact_job_title: string
+          primary_contact_mobile: string
+          primary_contact_name: string
+          regiao: string
+          segmento_id: string
+          setor_id: string
+          state: string
+          total_count: number
+        }[]
+      }
       search_ncm: {
         Args: { limit_rows?: number; search_term: string }
         Returns: {
