@@ -54,7 +54,7 @@ import { PipelineVelocityCard } from '@/components/reports/PipelineVelocityCard'
 import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
 import { BIAdvancedTab } from '@/components/reports/BIAdvancedTab';
-import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
+
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -260,12 +260,6 @@ export default function Reports() {
             <BarChart3 className="h-4 w-4" />
             Dashboard Personalizado
           </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger value="produtividade" className="gap-2">
-              <Users className="h-4 w-4" />
-              Produtividade Comercial
-            </TabsTrigger>
-          )}
         </TabsList>
 
         {/* Operational Reports Tab */}
@@ -291,12 +285,6 @@ export default function Reports() {
           </TabsContent>
         )}
 
-        {/* Productivity Report Tab - Admin only */}
-        {isAdmin && (
-          <TabsContent value="produtividade" className="space-y-6">
-            <SellerProductivityReport />
-          </TabsContent>
-        )}
 
         {/* Custom Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">

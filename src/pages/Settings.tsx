@@ -38,6 +38,7 @@ import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
+import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
@@ -746,12 +747,6 @@ export default function Settings() {
             <TrendingUp className="h-4 w-4" />
             Metas
           </TabsTrigger>
-          {(isAdmin || isDeveloper) && (
-            <TabsTrigger value="produtividade" className="gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Produtividade
-            </TabsTrigger>
-          )}
           <TabsTrigger value="permissions" className="gap-2">
             <Lock className="h-4 w-4" />
             Usuários e Permissões
@@ -827,7 +822,31 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
-          <SalesGoalsManager />
+          <Tabs defaultValue="goals-sub">
+            <TabsList>
+              <TabsTrigger value="goals-sub" className="gap-2">
+                <Target className="h-4 w-4" />
+                Metas de Vendas
+              </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="productivity-sub" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Produtividade Comercial
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            <TabsContent value="goals-sub" className="mt-4">
+              <SalesGoalsManager />
+            </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="productivity-sub" className="mt-4 space-y-6">
+                <SellerProductivityReport />
+                <ProductivityScoreSettings />
+              </TabsContent>
+            )}
+          </Tabs>
         </TabsContent>
 
 
@@ -1131,11 +1150,6 @@ export default function Settings() {
           
           {isDeveloper && <TaskAlertSettings />}
         </TabsContent>
-        {(isAdmin || isDeveloper) && (
-          <TabsContent value="produtividade" className="mt-6 space-y-6">
-            <ProductivityScoreSettings />
-          </TabsContent>
-        )}
 
 
         <TabsContent value="order-approval" className="mt-6">
