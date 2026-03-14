@@ -256,6 +256,12 @@ export default function Reports() {
               BI Avançado
             </TabsTrigger>
           )}
+          {isAdmin && (
+            <TabsTrigger value="produtividade" className="gap-2">
+              <Users className="h-4 w-4" />
+              Produtividade
+            </TabsTrigger>
+          )}
           <TabsTrigger value="dashboard" className="gap-2">
             <BarChart3 className="h-4 w-4" />
             Dashboard Personalizado
