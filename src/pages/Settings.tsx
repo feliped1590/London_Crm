@@ -677,9 +677,9 @@ export default function Settings() {
 
   const handleEditUser = (userId: string, currentRole: AppRole, fullName: string, email: string) => {
     setEditingUser({ userId, currentRole, fullName, email });
-    setEditUserFormData({
+      setEditUserFormData({
       full_name: fullName,
-      email: email,
+      email: '',
       password: '',
       role: currentRole,
     });
