@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
+import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
 import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
@@ -79,6 +80,7 @@ interface CustomerRow {
 
 export default function Customers() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { isAdmin, isDeveloper } = useModulePermissions();
   const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
@@ -102,6 +104,17 @@ export default function Customers() {
   const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Lifecycle filter from URL
+  const lifecycleFromUrl = searchParams.get('lifecycle') || '';
+  const [filterLifecycle, setFilterLifecycle] = useState(lifecycleFromUrl);
+
+  // Sync URL param changes
+  useEffect(() => {
+    const lc = searchParams.get('lifecycle') || '';
+    setFilterLifecycle(lc);
+    setCurrentPage(1);
+  }, [searchParams]);
+
   const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<any>(null);
@@ -110,7 +123,7 @@ export default function Customers() {
   const [enrichBatchSize, setEnrichBatchSize] = useState(50);
   const [enrichSalesRepId, setEnrichSalesRepId] = useState<string>('all');
   const [enrichPrioritizeAsterisks, setEnrichPrioritizeAsterisks] = useState(true);
-  const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId].filter(Boolean).length;
+  const activeFiltersCount = [filterCity, filterState, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, filterLifecycle].filter(Boolean).length;
 
   // Debounce search
   useEffect(() => {
@@ -164,7 +177,7 @@ export default function Customers() {
 
   // Main paginated query - all users see all customers
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, filterLifecycle, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -175,6 +188,7 @@ export default function Customers() {
         p_setor_id: filterSetorId || null,
         p_segmento_id: filterSegmentoId || null,
         p_atividade_id: filterAtividadeId || null,
+        p_lifecycle_stage: filterLifecycle || null,
         p_sort_field: dbSortField,
         p_sort_dir: sortDirection,
         p_limit: ITEMS_PER_PAGE,
@@ -309,6 +323,8 @@ export default function Customers() {
     setFilterSetorId(null);
     setFilterSegmentoId(null);
     setFilterAtividadeId(null);
+    setFilterLifecycle('');
+    setSearchParams({});
     setCurrentPage(1);
   };
 
@@ -452,6 +468,7 @@ export default function Customers() {
         </div>
       </div>
 
+      <LifecyclePanel />
       <CustomerDashboardCards />
       <DashboardCardSettings open={cardSettingsOpen} onOpenChange={setCardSettingsOpen} />
 
