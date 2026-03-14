@@ -980,6 +980,7 @@ export type Database = {
           is_matriz: boolean | null
           last_reviewed_at: string | null
           legal_entity_id: string | null
+          lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"] | null
           name: string
           neighborhood: string | null
           notes: string | null
@@ -1038,6 +1039,9 @@ export type Database = {
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null
+          lifecycle_stage?:
+            | Database["public"]["Enums"]["lifecycle_stage"]
+            | null
           name: string
           neighborhood?: string | null
           notes?: string | null
@@ -1096,6 +1100,9 @@ export type Database = {
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null
+          lifecycle_stage?:
+            | Database["public"]["Enums"]["lifecycle_stage"]
+            | null
           name?: string
           neighborhood?: string | null
           notes?: string | null
@@ -7923,6 +7930,12 @@ export type Database = {
         | "fechado_ganho"
         | "fechado_perdido"
       ipi_mode: "destacar" | "incluso" | "isento"
+      lifecycle_stage:
+        | "lead"
+        | "prospect"
+        | "customer_active"
+        | "customer_inactive"
+        | "customer_lost"
       modelo_tributario: "legado" | "dual_teste" | "dual_transicao" | "novo"
       order_status:
         | "pendente"
@@ -8185,6 +8198,13 @@ export const Constants = {
         "fechado_perdido",
       ],
       ipi_mode: ["destacar", "incluso", "isento"],
+      lifecycle_stage: [
+        "lead",
+        "prospect",
+        "customer_active",
+        "customer_inactive",
+        "customer_lost",
+      ],
       modelo_tributario: ["legado", "dual_teste", "dual_transicao", "novo"],
       order_status: [
         "pendente",

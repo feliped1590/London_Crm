@@ -7,6 +7,23 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 /** Number of days without activity to consider a client inactive */
 export const INACTIVITY_TRANSFER_DAYS = 60;
 
+/** Hook to get the CRM go-live date from system_settings */
+function useCrmGoLiveDate() {
+  return useQuery({
+    queryKey: ['crm_go_live_date'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'crm_config')
+        .maybeSingle();
+      const dateStr = (data?.value as any)?.crm_go_live_date;
+      return dateStr ? new Date(dateStr) : null;
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+  });
+}
+
 export interface PortfolioProtectionInfo {
   isBlocked: boolean;
   ownerSalesRepId: string | null;
@@ -29,6 +46,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const [showProtectionModal, setShowProtectionModal] = useState(false);
+  const { data: crmGoLiveDate } = useCrmGoLiveDate();
 
   // Get user's linked sales rep IDs
   const { data: mySalesRepIds } = useQuery({
@@ -164,7 +182,22 @@ export function usePortfolioProtection(companyId: string | undefined) {
     ? Math.floor((Date.now() - new Date(lastActivity.date).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const isInactive = daysSinceLastActivity === null || daysSinceLastActivity > INACTIVITY_TRANSFER_DAYS;
+  // Respect CRM go-live date: clients without activity created after go-live are NOT inactive
+  const isInactive = (() => {
+    // Has activity and it's recent enough → active
+    if (daysSinceLastActivity !== null && daysSinceLastActivity <= INACTIVITY_TRANSFER_DAYS) {
+      return false;
+    }
+    // No activity or old activity — check if CRM is still in initial phase
+    if (crmGoLiveDate) {
+      const daysSinceGoLive = Math.floor((Date.now() - crmGoLiveDate.getTime()) / (1000 * 60 * 60 * 24));
+      // If CRM has been live for less than the inactivity threshold, don't mark as inactive
+      if (daysSinceGoLive <= INACTIVITY_TRANSFER_DAYS && daysSinceLastActivity === null) {
+        return false;
+      }
+    }
+    return true;
+  })();
 
   // Determine if user is blocked
   const isBlocked = (() => {
