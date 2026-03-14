@@ -376,13 +376,9 @@ export default function Customers() {
     );
   };
 
-  // Determine last activity considering fallback
+  // Determine last activity - use last_interaction_at directly (already computed by RPC with all sources)
   const getLastActivity = (c: CustomerRow) => {
-    let lastActivity = c.last_interaction_at || null;
-    if (lastActivity && c.created_at && lastActivity === c.created_at) {
-      if (c.last_order_at) lastActivity = c.last_order_at;
-    }
-    return lastActivity;
+    return c.last_interaction_at || null;
   };
 
   return (

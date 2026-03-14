@@ -91,11 +91,32 @@ export function usePortfolioProtection(companyId: string | undefined) {
         .limit(1)
         .maybeSingle();
 
-      // Pick the most recent between activity and deal
+      // Also check orders
+      const { data: orderDetail } = await supabase
+        .from('orders')
+        .select('created_at, number')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // Pick the most recent between activity, deal and order
       const actDate = activityDetail?.created_at ? new Date(activityDetail.created_at).getTime() : 0;
       const dealDate = dealDetail?.created_at ? new Date(dealDetail.created_at).getTime() : 0;
+      const orderDate = orderDetail?.created_at ? new Date(orderDetail.created_at).getTime() : 0;
 
-      if (dealDate > actDate && dealDetail) {
+      const maxDate = Math.max(actDate, dealDate, orderDate);
+
+      if (maxDate === orderDate && orderDate > 0 && orderDetail) {
+        return {
+          date: orderDetail.created_at,
+          userName: null,
+          type: 'Pedido lançado',
+          subject: `Pedido #${orderDetail.number}`,
+        };
+      }
+
+      if (maxDate === dealDate && dealDate > 0 && dealDetail) {
         return {
           date: dealDetail.created_at,
           userName: null,
