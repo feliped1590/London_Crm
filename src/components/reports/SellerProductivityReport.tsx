@@ -327,6 +327,8 @@ export function SellerProductivityReport() {
                     <TableHead className="text-center font-bold">Status</TableHead>
                     <TableHead className="text-center font-bold">Part. %</TableHead>
                     <TableHead className="text-center font-bold">Eficiência</TableHead>
+                    <TableHead className="text-center font-bold">Conv. Proposta</TableHead>
+                    <TableHead className="text-center font-bold">Conv. Pipeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
