@@ -158,7 +158,7 @@ export default function CustomerDetail() {
               </Button>
             </div>
           )}
-          {!isErpCustomer && (
+          {!isErpCustomer && canEdit && (
             isEditing ? (
               <>
                 <Button variant="outline" onClick={() => setIsEditing(false)}>Cancelar</Button>
