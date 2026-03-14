@@ -62,6 +62,7 @@ import {
   METRIC_DEFINITIONS,
 } from '@/types/dashboard';
 import { Json } from '@/integrations/supabase/types';
+import { ExportPDFButton } from '@/components/reports/ExportPDFButton';
 
 const DEFAULT_WIDGETS: WidgetType[] = [
   { id: 'default-1', type: 'pipeline_total', chartType: 'number', title: 'Pipeline Total', size: 'sm', position: 0 },
