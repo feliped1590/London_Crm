@@ -2388,6 +2388,87 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_transfer_requests: {
+        Row: {
+          company_id: string
+          created_at: string
+          from_sales_rep_id: string
+          id: string
+          reason: string
+          requested_by: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          tenant_id: string
+          to_sales_rep_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          from_sales_rep_id: string
+          id?: string
+          reason: string
+          requested_by: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id: string
+          to_sales_rep_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          from_sales_rep_id?: string
+          id?: string
+          reason?: string
+          requested_by?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          tenant_id?: string
+          to_sales_rep_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_transfer_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transfer_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "customer_transfer_requests_from_sales_rep_id_fkey"
+            columns: ["from_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transfer_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transfer_requests_to_sales_rep_id_fkey"
+            columns: ["to_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_audit_log: {
         Row: {
           changed_at: string
@@ -7242,6 +7323,10 @@ export type Database = {
     }
     Functions: {
       admin_kill_session: { Args: { p_session_id: string }; Returns: boolean }
+      approve_transfer_request: {
+        Args: { p_request_id: string; p_review_note?: string }
+        Returns: Json
+      }
       can_access_legal_entity: {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean
