@@ -291,6 +291,11 @@ export default function Reports() {
           </TabsContent>
         )}
 
+        {isAdmin && (
+          <TabsContent value="produtividade" className="space-y-6">
+            <SellerProductivityReport />
+          </TabsContent>
+        )}
 
         {/* Custom Dashboard Tab */}
         <TabsContent value="dashboard" className="space-y-6">

@@ -842,7 +842,6 @@ export default function Settings() {
 
             {(isAdmin || isDeveloper) && (
               <TabsContent value="productivity-sub" className="mt-4 space-y-6">
-                <SellerProductivityReport />
                 <ProductivityScoreSettings />
               </TabsContent>
             )}
