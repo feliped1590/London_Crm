@@ -112,7 +112,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
           date: orderDetail.created_at,
           userName: null,
           type: 'Pedido lançado',
-          subject: `Pedido #${orderDetail.order_number}`,
+          subject: `Pedido #${orderDetail.number}`,
         };
       }
 
