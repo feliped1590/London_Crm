@@ -385,6 +385,16 @@ export function SellerProductivityReport() {
                             {row.efficiency_rate}%
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.proposal_conversion_rate >= 30 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.proposal_conversion_rate}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.pipeline_conversion_rate >= 10 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.pipeline_conversion_rate}%
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
