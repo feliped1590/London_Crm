@@ -81,7 +81,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isDeveloper } = useModulePermissions();
-  const { mySalesRepIds, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
+  const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
