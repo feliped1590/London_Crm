@@ -7637,6 +7637,13 @@ export type Database = {
           valid_until: string
         }[]
       }
+      get_lifecycle_counts: {
+        Args: never
+        Returns: {
+          lifecycle_stage: string
+          total: number
+        }[]
+      }
       get_module_access_type: {
         Args: { _module_key: string; _user_id: string }
         Returns: string
