@@ -13,6 +13,8 @@ export interface SellerProductivityRow {
   rank_position: number;
   participation_percent: number;
   efficiency_rate: number;
+  proposal_conversion_rate: number;
+  pipeline_conversion_rate: number;
   activities: number;
   tasks_created: number;
   tasks_completed: number;

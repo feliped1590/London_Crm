@@ -327,6 +327,8 @@ export function SellerProductivityReport() {
                     <TableHead className="text-center font-bold">Status</TableHead>
                     <TableHead className="text-center font-bold">Part. %</TableHead>
                     <TableHead className="text-center font-bold">Eficiência</TableHead>
+                    <TableHead className="text-center font-bold">Conv. Proposta</TableHead>
+                    <TableHead className="text-center font-bold">Conv. Pipeline</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -381,6 +383,16 @@ export function SellerProductivityReport() {
                         <TableCell className="text-center font-bold">
                           <Badge variant={row.efficiency_rate >= 5 ? 'default' : 'secondary'} className="text-[10px]">
                             {row.efficiency_rate}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.proposal_conversion_rate >= 30 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.proposal_conversion_rate}%
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.pipeline_conversion_rate >= 10 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.pipeline_conversion_rate}%
                           </Badge>
                         </TableCell>
                       </TableRow>

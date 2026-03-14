@@ -7559,6 +7559,8 @@ export type Database = {
           notes: number
           orders: number
           participation_percent: number
+          pipeline_conversion_rate: number
+          proposal_conversion_rate: number
           proposals: number
           rank_position: number
           seller_id: string
