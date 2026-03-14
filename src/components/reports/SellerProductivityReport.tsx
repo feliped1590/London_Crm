@@ -378,6 +378,11 @@ export function SellerProductivityReport() {
                           )}
                         </TableCell>
                         <TableCell className="text-center font-bold">{row.participation_percent}%</TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.efficiency_rate >= 5 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.efficiency_rate}%
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
