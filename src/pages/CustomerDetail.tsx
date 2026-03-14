@@ -29,7 +29,7 @@ export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin } = useModulePermissions();
-  const { canAccessBySalesRep, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
+  const { hasDirectAccess, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
   const { salesReps, allUserSalesReps } = useSalesReps();
 
