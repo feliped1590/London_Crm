@@ -4288,48 +4288,88 @@ export type Database = {
       }
       portfolio_transfers: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string | null
           entity_id: string
           entity_name: string
           entity_type: string
           filter_context: Json | null
+          from_sales_rep_id: string | null
           from_user_id: string | null
           id: string
           notes: string | null
           reason: string | null
+          requested_by: string | null
+          to_sales_rep_id: string | null
           to_user_id: string
+          transfer_request_id: string | null
           transferred_at: string | null
           transferred_by: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           entity_id: string
           entity_name: string
           entity_type: string
           filter_context?: Json | null
+          from_sales_rep_id?: string | null
           from_user_id?: string | null
           id?: string
           notes?: string | null
           reason?: string | null
+          requested_by?: string | null
+          to_sales_rep_id?: string | null
           to_user_id: string
+          transfer_request_id?: string | null
           transferred_at?: string | null
           transferred_by: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string | null
           entity_id?: string
           entity_name?: string
           entity_type?: string
           filter_context?: Json | null
+          from_sales_rep_id?: string | null
           from_user_id?: string | null
           id?: string
           notes?: string | null
           reason?: string | null
+          requested_by?: string | null
+          to_sales_rep_id?: string | null
           to_user_id?: string
+          transfer_request_id?: string | null
           transferred_at?: string | null
           transferred_by?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_transfers_from_sales_rep_id_fkey"
+            columns: ["from_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_transfers_to_sales_rep_id_fkey"
+            columns: ["to_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_transfers_transfer_request_id_fkey"
+            columns: ["transfer_request_id"]
+            isOneToOne: false
+            referencedRelation: "customer_transfer_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pricing_rules: {
         Row: {
