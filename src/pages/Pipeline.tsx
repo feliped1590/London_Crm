@@ -26,6 +26,8 @@ import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationMod
 import { QuickCreateCompanyModal } from '@/components/pipeline/QuickCreateCompanyModal';
 import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContactModal';
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
+import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
+import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
 import { usePipelineData, type Deal, type DealStage } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
@@ -107,6 +109,14 @@ export default function Pipeline() {
     pendingAction: { type: 'CREATE_DEAL' | 'UPDATE_DEAL' | 'MOVE_STAGE'; data: Record<string, unknown> };
     clientId: string; clientOwnerId: string;
   } | null>(null);
+
+  // Portfolio protection for deals
+  const {
+    protectionInfo,
+    showProtectionModal,
+    setShowProtectionModal,
+    checkAccess: checkPortfolioAccess,
+  } = usePortfolioProtection(formData.company_id || undefined);
 
   // ── Queries that depend on form state (must be at component level) ──
   const { data: selectedCompanyData } = useQuery({
@@ -286,6 +296,8 @@ export default function Pipeline() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Check portfolio protection before submitting
+    if (!checkPortfolioAccess()) return;
     const cleanedFormData = { ...formData, expected_close_date: formData.expected_close_date || null };
 
     if (formData.company_id) {
@@ -660,6 +672,12 @@ export default function Pipeline() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PortfolioProtectionModal
+        open={showProtectionModal}
+        onOpenChange={setShowProtectionModal}
+        info={protectionInfo}
+      />
     </div>
   );
 }

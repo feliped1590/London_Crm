@@ -35,6 +35,8 @@ import { DocumentTotals } from '@/components/documents/DocumentTotals';
 import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload, extractLogisticsFromRecord } from '@/components/documents/DocumentLogisticsSection';
 import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
+import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
+import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 
 interface OrderDialogProps {
   open: boolean;
@@ -441,11 +443,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     }
   };
 
+  // Portfolio protection
+  const {
+    isBlocked: isPortfolioBlocked,
+    protectionInfo,
+    showProtectionModal,
+    setShowProtectionModal,
+    checkAccess,
+    isLoaded: protectionLoaded,
+  } = usePortfolioProtection(companyId || undefined);
+
   const handleSubmit = () => {
     if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
       toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
       return;
     }
+    // Check portfolio protection before submitting
+    if (!checkAccess()) return;
     if (!priceValidation.validateBeforeSubmit()) return;
     if (isEditMode) updateOrderMutation.mutate();
     else createOrderMutation.mutate();
@@ -729,6 +743,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       </DialogContent>
 
       <PriceOverrideModal {...priceOverrideProps} />
+
+      <PortfolioProtectionModal
+        open={showProtectionModal}
+        onOpenChange={setShowProtectionModal}
+        info={protectionInfo}
+      />
     </Dialog>
   );
 }
