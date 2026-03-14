@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Trophy, TrendingUp, ArrowUpDown, BarChart3, BarChartHorizontal } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { CalendarIcon, Trophy, TrendingUp, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -22,6 +23,7 @@ import {
   Legend,
   PieChart,
   Pie,
+  ReferenceLine,
 } from 'recharts';
 import {
   useSellerProductivity,
@@ -74,6 +76,7 @@ export function SellerProductivityReport() {
     customEnd,
     setCustomEnd,
     dateRange,
+    targetMap,
   } = useSellerProductivity();
 
   const [sortBy, setSortBy] = useState<SortField>('interaction_score');
@@ -86,11 +89,17 @@ export function SellerProductivityReport() {
     score: row.interaction_score,
     interacoes: row.total_interactions,
     participacao: row.participation_percent,
+    meta: targetMap.get(row.seller_id) ?? null,
   }));
 
   const topSeller = sorted[0];
   const dataKey = sortBy === 'interaction_score' ? 'score' : 'interacoes';
   const dataLabel = sortBy === 'interaction_score' ? 'Score' : 'Interações';
+
+  // Compute average target for reference line (only when sorting by score)
+  const avgTarget = sortBy === 'interaction_score' && targetMap.size > 0
+    ? Math.round([...targetMap.values()].reduce((a, b) => a + b, 0) / targetMap.size)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -214,14 +223,22 @@ export function SellerProductivityReport() {
                 <Tooltip
                   formatter={(value: number, name: string) => [
                     value,
-                    name === 'score' ? 'Score' : 'Interações',
+                    name === 'score' ? 'Score' : name === 'meta' ? 'Meta' : 'Interações',
                   ]}
                 />
                 <Legend />
+                {avgTarget && sortBy === 'interaction_score' && (
+                  <ReferenceLine y={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
+                )}
                 <Bar dataKey={dataKey} name={dataLabel} radius={[6, 6, 0, 0]}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
+                  {chartData.map((entry, i) => {
+                    const target = entry.meta;
+                    const score = entry.score;
+                    const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
+                    return (
+                      <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -238,10 +255,18 @@ export function SellerProductivityReport() {
                   ]}
                 />
                 <Legend />
+                {avgTarget && sortBy === 'interaction_score' && (
+                  <ReferenceLine x={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
+                )}
                 <Bar dataKey={dataKey} name={dataLabel} radius={[0, 6, 6, 0]}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
+                  {chartData.map((entry, i) => {
+                    const target = entry.meta;
+                    const score = entry.score;
+                    const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
+                    return (
+                      <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
+                    );
+                  })}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -298,12 +323,19 @@ export function SellerProductivityReport() {
                     <TableHead className="text-center">Atualiz. Negócios</TableHead>
                     <TableHead className="text-center font-bold">Total</TableHead>
                     <TableHead className="text-center font-bold">Score</TableHead>
+                    <TableHead className="text-center font-bold">Meta</TableHead>
+                    <TableHead className="text-center font-bold">Status</TableHead>
                     <TableHead className="text-center font-bold">Part. %</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {sorted.map((row) => {
                     const rankInfo = RANK_LABELS[row.rank_position];
+                    const target = targetMap.get(row.seller_id);
+                    const hasTarget = target != null;
+                    const metTarget = hasTarget && row.interaction_score >= target;
+                    const progressPct = hasTarget ? Math.min(Math.round((row.interaction_score / target) * 100), 100) : null;
+
                     return (
                       <TableRow key={row.seller_id}>
                         <TableCell className="sticky left-0 bg-background z-10 text-center font-medium">
@@ -329,6 +361,21 @@ export function SellerProductivityReport() {
                         <TableCell className="text-center">{row.deal_updates}</TableCell>
                         <TableCell className="text-center font-bold">{row.total_interactions}</TableCell>
                         <TableCell className="text-center font-bold text-primary">{row.interaction_score}</TableCell>
+                        <TableCell className="text-center">
+                          {hasTarget ? target : <span className="text-muted-foreground text-xs">—</span>}
+                        </TableCell>
+                        <TableCell className="text-center min-w-[120px]">
+                          {hasTarget ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <Badge variant={metTarget ? 'default' : 'destructive'} className="text-[10px]">
+                                {metTarget ? '🟢 Atingida' : '🔴 Abaixo'}
+                              </Badge>
+                              <Progress value={progressPct ?? 0} className="h-1.5 w-20" />
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center font-bold">{row.participation_percent}%</TableCell>
                       </TableRow>
                     );
