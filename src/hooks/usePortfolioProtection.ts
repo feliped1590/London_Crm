@@ -46,6 +46,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
   const [showProtectionModal, setShowProtectionModal] = useState(false);
+  const { data: crmGoLiveDate } = useCrmGoLiveDate();
 
   // Get user's linked sales rep IDs
   const { data: mySalesRepIds } = useQuery({
