@@ -27,6 +27,7 @@ import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
+import { toast } from 'sonner';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
