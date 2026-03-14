@@ -1,0 +1,260 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon, Trophy, TrendingUp, ArrowUpDown } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  Legend,
+} from 'recharts';
+import {
+  useSellerProductivity,
+  type PeriodFilter,
+  type SellerProductivityRow,
+} from '@/hooks/useSellerProductivity';
+
+const PERIOD_OPTIONS: { value: PeriodFilter; label: string }[] = [
+  { value: 'today', label: 'Hoje' },
+  { value: '7days', label: 'Últimos 7 dias' },
+  { value: 'month', label: 'Este mês' },
+  { value: 'custom', label: 'Personalizado' },
+];
+
+const COLORS = [
+  'hsl(var(--primary))',
+  'hsl(210, 70%, 55%)',
+  'hsl(190, 65%, 50%)',
+  'hsl(170, 60%, 45%)',
+  'hsl(150, 55%, 45%)',
+  'hsl(130, 50%, 45%)',
+  'hsl(220, 60%, 60%)',
+  'hsl(240, 50%, 55%)',
+  'hsl(260, 45%, 55%)',
+  'hsl(280, 40%, 55%)',
+];
+
+type SortField = 'interaction_score' | 'total_interactions';
+
+export function SellerProductivityReport() {
+  const {
+    data,
+    isLoading,
+    period,
+    setPeriod,
+    customStart,
+    setCustomStart,
+    customEnd,
+    setCustomEnd,
+    dateRange,
+  } = useSellerProductivity();
+
+  const [sortBy, setSortBy] = useState<SortField>('interaction_score');
+
+  const sorted = [...data].sort((a, b) => b[sortBy] - a[sortBy]);
+
+  const chartData = sorted.map((row) => ({
+    name: row.seller_name.split(' ').slice(0, 2).join(' '),
+    score: row.interaction_score,
+    interacoes: row.total_interactions,
+  }));
+
+  const topSeller = sorted[0];
+
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Período</label>
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIOD_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {period === 'custom' && (
+          <>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[160px] justify-start">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customStart ? format(customStart, 'dd/MM/yyyy') : 'Início'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={customStart} onSelect={setCustomStart} locale={ptBR} />
+              </PopoverContent>
+            </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[160px] justify-start">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customEnd ? format(customEnd, 'dd/MM/yyyy') : 'Fim'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={customEnd} onSelect={setCustomEnd} locale={ptBR} />
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
+
+        <div className="ml-auto text-sm text-muted-foreground">
+          {format(dateRange.start, "dd/MM/yyyy", { locale: ptBR })} — {format(dateRange.end, "dd/MM/yyyy", { locale: ptBR })}
+        </div>
+      </div>
+
+      {/* Top seller highlight */}
+      {topSeller && !isLoading && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-4 py-4">
+            <Trophy className="h-8 w-8 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">Vendedor mais produtivo</p>
+              <p className="text-lg font-bold text-foreground">{topSeller.seller_name}</p>
+            </div>
+            <div className="ml-auto flex gap-6">
+              <div className="text-center">
+                <p className="text-2xl font-bold text-primary">{topSeller.interaction_score}</p>
+                <p className="text-xs text-muted-foreground">Score</p>
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold text-foreground">{topSeller.total_interactions}</p>
+                <p className="text-xs text-muted-foreground">Interações</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Chart */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Ranking de Produtividade
+          </CardTitle>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortField)}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="interaction_score">Por Score</SelectItem>
+              <SelectItem value="total_interactions">Por Interações</SelectItem>
+            </SelectContent>
+          </Select>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-[350px] w-full" />
+          ) : data.length === 0 ? (
+            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+              Nenhuma interação encontrada no período selecionado
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(300, sorted.length * 50)}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" />
+                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 13 }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    value,
+                    name === 'score' ? 'Score' : 'Interações',
+                  ]}
+                />
+                <Legend />
+                <Bar dataKey={sortBy === 'interaction_score' ? 'score' : 'interacoes'} name={sortBy === 'interaction_score' ? 'Score' : 'Interações'} radius={[0, 6, 6, 0]}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Detail table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowUpDown className="h-5 w-5" />
+            Detalhamento por Tipo de Interação
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-[200px] w-full" />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-background z-10">Vendedor</TableHead>
+                    <TableHead className="text-center">Atividades</TableHead>
+                    <TableHead className="text-center">Tarefas Criadas</TableHead>
+                    <TableHead className="text-center">Tarefas Concluídas</TableHead>
+                    <TableHead className="text-center">Mudanças Etapa</TableHead>
+                    <TableHead className="text-center">Propostas</TableHead>
+                    <TableHead className="text-center">Pedidos</TableHead>
+                    <TableHead className="text-center">E-mails</TableHead>
+                    <TableHead className="text-center">Observações</TableHead>
+                    <TableHead className="text-center">Atualiz. Negócios</TableHead>
+                    <TableHead className="text-center font-bold">Total</TableHead>
+                    <TableHead className="text-center font-bold">Score</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sorted.map((row, i) => (
+                    <TableRow key={row.seller_id}>
+                      <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                        <div className="flex items-center gap-2">
+                          {i === 0 && <Badge variant="default" className="text-[10px] px-1">1º</Badge>}
+                          {i === 1 && <Badge variant="secondary" className="text-[10px] px-1">2º</Badge>}
+                          {i === 2 && <Badge variant="outline" className="text-[10px] px-1">3º</Badge>}
+                          {row.seller_name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{row.activities}</TableCell>
+                      <TableCell className="text-center">{row.tasks_created}</TableCell>
+                      <TableCell className="text-center">{row.tasks_completed}</TableCell>
+                      <TableCell className="text-center">{row.stage_changes}</TableCell>
+                      <TableCell className="text-center">{row.proposals}</TableCell>
+                      <TableCell className="text-center">{row.orders}</TableCell>
+                      <TableCell className="text-center">{row.emails}</TableCell>
+                      <TableCell className="text-center">{row.notes}</TableCell>
+                      <TableCell className="text-center">{row.deal_updates}</TableCell>
+                      <TableCell className="text-center font-bold">{row.total_interactions}</TableCell>
+                      <TableCell className="text-center font-bold text-primary">{row.interaction_score}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

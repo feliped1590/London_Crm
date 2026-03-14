@@ -1913,6 +1913,33 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_activity_weights: {
+        Row: {
+          id: string
+          label: string
+          type: string
+          updated_at: string
+          updated_by: string | null
+          weight: number
+        }
+        Insert: {
+          id?: string
+          label: string
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+          weight?: number
+        }
+        Update: {
+          id?: string
+          label?: string
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+          weight?: number
+        }
+        Relationships: []
+      }
       crm_client_addresses: {
         Row: {
           bairro: string | null
@@ -7489,6 +7516,24 @@ export type Database = {
           seller_id: string
           seller_name: string
           total_value_won: number
+        }[]
+      }
+      get_seller_productivity: {
+        Args: { p_end_date: string; p_seller_id?: string; p_start_date: string }
+        Returns: {
+          activities: number
+          deal_updates: number
+          emails: number
+          interaction_score: number
+          notes: number
+          orders: number
+          proposals: number
+          seller_id: string
+          seller_name: string
+          stage_changes: number
+          tasks_completed: number
+          tasks_created: number
+          total_interactions: number
         }[]
       }
       get_session_idle_timeout_minutes: { Args: never; Returns: number }

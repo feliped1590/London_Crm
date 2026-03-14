@@ -37,6 +37,7 @@ import { PortfolioReallocationContent } from '@/components/settings/PortfolioRea
 import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
+import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
@@ -745,6 +746,12 @@ export default function Settings() {
             <TrendingUp className="h-4 w-4" />
             Metas
           </TabsTrigger>
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="produtividade" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Produtividade
+            </TabsTrigger>
+          )}
           <TabsTrigger value="permissions" className="gap-2">
             <Lock className="h-4 w-4" />
             Usuários e Permissões
@@ -1124,6 +1131,11 @@ export default function Settings() {
           
           {isDeveloper && <TaskAlertSettings />}
         </TabsContent>
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="produtividade" className="mt-6 space-y-6">
+            <ProductivityScoreSettings />
+          </TabsContent>
+        )}
 
 
         <TabsContent value="order-approval" className="mt-6">
