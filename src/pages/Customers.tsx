@@ -19,6 +19,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
+import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
 import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
