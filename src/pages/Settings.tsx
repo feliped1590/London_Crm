@@ -1148,6 +1148,12 @@ export default function Settings() {
             <TabsContent value="sales-reps-sub" className="mt-4">
               <SalesRepsManager />
             </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="transfers-sub" className="mt-4">
+                <TransferApprovalsManager />
+              </TabsContent>
+            )}
           </Tabs>
         </TabsContent>
 
