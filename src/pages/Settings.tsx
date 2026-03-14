@@ -479,7 +479,7 @@ export default function Settings() {
       const userIds = roles?.map(r => r.user_id) || [];
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, email')
         .in('user_id', userIds);
       if (profilesError) throw profilesError;
       
