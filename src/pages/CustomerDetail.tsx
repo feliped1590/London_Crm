@@ -303,6 +303,18 @@ export default function CustomerDetail() {
           <CustomerActivitiesTab customerId={id!} isErpCustomer={isErpCustomer} />
         </TabsContent>
       </Tabs>
+
+      {/* Transfer Request Modal */}
+      {isOtherSellerCustomer && customerSalesRepId && ownerSalesRep && (
+        <TransferRequestModal
+          open={isTransferModalOpen}
+          onOpenChange={setIsTransferModalOpen}
+          companyId={id!}
+          companyName={displayName}
+          currentSalesRepId={customerSalesRepId}
+          currentSalesRepName={ownerSalesRep.name}
+        />
+      )}
     </div>
   );
 }
