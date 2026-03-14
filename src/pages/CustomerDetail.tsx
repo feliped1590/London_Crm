@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building2, User, Save, Pencil,
   TrendingUp, Clock, FileText, Users, Database,
-  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package,
+  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight,
 } from 'lucide-react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
@@ -24,6 +26,7 @@ import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
+import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +44,23 @@ export default function CustomerDetail() {
   } = useCustomerDetail(id);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Check for pending transfer request
+  const { data: pendingTransfer } = useQuery({
+    queryKey: ['pending_transfer', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('customer_transfer_requests' as any)
+        .select('id, status, created_at')
+        .eq('company_id', id!)
+        .eq('status', 'pending')
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!id,
+  });
 
   // Company form state
   const [companyForm, setCompanyForm] = useState({
@@ -188,13 +208,33 @@ export default function CustomerDetail() {
 
       {/* Other seller's customer notice */}
       {isOtherSellerCustomer && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
-          <ShieldCheck className="h-5 w-5 text-amber-600" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
-            </p>
-            <p className="text-sm text-muted-foreground">Você pode visualizar os dados deste cliente, mas apenas o vendedor responsável pode editá-los.</p>
+        <div className="flex items-center justify-between gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
+              </p>
+              <p className="text-sm text-muted-foreground">Você pode visualizar os dados, mas apenas o vendedor responsável pode editá-los.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {pendingTransfer ? (
+              <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
+                <Clock className="h-3 w-3" />
+                Transferência pendente
+              </Badge>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => setIsTransferModalOpen(true)}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                Solicitar Transferência
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -263,6 +303,18 @@ export default function CustomerDetail() {
           <CustomerActivitiesTab customerId={id!} isErpCustomer={isErpCustomer} />
         </TabsContent>
       </Tabs>
+
+      {/* Transfer Request Modal */}
+      {isOtherSellerCustomer && customerSalesRepId && ownerSalesRep && (
+        <TransferRequestModal
+          open={isTransferModalOpen}
+          onOpenChange={setIsTransferModalOpen}
+          companyId={id!}
+          companyName={displayName}
+          currentSalesRepId={customerSalesRepId}
+          currentSalesRepName={ownerSalesRep.name}
+        />
+      )}
     </div>
   );
 }

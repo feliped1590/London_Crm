@@ -38,6 +38,7 @@ import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
+import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -1124,6 +1125,12 @@ export default function Settings() {
                 <UserPlus className="h-4 w-4" />
                 Vendedores
               </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="transfers-sub" className="gap-2">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Transferências
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="portfolio-sub" className="mt-4">
@@ -1141,6 +1148,12 @@ export default function Settings() {
             <TabsContent value="sales-reps-sub" className="mt-4">
               <SalesRepsManager />
             </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="transfers-sub" className="mt-4">
+                <TransferApprovalsManager />
+              </TabsContent>
+            )}
           </Tabs>
         </TabsContent>
 
