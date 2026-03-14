@@ -32,11 +32,14 @@ export function TransferApprovalsManager() {
           *,
           companies:company_id(name, fantasia),
           from_rep:from_sales_rep_id(name),
-          to_rep:to_sales_rep_id(name),
-          requester:requested_by(full_name:raw_user_meta_data)
+          to_rep:to_sales_rep_id(name)
         `)
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error('Transfer requests query error:', error);
+        throw error;
+      }
+      console.log('Transfer requests loaded:', data?.length);
       return data || [];
     },
   });
