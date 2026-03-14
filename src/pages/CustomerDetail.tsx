@@ -224,6 +224,17 @@ export default function CustomerDetail() {
                 <Clock className="h-3 w-3" />
                 Transferência pendente
               </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-destructive"
+                onClick={() => cancelTransferMutation.mutate()}
+                disabled={cancelTransferMutation.isPending}
+              >
+                <X className="h-3 w-3" />
+                Cancelar
+              </Button>
+            </div>
             ) : (
               <Button
                 variant="outline"
