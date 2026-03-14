@@ -100,6 +100,13 @@ Deno.serve(async (req) => {
       return !currentValue || hasPlaceholder(currentValue);
     };
 
+    // Check if API value is actually useful (not empty or placeholder)
+    const isUsefulValue = (value: string | null | undefined): boolean => {
+      if (!value || value.trim() === '') return false;
+      if (hasPlaceholder(value)) return false;
+      return true;
+    };
+
     const updates: Record<string, any> = {};
     const fieldsUpdated: string[] = [];
 
