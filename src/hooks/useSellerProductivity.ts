@@ -32,6 +32,13 @@ export interface ActivityWeight {
   updated_by: string | null;
 }
 
+export interface ProductivityTarget {
+  id: string;
+  seller_id: string;
+  period_type: 'week' | 'month';
+  target_score: number;
+}
+
 function getDateRange(period: PeriodFilter, customStart?: Date, customEnd?: Date) {
   const now = new Date();
   switch (period) {
@@ -47,6 +54,10 @@ function getDateRange(period: PeriodFilter, customStart?: Date, customEnd?: Date
         end: customEnd ? endOfDay(customEnd) : endOfDay(now),
       };
   }
+}
+
+function periodToPeriodType(period: PeriodFilter): 'week' | 'month' {
+  return period === '7days' ? 'week' : 'month';
 }
 
 export function useSellerProductivity() {
@@ -88,11 +99,34 @@ export function useSellerProductivity() {
     },
   });
 
+  const periodType = periodToPeriodType(period);
+
+  const { data: targets, isLoading: isLoadingTargets } = useQuery({
+    queryKey: ['productivity-targets', periodType],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('crm_productivity_targets')
+        .select('*')
+        .eq('period_type', periodType);
+      if (error) throw error;
+      return data as unknown as ProductivityTarget[];
+    },
+  });
+
+  const targetMap = useMemo(() => {
+    const map = new Map<string, number>();
+    (targets ?? []).forEach((t) => map.set(t.seller_id, t.target_score));
+    return map;
+  }, [targets]);
+
   return {
     data: data ?? [],
     weights: weights ?? [],
+    targets: targets ?? [],
+    targetMap,
     isLoading,
     isLoadingWeights,
+    isLoadingTargets,
     error,
     period,
     setPeriod,
@@ -103,5 +137,6 @@ export function useSellerProductivity() {
     selectedSellerId,
     setSelectedSellerId,
     dateRange,
+    periodType,
   };
 }
