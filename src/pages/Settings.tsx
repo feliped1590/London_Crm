@@ -37,6 +37,7 @@ import { PortfolioReallocationContent } from '@/components/settings/PortfolioRea
 import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
+import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
