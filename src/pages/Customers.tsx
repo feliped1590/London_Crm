@@ -665,14 +665,7 @@ export default function Customers() {
                         </TableCell>
                         <TableCell>
                           {customer.owner_name ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm">{customer.owner_name}</span>
-                              {!isSalesRepAdmin && !hasDirectAccess((customer as any).sales_rep_id || null) && (
-                                <Badge variant="outline" className="text-[10px] px-1 py-0 border-amber-500/50 text-amber-600">
-                                  Outro vendedor
-                                </Badge>
-                              )}
-                            </div>
+                            <span className="text-sm">{customer.owner_name}</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
