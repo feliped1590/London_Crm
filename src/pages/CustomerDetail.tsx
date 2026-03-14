@@ -186,6 +186,19 @@ export default function CustomerDetail() {
         </div>
       )}
 
+      {/* Other seller's customer notice */}
+      {isOtherSellerCustomer && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+          <ShieldCheck className="h-5 w-5 text-amber-600" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
+            </p>
+            <p className="text-sm text-muted-foreground">Você pode visualizar os dados deste cliente, mas apenas o vendedor responsável pode editá-los.</p>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
         <TabsList className="grid w-full grid-cols-8">
