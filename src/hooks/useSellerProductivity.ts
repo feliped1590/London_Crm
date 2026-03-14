@@ -12,6 +12,7 @@ export interface SellerProductivityRow {
   interaction_score: number;
   rank_position: number;
   participation_percent: number;
+  efficiency_rate: number;
   activities: number;
   tasks_created: number;
   tasks_completed: number;

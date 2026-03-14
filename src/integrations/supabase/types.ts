@@ -7553,6 +7553,7 @@ export type Database = {
         Returns: {
           activities: number
           deal_updates: number
+          efficiency_rate: number
           emails: number
           interaction_score: number
           notes: number

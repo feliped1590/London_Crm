@@ -326,6 +326,7 @@ export function SellerProductivityReport() {
                     <TableHead className="text-center font-bold">Meta</TableHead>
                     <TableHead className="text-center font-bold">Status</TableHead>
                     <TableHead className="text-center font-bold">Part. %</TableHead>
+                    <TableHead className="text-center font-bold">Eficiência</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -377,6 +378,11 @@ export function SellerProductivityReport() {
                           )}
                         </TableCell>
                         <TableCell className="text-center font-bold">{row.participation_percent}%</TableCell>
+                        <TableCell className="text-center font-bold">
+                          <Badge variant={row.efficiency_rate >= 5 ? 'default' : 'secondary'} className="text-[10px]">
+                            {row.efficiency_rate}%
+                          </Badge>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
