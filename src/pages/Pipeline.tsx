@@ -672,6 +672,12 @@ export default function Pipeline() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PortfolioProtectionModal
+        open={showProtectionModal}
+        onOpenChange={setShowProtectionModal}
+        info={protectionInfo}
+      />
     </div>
   );
 }
