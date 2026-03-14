@@ -163,6 +163,11 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
       <p className="text-sm text-muted-foreground">
         Editando <strong>{editingUser.fullName}</strong>
       </p>
+      {editingUser.email && (
+        <p className="text-sm text-muted-foreground">
+          Email atual: <strong>{editingUser.email}</strong>
+        </p>
+      )}
       <div>
         <Label htmlFor="edit-full_name">Nome Completo</Label>
         <Input
