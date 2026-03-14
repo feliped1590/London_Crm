@@ -821,7 +821,31 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="goals" className="mt-6">
-          <SalesGoalsManager />
+          <Tabs defaultValue="goals-sub">
+            <TabsList>
+              <TabsTrigger value="goals-sub" className="gap-2">
+                <Target className="h-4 w-4" />
+                Metas de Vendas
+              </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="productivity-sub" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Produtividade Comercial
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            <TabsContent value="goals-sub" className="mt-4">
+              <SalesGoalsManager />
+            </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="productivity-sub" className="mt-4 space-y-6">
+                <SellerProductivityReport />
+                <ProductivityScoreSettings />
+              </TabsContent>
+            )}
+          </Tabs>
         </TabsContent>
 
 
