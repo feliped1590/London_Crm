@@ -1023,7 +1023,7 @@ export default function Settings() {
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-8 w-8"
-                                    onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, '')}
+                                    onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, ur.profile?.email || '')}
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
