@@ -1131,6 +1131,11 @@ export default function Settings() {
           
           {isDeveloper && <TaskAlertSettings />}
         </TabsContent>
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="produtividade" className="mt-6 space-y-6">
+            <ProductivityScoreSettings />
+          </TabsContent>
+        )}
 
 
         <TabsContent value="order-approval" className="mt-6">
