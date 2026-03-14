@@ -35,6 +35,8 @@ import { DocumentTotals } from '@/components/documents/DocumentTotals';
 import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload, extractLogisticsFromRecord } from '@/components/documents/DocumentLogisticsSection';
 import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
+import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
+import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 
 interface OrderDialogProps {
   open: boolean;
