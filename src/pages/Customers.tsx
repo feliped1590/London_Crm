@@ -104,6 +104,17 @@ export default function Customers() {
   const [filterAtividadeId, setFilterAtividadeId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Lifecycle filter from URL
+  const lifecycleFromUrl = searchParams.get('lifecycle') || '';
+  const [filterLifecycle, setFilterLifecycle] = useState(lifecycleFromUrl);
+
+  // Sync URL param changes
+  useEffect(() => {
+    const lc = searchParams.get('lifecycle') || '';
+    setFilterLifecycle(lc);
+    setCurrentPage(1);
+  }, [searchParams]);
+
   const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<any>(null);
