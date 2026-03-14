@@ -152,8 +152,12 @@ export default function Customers() {
   const dbSortField = useMemo(() => {
     switch (sortField) {
       case 'name': return 'name';
-      case 'created_at': return 'created_at';
+      case 'contact': return 'contact';
+      case 'phone': return 'phone';
+      case 'last_activity': return 'last_activity';
+      case 'deals': return 'deals';
       case 'owner': return 'owner';
+      case 'created_at': return 'created_at';
       default: return 'name';
     }
   }, [sortField]);
