@@ -80,6 +80,7 @@ interface CustomerRow {
 
 export default function Customers() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { isAdmin, isDeveloper } = useModulePermissions();
   const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
