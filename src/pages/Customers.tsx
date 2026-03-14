@@ -323,6 +323,8 @@ export default function Customers() {
     setFilterSetorId(null);
     setFilterSegmentoId(null);
     setFilterAtividadeId(null);
+    setFilterLifecycle('');
+    setSearchParams({});
     setCurrentPage(1);
   };
 
