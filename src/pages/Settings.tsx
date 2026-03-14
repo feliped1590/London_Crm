@@ -1149,7 +1149,6 @@ export default function Settings() {
           
           {isDeveloper && <TaskAlertSettings />}
         </TabsContent>
-        )}
 
 
         <TabsContent value="order-approval" className="mt-6">
