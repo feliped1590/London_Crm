@@ -62,6 +62,24 @@ export default function CustomerDetail() {
     enabled: !!id,
   });
 
+  const transferQueryClient = useQueryClient();
+  const cancelTransferMutation = useMutation({
+    mutationFn: async () => {
+      if (!pendingTransfer) return;
+      const { error } = await supabase
+        .from('customer_transfer_requests' as any)
+        .update({ status: 'cancelled' })
+        .eq('id', (pendingTransfer as any).id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Solicitação cancelada');
+      transferQueryClient.invalidateQueries({ queryKey: ['pending_transfer', id] });
+      transferQueryClient.invalidateQueries({ queryKey: ['transfer_requests'] });
+    },
+    onError: () => toast.error('Erro ao cancelar solicitação'),
+  });
+
   // Company form state
   const [companyForm, setCompanyForm] = useState({
     name: '', fantasia: '', cnpj: '', inscricao_estadual: '',
