@@ -228,6 +228,12 @@ export default function CustomerDetail() {
               </Button>
             </div>
           )}
+          {!isErpCustomer && canEdit && isPJ && !isEditing && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichCompany} disabled={isEnriching}>
+              <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+              {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+            </Button>
+          )}
           {!isErpCustomer && canEdit && (
             isEditing ? (
               <>
