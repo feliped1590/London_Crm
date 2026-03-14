@@ -158,14 +158,9 @@ export default function Customers() {
     }
   }, [sortField]);
 
-  // Main paginated query
-  const allowedSalesRepIds = useMemo(() => {
-    if (isSalesRepAdmin) return null; // null = no restriction
-    return Array.from(mySalesRepIds);
-  }, [isSalesRepAdmin, mySalesRepIds]);
-
+  // Main paginated query - all users see all customers
   const { data: queryResult, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage, allowedSalesRepIds],
+    queryKey: ['customers-paginated', debouncedSearch, statusFilter, filterState, filterCity, filterOwner, filterSetorId, filterSegmentoId, filterAtividadeId, dbSortField, sortDirection, currentPage],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('search_customers_paginated', {
         p_search: debouncedSearch || null,
@@ -180,7 +175,7 @@ export default function Customers() {
         p_sort_dir: sortDirection,
         p_limit: ITEMS_PER_PAGE,
         p_offset: (currentPage - 1) * ITEMS_PER_PAGE,
-        p_allowed_sales_rep_ids: allowedSalesRepIds,
+        p_allowed_sales_rep_ids: null,
       } as any);
       if (error) throw error;
       return data as CustomerRow[];
