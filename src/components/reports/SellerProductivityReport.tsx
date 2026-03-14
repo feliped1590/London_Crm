@@ -326,6 +326,7 @@ export function SellerProductivityReport() {
                     <TableHead className="text-center font-bold">Meta</TableHead>
                     <TableHead className="text-center font-bold">Status</TableHead>
                     <TableHead className="text-center font-bold">Part. %</TableHead>
+                    <TableHead className="text-center font-bold">Eficiência</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
