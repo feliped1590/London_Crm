@@ -182,7 +182,22 @@ export function usePortfolioProtection(companyId: string | undefined) {
     ? Math.floor((Date.now() - new Date(lastActivity.date).getTime()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const isInactive = daysSinceLastActivity === null || daysSinceLastActivity > INACTIVITY_TRANSFER_DAYS;
+  // Respect CRM go-live date: clients without activity created after go-live are NOT inactive
+  const isInactive = (() => {
+    // Has activity and it's recent enough → active
+    if (daysSinceLastActivity !== null && daysSinceLastActivity <= INACTIVITY_TRANSFER_DAYS) {
+      return false;
+    }
+    // No activity or old activity — check if CRM is still in initial phase
+    if (crmGoLiveDate) {
+      const daysSinceGoLive = Math.floor((Date.now() - crmGoLiveDate.getTime()) / (1000 * 60 * 60 * 24));
+      // If CRM has been live for less than the inactivity threshold, don't mark as inactive
+      if (daysSinceGoLive <= INACTIVITY_TRANSFER_DAYS && daysSinceLastActivity === null) {
+        return false;
+      }
+    }
+    return true;
+  })();
 
   // Determine if user is blocked
   const isBlocked = (() => {
