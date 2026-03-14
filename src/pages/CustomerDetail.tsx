@@ -208,13 +208,33 @@ export default function CustomerDetail() {
 
       {/* Other seller's customer notice */}
       {isOtherSellerCustomer && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
-          <ShieldCheck className="h-5 w-5 text-amber-600" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
-            </p>
-            <p className="text-sm text-muted-foreground">Você pode visualizar os dados deste cliente, mas apenas o vendedor responsável pode editá-los.</p>
+        <div className="flex items-center justify-between gap-3 p-4 rounded-lg border border-amber-500/30 bg-amber-500/10">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-amber-600" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Cliente de outro vendedor{ownerSalesRep ? `: ${ownerSalesRep.name}` : ''}
+              </p>
+              <p className="text-sm text-muted-foreground">Você pode visualizar os dados, mas apenas o vendedor responsável pode editá-los.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {pendingTransfer ? (
+              <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
+                <Clock className="h-3 w-3" />
+                Transferência pendente
+              </Badge>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={() => setIsTransferModalOpen(true)}
+              >
+                <ArrowLeftRight className="h-4 w-4" />
+                Solicitar Transferência
+              </Button>
+            )}
           </div>
         </div>
       )}
