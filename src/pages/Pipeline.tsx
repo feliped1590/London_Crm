@@ -26,6 +26,8 @@ import { SLAJustificationModal } from '@/components/pipeline/SLAJustificationMod
 import { QuickCreateCompanyModal } from '@/components/pipeline/QuickCreateCompanyModal';
 import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContactModal';
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
+import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
+import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
 import { usePipelineData, type Deal, type DealStage } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
