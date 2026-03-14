@@ -1125,6 +1125,12 @@ export default function Settings() {
                 <UserPlus className="h-4 w-4" />
                 Vendedores
               </TabsTrigger>
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="transfers-sub" className="gap-2">
+                  <ArrowLeftRight className="h-4 w-4" />
+                  Transferências
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="portfolio-sub" className="mt-4">
