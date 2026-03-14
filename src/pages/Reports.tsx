@@ -260,12 +260,6 @@ export default function Reports() {
             <BarChart3 className="h-4 w-4" />
             Dashboard Personalizado
           </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger value="produtividade" className="gap-2">
-              <Users className="h-4 w-4" />
-              Produtividade Comercial
-            </TabsTrigger>
-          )}
         </TabsList>
 
         {/* Operational Reports Tab */}
