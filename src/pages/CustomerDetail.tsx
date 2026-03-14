@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ArrowLeft, Building2, User, Save, Pencil,
+  ArrowLeft, Building2, User, Save, Pencil, Wand2,
   TrendingUp, Clock, FileText, Users, Database,
   AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X,
 } from 'lucide-react';
@@ -46,6 +47,36 @@ export default function CustomerDetail() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleEnrichCompany = async () => {
+    if (!customer?.cnpj) {
+      toast.error('Cliente não possui CNPJ cadastrado');
+      return;
+    }
+    setIsEnriching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('enrich-company-single', {
+        body: { company_id: id },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        if (data.fields_updated?.length > 0) {
+          toast.success(`${data.message}\nCampos: ${data.fields_updated.join(', ')}`, { duration: 6000 });
+          queryClient.invalidateQueries({ queryKey: ['customer', id] });
+        } else {
+          toast.info(data.message);
+        }
+      } else {
+        toast.error(data?.error || 'Erro ao enriquecer dados');
+      }
+    } catch (err: any) {
+      toast.error('Erro: ' + (err.message || 'Erro desconhecido'));
+    } finally {
+      setIsEnriching(false);
+    }
+  };
 
   // Check for pending transfer request
   const { data: pendingTransfer } = useQuery({
@@ -196,6 +227,12 @@ export default function CustomerDetail() {
                 <CalendarCheck className="h-4 w-4" />
               </Button>
             </div>
+          )}
+          {!isErpCustomer && canEdit && isPJ && !isEditing && (
+            <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrichCompany} disabled={isEnriching}>
+              <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
+              {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+            </Button>
           )}
           {!isErpCustomer && canEdit && (
             isEditing ? (
