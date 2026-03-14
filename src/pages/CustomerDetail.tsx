@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  ArrowLeft, Building2, User, Save, Pencil,
+  ArrowLeft, Building2, User, Save, Pencil, Wand2,
   TrendingUp, Clock, FileText, Users, Database,
   AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X,
 } from 'lucide-react';
