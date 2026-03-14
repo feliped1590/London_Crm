@@ -2238,6 +2238,36 @@ export type Database = {
           },
         ]
       }
+      crm_productivity_targets: {
+        Row: {
+          created_at: string
+          id: string
+          period_type: string
+          seller_id: string
+          target_score: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          period_type?: string
+          seller_id: string
+          target_score?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          period_type?: string
+          seller_id?: string
+          target_score?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       crm_products: {
         Row: {
           ativo: boolean | null
