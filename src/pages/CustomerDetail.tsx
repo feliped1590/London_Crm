@@ -220,21 +220,22 @@ export default function CustomerDetail() {
           </div>
           <div className="flex items-center gap-2">
             {pendingTransfer ? (
-              <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
-                <Clock className="h-3 w-3" />
-                Transferência pendente
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1 text-destructive"
-                onClick={() => cancelTransferMutation.mutate()}
-                disabled={cancelTransferMutation.isPending}
-              >
-                <X className="h-3 w-3" />
-                Cancelar
-              </Button>
-            </div>
+              <>
+                <Badge variant="outline" className="gap-1 border-amber-500/50 text-amber-700 bg-amber-500/10">
+                  <Clock className="h-3 w-3" />
+                  Transferência pendente
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-destructive"
+                  onClick={() => cancelTransferMutation.mutate()}
+                  disabled={cancelTransferMutation.isPending}
+                >
+                  <X className="h-3 w-3" />
+                  Cancelar
+                </Button>
+              </>
             ) : (
               <Button
                 variant="outline"
