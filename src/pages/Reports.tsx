@@ -54,7 +54,7 @@ import { PipelineVelocityCard } from '@/components/reports/PipelineVelocityCard'
 import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
 import { BIAdvancedTab } from '@/components/reports/BIAdvancedTab';
-
+import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
