@@ -163,6 +163,11 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
       <p className="text-sm text-muted-foreground">
         Editando <strong>{editingUser.fullName}</strong>
       </p>
+      {editingUser.email && (
+        <p className="text-sm text-muted-foreground">
+          Email atual: <strong>{editingUser.email}</strong>
+        </p>
+      )}
       <div>
         <Label htmlFor="edit-full_name">Nome Completo</Label>
         <Input
@@ -479,7 +484,7 @@ export default function Settings() {
       const userIds = roles?.map(r => r.user_id) || [];
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, full_name')
+        .select('user_id, full_name, email')
         .in('user_id', userIds);
       if (profilesError) throw profilesError;
       
@@ -672,9 +677,9 @@ export default function Settings() {
 
   const handleEditUser = (userId: string, currentRole: AppRole, fullName: string, email: string) => {
     setEditingUser({ userId, currentRole, fullName, email });
-    setEditUserFormData({
+      setEditUserFormData({
       full_name: fullName,
-      email: email,
+      email: '',
       password: '',
       role: currentRole,
     });
@@ -1023,7 +1028,7 @@ export default function Settings() {
                                     variant="ghost" 
                                     size="icon" 
                                     className="h-8 w-8"
-                                    onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, '')}
+                                    onClick={() => handleEditUser(ur.user_id, ur.role as AppRole, fullName, ur.profile?.email || '')}
                                   >
                                     <Pencil className="h-3 w-3" />
                                   </Button>
