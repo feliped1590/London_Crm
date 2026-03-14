@@ -38,7 +38,7 @@ import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
-import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
+
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 
@@ -842,7 +842,6 @@ export default function Settings() {
 
             {(isAdmin || isDeveloper) && (
               <TabsContent value="productivity-sub" className="mt-4 space-y-6">
-                <SellerProductivityReport />
                 <ProductivityScoreSettings />
               </TabsContent>
             )}
