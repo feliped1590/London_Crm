@@ -44,6 +44,23 @@ export default function CustomerDetail() {
   } = useCustomerDetail(id);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+
+  // Check for pending transfer request
+  const { data: pendingTransfer } = useQuery({
+    queryKey: ['pending_transfer', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('customer_transfer_requests' as any)
+        .select('id, status, created_at')
+        .eq('company_id', id!)
+        .eq('status', 'pending')
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!id,
+  });
 
   // Company form state
   const [companyForm, setCompanyForm] = useState({
