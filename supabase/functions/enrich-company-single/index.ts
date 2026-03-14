@@ -69,7 +69,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const cnpjClean = company.cnpj?.replace(/\D/g, '') || '';
+    let cnpjClean = company.cnpj?.replace(/\D/g, '') || '';
+    // Pad with leading zeros if needed (some CNPJs stored without leading zero)
+    if (cnpjClean.length > 0 && cnpjClean.length < 14) {
+      cnpjClean = cnpjClean.padStart(14, '0');
+    }
     if (cnpjClean.length !== 14) {
       return new Response(JSON.stringify({ success: false, error: 'CNPJ inválido ou ausente' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
