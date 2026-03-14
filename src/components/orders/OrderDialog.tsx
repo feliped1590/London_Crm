@@ -743,6 +743,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       </DialogContent>
 
       <PriceOverrideModal {...priceOverrideProps} />
+
+      <PortfolioProtectionModal
+        open={showProtectionModal}
+        onOpenChange={setShowProtectionModal}
+        info={protectionInfo}
+      />
     </Dialog>
   );
 }
