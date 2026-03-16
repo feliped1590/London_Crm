@@ -282,12 +282,17 @@ export default function Tasks() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const sanitizedData = {
+      ...formData,
+      due_time: formData.due_time || null,
+      due_date: formData.due_date || null,
+    };
     if (editingTask) {
-      updateMutation.mutate({ id: editingTask.id, ...formData });
+      updateMutation.mutate({ id: editingTask.id, ...sanitizedData });
     } else {
       createMutation.mutate({
-        ...formData,
-        title: formData.title || '',
+        ...sanitizedData,
+        title: sanitizedData.title || '',
         created_by: user?.id,
         assigned_to: user?.id,
       });
