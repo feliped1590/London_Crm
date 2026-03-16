@@ -129,7 +129,7 @@ serve(async (req) => {
         cnpj: result.cnpj,
         state: result.estado,
         city: result.cidade,
-        industry: result.cnae_descricao,
+        
         owner_id: finalOwnerId,
         created_by: user.id,
         origin: 'prospecting',
