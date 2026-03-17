@@ -67,7 +67,7 @@ export default function Auth() {
     if (result?.success) {
       setSessionId(result.session_id);
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      navigate('/today', { replace: true });
     } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
       // Race condition fallback — check again
       const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
