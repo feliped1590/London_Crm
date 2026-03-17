@@ -61,11 +61,21 @@ export function ProtectedRoute() {
   const currentPath = '/' + location.pathname.split('/')[1];
   const moduleKey = routeToModuleKey[currentPath];
 
-  if (!isFullyLoaded || !moduleKey || isAdmin) {
-    // While permissions load or for admin/unknown routes, allow full access
+  if (isAdmin || !moduleKey) {
+    // Admin or unknown routes: full access
     const accessType: AccessType = 'total';
     return (
       <ModuleAccessContext.Provider value={{ accessType, hasFullAccess: true, hasRestrictedAccess: false }}>
+        <Outlet />
+      </ModuleAccessContext.Provider>
+    );
+  }
+
+  if (!isFullyLoaded) {
+    // Permissions still loading: render layout with restricted access (safe default)
+    const accessType: AccessType = 'restrito';
+    return (
+      <ModuleAccessContext.Provider value={{ accessType, hasFullAccess: false, hasRestrictedAccess: true }}>
         <Outlet />
       </ModuleAccessContext.Provider>
     );

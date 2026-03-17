@@ -66,11 +66,17 @@ export function AppInitializer({ children }: { children: ReactNode }) {
                 continue;
               }
 
-              // Session definitively invalid
+              // Session definitively invalid — only sign out for confirmed reasons
               if (!result?.valid) {
-                console.warn('App session invalid:', result?.reason);
-                await signOut();
-                return;
+                const definitiveReasons = ['replaced_by_new_login', 'admin_kick', 'manual_logout'];
+                if (definitiveReasons.includes(result?.reason)) {
+                  console.warn('App session definitively invalid:', result?.reason);
+                  await signOut();
+                  return;
+                }
+                // For transient reasons (idle_timeout, unknown), let useSessionGuard retry
+                console.warn('App session issue (non-fatal):', result?.reason);
+                break;
               }
             } catch (err) {
               console.warn(`Session validation attempt ${attempt + 1} exception:`, err);
