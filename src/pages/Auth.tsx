@@ -41,10 +41,9 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user && !showSessionModal && !pendingUserId) {
-      // If user is already logged in and has a session, redirect
       const sid = localStorage.getItem('app_session_id');
       if (sid) {
-        navigate('/dashboard', { replace: true });
+        navigate('/today', { replace: true });
       }
     }
   }, [user, loading, navigate, showSessionModal, pendingUserId]);
