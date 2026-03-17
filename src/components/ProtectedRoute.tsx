@@ -41,12 +41,8 @@ export function ProtectedRoute() {
   const { isFullyLoaded, canAccess, getAccessType, isAdmin } = useModulePermissions();
   const location = useLocation();
 
-  // Check auth first - redirect immediately if no user
-  if (!loading && !user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  if (loading || !isFullyLoaded) {
+  // Auth still loading — show spinner
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -54,12 +50,19 @@ export function ProtectedRoute() {
     );
   }
 
-  // Find the module key for the current route
+  // No user → redirect to auth
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // User exists — render immediately.
+  // If permissions haven't loaded yet, grant temporary full access (non-blocking).
+  // Once permissions load, React Query will trigger a re-render with correct access.
   const currentPath = '/' + location.pathname.split('/')[1];
   const moduleKey = routeToModuleKey[currentPath];
 
-  // If no module key found or user is admin, allow access
-  if (!moduleKey || isAdmin) {
+  if (!isFullyLoaded || !moduleKey || isAdmin) {
+    // While permissions load or for admin/unknown routes, allow full access
     const accessType: AccessType = 'total';
     return (
       <ModuleAccessContext.Provider value={{ accessType, hasFullAccess: true, hasRestrictedAccess: false }}>
@@ -68,12 +71,11 @@ export function ProtectedRoute() {
     );
   }
 
-  // Check if user has access to this module
+  // Permissions loaded — enforce access control
   if (!canAccess(moduleKey)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/today" replace />;
   }
 
-  // Provide access type context to children
   const accessType = getAccessType(moduleKey);
   const hasFullAccess = accessType === 'total';
   const hasRestrictedAccess = accessType === 'restrito';

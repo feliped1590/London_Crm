@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { clearSessionId, getSessionId } from '@/hooks/useSessionGuard';
@@ -20,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -29,7 +28,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -39,48 +37,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error as Error | null };
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        },
+        data: { full_name: fullName },
       },
     });
     return { error: error as Error | null };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-      // Invalidate app session first
       const sessionId = getSessionId();
       if (sessionId) {
         try {
           await supabase.rpc('invalidate_own_session', { p_session_id: sessionId });
-        } catch (_) {
-          // Ignore errors - session cleanup is best-effort
-        }
+        } catch (_) {}
       }
       clearSessionId();
 
-      // Timeout de 3 segundos para evitar travamento no Chrome
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout no logout')), 3000)
       );
-      
+
       await Promise.race([
         supabase.auth.signOut({ scope: 'local' }),
         timeoutPromise
@@ -88,19 +76,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Erro no signOut (continuando com limpeza local):', error);
     } finally {
-      // SEMPRE limpar estado local, independente de erro ou timeout
       setSession(null);
       setUser(null);
       clearSessionId();
-      
-      // Fallback: limpar localStorage manualmente
       const storageKey = `sb-lusyhkizwoihixcvcgap-auth-token`;
       localStorage.removeItem(storageKey);
     }
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user, session, loading, signIn, signUp, signOut
+  }), [user, session, loading, signIn, signUp, signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

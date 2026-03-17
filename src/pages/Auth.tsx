@@ -175,7 +175,7 @@ export default function Auth() {
       setPendingUserId(null);
       setActiveSessionInfo(null);
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      navigate('/today', { replace: true });
     } else {
       toast.error('Erro ao criar nova sessão');
     }
