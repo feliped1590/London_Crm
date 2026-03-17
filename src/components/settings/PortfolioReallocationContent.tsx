@@ -83,16 +83,7 @@ export function PortfolioReallocationContent() {
 
       <ReallocationFilters
         filters={filters}
-        onFiltersChange={(newFilters) => {
-          // Quando seleciona um vendedor, mapear para salesRepId
-          if (newFilters.ownerId && newFilters.ownerId !== filters.ownerId) {
-            setFilters({ ...newFilters, salesRepId: newFilters.ownerId });
-          } else if (!newFilters.ownerId) {
-            setFilters({ ...newFilters, salesRepId: undefined });
-          } else {
-            setFilters(newFilters);
-          }
-        }}
+        onFiltersChange={setFilters}
         onClear={clearFilters}
         availableStates={availableStates || []}
         availableRegions={availableRegions || []}
