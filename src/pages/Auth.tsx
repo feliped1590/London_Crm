@@ -41,10 +41,9 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user && !showSessionModal && !pendingUserId) {
-      // If user is already logged in and has a session, redirect
       const sid = localStorage.getItem('app_session_id');
       if (sid) {
-        navigate('/dashboard', { replace: true });
+        navigate('/today', { replace: true });
       }
     }
   }, [user, loading, navigate, showSessionModal, pendingUserId]);
@@ -68,7 +67,7 @@ export default function Auth() {
     if (result?.success) {
       setSessionId(result.session_id);
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      navigate('/today', { replace: true });
     } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
       // Race condition fallback — check again
       const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
@@ -176,7 +175,7 @@ export default function Auth() {
       setPendingUserId(null);
       setActiveSessionInfo(null);
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      navigate('/today', { replace: true });
     } else {
       toast.error('Erro ao criar nova sessão');
     }
