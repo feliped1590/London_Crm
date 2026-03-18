@@ -39,6 +39,7 @@ import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManag
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
+import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
