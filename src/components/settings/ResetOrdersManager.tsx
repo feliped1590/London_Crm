@@ -20,15 +20,11 @@ export function ResetOrdersManager() {
       return data as {
         success: boolean;
         deleted_orders: number;
-        deleted_items: number;
-        deleted_approvals: number;
-        deleted_audit: number;
-        deleted_fiscal: number;
       };
     },
     onSuccess: (data) => {
       toast.success('Base de pedidos limpa com sucesso', {
-        description: `${data.deleted_orders} pedidos, ${data.deleted_items} itens e ${data.deleted_approvals + data.deleted_audit + data.deleted_fiscal} registros auxiliares removidos.`,
+        description: `${data.deleted_orders} pedidos e registros auxiliares removidos.`,
       });
       setOpen(false);
       setConfirmText('');
