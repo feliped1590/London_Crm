@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2 } from 'lucide-react';
+import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
 import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
@@ -75,6 +76,7 @@ export function DealFormDialog({
   getContactPhone,
   getContactName,
 }: DealFormDialogProps) {
+  const navigate = useNavigate();
   const renderFormFields = (isEditing: boolean) => (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
@@ -129,17 +131,36 @@ export function DealFormDialog({
       </div>
       <div>
         <Label htmlFor="company_id">Empresa</Label>
-        <SearchableSelect
-          options={companyOptions}
-          value={isEditing ? formData.company_id : (formData.company_id || '')}
-          onChange={(v) => setFormData({ ...formData, company_id: isEditing ? v : (v || null), contact_id: null })}
-          placeholder="Buscar empresa..."
-          searchPlaceholder="Nome ou CNPJ..."
-          emptyMessage="Nenhuma empresa encontrada."
-          onCreateNew={onQuickCreateCompany}
-          createNewLabel="Criar nova empresa"
-          onSearchChange={onCompanySearchChange}
-        />
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <SearchableSelect
+              options={companyOptions}
+              value={isEditing ? formData.company_id : (formData.company_id || '')}
+              onChange={(v) => setFormData({ ...formData, company_id: isEditing ? v : (v || null), contact_id: null })}
+              placeholder="Buscar empresa..."
+              searchPlaceholder="Nome ou CNPJ..."
+              emptyMessage="Nenhuma empresa encontrada."
+              onCreateNew={onQuickCreateCompany}
+              createNewLabel="Criar nova empresa"
+              onSearchChange={onCompanySearchChange}
+            />
+          </div>
+          {formData.company_id && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              title="Ver Empresa"
+              onClick={() => {
+                onOpenChange(false);
+                navigate(`/customers/${formData.company_id}`);
+              }}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
       <div>
         <Label htmlFor="contact_id">Contato</Label>
