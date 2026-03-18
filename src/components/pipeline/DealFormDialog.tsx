@@ -76,6 +76,7 @@ export function DealFormDialog({
   getContactPhone,
   getContactName,
 }: DealFormDialogProps) {
+  const navigate = useNavigate();
   const renderFormFields = (isEditing: boolean) => (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
