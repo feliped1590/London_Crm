@@ -73,7 +73,6 @@ export function ResetOrdersManager() {
                   <li>Itens dos pedidos</li>
                   <li>Aprovações de pedidos</li>
                   <li>Logs de auditoria de pedidos</li>
-                  <li>Snapshots fiscais dos itens</li>
                 </ul>
                 <div className="pt-2">
                   <Label htmlFor="confirm-reset" className="text-sm font-medium">
