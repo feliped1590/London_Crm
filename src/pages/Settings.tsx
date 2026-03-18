@@ -792,7 +792,7 @@ export default function Settings() {
               Assistente IA
             </TabsTrigger>
           )}
-          {(isAdmin || isDeveloper) && (
+          {isDeveloper && (
             <TabsTrigger value="maintenance" className="gap-2">
               <Monitor className="h-4 w-4" />
               Manutenção
