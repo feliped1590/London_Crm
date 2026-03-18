@@ -1218,6 +1218,12 @@ export default function Settings() {
             <AIAssistantConfig />
           </TabsContent>
         )}
+
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="maintenance" className="mt-6 space-y-6">
+            <ResetOrdersManager />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
