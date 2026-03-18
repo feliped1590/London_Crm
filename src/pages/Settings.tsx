@@ -792,7 +792,7 @@ export default function Settings() {
               Assistente IA
             </TabsTrigger>
           )}
-          {(isAdmin || isDeveloper) && (
+          {isDeveloper && (
             <TabsTrigger value="maintenance" className="gap-2">
               <Monitor className="h-4 w-4" />
               Manutenção
@@ -1225,7 +1225,7 @@ export default function Settings() {
           </TabsContent>
         )}
 
-        {(isAdmin || isDeveloper) && (
+        {isDeveloper && (
           <TabsContent value="maintenance" className="mt-6 space-y-6">
             <ResetOrdersManager />
           </TabsContent>
