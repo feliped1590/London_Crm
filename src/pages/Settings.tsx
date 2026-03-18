@@ -39,6 +39,7 @@ import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManag
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
+import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -791,6 +792,12 @@ export default function Settings() {
               Assistente IA
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="maintenance" className="gap-2">
+              <Monitor className="h-4 w-4" />
+              Manutenção
+            </TabsTrigger>
+          )}
         </TabsList>
 
 
@@ -1215,6 +1222,12 @@ export default function Settings() {
         {isDeveloper && (
           <TabsContent value="ai-assistant" className="mt-6 space-y-6">
             <AIAssistantConfig />
+          </TabsContent>
+        )}
+
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="maintenance" className="mt-6 space-y-6">
+            <ResetOrdersManager />
           </TabsContent>
         )}
       </Tabs>

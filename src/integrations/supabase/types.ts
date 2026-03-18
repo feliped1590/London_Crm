@@ -7813,6 +7813,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reset_orders: { Args: never; Returns: Json }
       search_customers_paginated:
         | {
             Args: {
