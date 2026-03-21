@@ -7826,6 +7826,10 @@ export type Database = {
         Returns: Json
       }
       reset_orders: { Args: never; Returns: Json }
+      resolve_user_for_sales_rep: {
+        Args: { p_operation_context?: string; p_sales_rep_id: string }
+        Returns: string
+      }
       search_customers_paginated: {
         Args: {
           p_allowed_sales_rep_ids?: string[]
