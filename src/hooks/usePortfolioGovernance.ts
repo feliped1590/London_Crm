@@ -2,6 +2,7 @@ import { useAuth } from './useAuth';
 import { useModulePermissions } from './useModulePermissions';
 import { useSalesRepAccess } from './useSalesRepAccess';
 import { supabase } from '@/integrations/supabase/client';
+import { logOwnershipWarning } from '@/lib/ownership';
 
 export interface ClientOwnershipResult {
   isOwner: boolean;
@@ -39,7 +40,7 @@ export function usePortfolioGovernance() {
     // First fetch the company using sales_rep_id as the source of truth
     const { data: company, error } = await supabase
       .from('companies')
-      .select('id, name, sales_rep_id')
+      .select('id, name, sales_rep_id, owner_id')
       .eq('id', companyId)
       .maybeSingle();
 
@@ -57,13 +58,32 @@ export function usePortfolioGovernance() {
         .maybeSingle();
 
       ownerName = salesRep?.name || null;
+    } else if (company.owner_id) {
+      // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', company.owner_id)
+        .maybeSingle();
+
+      ownerName = profile?.full_name || null;
     }
 
-    const isOwner = !company.sales_rep_id || hasDirectAccess(company.sales_rep_id);
+    const isOwner = company.sales_rep_id
+      ? hasDirectAccess(company.sales_rep_id)
+      : company.owner_id === user.id;
+
+    if (company.sales_rep_id && !isOwner && !isAdmin) {
+      logOwnershipWarning('Inconsistência de ownership detectada para companhia CRM', {
+        companyId,
+        salesRepId: company.sales_rep_id,
+        userId: user.id,
+      });
+    }
 
     return {
       isOwner,
-      ownerId: company.sales_rep_id,
+      ownerId: company.sales_rep_id || company.owner_id,
       ownerName,
       clientName: company.name,
     };

@@ -23,6 +23,7 @@ import type { UnifiedCustomer } from '@/hooks/useCustomerDetail';
 import type { Json } from '@/integrations/supabase/types';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { resolveUserForSalesRep } from '@/lib/ownership';
 
 const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 
@@ -226,30 +227,23 @@ export function CustomerOverviewTab({
                     value={salesRepId || ''}
                     onValueChange={async (v) => {
                       const nextSalesRepId = v || null;
-                      let legacyOwnerId: string | null = null;
-
-                      if (nextSalesRepId) {
-                        const { data: links, error: linksError } = await supabase
-                          .from('user_sales_reps')
-                          .select('user_id, is_default, created_at')
-                          .eq('sales_rep_id', nextSalesRepId)
-                          .order('is_default', { ascending: false })
-                          .order('created_at', { ascending: true });
-
-                        if (linksError) {
-                          toast.error('Erro ao resolver usuário legado do vendedor');
-                          return;
-                        }
-
-                        legacyOwnerId = links?.[0]?.user_id || null;
-                      }
+                      const legacyOwnerId = await resolveUserForSalesRep(
+                        nextSalesRepId,
+                        'CustomerOverviewTab:update_sales_rep',
+                      );
 
                       const updateData: Record<string, string | null> = {
                         sales_rep_id: nextSalesRepId,
                       };
 
                       if (legacyOwnerId) {
+                        // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
                         updateData.owner_id = legacyOwnerId;
+                      } else if (nextSalesRepId) {
+                        console.warn('Sales_rep sem usuário vinculado durante operação crítica', {
+                          salesRepId: nextSalesRepId,
+                          operationContext: 'CustomerOverviewTab:update_sales_rep',
+                        });
                       }
 
                       const { error } = await supabase.from('companies').update(updateData).eq('id', customerId);
@@ -284,6 +278,7 @@ export function CustomerOverviewTab({
           <CardContent>
             <div className="flex items-center gap-4">
               <div className="w-[300px]">
+                {/* LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership. */}
                 <SearchableSelect
                   options={(sellers || []).map(s => ({ value: s.id, label: s.full_name }))}
                   value={selectValue === 'none' ? null : selectValue}
