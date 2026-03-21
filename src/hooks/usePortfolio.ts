@@ -40,7 +40,7 @@ export interface PortfolioTransfer {
   entity_id: string;
   entity_name: string;
   from_user_id: string | null;
-  to_user_id: string;
+  to_user_id: string | null;
   transferred_by: string;
   transferred_at: string;
   notes: string | null;
@@ -155,7 +155,7 @@ export function usePortfolio() {
         else if (item.type === 'contact') tableName = 'contacts';
         else tableName = 'deals';
 
-        // Build update: sales_rep_id apenas para empresas, owner_id para todos
+        // sales_rep_id remains the commercial ownership source; owner_id is legacy compatibility only
         const updateData: Record<string, any> = {};
         if (targetUserId) updateData.owner_id = targetUserId;
         if (item.type === 'company') updateData.sales_rep_id = request.toSalesRepId;
@@ -171,7 +171,7 @@ export function usePortfolio() {
           entity_id: item.id,
           entity_name: item.name,
           from_user_id: fromUserId,
-          to_user_id: targetUserId || request.toSalesRepId,
+          to_user_id: targetUserId,
           transferred_by: user.id,
           notes: request.notes
         });

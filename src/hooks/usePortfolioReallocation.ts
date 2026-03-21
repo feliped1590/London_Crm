@@ -8,7 +8,7 @@ export const ITEMS_PER_PAGE = 25;
 export interface ReallocationFilters {
   states?: string[];
   regions?: string[];
-  ownerId?: string; // agora referencia sales_rep_id na UI, mas resolve para user_id no filtro
+  ownerId?: string;
   salesRepId?: string; // novo: referência direta ao sales_rep
   noOwner?: boolean;
   minDaysNoInteraction?: number;
@@ -52,6 +52,25 @@ export interface ReallocationTransferRequest {
   reason: string;
   filterContext: ReallocationFilters;
   companySources: Record<string, 'crm' | 'erp'>;
+}
+
+async function resolveUserForSalesRep(
+  salesRepId: string | null,
+  sellers?: ReallocationSeller[],
+): Promise<string | null> {
+  if (!salesRepId) return null;
+
+  const linkedUserId = sellers?.find(seller => seller.id === salesRepId)?.linkedUserId;
+  if (linkedUserId) return linkedUserId;
+
+  const { data } = await supabase
+    .from('user_sales_reps')
+    .select('user_id, is_default, created_at')
+    .eq('sales_rep_id', salesRepId)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  return data?.[0]?.user_id || null;
 }
 
 export function usePortfolioReallocation() {
@@ -177,7 +196,7 @@ export function usePortfolioReallocation() {
 
           if (!company) continue;
 
-          const fromUserId = company.owner_id;
+          const fromUserId = await resolveUserForSalesRep(company.sales_rep_id, sellers);
 
           // Atualizar sales_rep_id e owner_id
           const updateData: Record<string, any> = {
@@ -199,7 +218,7 @@ export function usePortfolioReallocation() {
             entity_id: companyId,
             entity_name: company.name,
             from_user_id: fromUserId,
-            to_user_id: request.toUserId || request.toSalesRepId,
+                to_user_id: request.toUserId,
             transferred_by: user.id,
             notes: request.reason,
             reason: request.reason,
@@ -291,7 +310,7 @@ export function usePortfolioReallocation() {
             entity_id: companyId,
             entity_name: clientName,
             from_user_id: fromUserId,
-            to_user_id: request.toUserId || request.toSalesRepId,
+                to_user_id: request.toUserId,
             transferred_by: user.id,
             notes: request.reason,
             reason: request.reason,

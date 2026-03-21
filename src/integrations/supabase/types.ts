@@ -7727,6 +7727,7 @@ export type Database = {
         }[]
       }
       get_region_by_state: { Args: { state_code: string }; Returns: string }
+      get_sales_rep_name: { Args: { p_sales_rep_id: string }; Returns: string }
       get_seller_performance: {
         Args: {
           p_compare_previous?: boolean
@@ -7903,6 +7904,10 @@ export type Database = {
           p_to_company_id: string
         }
         Returns: Json
+      }
+      user_has_sales_rep_access: {
+        Args: { p_sales_rep_id: string; p_user_id: string }
+        Returns: boolean
       }
       validate_app_session: { Args: { p_session_id: string }; Returns: Json }
     }
