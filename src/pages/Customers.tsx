@@ -24,7 +24,7 @@ import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSetti
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import {
@@ -361,7 +361,7 @@ export default function Customers() {
   };
 
   const getLastActivityText = (date: string | null) => {
-    if (!date) return 'Sem atividade';
+    if (!date) return 'Sem interação';
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
   };
 
@@ -370,12 +370,11 @@ export default function Customers() {
 
     if (!interactionAt) return 'Sem interação';
 
-    const formattedDate = format(new Date(interactionAt), 'dd/MM/yyyy');
     const legalEntityName = customer.last_relevant_legal_entity_name?.trim();
 
     return legalEntityName
-      ? `${legalEntityName} • ${formattedDate}`
-      : `Interação sem entidade • ${formattedDate}`;
+      ? `Última interação com: ${legalEntityName}`
+      : 'Interação sem entidade';
   };
 
   const getPageNumbers = () => {
@@ -411,9 +410,9 @@ export default function Customers() {
     );
   };
 
-  // Determine last activity - use last_interaction_at directly (already computed by RPC with all sources)
+  // Determine last activity - use the canonical last relevant interaction from the backend
   const getLastActivity = (c: CustomerRow) => {
-    return c.last_interaction_at || null;
+    return c.last_relevant_interaction_at || null;
   };
 
   return (
@@ -639,6 +638,7 @@ export default function Customers() {
                     const CustomerIcon = getCustomerIcon(customer.cnpj);
                     const phone = getContactPhone(customer);
                     const lastInteractionLabel = getLastInteractionLabel(customer);
+                    const lastActivityText = getLastActivityText(getLastActivity(customer));
                     const displayName = customer.fantasia || customer.name;
 
                     return (
@@ -663,12 +663,17 @@ export default function Customers() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className={`text-sm ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : ''}`}>
+                        <TableCell className="align-middle">
+                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
                             {lastInteractionLabel}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-middle">
+                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
+                            {lastActivityText}
+                          </span>
+                        </TableCell>
+                        <TableCell className="align-middle">
                           <DealSummaryBadges customer={customer} />
                         </TableCell>
                         <TableCell>
