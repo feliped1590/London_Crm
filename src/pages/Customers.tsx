@@ -611,11 +611,10 @@ export default function Customers() {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader field="name">Cliente</SortableHeader>
-                      <SortableHeader field="contact">Contato Principal</SortableHeader>
-                      <SortableHeader field="phone">
+                      <SortableHeader field="last_activity">
                         <div className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
-                          Telefone
+                          <Clock className="h-3.5 w-3.5" />
+                          Última interação
                         </div>
                       </SortableHeader>
                       <SortableHeader field="last_activity">
@@ -638,9 +637,8 @@ export default function Customers() {
                   <TableBody>
                   {customers.map((customer) => {
                     const CustomerIcon = getCustomerIcon(customer.cnpj);
-                    const contactName = getContactName(customer);
                     const phone = getContactPhone(customer);
-                    const lastActivity = getLastActivity(customer);
+                    const lastInteractionLabel = getLastInteractionLabel(customer);
                     const displayName = customer.fantasia || customer.name;
 
                     return (
@@ -666,30 +664,8 @@ export default function Customers() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {contactName ? (
-                            <div>
-                              <p className="font-medium">{contactName}</p>
-                              {customer.primary_contact_job_title && (
-                                <p className="text-sm text-muted-foreground">{customer.primary_contact_job_title}</p>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Sem contato</span>
-                          )}
-                          {customer.contacts_count > 1 && (
-                            <Badge variant="secondary" className="ml-2">+{customer.contacts_count - 1}</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {phone ? (
-                            <span className="font-mono text-sm">{phone}</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className={`text-sm ${!lastActivity ? 'text-muted-foreground' : ''}`}>
-                            {getLastActivityText(lastActivity)}
+                          <span className={`text-sm ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : ''}`}>
+                            {lastInteractionLabel}
                           </span>
                         </TableCell>
                         <TableCell>
