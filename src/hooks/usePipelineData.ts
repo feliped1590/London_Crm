@@ -96,16 +96,47 @@ export function usePipelineData(selectedPipelineId: string | null) {
   const { data: sellers } = useQuery({
     queryKey: ['sellers-for-pipeline'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('sales_reps')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
-      if (error) throw error;
-      return (data ?? []) as { id: string; name: string }[];
+      const [profilesResult, linksResult] = await Promise.all([
+        (supabase as any)
+          .from('profiles')
+          .select('id, user_id, full_name')
+          .order('full_name'),
+        (supabase as any)
+          .from('user_sales_reps')
+          .select('user_id, sales_rep_id'),
+      ]);
+
+      if (profilesResult.error) throw profilesResult.error;
+      if (linksResult.error) throw linksResult.error;
+
+      const salesRepIdsByUser = new Map<string, string[]>();
+
+      for (const link of (linksResult.data ?? []) as Array<{ user_id: string; sales_rep_id: string }>) {
+        if (!link.user_id || !link.sales_rep_id) continue;
+        const current = salesRepIdsByUser.get(link.user_id) ?? [];
+        current.push(link.sales_rep_id);
+        salesRepIdsByUser.set(link.user_id, current);
+      }
+
+      return ((profilesResult.data ?? []) as Array<{ id: string; user_id: string; full_name: string | null }>).map(profile => ({
+        id: profile.id,
+        user_id: profile.user_id,
+        full_name: profile.full_name ?? 'Usuário',
+        sales_rep_ids: salesRepIdsByUser.get(profile.user_id) ?? [],
+      }));
     },
     enabled: isAdmin,
   });
+
+  const salesRepIdsByUserFilter = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+
+    for (const seller of sellers ?? []) {
+      map.set(seller.user_id, new Set(seller.sales_rep_ids));
+    }
+
+    return map;
+  }, [sellers]);
 
   // ── Deals ─────────────────────────────────────────────────────────
   const { data: deals, isLoading, refetch, isFetching } = useQuery({
@@ -361,8 +392,9 @@ export function usePipelineData(selectedPipelineId: string | null) {
         if (!matchesMine) return false;
       }
       if (filterOwner !== 'mine' && filterOwner !== 'all') {
+        const selectedUserSalesRepIds = salesRepIdsByUserFilter.get(filterOwner);
         const matchesSelectedOwner = companySalesRepId
-          ? companySalesRepId === filterOwner
+          ? selectedUserSalesRepIds?.has(companySalesRepId) ?? false
           : deal.owner_id === filterOwner;
         if (!matchesSelectedOwner) return false;
       }
@@ -384,7 +416,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess]);
+  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
   const handleDrop = useCallback(async (
