@@ -96,13 +96,13 @@ export function usePipelineData(selectedPipelineId: string | null) {
   const { data: sellers } = useQuery({
     queryKey: ['sellers-for-pipeline'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('sales_reps')
         .select('id, name')
         .eq('is_active', true)
         .order('name');
       if (error) throw error;
-      return data;
+      return (data ?? []) as { id: string; name: string }[];
     },
     enabled: isAdmin,
   });
