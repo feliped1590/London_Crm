@@ -33,7 +33,7 @@ interface PipelineFiltersProps {
   companies: { id: string; name: string }[] | undefined;
   hasActiveFilters: boolean;
   isAdmin?: boolean;
-  sellers?: { id: string; user_id: string; full_name: string }[] | null;
+  sellers?: { id: string; name: string }[] | null;
   onCompanySearchChange?: (search: string) => void;
 }
 
@@ -42,10 +42,10 @@ const buildCompanyOptions = (companies: { id: string; name: string }[] | undefin
   ...(companies || []).map(c => ({ value: c.id, label: c.name })),
 ];
 
-const buildSellerOptions = (sellers: { id: string; user_id: string; full_name: string }[] | null | undefined): SearchableSelectOption[] => [
+const buildSellerOptions = (sellers: { id: string; name: string }[] | null | undefined): SearchableSelectOption[] => [
   { value: 'mine', label: 'Meus negócios' },
   { value: 'all', label: 'Todos' },
-  ...(sellers || []).map(s => ({ value: s.user_id, label: s.full_name })),
+  ...(sellers || []).map(s => ({ value: s.id, label: s.name })),
 ];
 
 export function PipelineFilters({
