@@ -40,7 +40,7 @@ import {
 const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
-type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'created_at';
+type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'last_interaction_entity' | 'deals' | 'owner' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 interface CustomerRow {
@@ -172,6 +172,7 @@ export default function Customers() {
       case 'contact': return 'contact';
       case 'phone': return 'phone';
       case 'last_activity': return 'last_activity';
+      case 'last_interaction_entity': return 'last_interaction_entity';
       case 'deals': return 'deals';
       case 'owner': return 'owner';
       case 'created_at': return 'created_at';
@@ -610,7 +611,7 @@ export default function Customers() {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader field="name">Cliente</SortableHeader>
-                      <SortableHeader field="last_activity">
+                      <SortableHeader field="last_interaction_entity">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
                           Última interação com
