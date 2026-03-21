@@ -2,9 +2,7 @@ import { useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -82,53 +80,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const persister = createSyncStoragePersister({
-  storage: window.localStorage,
-  key: 'CRM_QUERY_CACHE',
-  // Limitar tamanho: se serialização falhar por quota, remove silenciosamente
-  retry: ({ persistedClient, error, errorCount }) => {
-    if (errorCount > 1) {
-      // Não tenta mais, remove cache corrompido/excedido
-      window.localStorage.removeItem('CRM_QUERY_CACHE');
-      return undefined;
-    }
-    // Na primeira falha, tenta remover queries maiores
-    if (persistedClient) {
-      const queries = persistedClient.clientState.queries;
-      // Manter no máximo 30 queries persistidas (as mais recentes)
-      if (queries.length > 30) {
-        persistedClient.clientState.queries = queries
-          .sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt)
-          .slice(0, 30);
-      }
-      return persistedClient;
-    }
-    return undefined;
-  },
-});
-
-const persistOptions = {
-  persister,
-  maxAge: 10 * 60 * 1000, // 10 minutos
-  buster: 'crm-cache-v1',
-  dehydrateOptions: {
-    shouldDehydrateQuery: (query: any) => {
-      // Só persistir queries com sucesso
-      if (query.state.status !== 'success') return false;
-
-      const keyStr = JSON.stringify(query.queryKey).toLowerCase();
-
-      // Bloquear queries sensíveis/voláteis
-      if (BLOCKED_QUERY_KEYS.some(blocked => keyStr.includes(blocked))) {
-        return false;
-      }
-
-      // Persistir apenas queries estruturais (whitelist)
-      return PERSISTABLE_QUERY_KEYS.some(allowed => keyStr.includes(allowed));
-    },
-  },
-};
-
 // Componente que monitora mudanças de autenticação e limpa o cache apenas quando necessário
 function AuthStateListener() {
   const qc = useQueryClient();
@@ -173,7 +124,7 @@ function RealtimeSync() {
 
 const App = () => (
   <BrowserRouter>
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+    <QueryClientProvider client={queryClient}>
       <AuthStateListener />
       <AuthProvider>
         <AppInitializer>
@@ -224,7 +175,7 @@ const App = () => (
           </ErrorBoundary>
         </AppInitializer>
       </AuthProvider>
-    </PersistQueryClientProvider>
+    </QueryClientProvider>
   </BrowserRouter>
 );
 

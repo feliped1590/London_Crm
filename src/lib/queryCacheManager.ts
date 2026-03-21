@@ -75,6 +75,10 @@ export function insertItemInList<T extends ItemWithId>(
     return false;
   }
 
+  if (existing.some((item) => item.id === newItem.id)) {
+    return false;
+  }
+
   qc.setQueryData(listKey, [newItem, ...existing]);
   return true;
 }
