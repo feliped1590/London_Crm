@@ -59,9 +59,17 @@ export function ReallocationConfirmModal({
     return acc;
   }, {} as Record<string, CompanyForReallocation[]>);
 
-  // Excluir vendedores que são donos dos clientes selecionados do destino
-  const ownerIds = new Set(selectedCompanies.map(c => c.owner_id).filter(Boolean));
-  const availableSellers = sellers.filter(s => !ownerIds.has(s.id));
+  // Para CRM, o bloqueio do destino deve considerar o vendedor comercial atual.
+  // Para ERP, mantém fallback no owner_id legado.
+  const blockedSalesRepNames = new Set(
+    selectedCompanies
+      .filter((company) => company.source === 'crm' && company.sales_rep_name)
+      .map((company) => company.sales_rep_name as string),
+  );
+  const blockedLegacyOwnerIds = new Set(selectedCompanies.map(c => c.source === 'erp' ? c.owner_id : null).filter(Boolean));
+  const availableSellers = sellers.filter(
+    (seller) => !blockedSalesRepNames.has(seller.name) && !blockedLegacyOwnerIds.has(seller.id),
+  );
 
   const handleConfirm = () => {
     if (!toUserId || !reason.trim()) return;

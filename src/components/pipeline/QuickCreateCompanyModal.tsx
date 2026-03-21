@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useSalesReps } from '@/hooks/useSalesReps';
+import { resolveUserForSalesRep } from '@/lib/ownership';
 
 interface QuickCreateCompanyModalProps {
   open: boolean;
@@ -51,13 +52,17 @@ export function QuickCreateCompanyModal({
 
     setIsSubmitting(true);
     try {
+      const legacyOwnerId = selectedSalesRepId
+        ? await resolveUserForSalesRep(selectedSalesRepId, 'QuickCreateCompanyModal:create_company')
+        : user?.id ?? null;
+
       const { data, error } = await supabase.from('companies').insert({
         name: formData.name.trim(),
         cnpj: formData.cnpj ? cleanDocument(formData.cnpj) : null,
         email: formData.email || null,
         phone: formData.phone || null,
         created_by: user?.id,
-        owner_id: user?.id,
+        owner_id: legacyOwnerId,
         sales_rep_id: selectedSalesRepId || null,
       }).select('id').single();
 

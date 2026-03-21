@@ -172,7 +172,7 @@ export function usePortfolioReallocation() {
         if (source === 'crm') {
           const { data: company } = await supabase
             .from('companies')
-            .select('id, name, owner_id, sales_rep_id')
+            .select('id, name, sales_rep_id')
             .eq('id', companyId)
             .single();
 

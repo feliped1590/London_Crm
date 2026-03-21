@@ -17,6 +17,7 @@ import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useSalesReps } from '@/hooks/useSalesReps';
+import { resolveUserForSalesRep } from '@/lib/ownership';
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -227,6 +228,10 @@ export default function CustomerNew() {
           );
         }
       }
+
+      const legacyOwnerId = selectedSalesRepId
+        ? await resolveUserForSalesRep(selectedSalesRepId, 'CustomerNew:create_company')
+        : user?.id ?? null;
       
       // Create company first
       const companyData: any = {
@@ -242,7 +247,7 @@ export default function CustomerNew() {
         city: companyForm.city || null,
         state: companyForm.state || null,
         created_by: user?.id,
-        owner_id: user?.id,
+        owner_id: legacyOwnerId,
         legal_entity_id: selectedLegalEntityId || effectiveEntityId || null,
         sales_rep_id: selectedSalesRepId || null,
         custom_fields: { 
