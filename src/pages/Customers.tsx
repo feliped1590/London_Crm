@@ -17,14 +17,14 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Users, RefreshCw, Building2, User, Phone, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2 } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
 import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
 import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import {
@@ -76,6 +76,10 @@ interface CustomerRow {
   segmento_id: string | null;
   contribuinte_ipi: boolean;
   atividade_id: string | null;
+  last_relevant_interaction_at: string | null;
+  last_relevant_legal_entity_id: string | null;
+  last_relevant_legal_entity_name: string | null;
+  last_relevant_interaction_source: string | null;
 }
 
 export default function Customers() {
@@ -361,6 +365,19 @@ export default function Customers() {
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
   };
 
+  const getLastInteractionLabel = (customer: CustomerRow) => {
+    const interactionAt = customer.last_relevant_interaction_at;
+
+    if (!interactionAt) return 'Sem interação';
+
+    const formattedDate = format(new Date(interactionAt), 'dd/MM/yyyy');
+    const legalEntityName = customer.last_relevant_legal_entity_name?.trim();
+
+    return legalEntityName
+      ? `${legalEntityName} • ${formattedDate}`
+      : `Interação sem entidade • ${formattedDate}`;
+  };
+
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
     if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
@@ -374,8 +391,6 @@ export default function Customers() {
     return pages;
   };
 
-  // Determine display contact name
-  const getContactName = (c: CustomerRow) => c.primary_contact_name || c.contact_name || null;
   const getContactPhone = (c: CustomerRow) => c.primary_contact_mobile || c.phone;
 
   // Deal summary badges
