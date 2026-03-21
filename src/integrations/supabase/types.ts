@@ -7613,6 +7613,17 @@ export type Database = {
           states: string[]
         }[]
       }
+      get_customer_last_relevant_interactions: {
+        Args: { p_company_ids?: string[] }
+        Returns: {
+          customer_company_id: string
+          interaction_source: string
+          last_relevant_interaction_at: string
+          legal_entity_id: string
+          legal_entity_name: string
+          source_record_id: string
+        }[]
+      }
       get_dashboard_card_metrics: { Args: never; Returns: Json }
       get_distinct_regions_for_reallocation: {
         Args: never
@@ -7852,6 +7863,10 @@ export type Database = {
               id: string
               last_interaction_at: string
               last_order_at: string
+              last_relevant_interaction_at: string
+              last_relevant_interaction_source: string
+              last_relevant_legal_entity_id: string
+              last_relevant_legal_entity_name: string
               name: string
               owner_id: string
               owner_name: string
@@ -7905,6 +7920,10 @@ export type Database = {
               id: string
               last_interaction_at: string
               last_order_at: string
+              last_relevant_interaction_at: string
+              last_relevant_interaction_source: string
+              last_relevant_legal_entity_id: string
+              last_relevant_legal_entity_name: string
               name: string
               owner_id: string
               owner_name: string
