@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth';
 import { useModulePermissions } from './useModulePermissions';
+import { useSalesRepAccess } from './useSalesRepAccess';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ClientOwnershipResult {
@@ -25,6 +26,7 @@ export interface InterventionLogData {
 export function usePortfolioGovernance() {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { hasDirectAccess } = useSalesRepAccess();
 
   /**
    * Check if the current user owns a company (by CRM company ID)
@@ -34,10 +36,10 @@ export function usePortfolioGovernance() {
       return { isOwner: false, ownerId: null, ownerName: null, clientName: null };
     }
 
-    // First fetch the company
+    // First fetch the company using sales_rep_id as the source of truth
     const { data: company, error } = await supabase
       .from('companies')
-      .select('id, name, owner_id')
+      .select('id, name, sales_rep_id')
       .eq('id', companyId)
       .maybeSingle();
 
@@ -45,22 +47,23 @@ export function usePortfolioGovernance() {
       return { isOwner: false, ownerId: null, ownerName: null, clientName: null };
     }
 
-    // Then fetch the owner profile if there's an owner
+    // Then fetch the sales rep name if there's an assigned portfolio owner
     let ownerName: string | null = null;
-    if (company.owner_id) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('user_id', company.owner_id)
+    if (company.sales_rep_id) {
+      const { data: salesRep } = await supabase
+        .from('sales_reps')
+        .select('name')
+        .eq('id', company.sales_rep_id)
         .maybeSingle();
-      ownerName = profile?.full_name || null;
+
+      ownerName = salesRep?.name || null;
     }
 
-    const isOwner = !company.owner_id || company.owner_id === user.id;
+    const isOwner = !company.sales_rep_id || hasDirectAccess(company.sales_rep_id);
 
     return {
       isOwner,
-      ownerId: company.owner_id,
+      ownerId: company.sales_rep_id,
       ownerName,
       clientName: company.name,
     };

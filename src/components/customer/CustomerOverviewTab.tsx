@@ -225,7 +225,34 @@ export function CustomerOverviewTab({
                   <Select
                     value={salesRepId || ''}
                     onValueChange={async (v) => {
-                      const { error } = await supabase.from('companies').update({ sales_rep_id: v || null }).eq('id', customerId);
+                      const nextSalesRepId = v || null;
+                      let legacyOwnerId: string | null = null;
+
+                      if (nextSalesRepId) {
+                        const { data: links, error: linksError } = await supabase
+                          .from('user_sales_reps')
+                          .select('user_id, is_default, created_at')
+                          .eq('sales_rep_id', nextSalesRepId)
+                          .order('is_default', { ascending: false })
+                          .order('created_at', { ascending: true });
+
+                        if (linksError) {
+                          toast.error('Erro ao resolver usuário legado do vendedor');
+                          return;
+                        }
+
+                        legacyOwnerId = links?.[0]?.user_id || null;
+                      }
+
+                      const updateData: Record<string, string | null> = {
+                        sales_rep_id: nextSalesRepId,
+                      };
+
+                      if (legacyOwnerId) {
+                        updateData.owner_id = legacyOwnerId;
+                      }
+
+                      const { error } = await supabase.from('companies').update(updateData).eq('id', customerId);
                       if (error) { toast.error('Erro ao atualizar'); return; }
                       queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
                       toast.success('Vendedor comercial atualizado!');
@@ -245,8 +272,8 @@ export function CustomerOverviewTab({
         );
       })()}
 
-      {/* Admin: Assign user */}
-      {isAdmin && (
+      {/* Admin: Assign user (ERP legacy only) */}
+      {isAdmin && isErpCustomer && (
         <Card className="mt-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

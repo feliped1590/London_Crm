@@ -289,8 +289,13 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
   // ── Helpers ───────────────────────────────────────────────────────
   const canDeleteDeal = useCallback((deal: Deal) => {
-    return isAdmin || deal.owner_id === user?.id;
-  }, [isAdmin, user?.id]);
+    const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
+
+    if (isAdmin) return true;
+    if (companySalesRepId) return canAccessBySalesRep(companySalesRepId);
+
+    return deal.owner_id === user?.id;
+  }, [canAccessBySalesRep, isAdmin, user?.id]);
 
   const getContactInfo = useCallback((contactId: string | null, selectedContactData?: any) => {
     if (!contactId) return null;
@@ -317,8 +322,11 @@ export function usePipelineData(selectedPipelineId: string | null) {
   ) => {
     return deals?.filter(deal => {
       const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
-      const isMyDeal = deal.owner_id === user?.id || deal.created_by === user?.id;
-      if (!isMyDeal && !canAccessBySalesRep(companySalesRepId)) return false;
+      const hasPortfolioAccess = companySalesRepId
+        ? canAccessBySalesRep(companySalesRepId)
+        : (deal.owner_id === user?.id || deal.created_by === user?.id);
+
+      if (!hasPortfolioAccess) return false;
 
       const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;
       if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;

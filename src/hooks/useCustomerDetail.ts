@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { useSalesReps } from '@/hooks/useSalesReps';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
 
@@ -35,6 +36,7 @@ export interface UnifiedCustomer {
   active?: boolean;
   contribuinte_ipi?: boolean;
   owner_id?: string | null;
+  sales_rep_id?: string | null;
   contact_name?: string | null;
   source: 'crm' | 'erp';
   contacts?: CustomerContact[];
@@ -59,6 +61,7 @@ export interface CustomerContact {
 export function useCustomerDetail(id: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { salesReps } = useSalesReps();
   const queryClient = useQueryClient();
 
   // Fetch profiles map for access resolution
@@ -154,20 +157,29 @@ export function useCustomerDetail(id: string | undefined) {
 
   // Current owner resolution
   const currentOwner = React.useMemo(() => {
-    if (!customer?.owner_id || !sellers) return null;
+    if (!customer) return null;
+
+    if (customer.source === 'crm') {
+      return salesReps?.find(s => s.id === customer.sales_rep_id) || null;
+    }
+
+    if (!customer.owner_id || !sellers) return null;
+
     if (customer.source === 'erp') {
       return sellers.find(s => s.id === customer.owner_id);
-    } else {
-      return sellers.find(s => s.user_id === customer.owner_id);
     }
-  }, [customer?.owner_id, customer?.source, sellers]);
+
+    return sellers.find(s => s.user_id === customer.owner_id);
+  }, [customer, sellers, salesReps]);
 
   const selectValue = React.useMemo(() => {
-    if (!customer?.owner_id) return 'none';
+    if (!customer) return 'none';
+    if (customer.source === 'crm') return customer.sales_rep_id || 'none';
+    if (!customer.owner_id) return 'none';
     if (customer.source === 'erp') return customer.owner_id;
     const seller = sellers?.find(s => s.user_id === customer.owner_id);
     return seller?.id || 'none';
-  }, [customer?.owner_id, customer?.source, sellers]);
+  }, [customer, sellers]);
 
   // ── Mutations ──
 
