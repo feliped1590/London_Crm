@@ -6,6 +6,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { toast } from 'sonner';
 import type { Json } from '@/integrations/supabase/types';
+import { LEGACY_OWNER_COMMENT, shouldUseLegacyOwnerFallback } from '@/lib/ownership';
 
 // Interface unificada para cliente (CRM ou ERP)
 export interface UnifiedCustomer {
@@ -163,6 +164,7 @@ export function useCustomerDetail(id: string | undefined) {
       return salesReps?.find(s => s.id === customer.sales_rep_id) || null;
     }
 
+    // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
     if (!customer.owner_id || !sellers) return null;
 
     if (customer.source === 'erp') {
@@ -175,6 +177,7 @@ export function useCustomerDetail(id: string | undefined) {
   const selectValue = React.useMemo(() => {
     if (!customer) return 'none';
     if (customer.source === 'crm') return customer.sales_rep_id || 'none';
+    // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
     if (!customer.owner_id) return 'none';
     if (customer.source === 'erp') return customer.owner_id;
     const seller = sellers?.find(s => s.user_id === customer.owner_id);
@@ -186,12 +189,22 @@ export function useCustomerDetail(id: string | undefined) {
   const assignOwnerMutation = useMutation({
     mutationFn: async (profileId: string | null) => {
       const isErp = customer?.source === 'erp';
-      const tableName = isErp ? 'crm_clients' : 'companies';
+      if (!isErp) {
+        throw new Error('Para clientes CRM, altere o vendedor comercial via sales_rep_id.');
+      }
+
+      const tableName = 'crm_clients';
       let ownerIdToSave: string | null = null;
       if (profileId && profileId !== 'none') {
         const seller = sellers?.find(s => s.id === profileId);
         ownerIdToSave = isErp ? profileId : (seller?.user_id || null);
       }
+
+      if (!shouldUseLegacyOwnerFallback(customer?.source || 'erp', customer?.sales_rep_id)) {
+        throw new Error(LEGACY_OWNER_COMMENT);
+      }
+
+      // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
       const { error } = await supabase.from(tableName).update({ owner_id: ownerIdToSave }).eq('id', id);
       if (error) throw error;
     },

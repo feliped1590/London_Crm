@@ -12,6 +12,7 @@ import { updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import { toast } from 'sonner';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { logOwnershipWarning } from '@/lib/ownership';
 
 export type Deal = Tables<'deals'>;
 export type DealStage = Tables<'deals'>['stage'];
@@ -292,8 +293,20 @@ export function usePipelineData(selectedPipelineId: string | null) {
     const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
 
     if (isAdmin) return true;
-    if (companySalesRepId) return canAccessBySalesRep(companySalesRepId);
+    if (companySalesRepId) {
+      const hasAccess = canAccessBySalesRep(companySalesRepId);
+      if (!hasAccess && deal.owner_id === user?.id) {
+        logOwnershipWarning('Acesso negado por vínculo inconsistente entre usuário e sales_rep', {
+          dealId: deal.id,
+          companySalesRepId,
+          userId: user?.id,
+          operationContext: 'usePipelineData:canDeleteDeal',
+        });
+      }
+      return hasAccess;
+    }
 
+    // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
     return deal.owner_id === user?.id;
   }, [canAccessBySalesRep, isAdmin, user?.id]);
 
@@ -326,12 +339,26 @@ export function usePipelineData(selectedPipelineId: string | null) {
         ? canAccessBySalesRep(companySalesRepId)
         : (deal.owner_id === user?.id || deal.created_by === user?.id);
 
+      if (companySalesRepId && !hasPortfolioAccess && deal.owner_id === user?.id) {
+        logOwnershipWarning('Acesso negado por vínculo inconsistente entre usuário e sales_rep', {
+          dealId: deal.id,
+          companySalesRepId,
+          userId: user?.id,
+          operationContext: 'usePipelineData:buildFilteredDeals',
+        });
+      }
+
       if (!hasPortfolioAccess) return false;
 
       const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;
       if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;
 
-      if (filterOwner === 'mine' && deal.owner_id !== user?.id) return false;
+      if (filterOwner === 'mine') {
+        const matchesMine = companySalesRepId
+          ? canAccessBySalesRep(companySalesRepId)
+          : deal.owner_id === user?.id;
+        if (!matchesMine) return false;
+      }
       if (filterOwner !== 'mine' && filterOwner !== 'all' && deal.owner_id !== filterOwner) return false;
       if (filterStage !== 'all' && deal.stage !== filterStage) return false;
       if (filterCompany !== 'all' && deal.company_id !== filterCompany) return false;

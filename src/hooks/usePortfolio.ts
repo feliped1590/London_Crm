@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logOwnershipWarning, resolveUserForSalesRep } from '@/lib/ownership';
 
 export interface PortfolioItem {
   id: string;
@@ -44,19 +45,6 @@ export interface PortfolioTransfer {
   transferred_by: string;
   transferred_at: string;
   notes: string | null;
-}
-
-/**
- * Resolve a user_id linked to a sales_rep (prefers default link).
- */
-async function resolveUserForSalesRep(salesRepId: string): Promise<string | null> {
-  const { data } = await supabase
-    .from('user_sales_reps')
-    .select('user_id, is_default')
-    .eq('sales_rep_id', salesRepId);
-
-  if (!data?.length) return null;
-  return data.find(l => l.is_default)?.user_id || data[0].user_id;
 }
 
 export function usePortfolio() {
@@ -108,12 +96,19 @@ export function usePortfolio() {
       if (!user) throw new Error('Usuário não autenticado');
 
       // Resolver user_id do vendedor destino (para manter RLS)
-      const targetUserId = await resolveUserForSalesRep(request.toSalesRepId);
+      const targetUserId = await resolveUserForSalesRep(request.toSalesRepId, 'usePortfolio:target_sales_rep');
 
       // Resolver user_id do vendedor origem (para histórico)
       let fromUserId: string | null = null;
       if (request.fromSalesRepId) {
-        fromUserId = await resolveUserForSalesRep(request.fromSalesRepId);
+        fromUserId = await resolveUserForSalesRep(request.fromSalesRepId, 'usePortfolio:source_sales_rep');
+      }
+
+      if (!targetUserId) {
+        logOwnershipWarning('Sales_rep sem usuário vinculado durante operação crítica', {
+          salesRepId: request.toSalesRepId,
+          operationContext: 'usePortfolio:transfer',
+        });
       }
 
       const transferRecords: any[] = [];
@@ -155,7 +150,8 @@ export function usePortfolio() {
         else if (item.type === 'contact') tableName = 'contacts';
         else tableName = 'deals';
 
-        // sales_rep_id remains the commercial ownership source; owner_id is legacy compatibility only
+        // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
+        // sales_rep_id remains the commercial ownership source; owner_id is legacy compatibility only.
         const updateData: Record<string, any> = {};
         if (targetUserId) updateData.owner_id = targetUserId;
         if (item.type === 'company') updateData.sales_rep_id = request.toSalesRepId;

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
+import { logOwnershipWarning, resolveUserForSalesRep } from '@/lib/ownership';
 
 export const ITEMS_PER_PAGE = 25;
 
@@ -52,25 +53,6 @@ export interface ReallocationTransferRequest {
   reason: string;
   filterContext: ReallocationFilters;
   companySources: Record<string, 'crm' | 'erp'>;
-}
-
-async function resolveUserForSalesRep(
-  salesRepId: string | null,
-  sellers?: ReallocationSeller[],
-): Promise<string | null> {
-  if (!salesRepId) return null;
-
-  const linkedUserId = sellers?.find(seller => seller.id === salesRepId)?.linkedUserId;
-  if (linkedUserId) return linkedUserId;
-
-  const { data } = await supabase
-    .from('user_sales_reps')
-    .select('user_id, is_default, created_at')
-    .eq('sales_rep_id', salesRepId)
-    .order('is_default', { ascending: false })
-    .order('created_at', { ascending: true });
-
-  return data?.[0]?.user_id || null;
 }
 
 export function usePortfolioReallocation() {
@@ -196,14 +178,30 @@ export function usePortfolioReallocation() {
 
           if (!company) continue;
 
-          const fromUserId = await resolveUserForSalesRep(company.sales_rep_id, sellers);
+          const fromUserId = await resolveUserForSalesRep(
+            company.sales_rep_id,
+            'usePortfolioReallocation:source_sales_rep',
+          );
+          const targetUserId = request.toUserId ?? await resolveUserForSalesRep(
+            request.toSalesRepId,
+            'usePortfolioReallocation:target_sales_rep',
+          );
 
-          // Atualizar sales_rep_id e owner_id
+          if (!targetUserId) {
+            logOwnershipWarning('Sales_rep sem usuário vinculado durante operação crítica', {
+              salesRepId: request.toSalesRepId,
+              operationContext: 'usePortfolioReallocation:transfer_crm',
+              companyId,
+            });
+          }
+
+          // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
+          // Atualizar owner_id apenas para compatibilidade temporária.
           const updateData: Record<string, any> = {
             sales_rep_id: request.toSalesRepId,
           };
-          if (request.toUserId) {
-            updateData.owner_id = request.toUserId;
+          if (targetUserId) {
+            updateData.owner_id = targetUserId;
           }
 
           const { error: updateError } = await supabase
@@ -218,7 +216,7 @@ export function usePortfolioReallocation() {
             entity_id: companyId,
             entity_name: company.name,
             from_user_id: fromUserId,
-                to_user_id: request.toUserId,
+                to_user_id: targetUserId,
             transferred_by: user.id,
             notes: request.reason,
             reason: request.reason,
@@ -228,7 +226,7 @@ export function usePortfolioReallocation() {
           totalTransferred++;
 
           // Transferir contatos relacionados
-          if (request.transferContacts && request.toUserId) {
+          if (request.transferContacts && targetUserId) {
             const { data: contacts } = await supabase
               .from('contacts')
               .select('id, first_name, last_name')
@@ -237,7 +235,7 @@ export function usePortfolioReallocation() {
             for (const contact of contacts || []) {
               await supabase
                 .from('contacts')
-                .update({ owner_id: request.toUserId })
+                .update({ owner_id: targetUserId })
                 .eq('id', contact.id);
 
               const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
@@ -246,7 +244,7 @@ export function usePortfolioReallocation() {
                 entity_id: contact.id,
                 entity_name: contactName || 'Sem nome',
                 from_user_id: fromUserId,
-                to_user_id: request.toUserId,
+                to_user_id: targetUserId,
                 transferred_by: user.id,
                 notes: request.reason,
                 reason: request.reason,
@@ -256,7 +254,7 @@ export function usePortfolioReallocation() {
           }
 
           // Transferir negócios abertos
-          if (request.transferDeals && request.toUserId) {
+          if (request.transferDeals && targetUserId) {
             const { data: deals } = await supabase
               .from('deals')
               .select('id, name')
@@ -266,7 +264,7 @@ export function usePortfolioReallocation() {
             for (const deal of deals || []) {
               await supabase
                 .from('deals')
-                .update({ owner_id: request.toUserId })
+                .update({ owner_id: targetUserId })
                 .eq('id', deal.id);
 
               transferRecords.push({
@@ -274,7 +272,7 @@ export function usePortfolioReallocation() {
                 entity_id: deal.id,
                 entity_name: deal.name,
                 from_user_id: fromUserId,
-                to_user_id: request.toUserId,
+                to_user_id: targetUserId,
                 transferred_by: user.id,
                 notes: request.reason,
                 reason: request.reason,
@@ -292,6 +290,7 @@ export function usePortfolioReallocation() {
 
           if (!client) continue;
 
+          // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
           const fromUserId = client.owner_id;
           const clientName = client.razao_social || client.nome_fantasia || 'Cliente ERP';
 
