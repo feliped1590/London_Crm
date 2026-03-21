@@ -8,7 +8,7 @@ import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { getPendingChecklistItems } from '@/hooks/useStageChecklists';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
+import { updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import { toast } from 'sonner';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -185,8 +185,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, ['deals'], created);
+    onSuccess: () => {
       toast.success('Negócio criado com sucesso!');
     },
     onError: (error: any) => {
