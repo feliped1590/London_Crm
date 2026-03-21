@@ -46,7 +46,7 @@ export interface StageConfigEntry {
 export function usePipelineData(selectedPipelineId: string | null) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
-  const { canAccessBySalesRep } = useSalesRepAccess();
+  const { canAccessBySalesRep, hasDirectAccess, mySalesRepIds } = useSalesRepAccess();
   const queryClient = useQueryClient();
   const { pipelines, defaultPipeline } = usePipelines();
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
@@ -97,9 +97,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
     queryKey: ['sellers-for-pipeline'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('id, user_id, full_name')
-        .order('full_name');
+        .from('sales_reps')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
       if (error) throw error;
       return data;
     },
@@ -355,11 +356,16 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       if (filterOwner === 'mine') {
         const matchesMine = companySalesRepId
-          ? canAccessBySalesRep(companySalesRepId)
+          ? hasDirectAccess(companySalesRepId)
           : deal.owner_id === user?.id;
         if (!matchesMine) return false;
       }
-      if (filterOwner !== 'mine' && filterOwner !== 'all' && deal.owner_id !== filterOwner) return false;
+      if (filterOwner !== 'mine' && filterOwner !== 'all') {
+        const matchesSelectedOwner = companySalesRepId
+          ? companySalesRepId === filterOwner
+          : deal.owner_id === filterOwner;
+        if (!matchesSelectedOwner) return false;
+      }
       if (filterStage !== 'all' && deal.stage !== filterStage) return false;
       if (filterCompany !== 'all' && deal.company_id !== filterCompany) return false;
 
@@ -378,7 +384,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep]);
+  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
   const handleDrop = useCallback(async (
@@ -464,6 +470,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
     stages, stageConfig,
     deals, isLoading, isFetching, handleRefresh,
     sellers,
+    mySalesRepIds,
     companySearch, setCompanySearch,
     filterCompanySearch, setFilterCompanySearch,
     contactSearch, setContactSearch,
