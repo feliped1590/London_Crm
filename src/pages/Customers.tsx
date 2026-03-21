@@ -373,7 +373,7 @@ export default function Customers() {
     const legalEntityName = customer.last_relevant_legal_entity_name?.trim();
 
     return legalEntityName
-      ? `Última interação com: ${legalEntityName}`
+      ? legalEntityName
       : 'Interação sem entidade';
   };
 
@@ -613,7 +613,7 @@ export default function Customers() {
                       <SortableHeader field="last_activity">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
-                          Última interação
+                          Última interação com
                         </div>
                       </SortableHeader>
                       <SortableHeader field="last_activity">
