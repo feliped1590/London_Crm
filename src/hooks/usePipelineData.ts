@@ -43,6 +43,8 @@ export interface StageConfigEntry {
   hexColor?: string;
 }
 
+export type PipelineOwnershipViewMode = 'historical' | 'commercial';
+
 export function usePipelineData(selectedPipelineId: string | null) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
@@ -152,6 +154,30 @@ export function usePipelineData(selectedPipelineId: string | null) {
     staleTime: 0,
     refetchOnMount: 'always',
   });
+
+  const { data: dealParticipants } = useQuery({
+    queryKey: ['deal-participants-for-pipeline'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deal_participants')
+        .select('deal_id, user_id');
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const participantUserIdsByDeal = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+
+    for (const participant of dealParticipants ?? []) {
+      if (!participant.deal_id || !participant.user_id) continue;
+      const current = map.get(participant.deal_id) ?? new Set<string>();
+      current.add(participant.user_id);
+      map.set(participant.deal_id, current);
+    }
+
+    return map;
+  }, [dealParticipants]);
 
   const handleRefresh = useCallback(async () => {
     await refetch();
@@ -360,6 +386,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
   // ── Filtered deals builder ────────────────────────────────────────
   const buildFilteredDeals = useCallback((
     filterOwner: string,
+    ownershipViewMode: PipelineOwnershipViewMode,
     filterStage: string,
     filterCompany: string,
     filterDateFrom: string,
@@ -367,9 +394,12 @@ export function usePipelineData(selectedPipelineId: string | null) {
   ) => {
     return deals?.filter(deal => {
       const companySalesRepId = (deal as any).companies?.sales_rep_id as string | null | undefined;
+      const participantUserIds = participantUserIdsByDeal.get(deal.id);
+      const isCurrentUserParticipant = user?.id ? participantUserIds?.has(user.id) ?? false : false;
+      const hasHistoricalAccess = deal.owner_id === user?.id || deal.created_by === user?.id || isCurrentUserParticipant;
       const hasPortfolioAccess = companySalesRepId
         ? canAccessBySalesRep(companySalesRepId)
-        : (deal.owner_id === user?.id || deal.created_by === user?.id);
+        : hasHistoricalAccess;
 
       if (companySalesRepId && !hasPortfolioAccess && deal.owner_id === user?.id) {
         logOwnershipWarning('Acesso negado por vínculo inconsistente entre usuário e sales_rep', {
@@ -386,16 +416,17 @@ export function usePipelineData(selectedPipelineId: string | null) {
       if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;
 
       if (filterOwner === 'mine') {
-        const matchesMine = companySalesRepId
-          ? hasDirectAccess(companySalesRepId)
-          : deal.owner_id === user?.id;
+        const matchesMine = ownershipViewMode === 'commercial'
+          ? (companySalesRepId ? hasDirectAccess(companySalesRepId) : false)
+          : hasHistoricalAccess;
         if (!matchesMine) return false;
       }
       if (filterOwner !== 'mine' && filterOwner !== 'all') {
         const selectedUserSalesRepIds = salesRepIdsByUserFilter.get(filterOwner);
-        const matchesSelectedOwner = companySalesRepId
-          ? selectedUserSalesRepIds?.has(companySalesRepId) ?? false
-          : deal.owner_id === filterOwner;
+        const isSelectedUserParticipant = participantUserIds?.has(filterOwner) ?? false;
+        const matchesSelectedOwner = ownershipViewMode === 'commercial'
+          ? (companySalesRepId ? selectedUserSalesRepIds?.has(companySalesRepId) ?? false : false)
+          : deal.created_by === filterOwner || deal.owner_id === filterOwner || isSelectedUserParticipant;
         if (!matchesSelectedOwner) return false;
       }
       if (filterStage !== 'all' && deal.stage !== filterStage) return false;
@@ -416,7 +447,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter]);
+  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
   const handleDrop = useCallback(async (

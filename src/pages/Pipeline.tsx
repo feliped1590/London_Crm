@@ -28,7 +28,7 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
-import { usePipelineData, type Deal, type DealStage } from '@/hooks/usePipelineData';
+import { usePipelineData, type Deal, type DealStage, type PipelineOwnershipViewMode } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
 import { format } from 'date-fns';
@@ -71,6 +71,7 @@ export default function Pipeline() {
 
   // View & filters
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [ownershipViewMode, setOwnershipViewMode] = useState<PipelineOwnershipViewMode>('historical');
   const [filterOwner, setFilterOwner] = useState('mine');
   const [filterStage, setFilterStage] = useState('all');
   const [filterCompany, setFilterCompany] = useState('all');
@@ -225,12 +226,12 @@ export default function Pipeline() {
   }, [contactsSearchResult, selectedContactData]);
 
   const filteredDeals = useMemo(
-    () => buildFilteredDeals(filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo),
-    [buildFilteredDeals, filterOwner, filterStage, filterCompany, filterDateFrom, filterDateTo],
+    () => buildFilteredDeals(filterOwner, ownershipViewMode, filterStage, filterCompany, filterDateFrom, filterDateTo),
+    [buildFilteredDeals, filterOwner, ownershipViewMode, filterStage, filterCompany, filterDateFrom, filterDateTo],
   );
 
-  const hasActiveFilters = filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
-  const paginationResetKey = `${filterOwner}-${filterStage}-${filterCompany}-${filterDateFrom}-${filterDateTo}-${currentPipelineId}`;
+  const hasActiveFilters = ownershipViewMode !== 'historical' || filterOwner !== 'mine' || filterStage !== 'all' || filterCompany !== 'all' || filterDateFrom !== '' || filterDateTo !== '';
+  const paginationResetKey = `${ownershipViewMode}-${filterOwner}-${filterStage}-${filterCompany}-${filterDateFrom}-${filterDateTo}-${currentPipelineId}`;
 
   // ── Auto-open deal from URL params ────────────────────────────────
   useEffect(() => {
@@ -486,6 +487,8 @@ export default function Pipeline() {
 
       {/* Filters */}
       <PipelineFilters
+        ownershipViewMode={ownershipViewMode}
+        setOwnershipViewMode={setOwnershipViewMode}
         filterOwner={filterOwner} setFilterOwner={setFilterOwner}
         filterStage={filterStage} setFilterStage={setFilterStage}
         filterCompany={filterCompany} setFilterCompany={setFilterCompany}

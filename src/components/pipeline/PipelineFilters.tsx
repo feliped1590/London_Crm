@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { X, CalendarIcon } from 'lucide-react';
+import type { PipelineOwnershipViewMode } from '@/hooks/usePipelineData';
 
 type DealStage = 'prospeccao' | 'qualificacao' | 'proposta' | 'negociacao' | 'fechado_ganho' | 'fechado_perdido';
 
@@ -20,6 +21,8 @@ const stageConfig: Record<DealStage, { label: string }> = {
 const stages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao', 'fechado_ganho', 'fechado_perdido'];
 
 interface PipelineFiltersProps {
+  ownershipViewMode: PipelineOwnershipViewMode;
+  setOwnershipViewMode: (value: PipelineOwnershipViewMode) => void;
   filterOwner: string;
   setFilterOwner: (value: string) => void;
   filterStage: string;
@@ -49,6 +52,8 @@ const buildSellerOptions = (sellers: { id: string; user_id: string; full_name: s
 ];
 
 export function PipelineFilters({
+  ownershipViewMode,
+  setOwnershipViewMode,
   filterOwner,
   setFilterOwner,
   filterStage,
@@ -66,6 +71,7 @@ export function PipelineFilters({
   onCompanySearchChange,
 }: PipelineFiltersProps) {
   const clearFilters = () => {
+    setOwnershipViewMode('historical');
     setFilterOwner('mine');
     setFilterStage('all');
     setFilterCompany('all');
@@ -79,6 +85,16 @@ export function PipelineFilters({
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Filtros:</span>
+
+        <Select value={ownershipViewMode} onValueChange={(value: PipelineOwnershipViewMode) => setOwnershipViewMode(value)}>
+          <SelectTrigger className="w-[180px] h-9">
+            <SelectValue placeholder="Modo de visão" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="historical">Meus negócios</SelectItem>
+            <SelectItem value="commercial">Carteira</SelectItem>
+          </SelectContent>
+        </Select>
         
         {isAdmin ? (
           <div className="w-[200px]">
@@ -92,7 +108,9 @@ export function PipelineFilters({
             />
           </div>
         ) : (
-          <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">Meus negócios</span>
+          <span className="text-sm font-medium px-3 py-1.5 rounded-md bg-muted">
+            {ownershipViewMode === 'commercial' ? 'Minha carteira' : 'Meus negócios'}
+          </span>
         )}
 
         <Select value={filterStage} onValueChange={setFilterStage}>
