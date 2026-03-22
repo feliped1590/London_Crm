@@ -1,16 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Package, Plus, Star, Archive, Link2 } from 'lucide-react';
+import { Archive, Link2, Package, Plus, ShoppingCart, Star } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
-
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
   relationshipTypeOptions,
   useCompanyProducts,
@@ -37,7 +36,6 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
     isLoading,
     availableProducts,
     isLoadingProducts,
-    productSearch,
     setProductSearch,
     createLinkMutation,
     archiveLinkMutation,
@@ -104,7 +102,15 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Origem dos dados:</span> os itens abaixo representam <strong className="font-medium text-foreground">vínculos manuais</strong>, independentes do histórico transacional de pedidos e propostas.
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="gap-1">
+                <Link2 className="h-3 w-3" />
+                Vínculo manual
+              </Badge>
+              <span>
+                Os itens abaixo representam a camada estratégica manual, independente do histórico transacional.
+              </span>
+            </div>
           </div>
 
           {canEdit && (
@@ -115,8 +121,12 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
                   <SearchableSelect
                     options={availableProducts.map((product) => ({
                       value: product.id,
-                      label: product.name,
-                      searchTerms: product.sku,
+                      label: product.is_already_ordered ? `${product.name} • Já comprado` : product.name,
+                      searchTerms: [
+                        product.sku,
+                        product.is_already_ordered ? 'Já comprado' : null,
+                        product.last_order_at ? `Última compra ${new Date(product.last_order_at).toLocaleDateString('pt-BR')}` : null,
+                      ].filter(Boolean).join(' • '),
                     }))}
                     value={selectedProductId}
                     onChange={setSelectedProductId}
@@ -128,6 +138,8 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
                   {selectedProduct && (
                     <p className="text-xs text-muted-foreground">
                       SKU: {selectedProduct.sku} • {formatCurrency(selectedProduct.unit_price || 0)}
+                      {selectedProduct.is_already_ordered && ' • Já comprado'}
+                      {selectedProduct.last_order_at && ` • Última compra: ${new Date(selectedProduct.last_order_at).toLocaleDateString('pt-BR')}`}
                     </p>
                   )}
                 </div>
@@ -189,6 +201,9 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
             <div className="space-y-3">
               {companyProducts.map((link) => {
                 const relationshipLabel = relationshipTypeOptions.find((option) => option.value === link.relationship_type)?.label || link.relationship_type;
+                const metadata = (link.metadata as Record<string, unknown> | null) ?? null;
+                const isAlreadyOrdered = Boolean(metadata?.is_already_ordered);
+                const metadataLastOrderAt = typeof metadata?.last_order_at === 'string' ? metadata.last_order_at : null;
 
                 return (
                   <div key={link.id} className="rounded-lg border border-border bg-card p-4">
@@ -197,7 +212,16 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-foreground">{link.product?.name || 'Produto sem nome'}</p>
                           <Badge variant={relationshipTypeVariant[link.relationship_type]}>{relationshipLabel}</Badge>
-                          <Badge variant="secondary">Vínculo manual</Badge>
+                          <Badge variant="secondary" className="gap-1">
+                            <Link2 className="h-3 w-3" />
+                            Vínculo manual
+                          </Badge>
+                          {isAlreadyOrdered && (
+                            <Badge variant="outline" className="gap-1">
+                              <ShoppingCart className="h-3 w-3" />
+                              Já comprado
+                            </Badge>
+                          )}
                           {link.is_preferred && (
                             <Badge variant="outline" className="gap-1">
                               <Star className="h-3 w-3" />
@@ -210,6 +234,9 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
                           <span>SKU: {link.product?.sku || '-'}</span>
                           {link.product?.unit_price != null && (
                             <span> • {formatCurrency(link.product.unit_price)}</span>
+                          )}
+                          {metadataLastOrderAt && (
+                            <span> • Última compra: {new Date(metadataLastOrderAt).toLocaleDateString('pt-BR')}</span>
                           )}
                           {link.last_interaction_at && (
                             <span> • Última interação: {new Date(link.last_interaction_at).toLocaleDateString('pt-BR')}</span>

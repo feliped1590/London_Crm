@@ -7560,6 +7560,8 @@ export type Database = {
         Returns: {
           active: boolean
           id: string
+          is_already_ordered: boolean
+          last_order_at: string
           name: string
           sku: string
           tenant_id: string
