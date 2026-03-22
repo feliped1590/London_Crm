@@ -22,6 +22,7 @@ import { CustomerOverviewTab } from '@/components/customer/CustomerOverviewTab';
 import { CustomerContactsTab } from '@/components/customer/CustomerContactsTab';
 import { CustomerDealsTab } from '@/components/customer/CustomerDealsTab';
 import { CustomerActivitiesTab } from '@/components/customer/CustomerActivitiesTab';
+import { CustomerProductsTab } from '@/components/customer/CustomerProductsTab';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
@@ -309,7 +310,7 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-8 lg:grid-cols-8 xl:grid-cols-8">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />Contatos
@@ -318,6 +319,9 @@ export default function CustomerDetail() {
           <TabsTrigger value="negocios" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />Negócios
             {deals.length > 0 && <Badge variant="secondary" className="h-5 min-w-5">{deals.length}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="itens" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />Itens vinculados
           </TabsTrigger>
           <TabsTrigger value="pedidos" className="flex items-center gap-2"><Package className="h-4 w-4" />Pedidos</TabsTrigger>
           <TabsTrigger value="credito" className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Crédito</TabsTrigger>
@@ -353,6 +357,10 @@ export default function CustomerDetail() {
 
         <TabsContent value="negocios">
           <CustomerDealsTab customerId={id!} deals={deals} isErpCustomer={isErpCustomer} />
+        </TabsContent>
+
+        <TabsContent value="itens">
+          <CustomerProductsTab companyId={id!} canEdit={!isErpCustomer && canEdit} />
         </TabsContent>
 
         <TabsContent value="pedidos">

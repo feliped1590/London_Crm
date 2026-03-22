@@ -1475,6 +1475,89 @@ export type Database = {
           },
         ]
       }
+      company_products: {
+        Row: {
+          archived_at: string | null
+          archived_by: string | null
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_preferred: boolean
+          last_interaction_at: string | null
+          metadata: Json
+          notes: string | null
+          product_id: string
+          relationship_type: Database["public"]["Enums"]["company_product_relationship_type"]
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_preferred?: boolean
+          last_interaction_at?: string | null
+          metadata?: Json
+          notes?: string | null
+          product_id: string
+          relationship_type?: Database["public"]["Enums"]["company_product_relationship_type"]
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          archived_by?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_preferred?: boolean
+          last_interaction_at?: string | null
+          metadata?: Json
+          notes?: string | null
+          product_id?: string
+          relationship_type?: Database["public"]["Enums"]["company_product_relationship_type"]
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "company_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_products_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_erp_data: {
         Row: {
           contact_id: string
@@ -7943,6 +8026,12 @@ export type Database = {
         | "60"
         | "70"
         | "90"
+      company_product_relationship_type:
+        | "INTEREST"
+        | "HOMOLOGATED"
+        | "RECURRENT"
+        | "STRATEGIC"
+        | "BLACKLIST"
       custom_field_entity: "company" | "contact" | "deal"
       custom_field_type:
         | "text"
@@ -8208,6 +8297,13 @@ export const Constants = {
         "60",
         "70",
         "90",
+      ],
+      company_product_relationship_type: [
+        "INTEREST",
+        "HOMOLOGATED",
+        "RECURRENT",
+        "STRATEGIC",
+        "BLACKLIST",
       ],
       custom_field_entity: ["company", "contact", "deal"],
       custom_field_type: [
