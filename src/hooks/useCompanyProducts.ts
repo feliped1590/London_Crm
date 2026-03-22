@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -38,6 +38,7 @@ export interface ProductOption {
   sku: string;
   unit_price: number | null;
   active: boolean | null;
+  tenant_id?: string;
 }
 
 interface CreateCompanyProductInput {
@@ -109,36 +110,27 @@ export function useCompanyProducts(companyId: string | undefined) {
   });
 
   const availableProductsQuery = useQuery({
-    queryKey: ['company-products-available-products', companyId, productSearch],
+    queryKey: ['company-products-available-products', companyId, companyTenantQuery.data, productSearch],
     queryFn: async (): Promise<ProductOption[]> => {
-      let query = supabase
-        .from('products')
-        .select('id, name, sku, unit_price, active')
-        .eq('active', true)
-        .order('name')
-        .limit(50);
+      if (!companyId) return [];
+      if (!companyTenantQuery.data) throw new Error('Tenant do cliente não encontrado');
 
-      if (productSearch.trim()) {
-        const search = productSearch.trim();
-        query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
-      }
+      const search = productSearch.trim();
 
-      const { data, error } = await query;
+      const { data, error } = await supabase.rpc('get_available_company_products', {
+        p_company_id: companyId,
+        p_search: search || null,
+        p_limit: 50,
+      });
+
       if (error) throw error;
-      return (data ?? []) as ProductOption[];
+
+      return ((data ?? []) as ProductOption[]).filter(
+        (product) => product.tenant_id === companyTenantQuery.data,
+      );
     },
-    enabled: !!companyId,
+    enabled: !!companyId && !!companyTenantQuery.data,
   });
-
-  const linkedProductIds = useMemo(
-    () => new Set((linksQuery.data ?? []).map((item) => item.product_id)),
-    [linksQuery.data],
-  );
-
-  const availableOptions = useMemo(
-    () => (availableProductsQuery.data ?? []).filter((product) => !linkedProductIds.has(product.id)),
-    [availableProductsQuery.data, linkedProductIds],
-  );
 
   const invalidate = async () => {
     await Promise.all([
@@ -201,7 +193,7 @@ export function useCompanyProducts(companyId: string | undefined) {
   return {
     companyProducts: linksQuery.data ?? [],
     isLoading: linksQuery.isLoading,
-    availableProducts: availableOptions,
+    availableProducts: availableProductsQuery.data ?? [],
     isLoadingProducts: availableProductsQuery.isLoading,
     productSearch,
     setProductSearch,
