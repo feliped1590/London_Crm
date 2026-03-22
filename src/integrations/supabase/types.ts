@@ -7749,6 +7749,14 @@ export type Database = {
           state: string
         }[]
       }
+      get_group_deal_metrics_v1: {
+        Args: { p_company_id: string }
+        Returns: {
+          counts_by_stage: Json
+          total_deals: number
+          total_value: number
+        }[]
+      }
       get_license_status: {
         Args: never
         Returns: {
