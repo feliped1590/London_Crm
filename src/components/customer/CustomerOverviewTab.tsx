@@ -23,15 +23,32 @@ import type { SameGroupCompany, UnifiedCustomer } from '@/hooks/useCustomerDetai
 import type { Json } from '@/integrations/supabase/types';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
+import { formatCurrency } from '@/lib/formatters';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 
 const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
+const STAGE_LABELS: Record<string, string> = {
+  prospeccao: 'Prospecção',
+  qualificacao: 'Qualificação',
+  proposta: 'Proposta',
+  negociacao: 'Negociação',
+  fechado_ganho: 'Fechado ganho',
+  fechado_perdido: 'Fechado perdido',
+};
+
+const STAGE_ORDER = ['prospeccao', 'qualificacao', 'proposta', 'negociacao', 'fechado_ganho', 'fechado_perdido'];
 
 interface CustomerOverviewTabProps {
   customer: UnifiedCustomer;
   customerId: string;
   sameGroupCompanies: SameGroupCompany[];
   sameGroupCompaniesLoading: boolean;
+  groupDealMetrics?: {
+    total_deals: number;
+    total_value: number;
+    counts_by_stage: Record<string, number>;
+  };
+  groupDealMetricsLoading: boolean;
   isEditing: boolean;
   companyForm: any;
   setCompanyForm: React.Dispatch<React.SetStateAction<any>>;
@@ -49,6 +66,8 @@ export function CustomerOverviewTab({
   customerId,
   sameGroupCompanies,
   sameGroupCompaniesLoading,
+  groupDealMetrics,
+  groupDealMetricsLoading,
   isEditing,
   companyForm,
   setCompanyForm,
@@ -71,6 +90,19 @@ export function CustomerOverviewTab({
   const [pendingOwnerChange, setPendingOwnerChange] = useState<string | null>(null);
 
   const isErpCustomer = customer.source === 'erp';
+  const pipelineBreakdown = useMemo(
+    () =>
+      Object.entries(groupDealMetrics?.counts_by_stage || {}).sort(([stageA], [stageB]) => {
+        const indexA = STAGE_ORDER.indexOf(stageA);
+        const indexB = STAGE_ORDER.indexOf(stageB);
+        const normalizedA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+        const normalizedB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+        if (normalizedA !== normalizedB) return normalizedA - normalizedB;
+        return stageA.localeCompare(stageB);
+      }),
+    [groupDealMetrics],
+  );
 
   return (
     <>
@@ -251,6 +283,63 @@ export function CustomerOverviewTab({
           )}
         </CardContent>
       </Card>
+
+      {customer.cnpj_root && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-5 w-5" />
+              Resumo comercial do grupo
+            </CardTitle>
+            <CardDescription>
+              Todos os negócios do grupo econômico identificado pela mesma raiz do CNPJ.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {groupDealMetricsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Carregando resumo comercial do grupo...
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">Negócios do grupo</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">
+                    {groupDealMetrics?.total_deals ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">Valor total</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">
+                    {formatCurrency(groupDealMetrics?.total_value ?? 0)}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border bg-card p-4">
+                  <p className="text-sm text-muted-foreground">Pipeline</p>
+
+                  {pipelineBreakdown.length === 0 ? (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Nenhum negócio encontrado para este grupo.
+                    </p>
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {pipelineBreakdown.map(([stage, count]) => (
+                        <div key={stage} className="flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground">{STAGE_LABELS[stage] || stage}</span>
+                          <Badge variant="secondary">{count}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {(() => {
         const salesRepId = (customer as any)?.sales_rep_id;

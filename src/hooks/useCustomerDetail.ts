@@ -58,6 +58,12 @@ export interface SameGroupCompany {
   parent_company_id: string | null;
 }
 
+export interface GroupDealMetrics {
+  total_deals: number;
+  total_value: number;
+  counts_by_stage: Record<string, number>;
+}
+
 export interface CustomerContact {
   id: string;
   first_name: string;
@@ -173,6 +179,38 @@ export function useCustomerDetail(id: string | undefined) {
       return data || [];
     },
     enabled: !!id && customer?.source === 'crm' && !!customer?.tenant_id && !!customer?.cnpj_root,
+  });
+
+  const { data: groupDealMetrics, isLoading: groupDealMetricsLoading } = useQuery({
+    queryKey: ['customer-group-deal-metrics', id, customer?.cnpj_root],
+    queryFn: async (): Promise<GroupDealMetrics> => {
+      const { data, error } = await supabase.rpc('get_group_deal_metrics_v1', {
+        p_company_id: id!,
+      });
+
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as {
+        total_deals?: number | string | null;
+        total_value?: number | string | null;
+        counts_by_stage?: Json | null;
+      } | null;
+
+      const rawCounts = row?.counts_by_stage;
+      const counts_by_stage =
+        rawCounts && typeof rawCounts === 'object' && !Array.isArray(rawCounts)
+          ? Object.fromEntries(
+              Object.entries(rawCounts).map(([stage, count]) => [stage, Number(count) || 0]),
+            )
+          : {};
+
+      return {
+        total_deals: Number(row?.total_deals) || 0,
+        total_value: Number(row?.total_value) || 0,
+        counts_by_stage,
+      };
+    },
+    enabled: !!id && customer?.source === 'crm' && !!customer?.cnpj_root,
   });
 
   // Fetch sellers for owner assignment (admin only)
@@ -341,6 +379,8 @@ export function useCustomerDetail(id: string | undefined) {
     isLoading,
     sameGroupCompanies,
     sameGroupCompaniesLoading,
+    groupDealMetrics,
+    groupDealMetricsLoading,
     sellers,
     currentOwner,
     selectValue,
