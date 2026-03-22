@@ -60,6 +60,23 @@ export function useCompanyProducts(companyId: string | undefined) {
   const queryClient = useQueryClient();
   const [productSearch, setProductSearch] = useState('');
 
+  const companyTenantQuery = useQuery({
+    queryKey: ['company-products-tenant', companyId],
+    queryFn: async () => {
+      if (!companyId) return null;
+
+      const { data, error } = await supabase
+        .from('companies')
+        .select('tenant_id')
+        .eq('id', companyId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data?.tenant_id ?? null;
+    },
+    enabled: !!companyId,
+  });
+
   const linksQuery = useQuery({
     queryKey: ['company-products', companyId],
     queryFn: async (): Promise<CompanyProductLink[]> => {
@@ -135,8 +152,10 @@ export function useCompanyProducts(companyId: string | undefined) {
     mutationFn: async ({ productId, relationshipType, notes, isPreferred }: CreateCompanyProductInput) => {
       if (!companyId) throw new Error('Cliente não informado');
       if (!user?.id) throw new Error('Usuário não autenticado');
+      if (!companyTenantQuery.data) throw new Error('Tenant do cliente não encontrado');
 
-      const { error } = await supabase.from('company_products').insert({
+      const { error } = await supabase.from('company_products').insert([{
+        tenant_id: companyTenantQuery.data,
         company_id: companyId,
         product_id: productId,
         relationship_type: relationshipType,
@@ -144,7 +163,7 @@ export function useCompanyProducts(companyId: string | undefined) {
         is_preferred: !!isPreferred,
         created_by: user.id,
         updated_by: user.id,
-      });
+      }]);
 
       if (error) throw error;
     },
