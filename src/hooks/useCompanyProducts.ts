@@ -39,6 +39,8 @@ export interface ProductOption {
   unit_price: number | null;
   active: boolean | null;
   tenant_id?: string;
+  is_already_ordered?: boolean;
+  last_order_at?: string | null;
 }
 
 interface CreateCompanyProductInput {
@@ -125,9 +127,7 @@ export function useCompanyProducts(companyId: string | undefined) {
 
       if (error) throw error;
 
-      return ((data ?? []) as ProductOption[]).filter(
-        (product) => product.tenant_id === companyTenantQuery.data,
-      );
+      return (data ?? []) as ProductOption[];
     },
     enabled: !!companyId && !!companyTenantQuery.data,
   });
