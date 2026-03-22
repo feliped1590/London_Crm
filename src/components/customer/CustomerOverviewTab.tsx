@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Building2, Users, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
@@ -91,6 +92,9 @@ export function CustomerOverviewTab({
   const [pendingOwnerChange, setPendingOwnerChange] = useState<string | null>(null);
 
   const isErpCustomer = customer.source === 'erp';
+  const currentCompanyDealsCount = customer.deals?.length ?? 0;
+  const groupCompanyCount = sameGroupCompanies.length + 1;
+  const hasGroupOpportunityInsight = currentCompanyDealsCount === 0 && (groupDealMetrics?.total_deals ?? 0) > 0;
   const pipelineBreakdown = useMemo(
     () =>
       Object.entries(groupDealMetrics?.counts_by_stage || {}).sort(([stageA], [stageB]) => {
@@ -294,47 +298,71 @@ export function CustomerOverviewTab({
             </CardTitle>
             <CardDescription>
               Todos os negócios do grupo econômico identificado pela mesma raiz do CNPJ.
+              {!sameGroupCompaniesLoading && ` Baseado em ${groupCompanyCount} ${groupCompanyCount === 1 ? 'empresa do grupo' : 'empresas do grupo'}.`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {groupDealMetricsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                Carregando resumo comercial do grupo...
-              </div>
-            ) : (
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-lg border bg-card p-4">
-                  <p className="text-sm text-muted-foreground">Negócios do grupo</p>
-                  <p className="mt-2 text-2xl font-semibold text-foreground">
-                    {groupDealMetrics?.total_deals ?? 0}
-                  </p>
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="mt-3 h-8 w-20" />
                 </div>
-
                 <div className="rounded-lg border bg-card p-4">
-                  <p className="text-sm text-muted-foreground">Valor total</p>
-                  <p className="mt-2 text-2xl font-semibold text-foreground">
-                    {formatCurrency(groupDealMetrics?.total_value ?? 0)}
-                  </p>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-3 h-8 w-32" />
                 </div>
-
                 <div className="rounded-lg border bg-card p-4">
-                  <p className="text-sm text-muted-foreground">Pipeline</p>
+                  <Skeleton className="h-4 w-16" />
+                  <div className="mt-3 space-y-2">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-5/6" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {hasGroupOpportunityInsight && (
+                  <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-foreground">
+                    <span className="font-medium">Oportunidade no grupo:</span>{' '}
+                    Esta empresa ainda não possui negócios, mas o grupo já possui {groupDealMetrics?.total_deals ?? 0}.
+                  </div>
+                )}
 
-                  {pipelineBreakdown.length === 0 ? (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Nenhum negócio encontrado para este grupo.
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border bg-card p-4">
+                    <p className="text-sm text-muted-foreground">Negócios do grupo</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">
+                      {groupDealMetrics?.total_deals ?? 0}
                     </p>
-                  ) : (
-                    <div className="mt-3 space-y-2">
-                      {pipelineBreakdown.map(([stage, count]) => (
-                        <div key={stage} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-foreground">{STAGE_LABELS[stage] || stage}</span>
-                          <Badge variant="secondary">{count}</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  </div>
+
+                  <div className="rounded-lg border bg-card p-4">
+                    <p className="text-sm text-muted-foreground">Valor total</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">
+                      {formatCurrency(groupDealMetrics?.total_value ?? 0)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border bg-card p-4">
+                    <p className="text-sm text-muted-foreground">Pipeline</p>
+
+                    {pipelineBreakdown.length === 0 ? (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Nenhum negócio encontrado para este grupo.
+                      </p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {pipelineBreakdown.map(([stage, count]) => (
+                          <div key={stage} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="text-foreground">{STAGE_LABELS[stage] || stage}</span>
+                            <Badge variant="secondary">{count}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

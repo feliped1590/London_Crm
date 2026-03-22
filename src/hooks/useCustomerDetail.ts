@@ -184,8 +184,16 @@ export function useCustomerDetail(id: string | undefined) {
   const { data: groupDealMetrics, isLoading: groupDealMetricsLoading } = useQuery({
     queryKey: ['customer-group-deal-metrics', id, customer?.cnpj_root],
     queryFn: async (): Promise<GroupDealMetrics> => {
+      if (!id) {
+        return {
+          total_deals: 0,
+          total_value: 0,
+          counts_by_stage: {},
+        };
+      }
+
       const { data, error } = await supabase.rpc('get_group_deal_metrics_v1', {
-        p_company_id: id!,
+        p_company_id: id,
       });
 
       if (error) throw error;
