@@ -119,7 +119,7 @@ export function useCompanyProducts(companyId: string | undefined) {
 
       const search = productSearch.trim();
 
-      const { data, error } = await supabase.rpc('get_available_company_products', {
+      const { data, error } = await supabase.rpc('get_available_company_products_v2', {
         p_company_id: companyId,
         p_search: search || null,
         p_limit: 50,
