@@ -953,6 +953,7 @@ export type Database = {
           atividade_id: string | null
           city: string | null
           cnpj: string | null
+          cnpj_root: string | null
           contact_name: string | null
           contribuinte_icms: boolean | null
           contribuinte_ipi: boolean | null
@@ -1012,6 +1013,7 @@ export type Database = {
           atividade_id?: string | null
           city?: string | null
           cnpj?: string | null
+          cnpj_root?: string | null
           contact_name?: string | null
           contribuinte_icms?: boolean | null
           contribuinte_ipi?: boolean | null
@@ -1073,6 +1075,7 @@ export type Database = {
           atividade_id?: string | null
           city?: string | null
           cnpj?: string | null
+          cnpj_root?: string | null
           contact_name?: string | null
           contribuinte_icms?: boolean | null
           contribuinte_ipi?: boolean | null
