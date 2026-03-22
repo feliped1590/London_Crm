@@ -11,7 +11,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building2, Users, User, Truck } from 'lucide-react';
+import { AlertTriangle, Building2, Users, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
@@ -94,7 +94,8 @@ export function CustomerOverviewTab({
   const isErpCustomer = customer.source === 'erp';
   const currentCompanyDealsCount = customer.deals?.length ?? 0;
   const groupCompanyCount = sameGroupCompanies.length + 1;
-  const hasGroupOpportunityInsight = currentCompanyDealsCount === 0 && (groupDealMetrics?.total_deals ?? 0) > 0;
+  const totalGroupDeals = groupDealMetrics?.total_deals ?? 0;
+  const hasGroupOpportunityInsight = currentCompanyDealsCount === 0 && totalGroupDeals > 0;
   const pipelineBreakdown = useMemo(
     () =>
       Object.entries(groupDealMetrics?.counts_by_stage || {}).sort(([stageA], [stageB]) => {
@@ -324,9 +325,12 @@ export function CustomerOverviewTab({
             ) : (
               <div className="space-y-4">
                 {hasGroupOpportunityInsight && (
-                  <div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-foreground">
-                    <span className="font-medium">Oportunidade no grupo:</span>{' '}
-                    Esta empresa ainda não possui negócios, mas o grupo já possui {groupDealMetrics?.total_deals ?? 0}.
+                  <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-foreground">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                    <p>
+                      <span className="font-medium">Oportunidade no grupo:</span>{' '}
+                      Esta empresa ainda não possui negócios, mas o grupo já possui {totalGroupDeals} — oportunidade de expansão.
+                    </p>
                   </div>
                 )}
 
