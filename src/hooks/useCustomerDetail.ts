@@ -14,6 +14,7 @@ export interface UnifiedCustomer {
   name: string;
   fantasia: string | null;
   cnpj: string | null;
+  cnpj_root?: string | null;
   inscricao_estadual: string | null;
   phone: string | null;
   email: string | null;
@@ -38,10 +39,23 @@ export interface UnifiedCustomer {
   contribuinte_ipi?: boolean;
   owner_id?: string | null;
   sales_rep_id?: string | null;
+  tenant_id?: string | null;
   contact_name?: string | null;
   source: 'crm' | 'erp';
   contacts?: CustomerContact[];
   deals?: any[];
+}
+
+export interface SameGroupCompany {
+  id: string;
+  name: string;
+  fantasia: string | null;
+  cnpj: string | null;
+  cnpj_root: string | null;
+  city: string | null;
+  state: string | null;
+  is_matriz: boolean | null;
+  parent_company_id: string | null;
 }
 
 export interface CustomerContact {
@@ -140,6 +154,25 @@ export function useCustomerDetail(id: string | undefined) {
       return null;
     },
     enabled: !!id,
+  });
+
+  const { data: sameGroupCompanies = [], isLoading: sameGroupCompaniesLoading } = useQuery({
+    queryKey: ['customer-same-group', id, customer?.tenant_id, customer?.cnpj_root],
+    queryFn: async (): Promise<SameGroupCompany[]> => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, fantasia, cnpj, cnpj_root, city, state, is_matriz, parent_company_id')
+        .eq('tenant_id', customer!.tenant_id)
+        .eq('cnpj_root', customer!.cnpj_root)
+        .neq('id', id!)
+        .order('is_matriz', { ascending: false, nullsFirst: false })
+        .order('name', { ascending: true })
+        .limit(10);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id && customer?.source === 'crm' && !!customer?.tenant_id && !!customer?.cnpj_root,
   });
 
   // Fetch sellers for owner assignment (admin only)
@@ -306,6 +339,8 @@ export function useCustomerDetail(id: string | undefined) {
   return {
     customer,
     isLoading,
+    sameGroupCompanies,
+    sameGroupCompaniesLoading,
     sellers,
     currentOwner,
     selectValue,
