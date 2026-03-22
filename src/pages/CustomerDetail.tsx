@@ -40,7 +40,7 @@ export default function CustomerDetail() {
   const { salesReps, allUserSalesReps } = useSalesReps();
 
   const {
-    customer, isLoading, sellers, currentOwner, selectValue, profilesMap,
+    customer, isLoading, sameGroupCompanies, sameGroupCompaniesLoading, sellers, currentOwner, selectValue, profilesMap,
     assignOwnerMutation, updateCompanyMutation, saveContactMutation,
     deleteContactMutation, markAsReviewedMutation,
     isReviewOverdue, formatReviewDate,
@@ -333,6 +333,8 @@ export default function CustomerDetail() {
           <CustomerOverviewTab
             customer={customer}
             customerId={id!}
+            sameGroupCompanies={sameGroupCompanies}
+            sameGroupCompaniesLoading={sameGroupCompaniesLoading}
             isEditing={isEditing}
             companyForm={companyForm}
             setCompanyForm={setCompanyForm}
