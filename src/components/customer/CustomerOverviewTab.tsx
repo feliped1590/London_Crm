@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Users, User, Truck } from 'lucide-react';
+import { Building2, Users, User, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
@@ -19,7 +19,7 @@ import { useSalesReps } from '@/hooks/useSalesReps';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useAuth } from '@/hooks/useAuth';
 import { usePortfolioGovernance } from '@/hooks/usePortfolioGovernance';
-import type { UnifiedCustomer } from '@/hooks/useCustomerDetail';
+import type { SameGroupCompany, UnifiedCustomer } from '@/hooks/useCustomerDetail';
 import type { Json } from '@/integrations/supabase/types';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
@@ -30,6 +30,8 @@ const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+
 interface CustomerOverviewTabProps {
   customer: UnifiedCustomer;
   customerId: string;
+  sameGroupCompanies: SameGroupCompany[];
+  sameGroupCompaniesLoading: boolean;
   isEditing: boolean;
   companyForm: any;
   setCompanyForm: React.Dispatch<React.SetStateAction<any>>;
@@ -45,6 +47,8 @@ interface CustomerOverviewTabProps {
 export function CustomerOverviewTab({
   customer,
   customerId,
+  sameGroupCompanies,
+  sameGroupCompaniesLoading,
   isEditing,
   companyForm,
   setCompanyForm,
@@ -193,6 +197,61 @@ export function CustomerOverviewTab({
       </Card>
 
       {/* Sales Rep info */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="h-5 w-5" />
+            Empresas do mesmo grupo (raiz do CNPJ)
+          </CardTitle>
+          <CardDescription>
+            Agrupamento documental por raiz do CNPJ, separado da hierarquia operacional de matriz e filial.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!customer.cnpj_root ? (
+            <p className="text-sm text-muted-foreground">
+              Sem CNPJ válido para identificar grupo documental por raiz.
+            </p>
+          ) : sameGroupCompaniesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Buscando empresas do mesmo grupo...
+            </div>
+          ) : sameGroupCompanies.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma outra empresa encontrada com a mesma raiz de CNPJ neste tenant.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sameGroupCompanies.map((company) => {
+                const displayName = company.fantasia || company.name;
+                const relationshipLabel = company.is_matriz ? 'Matriz' : 'Filial';
+
+                return (
+                  <div
+                    key={company.id}
+                    className="flex items-start justify-between gap-4 rounded-lg border p-3"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium text-foreground">{displayName}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        {company.cnpj && <span>{formatCNPJ(company.cnpj)}</span>}
+                        {company.city && company.state && <span>• {company.city}/{company.state}</span>}
+                      </div>
+                    </div>
+                    <div className="shrink-0">
+                      <span className="inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                        {relationshipLabel}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {(() => {
         const salesRepId = (customer as any)?.sales_rep_id;
         const salesRep = salesRepId ? salesReps?.find(r => r.id === salesRepId) : null;
