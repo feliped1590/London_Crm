@@ -103,6 +103,10 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Origem dos dados:</span> os itens abaixo representam <strong className="font-medium text-foreground">vínculos manuais</strong>, independentes do histórico transacional de pedidos e propostas.
+          </div>
+
           {canEdit && (
             <div className="grid gap-4 rounded-lg border border-border bg-muted/20 p-4">
               <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
@@ -193,6 +197,7 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-foreground">{link.product?.name || 'Produto sem nome'}</p>
                           <Badge variant={relationshipTypeVariant[link.relationship_type]}>{relationshipLabel}</Badge>
+                          <Badge variant="secondary">Vínculo manual</Badge>
                           {link.is_preferred && (
                             <Badge variant="outline" className="gap-1">
                               <Star className="h-3 w-3" />
