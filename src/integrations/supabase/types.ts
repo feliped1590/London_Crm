@@ -7555,6 +7555,17 @@ export type Database = {
           user_name: string
         }[]
       }
+      get_available_company_products: {
+        Args: { p_company_id: string; p_limit?: number; p_search?: string }
+        Returns: {
+          active: boolean
+          id: string
+          name: string
+          sku: string
+          tenant_id: string
+          unit_price: number
+        }[]
+      }
       get_bi_anomalies: {
         Args: never
         Returns: {
