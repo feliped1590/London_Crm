@@ -400,8 +400,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
       const hasPortfolioAccess = companySalesRepId
         ? canAccessBySalesRep(companySalesRepId)
         : hasHistoricalAccess;
+      const isCommercialView = ownershipViewMode === 'commercial';
+      const hasAccessForCurrentView = isCommercialView ? hasPortfolioAccess : hasHistoricalAccess;
 
-      if (companySalesRepId && !hasPortfolioAccess && deal.owner_id === user?.id) {
+      if (isCommercialView && companySalesRepId && !hasPortfolioAccess && deal.owner_id === user?.id) {
         logOwnershipWarning('Acesso negado por vínculo inconsistente entre usuário e sales_rep', {
           dealId: deal.id,
           companySalesRepId,
@@ -410,13 +412,13 @@ export function usePipelineData(selectedPipelineId: string | null) {
         });
       }
 
-      if (!hasPortfolioAccess) return false;
+      if (!isAdmin && !hasAccessForCurrentView) return false;
 
       const dealPipelineId = deal.pipeline_id || defaultPipeline?.id;
       if (currentPipelineId && dealPipelineId !== currentPipelineId) return false;
 
       if (filterOwner === 'mine') {
-        const matchesMine = ownershipViewMode === 'commercial'
+        const matchesMine = isCommercialView
           ? (companySalesRepId ? hasDirectAccess(companySalesRepId) : false)
           : hasHistoricalAccess;
         if (!matchesMine) return false;
@@ -424,7 +426,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
       if (filterOwner !== 'mine' && filterOwner !== 'all') {
         const selectedUserSalesRepIds = salesRepIdsByUserFilter.get(filterOwner);
         const isSelectedUserParticipant = participantUserIds?.has(filterOwner) ?? false;
-        const matchesSelectedOwner = ownershipViewMode === 'commercial'
+        const matchesSelectedOwner = isCommercialView
           ? (companySalesRepId ? selectedUserSalesRepIds?.has(companySalesRepId) ?? false : false)
           : deal.created_by === filterOwner || deal.owner_id === filterOwner || isSelectedUserParticipant;
         if (!matchesSelectedOwner) return false;
@@ -447,7 +449,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal]);
+  }, [deals, user?.id, isAdmin, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
   const handleDrop = useCallback(async (
