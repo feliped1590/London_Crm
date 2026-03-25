@@ -430,6 +430,7 @@ export default function Pipeline() {
   // Wrap contact helpers to pass selectedContactData
   const wrappedGetContactPhone = (contactId: string | null) => getContactPhone(contactId, selectedContactData);
   const wrappedGetContactName = (contactId: string | null) => getContactName(contactId, selectedContactData);
+  const wrappedGetContactInfo = (contactId: string | null) => getContactInfo(contactId, selectedContactData);
 
   // ── Render ────────────────────────────────────────────────────────
   return (
