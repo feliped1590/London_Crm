@@ -450,7 +450,6 @@ export default function Tasks() {
                     searchPlaceholder="Buscar empresa..."
                     emptyMessage="Nenhuma empresa encontrada."
                     onSearchChange={setCompanySearch}
-                    filter={() => 1}
                   />
                 </div>
                 <div>
