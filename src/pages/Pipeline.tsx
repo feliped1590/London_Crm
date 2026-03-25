@@ -482,6 +482,7 @@ export default function Pipeline() {
             isMutating={createMutation.isPending || updateMutation.isPending}
             getContactPhone={wrappedGetContactPhone}
             getContactName={wrappedGetContactName}
+            getContactInfo={wrappedGetContactInfo}
           />
         </div>
       </div>
