@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink } from 'lucide-react';
+import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
@@ -47,6 +47,7 @@ interface DealFormDialogProps {
   isMutating: boolean;
   getContactPhone: (contactId: string | null) => string | null;
   getContactName: (contactId: string | null) => string;
+  getContactInfo: (contactId: string | null) => { id: string; first_name: string; last_name?: string; email?: string; phone?: string; mobile?: string } | null;
 }
 
 export function DealFormDialog({
@@ -75,6 +76,7 @@ export function DealFormDialog({
   isMutating,
   getContactPhone,
   getContactName,
+  getContactInfo,
 }: DealFormDialogProps) {
   const navigate = useNavigate();
   const renderFormFields = (isEditing: boolean) => (
@@ -175,6 +177,29 @@ export function DealFormDialog({
           createNewLabel="Criar novo contato"
           onSearchChange={onContactSearchChange}
         />
+        {(() => {
+          const contactInfo = getContactInfo(formData.contact_id ?? null);
+          if (!contactInfo) return null;
+          const phone = contactInfo.mobile || contactInfo.phone;
+          const email = contactInfo.email;
+          if (!phone && !email) return null;
+          return (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {phone && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  {phone}
+                </span>
+              )}
+              {email && (
+                <span className="inline-flex items-center gap-1">
+                  <AtSign className="h-3.5 w-3.5" />
+                  {email}
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
       {legalEntities.length > 0 && isEditing && (
         <div>

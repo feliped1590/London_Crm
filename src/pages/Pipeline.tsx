@@ -53,7 +53,7 @@ export default function Pipeline() {
     templates,
     createMutation, updateMutation, deleteMutation, sendEmailMutation,
     canDeleteDeal,
-    getContactPhone, getContactName,
+    getContactInfo, getContactPhone, getContactName,
     buildFilteredDeals,
     handleDrop: handleDropCore,
     requiresJustification, logIntervention,
@@ -430,6 +430,7 @@ export default function Pipeline() {
   // Wrap contact helpers to pass selectedContactData
   const wrappedGetContactPhone = (contactId: string | null) => getContactPhone(contactId, selectedContactData);
   const wrappedGetContactName = (contactId: string | null) => getContactName(contactId, selectedContactData);
+  const wrappedGetContactInfo = (contactId: string | null) => getContactInfo(contactId, selectedContactData);
 
   // ── Render ────────────────────────────────────────────────────────
   return (
@@ -481,6 +482,7 @@ export default function Pipeline() {
             isMutating={createMutation.isPending || updateMutation.isPending}
             getContactPhone={wrappedGetContactPhone}
             getContactName={wrappedGetContactName}
+            getContactInfo={wrappedGetContactInfo}
           />
         </div>
       </div>
