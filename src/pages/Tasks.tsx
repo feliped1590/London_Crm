@@ -144,13 +144,29 @@ export default function Tasks() {
     toast.success('Dados atualizados!');
   };
 
+  const [companySearch, setCompanySearch] = useState('');
   const { data: companies } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['task_companies', companySearch],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      let query = supabase.from('companies').select('id, name').order('name').limit(50);
+      if (companySearch) {
+        query = query.ilike('name', `%${companySearch}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+  });
+
+  // Ensure selected company always appears in options
+  const { data: selectedCompany } = useQuery({
+    queryKey: ['task_company_selected', formData.company_id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('companies').select('id, name').eq('id', formData.company_id!).single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!formData.company_id,
   });
 
   const { data: contacts } = useQuery({
@@ -175,9 +191,13 @@ export default function Tasks() {
     },
   });
 
-  const companyOptions = useMemo(() => 
-    (companies || []).map(c => ({ value: c.id, label: c.name })), [companies]
-  );
+  const companyOptions = useMemo(() => {
+    const list = (companies || []).map(c => ({ value: c.id, label: c.name }));
+    if (selectedCompany && !list.find(o => o.value === selectedCompany.id)) {
+      list.unshift({ value: selectedCompany.id, label: selectedCompany.name });
+    }
+    return list;
+  }, [companies, selectedCompany]);
 
   const contactOptions = useMemo(() => 
     (contacts || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name || ''}`.trim() })), [contacts]
@@ -444,6 +464,7 @@ export default function Tasks() {
                     placeholder="Selecione a empresa"
                     searchPlaceholder="Buscar empresa..."
                     emptyMessage="Nenhuma empresa encontrada."
+                    onSearchChange={setCompanySearch}
                   />
                 </div>
                 <div>
