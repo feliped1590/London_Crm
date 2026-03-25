@@ -37,8 +37,8 @@ export function VersionChecker() {
 
     const local = localStorage.getItem(VERSION_KEY);
 
-    // First visit — just store
-    if (!local) {
+    // First visit or post-reload — store and done
+    if (!local || (local !== remote && !isReloadSafe())) {
       localStorage.setItem(VERSION_KEY, remote);
       return;
     }
