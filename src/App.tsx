@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AppInitializer } from "@/components/AppInitializer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { VersionChecker } from "@/components/VersionChecker";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import Auth from "./pages/Auth";
@@ -126,6 +127,7 @@ const App = () => (
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
+      <VersionChecker />
       <AuthProvider>
         <AppInitializer>
           <RealtimeSync />
