@@ -127,6 +127,7 @@ const App = () => (
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
+      <VersionChecker />
       <AuthProvider>
         <AppInitializer>
           <RealtimeSync />
