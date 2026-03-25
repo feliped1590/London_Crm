@@ -177,6 +177,29 @@ export function DealFormDialog({
           createNewLabel="Criar novo contato"
           onSearchChange={onContactSearchChange}
         />
+        {(() => {
+          const contactInfo = getContactInfo(formData.contact_id ?? null);
+          if (!contactInfo) return null;
+          const phone = contactInfo.mobile || contactInfo.phone;
+          const email = contactInfo.email;
+          if (!phone && !email) return null;
+          return (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              {phone && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  {phone}
+                </span>
+              )}
+              {email && (
+                <span className="inline-flex items-center gap-1">
+                  <AtSign className="h-3.5 w-3.5" />
+                  {email}
+                </span>
+              )}
+            </div>
+          );
+        })()}
       </div>
       {legalEntities.length > 0 && isEditing && (
         <div>
