@@ -144,10 +144,15 @@ export default function Tasks() {
     toast.success('Dados atualizados!');
   };
 
+  const [companySearch, setCompanySearch] = useState('');
   const { data: companies } = useQuery({
-    queryKey: ['companies'],
+    queryKey: ['task_companies', companySearch],
     queryFn: async () => {
-      const { data, error } = await supabase.from('companies').select('id, name').order('name');
+      let query = supabase.from('companies').select('id, name').order('name').limit(50);
+      if (companySearch) {
+        query = query.ilike('name', `%${companySearch}%`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
