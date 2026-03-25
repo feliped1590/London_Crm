@@ -47,6 +47,7 @@ interface DealFormDialogProps {
   isMutating: boolean;
   getContactPhone: (contactId: string | null) => string | null;
   getContactName: (contactId: string | null) => string;
+  getContactInfo: (contactId: string | null) => { id: string; first_name: string; last_name?: string; email?: string; phone?: string; mobile?: string } | null;
 }
 
 export function DealFormDialog({
