@@ -47,7 +47,6 @@ export function VersionChecker() {
 
     // New version detected
     if (autoReload && isReloadSafe()) {
-      localStorage.setItem(VERSION_KEY, remote);
       markReload();
       window.location.reload();
       return;
