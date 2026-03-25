@@ -60,15 +60,14 @@ export function VersionChecker() {
   useEffect(() => {
     if (!pendingVersion) return;
 
-    toast.info('Nova versão disponível', {
-      description: 'Clique para atualizar o sistema.',
+    toast.info('🚀 Nova versão disponível', {
+      description: 'Atualize para continuar com a melhor experiência.',
       duration: Infinity,
       id: 'version-update',
       action: {
         label: 'Atualizar agora',
         onClick: () => {
           if (isReloadSafe()) {
-            localStorage.setItem(VERSION_KEY, pendingVersion);
             markReload();
             window.location.reload();
           }
