@@ -76,6 +76,7 @@ export function DealFormDialog({
   isMutating,
   getContactPhone,
   getContactName,
+  getContactInfo,
 }: DealFormDialogProps) {
   const navigate = useNavigate();
   const renderFormFields = (isEditing: boolean) => (
