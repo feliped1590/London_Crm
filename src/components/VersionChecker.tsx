@@ -37,8 +37,8 @@ export function VersionChecker() {
 
     const local = localStorage.getItem(VERSION_KEY);
 
-    // First visit — just store
-    if (!local) {
+    // First visit or post-reload — store and done
+    if (!local || (local !== remote && !isReloadSafe())) {
       localStorage.setItem(VERSION_KEY, remote);
       return;
     }
@@ -47,7 +47,6 @@ export function VersionChecker() {
 
     // New version detected
     if (autoReload && isReloadSafe()) {
-      localStorage.setItem(VERSION_KEY, remote);
       markReload();
       window.location.reload();
       return;
@@ -61,15 +60,14 @@ export function VersionChecker() {
   useEffect(() => {
     if (!pendingVersion) return;
 
-    toast.info('Nova versão disponível', {
-      description: 'Clique para atualizar o sistema.',
+    toast.info('🚀 Nova versão disponível', {
+      description: 'Atualize para continuar com a melhor experiência.',
       duration: Infinity,
       id: 'version-update',
       action: {
         label: 'Atualizar agora',
         onClick: () => {
           if (isReloadSafe()) {
-            localStorage.setItem(VERSION_KEY, pendingVersion);
             markReload();
             window.location.reload();
           }
