@@ -53,7 +53,7 @@ export default function Pipeline() {
     templates,
     createMutation, updateMutation, deleteMutation, sendEmailMutation,
     canDeleteDeal,
-    getContactPhone, getContactName,
+    getContactInfo, getContactPhone, getContactName,
     buildFilteredDeals,
     handleDrop: handleDropCore,
     requiresJustification, logIntervention,
