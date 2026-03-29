@@ -599,10 +599,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
-    console.error("Error generating order PDF:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("generate-order-pdf failed", { code: (error as any)?.code });
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: errorMessage }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
