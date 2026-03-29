@@ -2,17 +2,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 function parseMarkdownRows(text: string): any[] {
   const lines = text.split('\n').filter(l => l.trim().startsWith('|'));
-  // Skip header and separator lines
   const dataLines = lines.filter(l => !l.includes('Razão Social') && !l.match(/^\|[-\s|]+\|$/));
   
   return dataLines.map(line => {
     const cols = line.split('|').slice(1, -1).map(c => c.trim());
-    // Map: 0=name, 1=contact, 2=phone, 3=fax, 4=address, 5=neighborhood, 6=city, 7=state, 8=zip, 9=cnpj, 10=ie, 11=abertura, 12=fantasia, 13=numero, 14=origin
     const cnpjRaw = cols[9] || '';
     const cnpj = cnpjRaw.replace(/\D/g, '');
     let zipCode = (cols[8] || '').replace(/\D/g, '');
@@ -43,17 +41,96 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // =========================================================================
+    // 1. AUTENTICAÇÃO — validar usuário real via getUser()
+    // =========================================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
+    // =========================================================================
+    // 2. SERVICE CLIENT — criado APÓS autenticação
+    // =========================================================================
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // =========================================================================
+    // 3. AUTORIZAÇÃO — apenas admin
+    // =========================================================================
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin role required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // =========================================================================
+    // 4. RATE LIMIT — max 10 imports/min (importação é operação pesada)
+    // =========================================================================
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count: recentRequests } = await supabase
+      .from('request_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('function_name', 'import-companies-bulk')
+      .gte('created_at', oneMinuteAgo);
+
+    if (recentRequests && recentRequests > 10) {
+      return new Response(
+        JSON.stringify({ error: 'Too many import requests. Try again in a minute.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    await supabase.from('request_logs').insert({
+      user_id: userId,
+      function_name: 'import-companies-bulk',
+    });
+
+    // =========================================================================
+    // 5. INPUT VALIDATION
+    // =========================================================================
     const body = await req.json();
     let rows: any[];
 
     if (body.markdown_text) {
+      if (typeof body.markdown_text !== 'string' || body.markdown_text.length > 10 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: 'markdown_text must be a string under 10MB' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       rows = parseMarkdownRows(body.markdown_text);
     } else if (body.rows && Array.isArray(body.rows)) {
+      if (body.rows.length > 10000) {
+        return new Response(JSON.stringify({ error: 'Maximum 10000 rows per request' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       rows = body.rows;
     } else {
       return new Response(JSON.stringify({ error: 'rows array or markdown_text required' }), {
@@ -62,10 +139,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    // =========================================================================
+    // 6. LÓGICA DE NEGÓCIO (mantida integralmente)
+    // =========================================================================
     const LEGAL_ENTITY_ID = 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
     const TENANT_ID = '00000000-0000-0000-0000-000000000001';
 
-    // Get existing CNPJs
     const { data: existingCompanies } = await supabase
       .from('companies')
       .select('cnpj');
@@ -143,7 +222,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('Error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

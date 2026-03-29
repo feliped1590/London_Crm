@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -12,13 +12,71 @@ serve(async (req) => {
   }
 
   try {
-    const { widgets, data, title, format } = await req.json();
-
-    console.log("Generating report PDF", { widgetCount: widgets?.length, format, title });
-
-    if (!widgets || widgets.length === 0) {
-      throw new Error("No widgets provided");
+    // =========================================================================
+    // 1. AUTENTICAÇÃO — validar usuário real via getUser()
+    // =========================================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =========================================================================
+    // 2. INPUT VALIDATION — validar widgets
+    // =========================================================================
+    const body = await req.json();
+    const { widgets, data, title, format } = body;
+
+    if (!Array.isArray(widgets) || widgets.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid widgets: must be a non-empty array' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (widgets.length > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Too many widgets: maximum is 50' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (title && typeof title !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'title must be a string' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validar payload total (evitar payloads excessivos > 5MB)
+    const bodyStr = JSON.stringify(body);
+    if (bodyStr.length > 5 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ error: 'Payload too large' }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =========================================================================
+    // 3. LÓGICA DE NEGÓCIO (mantida integralmente)
+    // =========================================================================
+    console.log("Generating report PDF", { widgetCount: widgets?.length, format, title });
 
     const now = new Date().toLocaleDateString("pt-BR", {
       day: "2-digit",
@@ -66,7 +124,6 @@ serve(async (req) => {
           `;
         }
 
-        // For graphical format, create SVG charts
         const maxValue = Math.max(...widgetData.chartData.map((d: any) => d.value));
         const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
@@ -138,7 +195,6 @@ serve(async (req) => {
           `;
         }
 
-        // Line/Area chart as table for print
         return `
           <table class="data-table">
             <thead>
@@ -184,118 +240,33 @@ serve(async (req) => {
   <title>${title || "Relatório"}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      padding: 40px; 
-      color: #1f2937;
-      background: white;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e5e7eb;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1f2937; background: white; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
     .header h1 { font-size: 24px; color: #111827; }
     .header .date { color: #6b7280; font-size: 14px; }
-    .widgets-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-    }
-    .widget {
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 16px;
-      break-inside: avoid;
-    }
+    .widgets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .widget { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; break-inside: avoid; }
     .widget-sm { grid-column: span 1; }
     .widget-md { grid-column: span 2; }
     .widget-lg { grid-column: span 3; }
     .widget-xl { grid-column: span 4; }
-    .widget-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-    .widget-number {
-      text-align: center;
-      padding: 20px 0;
-    }
-    .widget-number .value {
-      font-size: 32px;
-      font-weight: 700;
-      color: #111827;
-    }
-    .widget-number .subtitle {
-      font-size: 12px;
-      color: #6b7280;
-      margin-top: 4px;
-    }
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    .data-table th, .data-table td {
-      padding: 8px;
-      text-align: left;
-      border-bottom: 1px solid #e5e7eb;
-    }
-    .data-table th {
-      background: #f9fafb;
-      font-weight: 600;
-    }
-    .chart-svg {
-      width: 100%;
-      height: auto;
-    }
-    .bar-label {
-      font-size: 11px;
-      fill: #374151;
-    }
-    .bar-value {
-      font-size: 11px;
-      fill: #6b7280;
-    }
-    .pie-container {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-    }
-    .pie-svg {
-      width: 120px;
-      height: 120px;
-    }
-    .pie-legend {
-      flex: 1;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
-    .legend-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 2px;
-    }
-    .no-data {
-      color: #9ca3af;
-      text-align: center;
-      padding: 20px;
-    }
-    @media print {
-      body { padding: 20px; }
-      .widget { page-break-inside: avoid; }
-    }
+    .widget-title { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f3f4f6; }
+    .widget-number { text-align: center; padding: 20px 0; }
+    .widget-number .value { font-size: 32px; font-weight: 700; color: #111827; }
+    .widget-number .subtitle { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table th, .data-table td { padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    .data-table th { background: #f9fafb; font-weight: 600; }
+    .chart-svg { width: 100%; height: auto; }
+    .bar-label { font-size: 11px; fill: #374151; }
+    .bar-value { font-size: 11px; fill: #6b7280; }
+    .pie-container { display: flex; align-items: center; gap: 20px; }
+    .pie-svg { width: 120px; height: 120px; }
+    .pie-legend { flex: 1; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+    .legend-color { width: 12px; height: 12px; border-radius: 2px; }
+    .no-data { color: #9ca3af; text-align: center; padding: 20px; }
+    @media print { body { padding: 20px; } .widget { page-break-inside: avoid; } }
   </style>
 </head>
 <body>
@@ -322,19 +293,14 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ html }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
     console.error("Error generating report PDF:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ error: message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

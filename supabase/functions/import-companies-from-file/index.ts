@@ -11,11 +11,78 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // =========================================================================
+    // 1. AUTENTICAÇÃO — validar usuário real via getUser()
+    // =========================================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
+    // =========================================================================
+    // 2. SERVICE CLIENT — criado APÓS autenticação
+    // =========================================================================
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
+    // =========================================================================
+    // 3. AUTORIZAÇÃO — apenas admin
+    // =========================================================================
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin role required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // =========================================================================
+    // 4. RATE LIMIT — max 10 imports/min
+    // =========================================================================
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count: recentRequests } = await supabase
+      .from('request_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('function_name', 'import-companies-from-file')
+      .gte('created_at', oneMinuteAgo);
+
+    if (recentRequests && recentRequests > 10) {
+      return new Response(
+        JSON.stringify({ error: 'Too many import requests. Try again in a minute.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    await supabase.from('request_logs').insert({
+      user_id: userId,
+      function_name: 'import-companies-from-file',
+    });
+
+    // =========================================================================
+    // 5. INPUT VALIDATION
+    // =========================================================================
     const body = await req.json();
     const { rows, legal_entity_id, tenant_id, file_name, batch_index, total_batches } = body;
 
@@ -26,6 +93,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (rows.length > 5000) {
+      return new Response(JSON.stringify({ error: 'Maximum 5000 rows per batch' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // =========================================================================
+    // 6. LÓGICA DE NEGÓCIO (mantida integralmente)
+    // =========================================================================
     const LEGAL_ENTITY_ID = legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
     const TENANT_ID = tenant_id || '00000000-0000-0000-0000-000000000001';
 
@@ -93,10 +170,9 @@ Deno.serve(async (req) => {
 
     // Resolve vendedor names to sales_rep IDs
     const vendedorNames = [...new Set(validRows.map(r => r.vendedor_nome).filter(Boolean))] as string[];
-    const vendedorMap = new Map<string, string>(); // lowercase name -> sales_rep_id
+    const vendedorMap = new Map<string, string>();
 
     if (vendedorNames.length > 0) {
-      // Fetch all active sales reps
       const { data: salesReps } = await supabase
         .from('sales_reps')
         .select('id, name')
@@ -261,7 +337,7 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     console.error('Error:', err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
