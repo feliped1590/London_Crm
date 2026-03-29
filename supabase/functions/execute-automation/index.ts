@@ -169,12 +169,11 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     if (automationsError) {
-      console.error('Error fetching automations:', automationsError);
+      console.error('Automations fetch failed', { code: automationsError?.code });
       throw automationsError;
     }
 
     if (!automations || automations.length === 0) {
-      console.log('No active automations found for this trigger');
       return new Response(
         JSON.stringify({ success: true, message: 'No automations to execute', executed: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -190,7 +189,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (dealError) {
-      console.error('Error fetching deal:', dealError);
+      console.error('Deal details fetch failed', { code: dealError?.code });
       throw dealError;
     }
 
