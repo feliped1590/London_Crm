@@ -948,11 +948,11 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro no motor fiscal:', error);
+    console.error('calcular-tributacao failed', { code: (error as any)?.code });
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Erro interno no motor fiscal',
+        error: 'Erro interno no motor fiscal',
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
