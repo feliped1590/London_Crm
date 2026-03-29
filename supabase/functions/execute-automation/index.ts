@@ -225,17 +225,17 @@ Deno.serve(async (req) => {
             results.push({ automation: automation.name, action: automation.action_type, success: false, error: 'Unknown action type' });
         }
       } catch (actionError) {
-        console.error(`Error executing automation ${automation.name}:`, actionError);
+        console.error('Automation action failed', { automation: automation.name, code: (actionError as any)?.code });
         results.push({ 
           automation: automation.name, 
           action: automation.action_type, 
           success: false, 
-          error: actionError instanceof Error ? actionError.message : 'Unknown error' 
+          error: 'Action execution failed' 
         });
       }
     }
 
-    console.log('Automation execution results:', results);
+    console.log('Automation execution complete', { total: results.length, successes: results.filter(r => r.success).length });
 
     return new Response(
       JSON.stringify({ success: true, executed: results.length, results }),
