@@ -140,10 +140,16 @@ Deno.serve(async (req) => {
     }
 
     // =========================================================================
-    // 6. LÓGICA DE NEGÓCIO (mantida integralmente)
+    // 6. RESOLVER TENANT/LEGAL_ENTITY DINAMICAMENTE
     // =========================================================================
-    const LEGAL_ENTITY_ID = 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
-    const TENANT_ID = '00000000-0000-0000-0000-000000000001';
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('active_tenant_id, active_legal_entity_id')
+      .eq('user_id', userId)
+      .single();
+
+    const TENANT_ID = profile?.active_tenant_id || '00000000-0000-0000-0000-000000000001';
+    const LEGAL_ENTITY_ID = profile?.active_legal_entity_id || 'c617d4bc-65b8-4b1d-b786-9f256eaab0b2';
 
     const { data: existingCompanies } = await supabase
       .from('companies')
@@ -221,8 +227,8 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
-    console.error('Error:', err);
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
+    console.error('import-companies-bulk failed', { code: (err as any)?.code });
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

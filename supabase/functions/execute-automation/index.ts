@@ -121,29 +121,22 @@ Deno.serve(async (req) => {
     });
 
     // =========================================================================
-    // 5. AUTORIZAÇÃO — validar se o usuário tem acesso ao deal
+    // 5. AUTORIZAÇÃO — anti-enumeração: resposta unificada 404
     // =========================================================================
     const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
 
-    if (!isAdmin) {
-      // Verificar se é dono, criador ou participante do deal
-      const { data: deal } = await supabase
-        .from('deals')
-        .select('id, owner_id, created_by')
-        .eq('id', deal_id)
-        .maybeSingle();
+    const { data: dealCheck } = await supabase
+      .from('deals')
+      .select('id, owner_id, created_by')
+      .eq('id', deal_id)
+      .maybeSingle();
 
-      if (!deal) {
-        return new Response(
-          JSON.stringify({ error: 'Deal not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    let hasAccess = !!isAdmin;
 
-      const isDealOwner = deal.owner_id === userId || deal.created_by === userId;
+    if (!hasAccess && dealCheck) {
+      hasAccess = dealCheck.owner_id === userId || dealCheck.created_by === userId;
 
-      if (!isDealOwner) {
-        // Verificar se é participante
+      if (!hasAccess) {
         const { data: participant } = await supabase
           .from('deal_participants')
           .select('id')
@@ -151,20 +144,22 @@ Deno.serve(async (req) => {
           .eq('user_id', userId)
           .limit(1)
           .maybeSingle();
-
-        if (!participant) {
-          return new Response(
-            JSON.stringify({ error: 'Forbidden: you do not have access to this deal' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+        hasAccess = !!participant;
       }
+    }
+
+    // Resposta unificada: não revela se o deal existe ou se é acesso negado
+    if (!dealCheck || !hasAccess) {
+      return new Response(
+        JSON.stringify({ error: 'Deal not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // =========================================================================
     // 6. LÓGICA DE NEGÓCIO (mantida integralmente)
     // =========================================================================
-    console.log(`Processing automation for deal ${deal_id}, trigger: ${trigger_type}, stage: ${trigger_stage}`);
+    console.log('Processing automation', { trigger_type, trigger_stage });
 
     const { data: automations, error: automationsError } = await supabase
       .from('pipeline_automations')
@@ -174,12 +169,11 @@ Deno.serve(async (req) => {
       .eq('is_active', true);
 
     if (automationsError) {
-      console.error('Error fetching automations:', automationsError);
+      console.error('Automations fetch failed', { code: automationsError?.code });
       throw automationsError;
     }
 
     if (!automations || automations.length === 0) {
-      console.log('No active automations found for this trigger');
       return new Response(
         JSON.stringify({ success: true, message: 'No automations to execute', executed: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -195,7 +189,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (dealError) {
-      console.error('Error fetching deal:', dealError);
+      console.error('Deal details fetch failed', { code: dealError?.code });
       throw dealError;
     }
 
@@ -231,17 +225,17 @@ Deno.serve(async (req) => {
             results.push({ automation: automation.name, action: automation.action_type, success: false, error: 'Unknown action type' });
         }
       } catch (actionError) {
-        console.error(`Error executing automation ${automation.name}:`, actionError);
+        console.error('Automation action failed', { automation: automation.name, code: (actionError as any)?.code });
         results.push({ 
           automation: automation.name, 
           action: automation.action_type, 
           success: false, 
-          error: actionError instanceof Error ? actionError.message : 'Unknown error' 
+          error: 'Action execution failed' 
         });
       }
     }
 
-    console.log('Automation execution results:', results);
+    console.log('Automation execution complete', { total: results.length, successes: results.filter(r => r.success).length });
 
     return new Response(
       JSON.stringify({ success: true, executed: results.length, results }),

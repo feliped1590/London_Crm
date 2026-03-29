@@ -74,7 +74,7 @@ serve(async (req) => {
     );
 
     // =========================================================================
-    // 4. RATE LIMIT — max 50 requests/min por usuário nesta função
+    // 4. RATE LIMIT — max 50 requests/min (log APÓS validação de input)
     // =========================================================================
     const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
     const { count: recentRequests } = await supabase
@@ -91,14 +91,13 @@ serve(async (req) => {
       );
     }
 
-    // Log this request
     await supabase.from('request_logs').insert({
       user_id: userId,
       function_name: 'generate-order-pdf',
     });
 
     // =========================================================================
-    // 5. FETCH ORDER — buscar pedido
+    // 5. FETCH ORDER + AUTORIZAÇÃO (anti-enumeração: resposta unificada)
     // =========================================================================
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -112,24 +111,18 @@ serve(async (req) => {
       .eq("id", order_id)
       .single();
 
-    if (orderError || !order) {
-      console.error("Error fetching order:", orderError);
-      return new Response(
-        JSON.stringify({ error: "Order not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (orderError) {
+      console.error("Order fetch failed", { code: orderError?.code });
     }
 
-    // =========================================================================
-    // 6. AUTORIZAÇÃO — validar se o usuário é admin OU dono do pedido
-    // =========================================================================
+    // Verificar autorização — unificado com 404 para evitar enumeração
     const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
 
-    if (!isAdmin) {
-      // Verificar se o usuário está vinculado ao vendedor da empresa do pedido
-      const salesRepId = order.company?.sales_rep_id;
-      let hasAccess = false;
+    let hasAccess = !!isAdmin;
 
+    if (!hasAccess && order) {
+      // Verificar vínculo com vendedor da empresa
+      const salesRepId = order.company?.sales_rep_id;
       if (salesRepId) {
         const { data: userSalesRep } = await supabase
           .from('user_sales_reps')
@@ -138,17 +131,20 @@ serve(async (req) => {
           .eq('sales_rep_id', salesRepId)
           .limit(1)
           .maybeSingle();
-
         hasAccess = !!userSalesRep;
       }
-
-      // Também verificar se o usuário criou o pedido
-      if (!hasAccess && order.created_by !== userId) {
-        return new Response(
-          JSON.stringify({ error: 'Forbidden: you do not have access to this order' }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Verificar se é criador do pedido
+      if (!hasAccess) {
+        hasAccess = order.created_by === userId;
       }
+    }
+
+    // Resposta unificada: não revela se o recurso existe ou se é acesso negado
+    if (!order || !hasAccess) {
+      return new Response(
+        JSON.stringify({ error: "Order not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // =========================================================================
@@ -603,10 +599,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
-    console.error("Error generating order PDF:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("generate-order-pdf failed", { code: (error as any)?.code });
     return new Response(
-      JSON.stringify({ error: "Internal server error", details: errorMessage }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
