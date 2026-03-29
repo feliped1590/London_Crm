@@ -150,17 +150,17 @@ serve(async (req) => {
       errors,
     };
 
-    console.log('Import complete:', result);
+    console.log('Import complete', { valid_codes: result.valid_codes, processed: result.processed });
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Import error:', error);
+    console.error('import-ncm-tipi failed', { code: (error as any)?.code });
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
