@@ -1,70 +1,91 @@
 
 
-## Plano: Alerta de Tarefas Pendentes no Login
+# Plano: Corrigir autenticacao nas 7 Edge Functions criticas
 
-### 1. Migração SQL — RPC + Índice
+## Resumo
 
-Criar `check_pending_tasks(p_user_id UUID)` como `SECURITY DEFINER`:
-- Usa `date_trunc('day', now())` para comparações sem timezone issues
-- Retorna JSON com `overdue_count`, `today_count`, `overdue_tasks` (array de {id, title}), `today_tasks` (array de {id, title})
-- Filtra `status != 'done'` e `assigned_to = p_user_id`
+Adicionar validacao obrigatoria de JWT em 7 Edge Functions que hoje aceitam requisicoes sem autenticacao. O frontend ja usa `supabase.functions.invoke()` que envia o token automaticamente, entao nenhuma mudanca no frontend e necessaria.
 
-Criar índice composto:
-```sql
-CREATE INDEX IF NOT EXISTS idx_tasks_owner_status_due 
-ON public.tasks (assigned_to, status, due_date);
+## Padrao de autenticacao
+
+Todas as funcoes receberao o mesmo bloco de autenticacao no inicio do handler:
+
+```typescript
+// --- AUTH: validar token JWT ---
+const authHeader = req.headers.get('Authorization');
+if (!authHeader?.startsWith('Bearer ')) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+const supabaseAuth = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_ANON_KEY')!,
+  { global: { headers: { Authorization: authHeader } } }
+);
+const token = authHeader.replace('Bearer ', '');
+const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+if (claimsError || !claimsData?.claims) {
+  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+    status: 401,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+const userId = claimsData.claims.sub;
+// --- FIM AUTH ---
+// Agora sim, criar service client para operacoes privilegiadas
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+);
 ```
 
-### 2. Hook `useLoginTaskAlert`
+Para funcoes administrativas, adiciona-se apos o bloco acima:
 
-Novo arquivo `src/hooks/useLoginTaskAlert.ts`:
-- Executa **uma vez por login** usando `sessionStorage` key `task_alert_checked_<session_id>`
-- Carrega config de `system_settings` key `task_alert_config` (defaults: `enable_task_login_alert: true`, `enable_task_login_sound: true`)
-- Se alert habilitado, chama RPC `check_pending_tasks`
-- Se total > 0, abre modal com delay de ~800ms + fade-in
-- Se som habilitado, toca audio com try/catch no `.play()`
-- Retorna estado do modal e dados para o componente
+```typescript
+// --- ADMIN CHECK ---
+const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+if (!isAdmin) {
+  return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
+    status: 403,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+```
 
-### 3. Componente `TaskAlertModal`
+## Alteracoes por funcao
 
-Novo arquivo `src/components/tasks/TaskAlertModal.tsx`:
-- Dialog com animação suave (fade-in com delay)
-- Exibe contagens de tarefas vencidas e vencendo hoje
-- Botão "Ver Tarefas" → navega para `/tasks`
-- Botão "Fechar"
-- Design discreto e profissional
+| # | Funcao | Tipo | Alteracao |
+|---|--------|------|-----------|
+| 1 | `execute-automation/index.ts` | Authenticated | Inserir bloco auth nas linhas 47-50 (substituir criacao direta do service client) |
+| 2 | `import-companies-bulk/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 45-49 |
+| 3 | `generate-order-pdf/index.ts` | Authenticated | Inserir bloco auth nas linhas 14-17 |
+| 4 | `generate-report-pdf/index.ts` | Authenticated | Inserir bloco auth na linha 14 (antes do parse do body) |
+| 5 | `import-companies-from-file/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 13-17 |
+| 6 | `calcular-tributacao/index.ts` | Authenticated | Inserir bloco auth nas linhas 652-655 |
+| 7 | `import-ncm-tipi/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 14-17 |
 
-### 4. Som de Notificação
+## Compatibilidade
 
-Gerar um audio inline usando `AudioContext` Web API (tom breve de notificação), evitando necessidade de arquivo externo. Tratamento de erro no `.play()`.
+O frontend ja passa o token JWT automaticamente via `supabase.functions.invoke()`. Nenhuma alteracao no frontend e necessaria.
 
-### 5. Configuração no Settings (Notificações)
+## Validacao pos-implementacao
 
-Adicionar seção dentro da aba **Notificações** (`CustomNotificationsManager` ou diretamente no `TabsContent value="notifications"`), visível apenas para `isDeveloper`:
-- Toggle: Ativar/Desativar alerta no login (`enable_task_login_alert`)
-- Toggle: Ativar/Desativar som (`enable_task_login_sound`)
-- Persiste via upsert em `system_settings` key `task_alert_config`
+```bash
+# Sem token → deve retornar 401
+curl -X POST https://lusyhkizwoihixcvcgap.supabase.co/functions/v1/execute-automation \
+  -H "Content-Type: application/json" \
+  -d '{"deal_id":"test"}'
 
-### 6. Integração no Login
+# Com token valido → deve funcionar normalmente (via interface do CRM)
+```
 
-No `Auth.tsx`, após `createSessionAndNavigate` bem-sucedido: nenhuma mudança necessária — o hook será montado no `AppLayout.tsx` e verificará na primeira renderização pós-login.
+## Secao tecnica
 
-Integrar `<TaskAlertModal />` no `AppLayout.tsx`, controlado pelo hook `useLoginTaskAlert`.
-
-### Arquivos Criados/Editados
-
-| Ação | Arquivo |
-|------|---------|
-| Criar | Migração SQL (RPC + índice) |
-| Criar | `src/hooks/useLoginTaskAlert.ts` |
-| Criar | `src/components/tasks/TaskAlertModal.tsx` |
-| Editar | `src/components/layout/AppLayout.tsx` — adicionar hook + modal |
-| Editar | `src/pages/Settings.tsx` — adicionar config na aba Notificações |
-
-### Performance
-
-- Índice composto garante query eficiente
-- Hook executa apenas 1x por sessão (sessionStorage)
-- Delay de 800ms não bloqueia carregamento do dashboard
-- RPC é `STABLE SECURITY DEFINER` — sem overhead de RLS
+- `getClaims(token)` valida o JWT e retorna claims (sub, email, role, exp) sem round-trip ao banco
+- O `SERVICE_ROLE_KEY` so e usado APOS validacao do usuario
+- Funcoes de importacao e NCM exigem role `admin` via RPC `has_role`
+- `generate-report-pdf` nao usa Supabase client mas passara a validar identidade mesmo assim
+- Nenhum CORS header sera alterado — mantemos compatibilidade total
 
