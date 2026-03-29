@@ -6099,6 +6099,27 @@ export type Database = {
         }
         Relationships: []
       }
+      request_logs: {
+        Row: {
+          created_at: string
+          function_name: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          function_name: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          function_name?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       role_module_permissions: {
         Row: {
           access_type: Database["public"]["Enums"]["access_level"] | null
@@ -7522,6 +7543,7 @@ export type Database = {
       check_existing_session: { Args: { p_user_id: string }; Returns: Json }
       check_pending_tasks: { Args: { p_user_id: string }; Returns: Json }
       cleanup_expired_sessions: { Args: never; Returns: number }
+      cleanup_request_logs: { Args: never; Returns: undefined }
       compute_product_erp_hash: {
         Args: { p: Database["public"]["Tables"]["products"]["Row"] }
         Returns: string

@@ -3,8 +3,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+// --- UUID validation helper ---
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(val: unknown): val is string {
+  return typeof val === 'string' && UUID_REGEX.test(val);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,11 +18,38 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    // =========================================================================
+    // 1. AUTENTICAÇÃO — validar usuário real via getUser()
+    // =========================================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    const { order_id } = await req.json();
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = user.id;
+
+    // =========================================================================
+    // 2. INPUT VALIDATION — validar order_id como UUID
+    // =========================================================================
+    const body = await req.json();
+    const { order_id } = body;
 
     if (!order_id) {
       return new Response(
@@ -25,11 +58,53 @@ serve(async (req) => {
       );
     }
 
+    if (!isValidUUID(order_id)) {
+      return new Response(
+        JSON.stringify({ error: "order_id must be a valid UUID" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =========================================================================
+    // 3. SERVICE CLIENT — criado APÓS autenticação
+    // =========================================================================
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // =========================================================================
+    // 4. RATE LIMIT — max 50 requests/min por usuário nesta função
+    // =========================================================================
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count: recentRequests } = await supabase
+      .from('request_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('function_name', 'generate-order-pdf')
+      .gte('created_at', oneMinuteAgo);
+
+    if (recentRequests && recentRequests > 50) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. Try again in a minute.' }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Log this request
+    await supabase.from('request_logs').insert({
+      user_id: userId,
+      function_name: 'generate-order-pdf',
+    });
+
+    // =========================================================================
+    // 5. FETCH ORDER — buscar pedido
+    // =========================================================================
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select(`
         *,
-        company:companies(id, name, cnpj, inscricao_estadual, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep:sales_reps(id, name, phone, email)),
+        company:companies(id, name, cnpj, inscricao_estadual, address, city, state, phone, email, address_number, neighborhood, zip_code, sales_rep_id, sales_rep:sales_reps(id, name, phone, email)),
         contact:contacts(id, first_name, last_name, email, phone),
         proposal:proposals(id, number),
         legal_entity:legal_entities(id, name, trade_name, cnpj, address, city, state, phone, email, logo_url)
@@ -45,12 +120,43 @@ serve(async (req) => {
       );
     }
 
+    // =========================================================================
+    // 6. AUTORIZAÇÃO — validar se o usuário é admin OU dono do pedido
+    // =========================================================================
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+
+    if (!isAdmin) {
+      // Verificar se o usuário está vinculado ao vendedor da empresa do pedido
+      const salesRepId = order.company?.sales_rep_id;
+      let hasAccess = false;
+
+      if (salesRepId) {
+        const { data: userSalesRep } = await supabase
+          .from('user_sales_reps')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('sales_rep_id', salesRepId)
+          .limit(1)
+          .maybeSingle();
+
+        hasAccess = !!userSalesRep;
+      }
+
+      // Também verificar se o usuário criou o pedido
+      if (!hasAccess && order.created_by !== userId) {
+        return new Response(
+          JSON.stringify({ error: 'Forbidden: you do not have access to this order' }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // =========================================================================
+    // 7. LÓGICA DE NEGÓCIO — geração do HTML (mantida integralmente)
+    // =========================================================================
     const { data: items, error: itemsError } = await supabase
       .from("order_items")
-      .select(`
-        *,
-        product:products(id, sku, name)
-      `)
+      .select(`*, product:products(id, sku, name)`)
       .eq("order_id", order_id)
       .order("sort_order");
 
@@ -206,7 +312,6 @@ serve(async (req) => {
             line-height: 1.4;
           }
           
-          /* ===== PRINT ===== */
           @media print {
             body { padding: 15px 20px; }
             .page-break { page-break-before: always; }
@@ -215,7 +320,6 @@ serve(async (req) => {
           tr { page-break-inside: avoid; page-break-after: auto; }
           thead { display: table-header-group; }
           
-          /* ===== HEADER ===== */
           .header {
             display: flex;
             justify-content: space-between;
@@ -237,7 +341,6 @@ serve(async (req) => {
           .badge-ipi { background: #dbeafe; color: #1e40af; margin-left: 4px; }
           .badge-delivery { background: #c6f6d5; color: #22543d; }
           
-          /* ===== SECTIONS ===== */
           .section { margin-bottom: 18px; }
           .section-title {
             font-size: 11px; font-weight: 700; color: #2d3748;
@@ -246,23 +349,19 @@ serve(async (req) => {
             margin-bottom: 10px;
           }
           
-          /* ===== CLIENT GRID ===== */
           .client-grid { display: flex; gap: 15px; }
           .client-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 4px; padding: 12px; }
           .client-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 600; }
           .client-box .name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
           .client-box .detail { font-size: 10px; color: #4a5568; margin: 2px 0; }
           
-          /* ===== ORIGIN ===== */
           .origin-box { background: #f0fdf4; padding: 8px 14px; border-radius: 4px; border-left: 3px solid #38a169; font-size: 11px; color: #22543d; margin-bottom: 18px; }
           
-          /* ===== SELLER BOX ===== */
           .seller-box { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px 12px; background: #f7fafc; display: flex; gap: 25px; align-items: center; }
           .seller-box .label { font-size: 9px; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
           .seller-box .value { font-size: 11px; color: #1a1a2e; font-weight: 600; }
           .seller-box .sub { font-size: 10px; color: #4a5568; }
           
-          /* ===== TABLE ===== */
           table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
           thead th {
             background: #2d3748; color: #fff;
@@ -277,7 +376,6 @@ serve(async (req) => {
           .bold { font-weight: 700; }
           .desc-col { max-width: 200px; }
           
-          /* ===== TOTALS ===== */
           .totals-wrapper { display: flex; justify-content: flex-end; margin-top: 12px; }
           .totals-box {
             min-width: 280px; border: 1px solid #e2e8f0; border-radius: 4px;
@@ -290,19 +388,16 @@ serve(async (req) => {
             font-size: 14px; font-weight: 700; padding: 10px 14px;
           }
           
-          /* ===== CONDITIONS ===== */
           .conditions-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 14px; }
           .conditions-box p { margin: 4px 0; font-size: 11px; }
           .conditions-box strong { color: #2d3748; }
           
-          /* ===== ACCEPTANCE ===== */
           .acceptance { margin-top: 25px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 20px; }
           .acceptance-title { font-size: 11px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
           .acceptance-grid { display: flex; justify-content: space-between; gap: 30px; margin-top: 30px; }
           .acceptance-field { flex: 1; text-align: center; }
           .acceptance-line { border-top: 1px solid #1a1a2e; padding-top: 6px; font-size: 10px; color: #4a5568; }
           
-          /* ===== FOOTER ===== */
           .footer {
             margin-top: 25px; padding-top: 12px;
             border-top: 2px solid #2d3748;
@@ -337,7 +432,6 @@ serve(async (req) => {
           </div>
         </div>
 
-        <!-- PROPOSTA DE ORIGEM -->
         ${order.proposal?.number ? `
         <div class="origin-box">
           <strong>Proposta de Origem:</strong> ${order.proposal.number}
@@ -458,7 +552,6 @@ serve(async (req) => {
           </div>
         </div>
 
-        <!-- OBSERVAÇÕES -->
         ${order.observations ? `
         <div class="section">
           <div class="section-title">Observações</div>

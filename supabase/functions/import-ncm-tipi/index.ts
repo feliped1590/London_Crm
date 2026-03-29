@@ -12,13 +12,80 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // =========================================================================
+    // 1. AUTENTICAÇÃO — validar usuário real via getUser()
+    // =========================================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
+    const supabaseAuth = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = user.id;
+
+    // =========================================================================
+    // 2. SERVICE CLIENT — criado APÓS autenticação
+    // =========================================================================
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // =========================================================================
+    // 3. AUTORIZAÇÃO — apenas admin
+    // =========================================================================
+    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
+    if (!isAdmin) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin role required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // =========================================================================
+    // 4. RATE LIMIT — max 5 imports/min (operação pesada de API externa)
+    // =========================================================================
+    const oneMinuteAgo = new Date(Date.now() - 60000).toISOString();
+    const { count: recentRequests } = await supabase
+      .from('request_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('function_name', 'import-ncm-tipi')
+      .gte('created_at', oneMinuteAgo);
+
+    if (recentRequests && recentRequests > 5) {
+      return new Response(
+        JSON.stringify({ error: 'Too many requests. NCM import is a heavy operation.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    await supabase.from('request_logs').insert({
+      user_id: userId,
+      function_name: 'import-ncm-tipi',
+    });
+
+    // =========================================================================
+    // 5. LÓGICA DE NEGÓCIO (mantida integralmente)
+    // =========================================================================
     console.log('Fetching NCM data from BrasilAPI...');
 
-    // BrasilAPI provides the full TIPI NCM table
     const response = await fetch('https://brasilapi.com.br/api/ncm/v1', {
       headers: { 'Accept': 'application/json' },
     });
@@ -39,7 +106,6 @@ serve(async (req) => {
 
     console.log(`Received ${ncmData.length} NCM codes from BrasilAPI`);
 
-    // Transform to our schema
     const records = ncmData
       .filter(ncm => ncm.codigo && ncm.codigo.length === 8 && /^\d{8}$/.test(ncm.codigo))
       .map(ncm => ({
@@ -52,10 +118,8 @@ serve(async (req) => {
 
     console.log(`Filtered to ${records.length} valid 8-digit NCM codes`);
 
-    // Upsert in batches of 500
     const BATCH_SIZE = 500;
     let inserted = 0;
-    let updated = 0;
     let errors = 0;
 
     for (let i = 0; i < records.length; i += BATCH_SIZE) {
