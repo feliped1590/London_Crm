@@ -15,6 +15,7 @@ export interface UnifiedCustomer {
   fantasia: string | null;
   cnpj: string | null;
   cnpj_root?: string | null;
+  economic_group_id?: string | null;
   inscricao_estadual: string | null;
   phone: string | null;
   email: string | null;
@@ -163,36 +164,40 @@ export function useCustomerDetail(id: string | undefined) {
   });
 
   const { data: sameGroupCompanies = [], isLoading: sameGroupCompaniesLoading } = useQuery({
-    queryKey: ['customer-same-group', id, customer?.tenant_id, customer?.cnpj_root],
+    queryKey: ['customer-same-group', id, customer?.economic_group_id, customer?.tenant_id, customer?.cnpj_root],
     queryFn: async (): Promise<SameGroupCompany[]> => {
-      const { data, error } = await supabase
+      // Preferir economic_group_id; fallback para cnpj_root
+      let query = supabase
         .from('companies')
         .select('id, name, fantasia, cnpj, cnpj_root, city, state, is_matriz, parent_company_id')
-        .eq('tenant_id', customer!.tenant_id)
-        .eq('cnpj_root', customer!.cnpj_root)
         .neq('id', id!)
         .order('is_matriz', { ascending: false, nullsFirst: false })
         .order('name', { ascending: true })
         .limit(10);
 
+      if (customer!.economic_group_id) {
+        query = query.eq('economic_group_id', customer!.economic_group_id);
+      } else {
+        query = query
+          .eq('tenant_id', customer!.tenant_id)
+          .eq('cnpj_root', customer!.cnpj_root);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!id && customer?.source === 'crm' && !!customer?.tenant_id && !!customer?.cnpj_root,
+    enabled: !!id && customer?.source === 'crm' && !!(customer?.economic_group_id || (customer?.tenant_id && customer?.cnpj_root)),
   });
 
   const { data: groupDealMetrics, isLoading: groupDealMetricsLoading } = useQuery({
-    queryKey: ['customer-group-deal-metrics', id, customer?.cnpj_root],
+    queryKey: ['customer-group-deal-metrics', id, customer?.economic_group_id, customer?.cnpj_root],
     queryFn: async (): Promise<GroupDealMetrics> => {
       if (!id) {
-        return {
-          total_deals: 0,
-          total_value: 0,
-          counts_by_stage: {},
-        };
+        return { total_deals: 0, total_value: 0, counts_by_stage: {} };
       }
 
-      const { data, error } = await supabase.rpc('get_group_deal_metrics_v1', {
+      const { data, error } = await supabase.rpc('get_group_deal_metrics_v2', {
         p_company_id: id,
       });
 
@@ -218,7 +223,7 @@ export function useCustomerDetail(id: string | undefined) {
         counts_by_stage,
       };
     },
-    enabled: !!id && customer?.source === 'crm' && !!customer?.cnpj_root,
+    enabled: !!id && customer?.source === 'crm' && !!(customer?.economic_group_id || customer?.cnpj_root),
   });
 
   // Fetch sellers for owner assignment (admin only)

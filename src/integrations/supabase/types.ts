@@ -997,6 +997,7 @@ export type Database = {
           default_carrier_id: string | null
           default_freight_type: string | null
           domain: string | null
+          economic_group_id: string | null
           email: string | null
           employee_count: string | null
           erp_code: string | null
@@ -1057,6 +1058,7 @@ export type Database = {
           default_carrier_id?: string | null
           default_freight_type?: string | null
           domain?: string | null
+          economic_group_id?: string | null
           email?: string | null
           employee_count?: string | null
           erp_code?: string | null
@@ -1119,6 +1121,7 @@ export type Database = {
           default_carrier_id?: string | null
           default_freight_type?: string | null
           domain?: string | null
+          economic_group_id?: string | null
           email?: string | null
           employee_count?: string | null
           erp_code?: string | null
@@ -1174,6 +1177,13 @@ export type Database = {
             columns: ["default_carrier_id"]
             isOneToOne: false
             referencedRelation: "carriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_economic_group_id_fkey"
+            columns: ["economic_group_id"]
+            isOneToOne: false
+            referencedRelation: "economic_groups"
             referencedColumns: ["id"]
           },
           {
@@ -2909,6 +2919,47 @@ export type Database = {
             columns: ["regra_id"]
             isOneToOne: false
             referencedRelation: "regras_tributacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      economic_groups: {
+        Row: {
+          cnpj_root: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          owner_user_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj_root?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          owner_user_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj_root?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          owner_user_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "economic_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -7805,6 +7856,14 @@ export type Database = {
         }[]
       }
       get_group_deal_metrics_v1: {
+        Args: { p_company_id: string }
+        Returns: {
+          counts_by_stage: Json
+          total_deals: number
+          total_value: number
+        }[]
+      }
+      get_group_deal_metrics_v2: {
         Args: { p_company_id: string }
         Returns: {
           counts_by_stage: Json
