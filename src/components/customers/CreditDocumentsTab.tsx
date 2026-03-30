@@ -18,6 +18,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import {
   Dialog,
   DialogContent,
