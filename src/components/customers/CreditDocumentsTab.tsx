@@ -62,6 +62,7 @@ function formatFileSize(bytes: number | null): string {
 
 export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
   const queryClient = useQueryClient();
+  const { isAdmin } = useModulePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
