@@ -164,22 +164,30 @@ export function useCustomerDetail(id: string | undefined) {
   });
 
   const { data: sameGroupCompanies = [], isLoading: sameGroupCompaniesLoading } = useQuery({
-    queryKey: ['customer-same-group', id, customer?.tenant_id, customer?.cnpj_root],
+    queryKey: ['customer-same-group', id, customer?.economic_group_id, customer?.tenant_id, customer?.cnpj_root],
     queryFn: async (): Promise<SameGroupCompany[]> => {
-      const { data, error } = await supabase
+      // Preferir economic_group_id; fallback para cnpj_root
+      let query = supabase
         .from('companies')
         .select('id, name, fantasia, cnpj, cnpj_root, city, state, is_matriz, parent_company_id')
-        .eq('tenant_id', customer!.tenant_id)
-        .eq('cnpj_root', customer!.cnpj_root)
         .neq('id', id!)
         .order('is_matriz', { ascending: false, nullsFirst: false })
         .order('name', { ascending: true })
         .limit(10);
 
+      if (customer!.economic_group_id) {
+        query = query.eq('economic_group_id', customer!.economic_group_id);
+      } else {
+        query = query
+          .eq('tenant_id', customer!.tenant_id)
+          .eq('cnpj_root', customer!.cnpj_root);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
-    enabled: !!id && customer?.source === 'crm' && !!customer?.tenant_id && !!customer?.cnpj_root,
+    enabled: !!id && customer?.source === 'crm' && !!(customer?.economic_group_id || (customer?.tenant_id && customer?.cnpj_root)),
   });
 
   const { data: groupDealMetrics, isLoading: groupDealMetricsLoading } = useQuery({
