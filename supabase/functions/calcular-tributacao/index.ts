@@ -908,6 +908,20 @@ Deno.serve(async (req) => {
       observacoes.push(`Imposto Seletivo: exceção legal aplicada - ${is.excecao_legal}`);
     }
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { modelo_tributario: modelo, ncm: contexto.produto.ncm, uf_origem: contexto.empresa.uf, uf_destino: contexto.cliente.uf };
+    const safeAudit = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+    await supabase.from('audit_logs').insert({
+      user_id: user.id,
+      action: 'fiscal.calculate',
+      entity_type: 'fiscal',
+      metadata: safeAudit,
+      ip_address: ip,
+    }).then(() => {}, () => {});
+
     return new Response(
       JSON.stringify({
         success: true,

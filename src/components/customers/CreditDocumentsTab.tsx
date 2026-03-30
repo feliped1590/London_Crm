@@ -113,6 +113,15 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
           uploaded_by_name: profile?.full_name || user.email || null,
         });
       if (dbError) throw dbError;
+
+      // Audit log - upload
+      await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'document.upload',
+        entity_type: 'credit_document',
+        entity_id: companyId,
+        metadata: { file_name: file.name, file_size: file.size },
+      }).then(() => {}, () => {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-documents', companyId] });
@@ -126,9 +135,21 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (doc: CreditDocument) => {
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.storage.from('credit-documents').remove([doc.file_path]);
       const { error } = await supabase.from('credit_documents').delete().eq('id', doc.id);
       if (error) throw error;
+
+      // Audit log - delete
+      if (user) {
+        await supabase.from('audit_logs').insert({
+          user_id: user.id,
+          action: 'document.delete',
+          entity_type: 'credit_document',
+          entity_id: doc.company_id,
+          metadata: { file_name: doc.file_name, doc_id: doc.id },
+        }).then(() => {}, () => {});
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-documents', companyId] });
@@ -155,6 +176,19 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
       toast.error('Erro ao gerar link de download');
       return;
     }
+
+    // Audit log - download (best-effort)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'document.download',
+        entity_type: 'credit_document',
+        entity_id: doc.company_id,
+        metadata: { file_name: doc.file_name, doc_id: doc.id },
+      }).then(() => {}, () => {});
+    }
+
     window.open(data.signedUrl, '_blank');
   };
 

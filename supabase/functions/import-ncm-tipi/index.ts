@@ -152,6 +152,20 @@ serve(async (req) => {
 
     console.log('Import complete', { valid_codes: result.valid_codes, processed: result.processed });
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { total_fetched: ncmData.length, valid_codes: records.length, processed: inserted };
+    const safeMetadata = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action: 'import.ncm',
+      entity_type: 'import',
+      metadata: safeMetadata,
+      ip_address: ip,
+    }).then(() => {}, () => {});
+
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

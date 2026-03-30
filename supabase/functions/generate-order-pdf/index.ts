@@ -589,6 +589,21 @@ serve(async (req) => {
       </html>
     `;
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { order_number: order.number };
+    const safeMetadata = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action: 'order.generate_pdf',
+      entity_type: 'order',
+      entity_id: order_id,
+      metadata: safeMetadata,
+      ip_address: ip,
+    }).then(() => {}, () => {}); // fire-and-forget, never block response
+
     return new Response(
       JSON.stringify({
         success: true,

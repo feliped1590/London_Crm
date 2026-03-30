@@ -330,6 +330,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { file_name: file_name || 'unknown', total_received: rows.length, inserted, updated, skipped };
+    const safeMetadata = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action: 'import.companies',
+      entity_type: 'import',
+      metadata: safeMetadata,
+      ip_address: ip,
+    }).then(() => {}, () => {});
+
     return new Response(JSON.stringify({
       total_received: rows.length,
       to_process: validRows.length,

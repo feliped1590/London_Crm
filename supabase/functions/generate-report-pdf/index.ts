@@ -291,6 +291,25 @@ serve(async (req) => {
 </html>
     `;
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { widgets_count: widgets.length, title: title || 'Relatório' };
+    const safeMetadata = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+
+    const supabaseService = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    await supabaseService.from('audit_logs').insert({
+      user_id: user.id,
+      action: 'report.generate',
+      entity_type: 'report',
+      metadata: safeMetadata,
+      ip_address: ip,
+    }).then(() => {}, () => {});
+
     return new Response(
       JSON.stringify({ html }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

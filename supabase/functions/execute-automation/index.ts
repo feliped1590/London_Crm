@@ -237,6 +237,21 @@ Deno.serve(async (req) => {
 
     console.log('Automation execution complete', { total: results.length, successes: results.filter(r => r.success).length });
 
+    // =========================================================================
+    // AUDIT LOG
+    // =========================================================================
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const auditMetadata = { trigger_type, trigger_stage, results_count: results.length, successes: results.filter(r => r.success).length };
+    const safeMetadata = JSON.stringify(auditMetadata).length > 2000 ? { truncated: true } : auditMetadata;
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      action: 'automation.execute',
+      entity_type: 'deal',
+      entity_id: deal_id,
+      metadata: safeMetadata,
+      ip_address: ip,
+    }).then(() => {}, () => {});
+
     return new Response(
       JSON.stringify({ success: true, executed: results.length, results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
