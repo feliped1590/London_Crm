@@ -227,15 +227,17 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteId(doc.id)}
-                    className="text-destructive hover:text-destructive"
-                    title="Remover"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteId(doc.id)}
+                      className="text-destructive hover:text-destructive"
+                      title="Remover"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
