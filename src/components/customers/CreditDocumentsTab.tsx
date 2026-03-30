@@ -176,6 +176,19 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
       toast.error('Erro ao gerar link de download');
       return;
     }
+
+    // Audit log - download (best-effort)
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'document.download',
+        entity_type: 'credit_document',
+        entity_id: doc.company_id,
+        metadata: { file_name: doc.file_name, doc_id: doc.id },
+      }).then(() => {}, () => {});
+    }
+
     window.open(data.signedUrl, '_blank');
   };
 
