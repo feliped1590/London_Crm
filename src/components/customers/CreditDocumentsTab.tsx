@@ -113,6 +113,15 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
           uploaded_by_name: profile?.full_name || user.email || null,
         });
       if (dbError) throw dbError;
+
+      // Audit log - upload
+      await supabase.from('audit_logs').insert({
+        user_id: user.id,
+        action: 'document.upload',
+        entity_type: 'credit_document',
+        entity_id: companyId,
+        metadata: { file_name: file.name, file_size: file.size },
+      }).then(() => {}, () => {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit-documents', companyId] });
