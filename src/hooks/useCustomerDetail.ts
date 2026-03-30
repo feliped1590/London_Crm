@@ -15,6 +15,7 @@ export interface UnifiedCustomer {
   fantasia: string | null;
   cnpj: string | null;
   cnpj_root?: string | null;
+  economic_group_id?: string | null;
   inscricao_estadual: string | null;
   phone: string | null;
   email: string | null;
