@@ -18,6 +18,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +62,7 @@ function formatFileSize(bytes: number | null): string {
 
 export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
   const queryClient = useQueryClient();
+  const { isAdmin } = useModulePermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -225,15 +227,17 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeleteId(doc.id)}
-                    className="text-destructive hover:text-destructive"
-                    title="Remover"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeleteId(doc.id)}
+                      className="text-destructive hover:text-destructive"
+                      title="Remover"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
