@@ -201,17 +201,26 @@ export default function Products() {
     return group?.dimension_profile || 'none';
   };
 
+  const isGroupPrinted = (grupoId?: string): boolean => {
+    if (!grupoId) return false;
+    const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
+    return group?.is_printed ?? false;
+  };
+
   const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
+  const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
     const profile = getGroupProfile(data.grupo_id);
+    const printed = isGroupPrinted(data.grupo_id);
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
+      printedName: printed ? data.nome_impresso : undefined,
       width: data.width,
       length: profile === 'partial' ? undefined : data.length,
       thickness: data.thickness,
