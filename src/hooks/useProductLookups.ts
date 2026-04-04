@@ -11,6 +11,7 @@ export interface LookupItem {
 
 export interface GroupLookupItem extends LookupItem {
   dimension_profile: 'full' | 'partial' | 'none';
+  is_printed: boolean;
 }
 
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
