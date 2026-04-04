@@ -214,6 +214,12 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
+  // Resolve lookup value (code) by id — for SKU generation
+  const getLookupValue = (items: LookupItem[], id?: string) => {
+    if (!id) return undefined;
+    return items.find((i) => i.id === id)?.value;
+  };
+
   // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
   const getGroupProfile = (grupoId?: string): DimensionProfile => {
     if (!grupoId) return 'none';
