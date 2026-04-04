@@ -551,9 +551,7 @@ export default function Products() {
     }
 
     // Validação dinâmica por perfil de dimensão do grupo
-    const profile = getProductDimensionProfile(
-      getLookupLabel(grupos.items, formData.grupo_id)
-    );
+    const profile = getGroupProfile(formData.grupo_id);
     const missingFields = validateRequiredFields(formData as any, profile);
     if (missingFields.length > 0) {
       toast.error(
