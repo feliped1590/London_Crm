@@ -68,7 +68,8 @@ export interface CRMProduct {
 export function mapCRMProductToProjedata(product: CRMProduct): ProjedataProduto {
   const codigoFonte = product.erp_product_code || product.sku || '';
   const { codigo, versao: versaoParsed } = parseCodigoVersao(codigoFonte);
-  const versaoFinal = product.erp_versao || versaoParsed;
+  // erp_versao (ex: "100x150x0,120") é a fonte principal; fallback para parsed, nunca vazio
+  const versaoFinal = product.erp_versao || versaoParsed || '1';
   const empresaFinal = String(product.erp_empresa || 1);
 
   // Montar versão

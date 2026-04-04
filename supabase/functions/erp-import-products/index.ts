@@ -349,6 +349,8 @@ Deno.serve(async (req) => {
               erp_synced_at: new Date().toISOString(),
               erp_last_update_date: normalizeDate(raw.dt_modificacao),
               active: true,
+              origem_alteracao: 'ERP',
+              pendente_envio: false,
             };
 
             const { data: inserted, error: insertErr } = await supabase
