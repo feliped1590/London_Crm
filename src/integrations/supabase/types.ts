@@ -5342,6 +5342,8 @@ export type Database = {
           price_term: number | null
           reference: string | null
           sku: string
+          sku_unique: string | null
+          structure_hash: string | null
           subcategory: string | null
           subgrupo_id: string | null
           tem_icms_st: boolean | null
@@ -5409,6 +5411,8 @@ export type Database = {
           price_term?: number | null
           reference?: string | null
           sku: string
+          sku_unique?: string | null
+          structure_hash?: string | null
           subcategory?: string | null
           subgrupo_id?: string | null
           tem_icms_st?: boolean | null
@@ -5476,6 +5480,8 @@ export type Database = {
           price_term?: number | null
           reference?: string | null
           sku?: string
+          sku_unique?: string | null
+          structure_hash?: string | null
           subcategory?: string | null
           subgrupo_id?: string | null
           tem_icms_st?: boolean | null
