@@ -156,17 +156,30 @@ Deno.serve(async (req) => {
           .update({
             pendente_envio: false,
             erp_synced_at: new Date().toISOString(),
-            origem_alteracao: 'CRM',
+            origem_alteracao: 'SYNC',
           })
           .eq('id', item.product_id);
 
-        // Registrar log de sync
+        // Registrar log detalhado de sync
+        const parsedPayload = JSON.parse(payload);
+        await supabase.from('product_sync_log').insert({
+          product_id: item.product_id,
+          queue_item_id: item.id,
+          direction: 'crm_to_erp',
+          status: 'success',
+          request_payload: parsedPayload,
+          response_payload: responseData,
+          erp_hash_at_sync: product.erp_hash,
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
+        });
+
+        // Manter log legado em erp_sync_logs
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'product',
           entity_id: item.product_id,
           direction: 'crm_to_erp',
           status: 'success',
-          request_payload: JSON.parse(payload),
+          request_payload: parsedPayload,
           response_payload: responseData,
         });
 
@@ -193,7 +206,17 @@ Deno.serve(async (req) => {
           })
           .eq('id', item.id);
 
-        // Registrar log de erro
+        // Registrar log detalhado de erro
+        await supabase.from('product_sync_log').insert({
+          product_id: item.product_id,
+          queue_item_id: item.id,
+          direction: 'crm_to_erp',
+          status: 'failed',
+          error_message: errorMsg,
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
+        });
+
+        // Manter log legado
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'product',
           entity_id: item.product_id,
