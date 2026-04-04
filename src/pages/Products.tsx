@@ -379,8 +379,8 @@ export default function Products() {
       resetForm();
     },
     onError: (error: any) => {
-      if (error.message?.includes('duplicate key')) {
-        toast.error('SKU já existe. Use um código diferente.');
+      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('idx_products_technical_uniqueness')) {
+        toast.error('Já existe um produto ativo com essa mesma estrutura técnica (grupo, subgrupo, família, classe e dimensões). Verifique os campos e tente novamente.', { duration: 8000 });
       } else {
         toast.error('Erro ao criar produto');
       }
