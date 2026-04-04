@@ -129,7 +129,7 @@ function useGroupsTable() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...item }: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean; dimension_profile?: string }) => {
+    mutationFn: async ({ id, ...item }: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean; dimension_profile?: 'full' | 'partial' | 'none' }) => {
       const { error } = await supabase.from('product_groups').update(item).eq('id', id);
       if (error) throw error;
     },
