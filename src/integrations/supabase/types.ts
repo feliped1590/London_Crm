@@ -4920,6 +4920,7 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          dimension_profile: Database["public"]["Enums"]["dimension_profile"]
           id: string
           is_active: boolean | null
           label: string
@@ -4930,6 +4931,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null
           label: string
@@ -4940,6 +4942,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null
           label?: string
@@ -8202,6 +8205,7 @@ export type Database = {
         | "negociacao"
         | "fechado_ganho"
         | "fechado_perdido"
+      dimension_profile: "full" | "partial" | "none"
       ipi_mode: "destacar" | "incluso" | "isento"
       lifecycle_stage:
         | "lead"
@@ -8477,6 +8481,7 @@ export const Constants = {
         "fechado_ganho",
         "fechado_perdido",
       ],
+      dimension_profile: ["full", "partial", "none"],
       ipi_mode: ["destacar", "incluso", "isento"],
       lifecycle_stage: [
         "lead",
