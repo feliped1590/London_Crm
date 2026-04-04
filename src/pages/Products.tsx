@@ -192,15 +192,22 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
+  // Resolve perfil de dimensão do grupo atual
+  const currentDimensionProfile = getProductDimensionProfile(
+    getLookupLabel(grupos.items, formData.grupo_id)
+  );
+  const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
+
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
+    const profile = getProductDimensionProfile(getLookupLabel(grupos.items, data.grupo_id));
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
       width: data.width,
-      length: data.length,
+      length: profile === 'partial' ? undefined : data.length,
       thickness: data.thickness,
     });
   };
