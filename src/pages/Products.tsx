@@ -634,6 +634,7 @@ export default function Products() {
       length: product.length || 0,
       thickness: product.thickness || 0,
       active: product.active ?? true,
+      nome_impresso: (product as any).nome_impresso || '',
       ncm_code: product.ncm_code || '',
       ncm_id: product.ncm_id,
       cst_icms: product.cst_icms || '',
