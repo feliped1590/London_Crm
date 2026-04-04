@@ -56,6 +56,23 @@ export default function Products() {
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
   const { isAdmin } = useModulePermissions();
+  const { data: activeTenantId } = useQuery({
+    queryKey: ['products-active-tenant-id', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      return data?.active_tenant_id ?? null;
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -205,6 +222,36 @@ export default function Products() {
     if (!grupoId) return false;
     const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
     return group?.is_printed ?? false;
+  };
+
+  const normalizePrintedName = (value?: string | null) => {
+    const normalized = value?.trim().toUpperCase();
+    return normalized ? normalized : null;
+  };
+
+  const getDuplicateErrorMessage = (error: any) => {
+    const errorText = [error?.message, error?.details, error?.hint]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (
+      errorText.includes('products_sku_key') ||
+      errorText.includes('key (sku)') ||
+      errorText.includes('(sku)=')
+    ) {
+      return 'Já existe um produto com este código (SKU), inclusive se ele estiver inativo. Use outro código para continuar.';
+    }
+
+    if (errorText.includes('idx_products_technical_uniqueness')) {
+      return 'Já existe um produto ativo com essa mesma estrutura técnica (tipo, grupo, subgrupo, família, classe, dimensões e nome do impresso).';
+    }
+
+    if (error?.code === '23505') {
+      return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
+    }
+
+    return null;
   };
 
   const currentDimensionProfile = getGroupProfile(formData.grupo_id);
@@ -387,11 +434,8 @@ export default function Products() {
       resetForm();
     },
     onError: (error: any) => {
-      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('idx_products_technical_uniqueness')) {
-        toast.error('Já existe um produto ativo com essa mesma estrutura técnica (grupo, subgrupo, família, classe e dimensões). Verifique os campos e tente novamente.', { duration: 8000 });
-      } else {
-        toast.error('Erro ao criar produto');
-      }
+      const duplicateMessage = getDuplicateErrorMessage(error);
+      toast.error(duplicateMessage || 'Erro ao criar produto', { duration: 8000 });
     },
   });
 
@@ -415,11 +459,8 @@ export default function Products() {
       resetForm();
     },
     onError: (error: any) => {
-      if (error.code === '23505' || error.message?.includes('duplicate key') || error.message?.includes('idx_products_technical_uniqueness')) {
-        toast.error('Já existe um produto ativo com essa mesma estrutura técnica (grupo, subgrupo, família, classe e dimensões). Verifique os campos e tente novamente.', { duration: 8000 });
-      } else {
-        toast.error('Erro ao atualizar produto');
-      }
+      const duplicateMessage = getDuplicateErrorMessage(error);
+      toast.error(duplicateMessage || 'Erro ao atualizar produto', { duration: 8000 });
     },
   });
 
@@ -492,19 +533,24 @@ export default function Products() {
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
-  const checkDuplicateProduct = async (): Promise<boolean> => {
+  const checkDuplicateProduct = async (productData: typeof formData): Promise<boolean> => {
     // Must match idx_products_technical_uniqueness exactly:
-    // tenant_id, tipo_id, grupo_id, subgrupo_id, family_id, class_id, width, length, thickness
-    // NOTE: tenant_id isolation is enforced by RLS — no explicit filter needed
+    // tenant_id, tipo_id, grupo_id, subgrupo_id, family_id, class_id, width, length, thickness, nome_impresso
+    if (!activeTenantId) {
+      console.warn('Tenant ativo não encontrado para validação prévia de duplicidade.');
+      return false;
+    }
+
     let query = supabase
       .from('products')
       .select('id, sku, name')
+      .eq('tenant_id', activeTenantId)
       .eq('active', true);
 
     // Handle nullable UUID fields — use .is(null) for empty, .eq for values
     const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
     for (const field of uuidFields) {
-      const value = (formData as any)[field];
+      const value = (productData as any)[field];
       if (value) {
         query = query.eq(field, value);
       } else {
@@ -512,10 +558,9 @@ export default function Products() {
       }
     }
 
-    // Dimensions — treat empty/undefined as -1 to match COALESCE logic
-    const w = formData.width ?? null;
-    const l = formData.length ?? null;
-    const t = formData.thickness ?? null;
+    const w = productData.width ?? null;
+    const l = productData.length ?? null;
+    const t = productData.thickness ?? null;
 
     if (w !== null && w !== undefined) {
       query = query.eq('width', w);
@@ -534,9 +579,9 @@ export default function Products() {
     }
 
     // Handle nome_impresso for uniqueness
-    const ni = formData.nome_impresso?.trim() || null;
+    const ni = normalizePrintedName(productData.nome_impresso);
     if (ni) {
-      query = query.eq('nome_impresso', ni.toUpperCase());
+      query = query.eq('nome_impresso', ni);
     } else {
       query = query.is('nome_impresso', null);
     }
@@ -548,16 +593,16 @@ export default function Products() {
 
     query = query.limit(1);
 
-    const { data, error } = await query;
+    const { data: duplicateRows, error } = await query;
     if (error) {
       console.error('Erro ao verificar duplicidade:', error);
       return false;
     }
 
-    if (data && data.length > 0) {
-      const existing = data[0];
+    if (duplicateRows && duplicateRows.length > 0) {
+      const existing = duplicateRows[0];
       toast.error(
-        `Produto duplicado! Já existe um produto ativo com a mesma estrutura técnica: ${existing.sku} - ${existing.name}`,
+        `Produto duplicado! Já existe um produto ativo com a mesma estrutura técnica (incluindo nome do impresso): ${existing.sku} - ${existing.name}`,
         { duration: 6000 }
       );
       return true;
@@ -592,7 +637,7 @@ export default function Products() {
 
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
-    submitData.nome_impresso = submitData.nome_impresso?.trim().toUpperCase() || '';
+    submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
     if (hasAutoDimensions(profile)) {
       try {
         const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
@@ -624,7 +669,7 @@ export default function Products() {
 
     setIsCheckingDuplicate(true);
     try {
-      const isDuplicate = await checkDuplicateProduct();
+      const isDuplicate = await checkDuplicateProduct(submitData);
       if (isDuplicate) return;
 
       if (editingProduct) {
