@@ -1870,6 +1870,34 @@ export default function Products() {
     </div>
         </TabsContent>
       </Tabs>
+
+      {/* AlertDialog para produtos com mesma estrutura */}
+      <AlertDialog open={showSimilarAlert} onOpenChange={setShowSimilarAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Estrutura já existente</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-3">Já existem produtos com essa mesma estrutura técnica:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {similarProducts.map((p) => (
+                    <li key={p.id} className="text-sm">
+                      <span className="font-mono font-medium">{p.sku}</span>
+                      {' — '}
+                      {p.nome_impresso || p.name}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3">Deseja continuar e criar o produto mesmo assim?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelSimilar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSimilar}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
