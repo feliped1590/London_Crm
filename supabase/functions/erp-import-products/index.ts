@@ -359,11 +359,45 @@ Deno.serve(async (req) => {
               .select("id")
               .single();
 
-            if (insertErr) throw new Error(`Insert failed: ${insertErr.message}`);
+            if (insertErr) {
+              // Handle unique constraint violation — fallback to UPDATE
+              if (insertErr.code === '23505') {
+                // Find the existing active product with same technical structure
+                const { data: conflicting } = await supabase
+                  .from("products")
+                  .select("id")
+                  .eq("tenant_id", tenant_id)
+                  .eq("active", true)
+                  .eq("name", name)
+                  .limit(1)
+                  .maybeSingle();
 
-            await upsertProductErpData(supabase, inserted.id, tenant_id, raw);
+                if (conflicting) {
+                  const updateFields: Record<string, unknown> = {
+                    erp_product_code: erpCode,
+                    erp_synced_at: new Date().toISOString(),
+                    erp_last_update_date: normalizeDate(raw.dt_modificacao),
+                    erp_status: normalized.erp_status,
+                    origem_alteracao: 'ERP',
+                    pendente_envio: false,
+                  };
+                  if (normalized.price_cash !== null) updateFields.price_cash = normalized.price_cash;
+                  if (normalized.price_term !== null) updateFields.price_term = normalized.price_term;
+                  if (normalized.weight !== null) updateFields.weight = normalized.weight;
 
-            summary.inserted++;
+                  await supabase.from("products").update(updateFields).eq("id", conflicting.id);
+                  await upsertProductErpData(supabase, conflicting.id, tenant_id, raw);
+                  summary.updated++;
+                } else {
+                  throw new Error(`Unique constraint violation and no matching product found for update`);
+                }
+              } else {
+                throw new Error(`Insert failed: ${insertErr.message}`);
+              }
+            } else {
+              await upsertProductErpData(supabase, inserted.id, tenant_id, raw);
+              summary.inserted++;
+            }
           }
 
           summary.total_processed++;
