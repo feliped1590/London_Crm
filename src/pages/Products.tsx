@@ -1073,11 +1073,13 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
+                        disabled={isEditing}
                         onValueChange={(v) => {
                           const newTipoId = v === 'none' ? undefined : v;
                           const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
                           setIsAutoDescription(shouldAuto);
                           const updated = { ...formData, tipo_id: newTipoId };
+                          updated.sku = recalcularSku(updated);
                           if (shouldAuto) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
@@ -1093,16 +1095,19 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Código */}
+                    {/* Código (SKU) — readonly, auto-gerado */}
                     <div>
-                      <Label htmlFor="sku">Código *</Label>
+                      <Label htmlFor="sku">Código (SKU)</Label>
                       <Input
                         id="sku"
                         value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                        placeholder="Ex: BOB-001"
-                        required
+                        readOnly
+                        disabled={isEditing}
+                        className="bg-muted/50 font-mono cursor-not-allowed"
+                        placeholder="Gerado automaticamente"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente a partir da classificação</p>
+                    </div>
                     </div>
                     {/* Família */}
                     <div>
