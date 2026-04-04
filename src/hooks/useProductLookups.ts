@@ -9,6 +9,10 @@ export interface LookupItem {
   is_active: boolean;
 }
 
+export interface GroupLookupItem extends LookupItem {
+  dimension_profile: 'full' | 'partial' | 'none';
+}
+
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
 
 function useLookupTable(table: LookupTable) {
