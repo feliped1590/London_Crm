@@ -192,6 +192,7 @@ export default function Products() {
     tipo_produto_fiscal: undefined as TipoProdutoFiscal | undefined,
     ncm_validated_at: null as string | null,
     // Campos ERP Projedata
+    erp_product_code: '',
     tipo_item: '',
     tipo_ficha: undefined as number | undefined,
     erp_grupo: '',
@@ -1528,6 +1529,22 @@ export default function Products() {
                     </p>
                   </div>
                   
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="erp_product_code">Código ERP</Label>
+                      <Input
+                        id="erp_product_code"
+                        value={formData.erp_product_code || ''}
+                        readOnly
+                        className="bg-muted/50"
+                        placeholder="Gerado automaticamente"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formData.erp_product_code ? 'Código gerado pelo sistema' : 'Será gerado ao enviar para o ERP'}
+                      </p>
+                    </div>
+                  </div>
+
                   <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dados do Item</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
