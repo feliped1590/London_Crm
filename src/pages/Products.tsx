@@ -1108,7 +1108,6 @@ export default function Products() {
                       />
                       <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente a partir da classificação</p>
                     </div>
-                    </div>
                     {/* Família */}
                     <div>
                       <Label htmlFor="familia">Família</Label>
