@@ -37,6 +37,14 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
+import {
+  getProductDimensionProfile,
+  validateRequiredFields,
+  generateErpVersion,
+  tryGenerateErpVersion,
+  hasAutoDimensions,
+  VersionGenerationError,
+} from '@/utils/products/generateVersion';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -184,15 +192,22 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
+  // Resolve perfil de dimensão do grupo atual
+  const currentDimensionProfile = getProductDimensionProfile(
+    getLookupLabel(grupos.items, formData.grupo_id)
+  );
+  const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
+
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
+    const profile = getProductDimensionProfile(getLookupLabel(grupos.items, data.grupo_id));
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
       width: data.width,
-      length: data.length,
+      length: profile === 'partial' ? undefined : data.length,
       thickness: data.thickness,
     });
   };
@@ -530,8 +545,43 @@ export default function Products() {
       return;
     }
 
-    // Se preço unitário não foi informado, usar o fator milheiro calculado
+    // Validação dinâmica por perfil de dimensão do grupo
+    const profile = getProductDimensionProfile(
+      getLookupLabel(grupos.items, formData.grupo_id)
+    );
+    const missingFields = validateRequiredFields(formData as any, profile);
+    if (missingFields.length > 0) {
+      toast.error(
+        `Campos obrigatórios não preenchidos:\n• ${missingFields.join('\n• ')}`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    // Geração automática de erp_versao para grupos com dimensões
     const submitData = { ...formData };
+    if (hasAutoDimensions(profile)) {
+      try {
+        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
+        if (version) {
+          submitData.erp_versao = version;
+        }
+      } catch (err) {
+        if (err instanceof VersionGenerationError) {
+          toast.error(err.message);
+          return;
+        }
+        throw err;
+      }
+    } else {
+      // Perfil 'none': erp_versao deve ser preenchido manualmente
+      if (!submitData.erp_versao || submitData.erp_versao.trim() === '') {
+        toast.error('O campo Versão (ERP) é obrigatório. Preencha manualmente.');
+        return;
+      }
+    }
+
+    // Se preço unitário não foi informado, usar o fator milheiro calculado
     if (!submitData.unit_price || submitData.unit_price === 0) {
       const fatorMilheiro = recalcularFatorMilheiro(submitData);
       if (fatorMilheiro > 0) {
@@ -947,6 +997,10 @@ export default function Products() {
                               const newData = { ...formData, width: newWidth };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              if (hasAutoDimensions(prof)) {
+                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                              }
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
@@ -965,6 +1019,10 @@ export default function Products() {
                               const newData = { ...formData, length: newLength };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              if (hasAutoDimensions(prof)) {
+                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                              }
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
@@ -983,6 +1041,10 @@ export default function Products() {
                               const newData = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              if (hasAutoDimensions(prof)) {
+                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                              }
                               setFormData(newData);
                             }}
                             placeholder="Em micras"
@@ -1246,9 +1308,16 @@ export default function Products() {
                         id="erp_versao"
                         value={formData.erp_versao}
                         onChange={(e) => setFormData({ ...formData, erp_versao: e.target.value })}
-                        placeholder="Ex: 1"
+                        placeholder={isAutoVersion ? 'Gerado automaticamente' : 'Ex: 1'}
                         onFocus={(e) => e.target.select()}
+                        readOnly={isAutoVersion}
+                        className={isAutoVersion ? 'bg-muted cursor-not-allowed' : ''}
                       />
+                      {isAutoVersion && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Gerado automaticamente a partir das dimensões
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="erp_versao_situacao">Situação</Label>
