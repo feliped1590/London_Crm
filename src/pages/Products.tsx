@@ -1308,9 +1308,16 @@ export default function Products() {
                         id="erp_versao"
                         value={formData.erp_versao}
                         onChange={(e) => setFormData({ ...formData, erp_versao: e.target.value })}
-                        placeholder="Ex: 1"
+                        placeholder={isAutoVersion ? 'Gerado automaticamente' : 'Ex: 1'}
                         onFocus={(e) => e.target.select()}
+                        readOnly={isAutoVersion}
+                        className={isAutoVersion ? 'bg-muted cursor-not-allowed' : ''}
                       />
+                      {isAutoVersion && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Gerado automaticamente a partir das dimensões
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="erp_versao_situacao">Situação</Label>
