@@ -3,6 +3,7 @@ export interface GenerateProductDescriptionParams {
   group?: string;
   subgroup?: string;
   productClass?: string;
+  printedName?: string;
   width?: number;
   length?: number;
   thickness?: number;
