@@ -19,6 +19,7 @@ export const ipiModeConfig: Record<IpiMode, { label: string; description: string
 export interface Product {
   id: string;
   sku: string;
+  sku_unique?: string;
   name: string;
   description?: string;
   tipo_id?: string;
@@ -34,6 +35,7 @@ export interface Product {
   length?: number;
   thickness?: number;
   active?: boolean;
+  structure_hash?: string;
   created_by?: string;
   created_at: string;
   updated_at: string;

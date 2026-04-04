@@ -23,7 +23,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
@@ -37,6 +39,7 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
+import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
 import {
   type DimensionProfile,
   validateRequiredFields,
@@ -45,7 +48,7 @@ import {
   hasAutoDimensions,
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
-import { type GroupLookupItem } from '@/hooks/useProductLookups';
+import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -211,6 +214,12 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
+  // Resolve lookup value (code) by id — for SKU generation
+  const getLookupValue = (items: LookupItem[], id?: string) => {
+    if (!id) return undefined;
+    return items.find((i) => i.id === id)?.value;
+  };
+
   // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
   const getGroupProfile = (grupoId?: string): DimensionProfile => {
     if (!grupoId) return 'none';
@@ -236,11 +245,11 @@ export default function Products() {
       .toLowerCase();
 
     if (
-      errorText.includes('products_sku_key') ||
-      errorText.includes('key (sku)') ||
-      errorText.includes('(sku)=')
+      errorText.includes('products_sku_unique_key') ||
+      errorText.includes('key (sku_unique)') ||
+      errorText.includes('(sku_unique)=')
     ) {
-      return 'Já existe um produto com este código (SKU), inclusive se ele estiver inativo. Use outro código para continuar.';
+      return 'Já existe um produto com este código único (SKU). Use outro código para continuar.';
     }
 
     if (errorText.includes('idx_products_technical_uniqueness')) {
@@ -251,12 +260,33 @@ export default function Products() {
       return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
     }
 
+    if (errorText.includes('campos estruturais')) {
+      return 'Campos estruturais não podem ser alterados após criação. Utilize a opção de duplicar produto.';
+    }
+
     return null;
   };
 
   const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
+  const isEditing = !!editingProduct;
+
+  // Recalcula o SKU estrutural a partir dos códigos de lookup + dimensões
+  const recalcularSku = (data: typeof formData) => {
+    const profile = getGroupProfile(data.grupo_id);
+    return generateStructuralSku({
+      tipoCode: getLookupValue(tipos.items, data.tipo_id),
+      familyCode: getLookupValue(familias.items, data.family_id),
+      groupCode: getLookupValue(grupos.items as LookupItem[], data.grupo_id),
+      subgroupCode: getLookupValue(subgrupos.items, data.subgrupo_id),
+      classCode: getLookupValue(classes.items, data.class_id),
+      width: data.width,
+      length: data.length,
+      thickness: data.thickness,
+      dimensionProfile: profile,
+    });
+  };
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
@@ -531,6 +561,10 @@ export default function Products() {
     return tipoItem?.label?.toLowerCase() === 'produto acabado';
   };
 
+  const [similarProducts, setSimilarProducts] = useState<{id: string; sku: string; name: string; nome_impresso: string | null}[]>([]);
+  const [showSimilarAlert, setShowSimilarAlert] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<typeof formData | null>(null);
+
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
   const checkDuplicateProduct = async (productData: typeof formData): Promise<boolean> => {
@@ -611,10 +645,53 @@ export default function Products() {
     return false;
   };
 
+  // Find products with same structure (for UX alert, not blocking)
+  const findSimilarProducts = async (data: typeof formData) => {
+    if (!activeTenantId) return [];
+    let query = supabase
+      .from('products')
+      .select('id, sku, name, nome_impresso')
+      .eq('tenant_id', activeTenantId)
+      .eq('active', true);
+
+    const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
+    for (const field of uuidFields) {
+      const value = (data as any)[field];
+      if (value) query = query.eq(field, value);
+      else query = query.is(field, null);
+    }
+
+    // Match dimensions
+    if (data.width) query = query.eq('width', data.width);
+    else query = query.is('width', null);
+    if (data.length) query = query.eq('length', data.length);
+    else query = query.is('length', null);
+    if (data.thickness) query = query.eq('thickness', data.thickness);
+    else query = query.is('thickness', null);
+
+    // Do NOT filter by nome_impresso — we want all commercial variations
+    const { data: rows } = await query.limit(10);
+    return (rows || []) as {id: string; sku: string; name: string; nome_impresso: string | null}[];
+  };
+
+  const executeSave = (submitData: typeof formData) => {
+    if (editingProduct) {
+      updateMutation.mutate({ id: editingProduct.id, ...submitData });
+    } else {
+      createMutation.mutate(submitData);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.sku || !formData.name) {
-      toast.error('SKU e Nome são obrigatórios');
+    if (!formData.name) {
+      toast.error('Descrição é obrigatória');
+      return;
+    }
+
+    // SKU é gerado automaticamente — validar que foi gerado
+    if (!formData.sku) {
+      toast.error('SKU não foi gerado. Preencha os campos de classificação.');
       return;
     }
 
@@ -652,14 +729,12 @@ export default function Products() {
         throw err;
       }
     } else {
-      // Perfil 'none': erp_versao deve ser preenchido manualmente
       if (!submitData.erp_versao || submitData.erp_versao.trim() === '') {
         toast.error('O campo Versão (ERP) é obrigatório. Preencha manualmente.');
         return;
       }
     }
 
-    // Se preço unitário não foi informado, usar o fator milheiro calculado
     if (!submitData.unit_price || submitData.unit_price === 0) {
       const fatorMilheiro = recalcularFatorMilheiro(submitData);
       if (fatorMilheiro > 0) {
@@ -669,17 +744,40 @@ export default function Products() {
 
     setIsCheckingDuplicate(true);
     try {
-      const isDuplicate = await checkDuplicateProduct(submitData);
-      if (isDuplicate) return;
+      // Skip duplicate check in edit mode (structural fields are locked)
+      if (!isEditing) {
+        const isDuplicate = await checkDuplicateProduct(submitData);
+        if (isDuplicate) return;
 
-      if (editingProduct) {
-        updateMutation.mutate({ id: editingProduct.id, ...submitData });
-      } else {
-        createMutation.mutate(submitData);
+        // Check for similar structures (alert, not blocking)
+        const similar = await findSimilarProducts(submitData);
+        if (similar.length > 0) {
+          setSimilarProducts(similar);
+          setPendingSubmitData(submitData);
+          setShowSimilarAlert(true);
+          return;
+        }
       }
+
+      executeSave(submitData);
     } finally {
       setIsCheckingDuplicate(false);
     }
+  };
+
+  const handleConfirmSimilar = () => {
+    if (pendingSubmitData) {
+      executeSave(pendingSubmitData);
+    }
+    setShowSimilarAlert(false);
+    setPendingSubmitData(null);
+    setSimilarProducts([]);
+  };
+
+  const handleCancelSimilar = () => {
+    setShowSimilarAlert(false);
+    setPendingSubmitData(null);
+    setSimilarProducts([]);
   };
 
   const handleEdit = (product: Product) => {
@@ -737,6 +835,57 @@ export default function Products() {
           }
         });
     }
+  };
+
+  const handleDuplicate = (product: Product) => {
+    setEditingProduct(null); // modo criação — campos estruturais editáveis
+    const duplicatedData = {
+      sku: '', // será regenerado automaticamente
+      name: product.name,
+      description: product.description || '',
+      tipo_id: product.tipo_id || undefined,
+      unit_measure: product.unit_measure || 'un',
+      unit_price: product.unit_price || 0,
+      fator_kg: product.fator_kg || 0,
+      fator_milheiro: product.fator_milheiro || 0,
+      grupo_id: product.grupo_id || undefined,
+      subgrupo_id: product.subgrupo_id || undefined,
+      family_id: product.family_id || undefined,
+      class_id: product.class_id || undefined,
+      width: product.width || 0,
+      length: product.length || 0,
+      thickness: product.thickness || 0,
+      active: true,
+      nome_impresso: '', // limpar — nova variação comercial
+      ncm_code: product.ncm_code || '',
+      ncm_id: product.ncm_id,
+      cst_icms: product.cst_icms || '',
+      csosn: product.csosn || '',
+      aliquota_icms: product.aliquota_icms,
+      tem_icms_st: product.tem_icms_st || false,
+      aliquota_ipi: product.aliquota_ipi,
+      cst_pis_cofins: product.cst_pis_cofins || '',
+      aliquota_pis: product.aliquota_pis,
+      aliquota_cofins: product.aliquota_cofins,
+      tipo_produto_fiscal: product.tipo_produto_fiscal,
+      ncm_validated_at: product.ncm_validated_at || null,
+      tipo_item: product.tipo_item || '',
+      tipo_ficha: product.tipo_ficha,
+      erp_grupo: product.erp_grupo || '',
+      erp_subgrupo: product.erp_subgrupo || '',
+      erp_empresa: product.erp_empresa || 1,
+      erp_versao: product.erp_versao || '',
+      erp_versao_detalhes: product.erp_versao_detalhes || '',
+      erp_versao_roteiro: product.erp_versao_roteiro,
+      erp_versao_situacao: product.erp_versao_situacao || 'A',
+    };
+    // Regenerar SKU
+    duplicatedData.sku = recalcularSku(duplicatedData);
+    setFormData(duplicatedData);
+    setIsDialogOpen(true);
+    setFormTab('geral');
+    setIsAutoDescription(true);
+    toast.info('Produto duplicado. Ajuste os campos desejados e salve como novo produto.');
   };
 
   // Helper to get pricing info for a product
@@ -868,6 +1017,15 @@ export default function Products() {
                 </TabsList>
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
+                  {isEditing && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Este produto já foi criado e sua estrutura não pode ser alterada.
+                        Para mudanças estruturais, utilize a opção <strong>"Duplicar Produto"</strong>.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     {/* NCM */}
                     <div className="col-span-2">
@@ -919,11 +1077,13 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
+                        disabled={isEditing}
                         onValueChange={(v) => {
                           const newTipoId = v === 'none' ? undefined : v;
                           const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
                           setIsAutoDescription(shouldAuto);
                           const updated = { ...formData, tipo_id: newTipoId };
+                          updated.sku = recalcularSku(updated);
                           if (shouldAuto) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
@@ -939,24 +1099,28 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Código */}
+                    {/* Código (SKU) — readonly, auto-gerado */}
                     <div>
-                      <Label htmlFor="sku">Código *</Label>
+                      <Label htmlFor="sku">Código (SKU)</Label>
                       <Input
                         id="sku"
                         value={formData.sku}
-                        onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
-                        placeholder="Ex: BOB-001"
-                        required
+                        readOnly
+                        disabled={isEditing}
+                        className="bg-muted/50 font-mono cursor-not-allowed"
+                        placeholder="Gerado automaticamente"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente a partir da classificação</p>
                     </div>
                     {/* Família */}
                     <div>
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
+                        disabled={isEditing}
                         onValueChange={(v) => {
                           const updated = { ...formData, family_id: v === 'none' ? undefined : v };
+                          updated.sku = recalcularSku(updated);
                           if (isAutoDescription) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
@@ -997,13 +1161,14 @@ export default function Products() {
                           <Label htmlFor="grupo">Grupo</Label>
                           <Select
                             value={formData.grupo_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
                               const updated = { ...formData, grupo_id: newGrupoId };
-                              // Limpar nome_impresso quando grupo muda para não-impresso
                               if (!isGroupPrinted(newGrupoId)) {
                                 updated.nome_impresso = '';
                               }
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -1023,8 +1188,10 @@ export default function Products() {
                           <Label htmlFor="subgrupo">Subgrupo</Label>
                           <Select
                             value={formData.subgrupo_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -1044,8 +1211,10 @@ export default function Products() {
                           <Label htmlFor="classe">Classe</Label>
                           <Select
                             value={formData.class_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const updated = { ...formData, class_id: v === 'none' ? undefined : v };
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -1098,6 +1267,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
+                            disabled={isEditing}
                             value={formData.width || ''}
                             onChange={(e) => {
                               const newWidth = parseFloat(e.target.value) || 0;
@@ -1107,6 +1277,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
@@ -1120,6 +1291,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
+                            disabled={isEditing}
                             value={formData.length || ''}
                             onChange={(e) => {
                               const newLength = parseFloat(e.target.value) || 0;
@@ -1129,6 +1301,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
@@ -1142,6 +1315,7 @@ export default function Products() {
                             type="number"
                             step="0.001"
                             min="0"
+                            disabled={isEditing}
                             value={formData.thickness || ''}
                             onChange={(e) => {
                               const newThickness = parseFloat(e.target.value) || 0;
@@ -1151,6 +1325,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
@@ -1601,7 +1776,15 @@ export default function Products() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Duplicar produto (cria novo com base neste)</TooltipContent>
+                          </Tooltip>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1691,6 +1874,34 @@ export default function Products() {
     </div>
         </TabsContent>
       </Tabs>
+
+      {/* AlertDialog para produtos com mesma estrutura */}
+      <AlertDialog open={showSimilarAlert} onOpenChange={setShowSimilarAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Estrutura já existente</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p className="mb-3">Já existem produtos com essa mesma estrutura técnica:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  {similarProducts.map((p) => (
+                    <li key={p.id} className="text-sm">
+                      <span className="font-mono font-medium">{p.sku}</span>
+                      {' — '}
+                      {p.nome_impresso || p.name}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3">Deseja continuar e criar o produto mesmo assim?</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelSimilar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSimilar}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
