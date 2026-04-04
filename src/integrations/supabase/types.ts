@@ -5541,6 +5541,45 @@ export type Database = {
           },
         ]
       }
+      products_dedup_backup: {
+        Row: {
+          active: boolean | null
+          backed_up_at: string
+          backup_id: string
+          created_at: string | null
+          full_row: Json
+          name: string | null
+          original_id: string
+          sku: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          backed_up_at?: string
+          backup_id?: string
+          created_at?: string | null
+          full_row: Json
+          name?: string | null
+          original_id: string
+          sku?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          backed_up_at?: string
+          backup_id?: string
+          created_at?: string | null
+          full_row?: Json
+          name?: string | null
+          original_id?: string
+          sku?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           active_legal_entity_id: string | null

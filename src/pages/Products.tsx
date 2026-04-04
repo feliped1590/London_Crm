@@ -484,39 +484,44 @@ export default function Products() {
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
   const checkDuplicateProduct = async (): Promise<boolean> => {
-    // Build filter for the combination: family + grupo + subgrupo + class + dimensions
+    // Must match idx_products_technical_uniqueness exactly:
+    // tenant_id, tipo_id, grupo_id, subgrupo_id, family_id, class_id, width, length, thickness
     let query = supabase
       .from('products')
       .select('id, sku, name')
       .eq('active', true);
 
-    // Handle nullable fields - use .is(null) for undefined, .eq for values
-    if (formData.family_id) {
-      query = query.eq('family_id', formData.family_id);
-    } else {
-      query = query.is('family_id', null);
-    }
-    if (formData.grupo_id) {
-      query = query.eq('grupo_id', formData.grupo_id);
-    } else {
-      query = query.is('grupo_id', null);
-    }
-    if (formData.subgrupo_id) {
-      query = query.eq('subgrupo_id', formData.subgrupo_id);
-    } else {
-      query = query.is('subgrupo_id', null);
-    }
-    if (formData.class_id) {
-      query = query.eq('class_id', formData.class_id);
-    } else {
-      query = query.is('class_id', null);
+    // Handle nullable UUID fields — use .is(null) for empty, .eq for values
+    const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
+    for (const field of uuidFields) {
+      const value = (formData as any)[field];
+      if (value) {
+        query = query.eq(field, value);
+      } else {
+        query = query.is(field, null);
+      }
     }
 
-    // Dimensions
-    const w = formData.width || 0;
-    const l = formData.length || 0;
-    const t = formData.thickness || 0;
-    query = query.eq('width', w).eq('length', l).eq('thickness', t);
+    // Dimensions — treat empty/undefined as -1 to match COALESCE logic
+    const w = formData.width ?? null;
+    const l = formData.length ?? null;
+    const t = formData.thickness ?? null;
+
+    if (w !== null && w !== undefined) {
+      query = query.eq('width', w);
+    } else {
+      query = query.is('width', null);
+    }
+    if (l !== null && l !== undefined) {
+      query = query.eq('length', l);
+    } else {
+      query = query.is('length', null);
+    }
+    if (t !== null && t !== undefined) {
+      query = query.eq('thickness', t);
+    } else {
+      query = query.is('thickness', null);
+    }
 
     // Exclude current product when editing
     if (editingProduct) {
@@ -528,13 +533,13 @@ export default function Products() {
     const { data, error } = await query;
     if (error) {
       console.error('Erro ao verificar duplicidade:', error);
-      return false; // Don't block on error
+      return false;
     }
 
     if (data && data.length > 0) {
       const existing = data[0];
       toast.error(
-        `Produto duplicado! Já existe um produto ativo com a mesma estrutura: ${existing.sku} - ${existing.name}`,
+        `Produto duplicado! Já existe um produto ativo com a mesma estrutura técnica: ${existing.sku} - ${existing.name}`,
         { duration: 6000 }
       );
       return true;
