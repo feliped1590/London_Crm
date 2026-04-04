@@ -4,7 +4,7 @@ Updated: now
 O sistema de cadastro de produtos utiliza tabelas de consulta dinâmicas alinhadas à nomenclatura do ERP (Iniflex):
 
 - **Tipos** (`product_types`) — campo `tipo_id` (UUID FK)
-- **Grupos** (`product_groups`) — campo `grupo_id` (UUID FK)
+- **Grupos** (`product_groups`) — campo `grupo_id` (UUID FK) — possui coluna `dimension_profile` (enum: full/partial/none)
 - **Subgrupos** (`product_subgroups`) — campo `subgrupo_id` (UUID FK)
 - **Famílias** (`product_families`) — campo `family_id` (UUID FK)
 - **Classes** (`product_classes`) — campo `class_id` (UUID FK)
@@ -13,6 +13,13 @@ O sistema de cadastro de produtos utiliza tabelas de consulta dinâmicas alinhad
 Todas as colunas de classificação em `products` são UUID FK (não mais TEXT). Índices criados em todas as FK de lookup para performance multiempresa.
 
 Todas as tabelas de lookup (exceto unit_measures) possuem `tenant_id` para isolamento multi-empresa. Não há hierarquia entre Tipo/Grupo/Subgrupo/Família/Classe — são estruturas independentes.
+
+A coluna `dimension_profile` em `product_groups` define o perfil de dimensão:
+- `full` = Largura × Comprimento × Espessura (Saco)
+- `partial` = Largura × Espessura (Bobina)
+- `none` = sem dimensões obrigatórias
+
+O perfil é lido diretamente do banco — zero hardcode de labels no frontend. A função `getProductDimensionProfile` foi removida em favor de leitura direta via `GroupLookupItem.dimension_profile`.
 
 A função `compute_product_erp_hash` inclui `tipo_id`, `grupo_id`, `subgrupo_id`, `family_id` e `class_id` para detecção precisa de mudanças na sincronização ERP.
 
