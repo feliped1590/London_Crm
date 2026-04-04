@@ -446,6 +446,7 @@ export default function Products() {
       length: 0,
       thickness: 0,
       active: true,
+      nome_impresso: '',
       ncm_code: '',
       ncm_id: undefined,
       cst_icms: '',
