@@ -213,18 +213,15 @@ export default function Products() {
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
-    const profile = getGroupProfile(data.grupo_id);
     const printed = isGroupPrinted(data.grupo_id);
-    return generateProductDescription({
+    const base = generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
       printedName: printed ? data.nome_impresso : undefined,
-      width: data.width,
-      length: profile === 'partial' ? undefined : data.length,
-      thickness: data.thickness,
     });
+    return [base, data.erp_versao].filter(Boolean).join(' ');
   };
 
   // Recalcula o fator milheiro quando os valores mudam
