@@ -1772,7 +1772,15 @@ export default function Products() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Duplicar produto (cria novo com base neste)</TooltipContent>
+                          </Tooltip>
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
                             <Edit className="h-4 w-4" />
                           </Button>
