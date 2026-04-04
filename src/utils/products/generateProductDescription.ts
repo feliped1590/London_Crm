@@ -14,6 +14,7 @@ export function generateProductDescription({
   group,
   subgroup,
   productClass,
+  printedName,
   width,
   length,
   thickness,
@@ -24,6 +25,7 @@ export function generateProductDescription({
   if (group) parts.push(group);
   if (subgroup) parts.push(subgroup);
   if (productClass) parts.push(productClass);
+  if (printedName) parts.push(printedName);
 
   const w = Number(width);
   const l = Number(length);
