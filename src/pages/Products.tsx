@@ -1062,6 +1062,19 @@ export default function Products() {
                       </div>
                     </div>
 
+                    {/* Versão do Produto (readonly, tempo real) */}
+                    {formData.erp_versao && (
+                      <div className="col-span-2">
+                        <Label className="text-muted-foreground">Versão do Produto</Label>
+                        <Input
+                          value={formData.erp_versao}
+                          readOnly
+                          className="bg-muted/50 font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente a partir das dimensões</p>
+                      </div>
+                    )}
+
                     {/* Observações */}
                     <div className="col-span-2">
                       <Label htmlFor="description">Observações</Label>
