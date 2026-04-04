@@ -380,6 +380,7 @@ export default function Products() {
         erp_versao_detalhes: data.erp_versao_detalhes || null,
         erp_versao_roteiro: data.erp_versao_roteiro || null,
         erp_versao_situacao: data.erp_versao_situacao || 'A',
+        nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
       });
       if (error) throw error;
     },
