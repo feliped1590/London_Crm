@@ -4,9 +4,6 @@ export interface GenerateProductDescriptionParams {
   subgroup?: string;
   productClass?: string;
   printedName?: string;
-  width?: number;
-  length?: number;
-  thickness?: number;
 }
 
 export function generateProductDescription({
@@ -15,9 +12,6 @@ export function generateProductDescription({
   subgroup,
   productClass,
   printedName,
-  width,
-  length,
-  thickness,
 }: GenerateProductDescriptionParams): string {
   const parts: string[] = [];
 
@@ -26,14 +20,6 @@ export function generateProductDescription({
   if (subgroup) parts.push(subgroup);
   if (productClass) parts.push(productClass);
   if (printedName) parts.push(printedName);
-
-  const w = Number(width);
-  const l = Number(length);
-  const t = Number(thickness);
-
-  if (w > 0 && l > 0 && t > 0) {
-    parts.push(`${w}x${l}x${t}`);
-  }
 
   return parts.join(' ');
 }
