@@ -5112,6 +5112,63 @@ export type Database = {
           },
         ]
       }
+      product_sync_log: {
+        Row: {
+          created_at: string
+          direction: string
+          erp_hash_at_sync: string | null
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          product_id: string
+          queue_item_id: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          erp_hash_at_sync?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          product_id: string
+          queue_item_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          erp_hash_at_sync?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          product_id?: string
+          queue_item_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_sync_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_sync_log_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "product_sync_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_sync_queue: {
         Row: {
           attempt_count: number | null
