@@ -61,6 +61,7 @@ export interface Product {
   erp_versao_roteiro?: number;
   erp_versao_situacao?: string;
   erp_status?: string;
+  nome_impresso?: string;
   // Campos de sincronização ERP
   origem_alteracao?: string;
   pendente_envio?: boolean;

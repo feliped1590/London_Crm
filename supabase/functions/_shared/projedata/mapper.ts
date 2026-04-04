@@ -45,6 +45,7 @@ export interface CRMProduct {
   erp_versao_roteiro?: number | null;
   erp_versao_situacao?: string | null;
   erp_usuario?: number | null;
+  nome_impresso?: string | null;
 }
 
 /**

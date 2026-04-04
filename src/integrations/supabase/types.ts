@@ -4923,6 +4923,7 @@ export type Database = {
           dimension_profile: Database["public"]["Enums"]["dimension_profile"]
           id: string
           is_active: boolean | null
+          is_printed: boolean | null
           label: string
           sort_order: number | null
           tenant_id: string | null
@@ -4934,6 +4935,7 @@ export type Database = {
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null
+          is_printed?: boolean | null
           label: string
           sort_order?: number | null
           tenant_id?: string | null
@@ -4945,6 +4947,7 @@ export type Database = {
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null
+          is_printed?: boolean | null
           label?: string
           sort_order?: number | null
           tenant_id?: string | null
@@ -5329,6 +5332,7 @@ export type Database = {
           ncm_code: string | null
           ncm_id: string | null
           ncm_validated_at: string | null
+          nome_impresso: string | null
           origem_alteracao: string | null
           origem_mercadoria:
             | Database["public"]["Enums"]["origem_mercadoria"]
@@ -5395,6 +5399,7 @@ export type Database = {
           ncm_code?: string | null
           ncm_id?: string | null
           ncm_validated_at?: string | null
+          nome_impresso?: string | null
           origem_alteracao?: string | null
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
@@ -5461,6 +5466,7 @@ export type Database = {
           ncm_code?: string | null
           ncm_id?: string | null
           ncm_validated_at?: string | null
+          nome_impresso?: string | null
           origem_alteracao?: string | null
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]

@@ -157,6 +157,7 @@ export default function Products() {
     length: 0,
     thickness: 0,
     active: true,
+    nome_impresso: '',
     // Campos NCM e Fiscais
     ncm_code: '',
     ncm_id: '' as string | undefined,
@@ -200,17 +201,26 @@ export default function Products() {
     return group?.dimension_profile || 'none';
   };
 
+  const isGroupPrinted = (grupoId?: string): boolean => {
+    if (!grupoId) return false;
+    const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
+    return group?.is_printed ?? false;
+  };
+
   const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
+  const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
     const profile = getGroupProfile(data.grupo_id);
+    const printed = isGroupPrinted(data.grupo_id);
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
+      printedName: printed ? data.nome_impresso : undefined,
       width: data.width,
       length: profile === 'partial' ? undefined : data.length,
       thickness: data.thickness,
@@ -370,6 +380,7 @@ export default function Products() {
         erp_versao_detalhes: data.erp_versao_detalhes || null,
         erp_versao_roteiro: data.erp_versao_roteiro || null,
         erp_versao_situacao: data.erp_versao_situacao || 'A',
+        nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
       });
       if (error) throw error;
     },
@@ -445,6 +456,7 @@ export default function Products() {
       length: 0,
       thickness: 0,
       active: true,
+      nome_impresso: '',
       ncm_code: '',
       ncm_id: undefined,
       cst_icms: '',
@@ -524,6 +536,14 @@ export default function Products() {
       query = query.is('thickness', null);
     }
 
+    // Handle nome_impresso for uniqueness
+    const ni = formData.nome_impresso?.trim() || null;
+    if (ni) {
+      query = query.eq('nome_impresso', ni.toUpperCase());
+    } else {
+      query = query.is('nome_impresso', null);
+    }
+
     // Exclude current product when editing
     if (editingProduct) {
       query = query.neq('id', editingProduct.id);
@@ -556,6 +576,12 @@ export default function Products() {
       return;
     }
 
+    // Validação de nome_impresso para grupos impressos
+    if (isGroupPrinted(formData.grupo_id) && !formData.nome_impresso?.trim()) {
+      toast.error('O campo "Nome do Impresso" é obrigatório para produtos impressos.', { duration: 6000 });
+      return;
+    }
+
     // Validação dinâmica por perfil de dimensão do grupo
     const profile = getGroupProfile(formData.grupo_id);
     const missingFields = validateRequiredFields(formData as any, profile);
@@ -567,8 +593,9 @@ export default function Products() {
       return;
     }
 
-    // Geração automática de erp_versao para grupos com dimensões
+    // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
+    submitData.nome_impresso = submitData.nome_impresso?.trim().toUpperCase() || '';
     if (hasAutoDimensions(profile)) {
       try {
         const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
@@ -632,6 +659,7 @@ export default function Products() {
       length: product.length || 0,
       thickness: product.thickness || 0,
       active: product.active ?? true,
+      nome_impresso: (product as any).nome_impresso || '',
       ncm_code: product.ncm_code || '',
       ncm_id: product.ncm_id,
       cst_icms: product.cst_icms || '',
@@ -928,7 +956,12 @@ export default function Products() {
                           <Select
                             value={formData.grupo_id || 'none'}
                             onValueChange={(v) => {
-                              const updated = { ...formData, grupo_id: v === 'none' ? undefined : v };
+                              const newGrupoId = v === 'none' ? undefined : v;
+                              const updated = { ...formData, grupo_id: newGrupoId };
+                              // Limpar nome_impresso quando grupo muda para não-impresso
+                              if (!isGroupPrinted(newGrupoId)) {
+                                updated.nome_impresso = '';
+                              }
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -988,6 +1021,29 @@ export default function Products() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Nome do Impresso (condicional) */}
+                    {currentGroupIsPrinted && (
+                      <div className="col-span-2 pt-2">
+                        <Label htmlFor="nome_impresso" className="flex items-center gap-1">
+                          Nome do Impresso <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          id="nome_impresso"
+                          value={formData.nome_impresso}
+                          onChange={(e) => {
+                            const updated = { ...formData, nome_impresso: e.target.value };
+                            if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                            setFormData(updated);
+                          }}
+                          placeholder="Ex: BONGOS BIFINHO CARNE 65G"
+                          className="uppercase"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Nome do cliente/produto impresso que compõe a descrição final
+                        </p>
+                      </div>
+                    )}
 
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">

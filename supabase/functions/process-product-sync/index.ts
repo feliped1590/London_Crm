@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
           erp_versao_detalhes: product.erp_versao_detalhes,
           erp_versao_roteiro: product.erp_versao_roteiro,
           erp_versao_situacao: product.erp_versao_situacao,
+          nome_impresso: product.nome_impresso,
         };
 
         const produto = mapCRMProductToProjedata(crmProduct);

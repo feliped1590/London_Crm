@@ -11,6 +11,7 @@ export interface LookupItem {
 
 export interface GroupLookupItem extends LookupItem {
   dimension_profile: 'full' | 'partial' | 'none';
+  is_printed: boolean;
 }
 
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
@@ -92,13 +93,14 @@ function useGroupsTable() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_groups')
-        .select('id, value, label, sort_order, is_active, dimension_profile')
+        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed')
         .eq('is_active', true)
         .order('sort_order');
       if (error) throw error;
       return (data || []).map((g: any) => ({
         ...g,
         dimension_profile: g.dimension_profile || 'none',
+        is_printed: g.is_printed ?? false,
       })) as GroupLookupItem[];
     },
   });
@@ -108,12 +110,13 @@ function useGroupsTable() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_groups')
-        .select('id, value, label, sort_order, is_active, dimension_profile')
+        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed')
         .order('sort_order');
       if (error) throw error;
       return (data || []).map((g: any) => ({
         ...g,
         dimension_profile: g.dimension_profile || 'none',
+        is_printed: g.is_printed ?? false,
       })) as GroupLookupItem[];
     },
   });
