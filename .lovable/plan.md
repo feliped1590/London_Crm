@@ -1,91 +1,57 @@
 
 
-# Plano: Corrigir autenticacao nas 7 Edge Functions criticas
+# Plano: Incluir `erp_versao` na Descrição Automática do Produto
 
-## Resumo
+## Problema
 
-Adicionar validacao obrigatoria de JWT em 7 Edge Functions que hoje aceitam requisicoes sem autenticacao. O frontend ja usa `supabase.functions.invoke()` que envia o token automaticamente, entao nenhuma mudanca no frontend e necessaria.
+A função `recalcularDescricao` gera a descrição chamando `generateProductDescription`, que tenta montar dimensões internamente (`WxLxT`), mas:
 
-## Padrao de autenticacao
+1. Para perfil "partial" (Bobina), `length` é passado como `undefined`, então a condição `w > 0 && l > 0 && t > 0` falha — dimensões nunca aparecem
+2. O `erp_versao` (que já está formatado corretamente como `150x0,120`) **nunca é concatenado** na descrição final
+3. Existe duplicação de lógica: `generateProductDescription` tenta formatar dimensões por conta própria, enquanto `erp_versao` já faz isso corretamente
 
-Todas as funcoes receberao o mesmo bloco de autenticacao no inicio do handler:
+## Solução
 
-```typescript
-// --- AUTH: validar token JWT ---
-const authHeader = req.headers.get('Authorization');
-if (!authHeader?.startsWith('Bearer ')) {
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    status: 401,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-const supabaseAuth = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_ANON_KEY')!,
-  { global: { headers: { Authorization: authHeader } } }
-);
-const token = authHeader.replace('Bearer ', '');
-const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-if (claimsError || !claimsData?.claims) {
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-    status: 401,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-const userId = claimsData.claims.sub;
-// --- FIM AUTH ---
-// Agora sim, criar service client para operacoes privilegiadas
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-);
-```
+### 1. Remover lógica de dimensões de `generateProductDescription.ts`
 
-Para funcoes administrativas, adiciona-se apos o bloco acima:
+A função não deve mais tentar formatar dimensões. Ela deve gerar apenas a parte textual (Família + Grupo + Subgrupo + Classe + Nome Impresso).
+
+Remover os parâmetros `width`, `length`, `thickness` e o bloco que monta `WxLxT`.
+
+### 2. Concatenar `erp_versao` no `recalcularDescricao` (Products.tsx)
+
+Após chamar `generateProductDescription`, concatenar `erp_versao`:
 
 ```typescript
-// --- ADMIN CHECK ---
-const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-if (!isAdmin) {
-  return new Response(JSON.stringify({ error: 'Forbidden: admin role required' }), {
-    status: 403,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+const recalcularDescricao = (data: typeof formData) => {
+  const printed = isGroupPrinted(data.grupo_id);
+  const base = generateProductDescription({
+    family: getLookupLabel(familias.items, data.family_id),
+    group: getLookupLabel(grupos.items, data.grupo_id),
+    subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
+    productClass: getLookupLabel(classes.items, data.class_id),
+    printedName: printed ? data.nome_impresso : undefined,
   });
-}
+  return [base, data.erp_versao].filter(Boolean).join(' ');
+};
 ```
 
-## Alteracoes por funcao
+### 3. Garantir ordem de atualização nos handlers de dimensão
 
-| # | Funcao | Tipo | Alteracao |
-|---|--------|------|-----------|
-| 1 | `execute-automation/index.ts` | Authenticated | Inserir bloco auth nas linhas 47-50 (substituir criacao direta do service client) |
-| 2 | `import-companies-bulk/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 45-49 |
-| 3 | `generate-order-pdf/index.ts` | Authenticated | Inserir bloco auth nas linhas 14-17 |
-| 4 | `generate-report-pdf/index.ts` | Authenticated | Inserir bloco auth na linha 14 (antes do parse do body) |
-| 5 | `import-companies-from-file/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 13-17 |
-| 6 | `calcular-tributacao/index.ts` | Authenticated | Inserir bloco auth nas linhas 652-655 |
-| 7 | `import-ncm-tipi/index.ts` | Admin-only | Inserir bloco auth + admin check nas linhas 14-17 |
+Nos `onChange` de width/length/thickness, a `erp_versao` é calculada **antes** de `recalcularDescricao`. Verificar que o fluxo é:
 
-## Compatibilidade
+1. Atualizar dimensão → 2. Calcular `erp_versao` → 3. Recalcular `name` (que agora inclui a versão)
 
-O frontend ja passa o token JWT automaticamente via `supabase.functions.invoke()`. Nenhuma alteracao no frontend e necessaria.
+Isso já acontece no código atual (a versão é definida antes do `setFormData`), mas precisa garantir que `recalcularDescricao` recebe os dados com `erp_versao` já atualizado.
 
-## Validacao pos-implementacao
+## Resultado Esperado
 
-```bash
-# Sem token → deve retornar 401
-curl -X POST https://lusyhkizwoihixcvcgap.supabase.co/functions/v1/execute-automation \
-  -H "Content-Type: application/json" \
-  -d '{"deal_id":"test"}'
+Descrição: `Laminado Transparente Impresso Bobina 2 Soldas (NP + Pet Nat) TESTE DE IMPRESSO 150x0,120`
 
-# Com token valido → deve funcionar normalmente (via interface do CRM)
-```
+## Arquivos impactados
 
-## Secao tecnica
-
-- `getClaims(token)` valida o JWT e retorna claims (sub, email, role, exp) sem round-trip ao banco
-- O `SERVICE_ROLE_KEY` so e usado APOS validacao do usuario
-- Funcoes de importacao e NCM exigem role `admin` via RPC `has_role`
-- `generate-report-pdf` nao usa Supabase client mas passara a validar identidade mesmo assim
-- Nenhum CORS header sera alterado — mantemos compatibilidade total
+| Arquivo | Ação |
+|---------|------|
+| `src/utils/products/generateProductDescription.ts` | Remover parâmetros de dimensão |
+| `src/pages/Products.tsx` | Concatenar `erp_versao` na descrição; remover passagem de width/length/thickness |
 
