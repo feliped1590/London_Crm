@@ -193,15 +193,19 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
-  // Resolve perfil de dimensão do grupo atual
-  const currentDimensionProfile = getProductDimensionProfile(
-    getLookupLabel(grupos.items, formData.grupo_id)
-  );
+  // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
+  const getGroupProfile = (grupoId?: string): DimensionProfile => {
+    if (!grupoId) return 'none';
+    const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
+    return group?.dimension_profile || 'none';
+  };
+
+  const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
-    const profile = getProductDimensionProfile(getLookupLabel(grupos.items, data.grupo_id));
+    const profile = getGroupProfile(data.grupo_id);
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
