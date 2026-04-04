@@ -593,8 +593,9 @@ export default function Products() {
       return;
     }
 
-    // Geração automática de erp_versao para grupos com dimensões
+    // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
+    submitData.nome_impresso = submitData.nome_impresso?.trim().toUpperCase() || '';
     if (hasAutoDimensions(profile)) {
       try {
         const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
