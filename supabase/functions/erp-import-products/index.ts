@@ -281,6 +281,8 @@ Deno.serve(async (req) => {
             // Always update ERP sync metadata + informational fields
             fieldsToUpdate.erp_product_code = erpCode ?? existing.erp_product_code;
             fieldsToUpdate.erp_synced_at = new Date().toISOString();
+            fieldsToUpdate.origem_alteracao = 'ERP';
+            fieldsToUpdate.pendente_envio = false;
             fieldsToUpdate.erp_last_update_date = normalizeDate(raw.dt_modificacao) ?? existing.erp_last_update_date;
             fieldsToUpdate.erp_status = normalized.erp_status ?? existing.erp_status;
 
