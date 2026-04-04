@@ -1263,6 +1263,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
+                            disabled={isEditing}
                             value={formData.width || ''}
                             onChange={(e) => {
                               const newWidth = parseFloat(e.target.value) || 0;
@@ -1272,6 +1273,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
@@ -1285,6 +1287,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
+                            disabled={isEditing}
                             value={formData.length || ''}
                             onChange={(e) => {
                               const newLength = parseFloat(e.target.value) || 0;
@@ -1294,6 +1297,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
@@ -1307,6 +1311,7 @@ export default function Products() {
                             type="number"
                             step="0.001"
                             min="0"
+                            disabled={isEditing}
                             value={formData.thickness || ''}
                             onChange={(e) => {
                               const newThickness = parseFloat(e.target.value) || 0;
@@ -1316,6 +1321,7 @@ export default function Products() {
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
+                              newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
