@@ -420,6 +420,23 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Sincronizar sequência ERP com o maior código importado
+    const validCodes = records
+      .map((r: ERPProductRecord) => {
+        const parsed = parseInt(String(r.cd_material || '').trim());
+        return isNaN(parsed) ? 0 : parsed;
+      })
+      .filter((v: number) => v > 0);
+
+    if (validCodes.length > 0) {
+      const maxImported = Math.max(...validCodes);
+      await supabase.rpc('sync_erp_sequence_if_higher', {
+        p_sequence_name: 'product_code',
+        p_value: maxImported,
+      });
+      console.log(`[erp-import-products] Sequência ERP sincronizada: max=${maxImported}`);
+    }
+
     return new Response(
       JSON.stringify({ success: true, summary }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

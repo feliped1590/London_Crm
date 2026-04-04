@@ -79,6 +79,35 @@ Deno.serve(async (req) => {
           throw new Error(`Produto não encontrado: ${item.product_id}`);
         }
 
+        // Gerar código ERP se não existir
+        if (!product.erp_product_code) {
+          const { data: nextCode, error: seqError } = await supabase
+            .rpc('next_erp_sequence', { p_sequence_name: 'product_code' });
+
+          if (seqError || nextCode === null || nextCode === undefined) {
+            throw new Error(`Falha ao gerar código ERP: ${seqError?.message || 'valor nulo'}`);
+          }
+
+          const newCode = String(nextCode);
+
+          // Salvar no produto (com origem SYNC para não disparar re-envio)
+          await supabase
+            .from('products')
+            .update({ erp_product_code: newCode, origem_alteracao: 'SYNC' })
+            .eq('id', item.product_id);
+
+          // Log de auditoria
+          await supabase.from('erp_sequence_logs').insert({
+            sequence_name: 'product_code',
+            generated_value: nextCode,
+            product_id: item.product_id,
+            generated_by: 'process-product-sync',
+          });
+
+          product.erp_product_code = newCode;
+          console.log(`[process-product-sync] Código ERP gerado: ${newCode} para produto ${item.product_id}`);
+        }
+
         // Mapear para formato Projedata
         const crmProduct = {
           sku: product.sku,
