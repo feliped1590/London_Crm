@@ -9,6 +9,10 @@ export interface LookupItem {
   is_active: boolean;
 }
 
+export interface GroupLookupItem extends LookupItem {
+  dimension_profile: 'full' | 'partial' | 'none';
+}
+
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
 
 function useLookupTable(table: LookupTable) {
@@ -80,9 +84,84 @@ function useLookupTable(table: LookupTable) {
   };
 }
 
+function useGroupsTable() {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['product_groups'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_groups')
+        .select('id, value, label, sort_order, is_active, dimension_profile')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return (data || []).map((g: any) => ({
+        ...g,
+        dimension_profile: g.dimension_profile || 'none',
+      })) as GroupLookupItem[];
+    },
+  });
+
+  const { data: allData, isLoading: isLoadingAll } = useQuery({
+    queryKey: ['product_groups', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_groups')
+        .select('id, value, label, sort_order, is_active, dimension_profile')
+        .order('sort_order');
+      if (error) throw error;
+      return (data || []).map((g: any) => ({
+        ...g,
+        dimension_profile: g.dimension_profile || 'none',
+      })) as GroupLookupItem[];
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (item: { value: string; label: string; sort_order?: number }) => {
+      const { error } = await supabase.from('product_groups').insert(item);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product_groups'] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...item }: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean; dimension_profile?: 'full' | 'partial' | 'none' }) => {
+      const { error } = await supabase.from('product_groups').update(item).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product_groups'] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('product_groups').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product_groups'] });
+    },
+  });
+
+  return {
+    items: data || [],
+    allItems: allData || [],
+    isLoading,
+    isLoadingAll,
+    create: createMutation,
+    update: updateMutation,
+    remove: deleteMutation,
+  };
+}
+
 export function useProductLookups() {
   const tipos = useLookupTable('product_types');
-  const grupos = useLookupTable('product_groups');
+  const grupos = useGroupsTable();
   const subgrupos = useLookupTable('product_subgroups');
   const familias = useLookupTable('product_families');
   const classes = useLookupTable('product_classes');

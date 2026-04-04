@@ -38,13 +38,14 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import {
-  getProductDimensionProfile,
+  type DimensionProfile,
   validateRequiredFields,
   generateErpVersion,
   tryGenerateErpVersion,
   hasAutoDimensions,
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
+import { type GroupLookupItem } from '@/hooks/useProductLookups';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -192,15 +193,19 @@ export default function Products() {
     return items.find((i) => i.id === id)?.label;
   };
 
-  // Resolve perfil de dimensão do grupo atual
-  const currentDimensionProfile = getProductDimensionProfile(
-    getLookupLabel(grupos.items, formData.grupo_id)
-  );
+  // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
+  const getGroupProfile = (grupoId?: string): DimensionProfile => {
+    if (!grupoId) return 'none';
+    const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
+    return group?.dimension_profile || 'none';
+  };
+
+  const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
-    const profile = getProductDimensionProfile(getLookupLabel(grupos.items, data.grupo_id));
+    const profile = getGroupProfile(data.grupo_id);
     return generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
@@ -546,9 +551,7 @@ export default function Products() {
     }
 
     // Validação dinâmica por perfil de dimensão do grupo
-    const profile = getProductDimensionProfile(
-      getLookupLabel(grupos.items, formData.grupo_id)
-    );
+    const profile = getGroupProfile(formData.grupo_id);
     const missingFields = validateRequiredFields(formData as any, profile);
     if (missingFields.length > 0) {
       toast.error(
@@ -997,7 +1000,7 @@ export default function Products() {
                               const newData = { ...formData, width: newWidth };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
-                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
@@ -1019,7 +1022,7 @@ export default function Products() {
                               const newData = { ...formData, length: newLength };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
-                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
@@ -1041,7 +1044,7 @@ export default function Products() {
                               const newData = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
-                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }

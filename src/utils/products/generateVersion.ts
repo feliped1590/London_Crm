@@ -1,47 +1,12 @@
 /**
  * Geração automática de erp_versao para integração ERP Iniflex/Projedata.
  *
- * Usa mapeamento controlado de grupos para determinar quais dimensões são
- * obrigatórias, evitando dependência de texto livre (.includes).
+ * O perfil de dimensão (full/partial/none) vem da coluna dimension_profile
+ * da tabela product_groups — zero hardcode de labels.
  */
 
 // ─── Perfis de dimensão ────────────────────────────────────────────────
 export type DimensionProfile = 'full' | 'partial' | 'none';
-
-/**
- * Mapeamento controlado: label exato do grupo → perfil de dimensão.
- * Para adicionar novos grupos basta incluir aqui.
- *
- * full    = Largura × Comprimento × Espessura  (Saco)
- * partial = Largura × Espessura                 (Bobina)
- * none    = sem dimensões obrigatórias
- */
-const GROUP_DIMENSION_MAP: Record<string, DimensionProfile> = {
-  'Impresso Saco': 'full',
-  'Liso Saco': 'full',
-  'Impresso Bobina': 'partial',
-  'Liso Bobina': 'partial',
-};
-
-/**
- * Retorna o perfil de dimensão para um dado label de grupo.
- * Comparação case-insensitive com trim para resiliência.
- */
-export function getProductDimensionProfile(grupoLabel: string | undefined): DimensionProfile {
-  if (!grupoLabel) return 'none';
-  const normalized = grupoLabel.trim();
-
-  // Busca exata primeiro (mais rápido)
-  if (GROUP_DIMENSION_MAP[normalized]) {
-    return GROUP_DIMENSION_MAP[normalized];
-  }
-
-  // Busca case-insensitive como fallback
-  const key = Object.keys(GROUP_DIMENSION_MAP).find(
-    (k) => k.toLowerCase() === normalized.toLowerCase()
-  );
-  return key ? GROUP_DIMENSION_MAP[key] : 'none';
-}
 
 // ─── Campos obrigatórios por perfil ────────────────────────────────────
 
