@@ -1157,13 +1157,14 @@ export default function Products() {
                           <Label htmlFor="grupo">Grupo</Label>
                           <Select
                             value={formData.grupo_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
                               const updated = { ...formData, grupo_id: newGrupoId };
-                              // Limpar nome_impresso quando grupo muda para não-impresso
                               if (!isGroupPrinted(newGrupoId)) {
                                 updated.nome_impresso = '';
                               }
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -1183,8 +1184,10 @@ export default function Products() {
                           <Label htmlFor="subgrupo">Subgrupo</Label>
                           <Select
                             value={formData.subgrupo_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
@@ -1204,8 +1207,10 @@ export default function Products() {
                           <Label htmlFor="classe">Classe</Label>
                           <Select
                             value={formData.class_id || 'none'}
+                            disabled={isEditing}
                             onValueChange={(v) => {
                               const updated = { ...formData, class_id: v === 'none' ? undefined : v };
+                              updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
