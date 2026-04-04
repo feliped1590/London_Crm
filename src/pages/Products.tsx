@@ -245,11 +245,11 @@ export default function Products() {
       .toLowerCase();
 
     if (
-      errorText.includes('products_sku_key') ||
-      errorText.includes('key (sku)') ||
-      errorText.includes('(sku)=')
+      errorText.includes('products_sku_unique_key') ||
+      errorText.includes('key (sku_unique)') ||
+      errorText.includes('(sku_unique)=')
     ) {
-      return 'Já existe um produto com este código (SKU), inclusive se ele estiver inativo. Use outro código para continuar.';
+      return 'Já existe um produto com este código único (SKU). Use outro código para continuar.';
     }
 
     if (errorText.includes('idx_products_technical_uniqueness')) {
