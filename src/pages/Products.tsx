@@ -486,6 +486,7 @@ export default function Products() {
   const checkDuplicateProduct = async (): Promise<boolean> => {
     // Must match idx_products_technical_uniqueness exactly:
     // tenant_id, tipo_id, grupo_id, subgrupo_id, family_id, class_id, width, length, thickness
+    // NOTE: tenant_id isolation is enforced by RLS — no explicit filter needed
     let query = supabase
       .from('products')
       .select('id, sku, name')
