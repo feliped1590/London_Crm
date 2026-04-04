@@ -3107,6 +3107,51 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_sequence_logs: {
+        Row: {
+          created_at: string
+          generated_by: string | null
+          generated_value: number
+          id: string
+          product_id: string | null
+          sequence_name: string
+        }
+        Insert: {
+          created_at?: string
+          generated_by?: string | null
+          generated_value: number
+          id?: string
+          product_id?: string | null
+          sequence_name: string
+        }
+        Update: {
+          created_at?: string
+          generated_by?: string | null
+          generated_value?: number
+          id?: string
+          product_id?: string | null
+          sequence_name?: string
+        }
+        Relationships: []
+      }
+      erp_sequences: {
+        Row: {
+          last_value: number
+          sequence_name: string
+          updated_at: string
+        }
+        Insert: {
+          last_value?: number
+          sequence_name: string
+          updated_at?: string
+        }
+        Update: {
+          last_value?: number
+          sequence_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       erp_sync_control: {
         Row: {
           created_at: string
@@ -8157,6 +8202,7 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
       process_stock_movement: {
         Args: {
           p_company_id: string
@@ -8241,6 +8287,10 @@ export type Database = {
           id: string
           status: string
         }[]
+      }
+      sync_erp_sequence_if_higher: {
+        Args: { p_sequence_name: string; p_value: number }
+        Returns: undefined
       }
       touch_app_session: { Args: { p_session_id: string }; Returns: boolean }
       transfer_stock: {
