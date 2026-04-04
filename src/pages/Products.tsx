@@ -39,6 +39,7 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
+import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
 import {
   type DimensionProfile,
   validateRequiredFields,
@@ -47,7 +48,7 @@ import {
   hasAutoDimensions,
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
-import { type GroupLookupItem } from '@/hooks/useProductLookups';
+import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
