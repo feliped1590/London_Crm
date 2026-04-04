@@ -947,7 +947,12 @@ export default function Products() {
                           <Select
                             value={formData.grupo_id || 'none'}
                             onValueChange={(v) => {
-                              const updated = { ...formData, grupo_id: v === 'none' ? undefined : v };
+                              const newGrupoId = v === 'none' ? undefined : v;
+                              const updated = { ...formData, grupo_id: newGrupoId };
+                              // Limpar nome_impresso quando grupo muda para não-impresso
+                              if (!isGroupPrinted(newGrupoId)) {
+                                updated.nome_impresso = '';
+                              }
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
