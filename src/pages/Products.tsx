@@ -545,8 +545,43 @@ export default function Products() {
       return;
     }
 
-    // Se preço unitário não foi informado, usar o fator milheiro calculado
+    // Validação dinâmica por perfil de dimensão do grupo
+    const profile = getProductDimensionProfile(
+      getLookupLabel(grupos.items, formData.grupo_id)
+    );
+    const missingFields = validateRequiredFields(formData as any, profile);
+    if (missingFields.length > 0) {
+      toast.error(
+        `Campos obrigatórios não preenchidos:\n• ${missingFields.join('\n• ')}`,
+        { duration: 6000 }
+      );
+      return;
+    }
+
+    // Geração automática de erp_versao para grupos com dimensões
     const submitData = { ...formData };
+    if (hasAutoDimensions(profile)) {
+      try {
+        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
+        if (version) {
+          submitData.erp_versao = version;
+        }
+      } catch (err) {
+        if (err instanceof VersionGenerationError) {
+          toast.error(err.message);
+          return;
+        }
+        throw err;
+      }
+    } else {
+      // Perfil 'none': erp_versao deve ser preenchido manualmente
+      if (!submitData.erp_versao || submitData.erp_versao.trim() === '') {
+        toast.error('O campo Versão (ERP) é obrigatório. Preencha manualmente.');
+        return;
+      }
+    }
+
+    // Se preço unitário não foi informado, usar o fator milheiro calculado
     if (!submitData.unit_price || submitData.unit_price === 0) {
       const fatorMilheiro = recalcularFatorMilheiro(submitData);
       if (fatorMilheiro > 0) {
