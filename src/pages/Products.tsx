@@ -536,6 +536,14 @@ export default function Products() {
       query = query.is('thickness', null);
     }
 
+    // Handle nome_impresso for uniqueness
+    const ni = formData.nome_impresso?.trim() || null;
+    if (ni) {
+      query = query.eq('nome_impresso', ni.toUpperCase());
+    } else {
+      query = query.is('nome_impresso', null);
+    }
+
     // Exclude current product when editing
     if (editingProduct) {
       query = query.neq('id', editingProduct.id);
