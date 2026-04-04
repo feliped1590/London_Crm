@@ -533,7 +533,7 @@ export default function Products() {
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
-  const checkDuplicateProduct = async (data: typeof formData): Promise<boolean> => {
+  const checkDuplicateProduct = async (productData: typeof formData): Promise<boolean> => {
     // Must match idx_products_technical_uniqueness exactly:
     // tenant_id, tipo_id, grupo_id, subgrupo_id, family_id, class_id, width, length, thickness, nome_impresso
     if (!activeTenantId) {
@@ -550,7 +550,7 @@ export default function Products() {
     // Handle nullable UUID fields — use .is(null) for empty, .eq for values
     const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
     for (const field of uuidFields) {
-      const value = (data as any)[field];
+      const value = (productData as any)[field];
       if (value) {
         query = query.eq(field, value);
       } else {
@@ -558,9 +558,9 @@ export default function Products() {
       }
     }
 
-    const w = data.width ?? null;
-    const l = data.length ?? null;
-    const t = data.thickness ?? null;
+    const w = productData.width ?? null;
+    const l = productData.length ?? null;
+    const t = productData.thickness ?? null;
 
     if (w !== null && w !== undefined) {
       query = query.eq('width', w);
@@ -579,7 +579,7 @@ export default function Products() {
     }
 
     // Handle nome_impresso for uniqueness
-    const ni = normalizePrintedName(data.nome_impresso);
+    const ni = normalizePrintedName(productData.nome_impresso);
     if (ni) {
       query = query.eq('nome_impresso', ni);
     } else {
@@ -593,14 +593,14 @@ export default function Products() {
 
     query = query.limit(1);
 
-    const { data, error } = await query;
+    const { data: duplicateRows, error } = await query;
     if (error) {
       console.error('Erro ao verificar duplicidade:', error);
       return false;
     }
 
-    if (data && data.length > 0) {
-      const existing = data[0];
+    if (duplicateRows && duplicateRows.length > 0) {
+      const existing = duplicateRows[0];
       toast.error(
         `Produto duplicado! Já existe um produto ativo com a mesma estrutura técnica (incluindo nome do impresso): ${existing.sku} - ${existing.name}`,
         { duration: 6000 }
