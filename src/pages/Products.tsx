@@ -260,6 +260,10 @@ export default function Products() {
       return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
     }
 
+    if (errorText.includes('campos estruturais')) {
+      return 'Campos estruturais não podem ser alterados após criação. Utilize a opção de duplicar produto.';
+    }
+
     return null;
   };
 
