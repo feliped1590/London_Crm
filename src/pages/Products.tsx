@@ -266,6 +266,23 @@ export default function Products() {
   const currentDimensionProfile = getGroupProfile(formData.grupo_id);
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
+  const isEditing = !!editingProduct;
+
+  // Recalcula o SKU estrutural a partir dos códigos de lookup + dimensões
+  const recalcularSku = (data: typeof formData) => {
+    const profile = getGroupProfile(data.grupo_id);
+    return generateStructuralSku({
+      tipoCode: getLookupValue(tipos.items, data.tipo_id),
+      familyCode: getLookupValue(familias.items, data.family_id),
+      groupCode: getLookupValue(grupos.items as LookupItem[], data.grupo_id),
+      subgroupCode: getLookupValue(subgrupos.items, data.subgrupo_id),
+      classCode: getLookupValue(classes.items, data.class_id),
+      width: data.width,
+      length: data.length,
+      thickness: data.thickness,
+      dimensionProfile: profile,
+    });
+  };
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
@@ -539,6 +556,10 @@ export default function Products() {
     const tipoItem = tipos.items.find(t => t.id === tipoId);
     return tipoItem?.label?.toLowerCase() === 'produto acabado';
   };
+
+  const [similarProducts, setSimilarProducts] = useState<{id: string; sku: string; name: string; nome_impresso: string | null}[]>([]);
+  const [showSimilarAlert, setShowSimilarAlert] = useState(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<typeof formData | null>(null);
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
