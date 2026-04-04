@@ -381,9 +381,18 @@ Deno.serve(async (req) => {
                     origem_alteracao: 'ERP',
                     pendente_envio: false,
                   };
+                  // Sync informational/commercial fields
                   if (normalized.price_cash !== null) updateFields.price_cash = normalized.price_cash;
                   if (normalized.price_term !== null) updateFields.price_term = normalized.price_term;
                   if (normalized.weight !== null) updateFields.weight = normalized.weight;
+                  if (normalized.warranty_months !== null) updateFields.warranty_months = normalized.warranty_months;
+                  if (normalized.abc_classification !== null) updateFields.abc_classification = normalized.abc_classification;
+                  if (normalized.description !== null) updateFields.description = normalized.description;
+                  if (normalized.unit_measure !== null) updateFields.unit_measure = normalized.unit_measure;
+                  if (normalized.unit_sale !== null) updateFields.unit_sale = normalized.unit_sale;
+                  if (normalized.reference !== null) updateFields.reference = normalized.reference;
+                  // NOTE: width, length, thickness are NOT updated here to avoid
+                  // breaking the unique constraint on technical structure
 
                   await supabase.from("products").update(updateFields).eq("id", conflicting.id);
                   await upsertProductErpData(supabase, conflicting.id, tenant_id, raw);
