@@ -68,8 +68,11 @@ export interface CRMProduct {
 export function mapCRMProductToProjedata(product: CRMProduct): ProjedataProduto {
   const codigoFonte = product.erp_product_code || product.sku || '';
   const { codigo, versao: versaoParsed } = parseCodigoVersao(codigoFonte);
-  // erp_versao (ex: "100x150x0,120") é a fonte principal; fallback para parsed, nunca vazio
-  const versaoFinal = product.erp_versao || versaoParsed || '1';
+  // erp_versao é obrigatório — banco já garante via CHECK, aqui bloqueamos envio sem versão
+  const versaoFinal = product.erp_versao || versaoParsed;
+  if (!versaoFinal) {
+    throw new Error(`erp_versao obrigatório para envio ao ERP (produto código: ${codigo})`);
+  }
   const empresaFinal = String(product.erp_empresa || 1);
 
   // Montar versão
