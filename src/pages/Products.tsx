@@ -833,6 +833,57 @@ export default function Products() {
     }
   };
 
+  const handleDuplicate = (product: Product) => {
+    setEditingProduct(null); // modo criação — campos estruturais editáveis
+    const duplicatedData = {
+      sku: '', // será regenerado automaticamente
+      name: product.name,
+      description: product.description || '',
+      tipo_id: product.tipo_id || undefined,
+      unit_measure: product.unit_measure || 'un',
+      unit_price: product.unit_price || 0,
+      fator_kg: product.fator_kg || 0,
+      fator_milheiro: product.fator_milheiro || 0,
+      grupo_id: product.grupo_id || undefined,
+      subgrupo_id: product.subgrupo_id || undefined,
+      family_id: product.family_id || undefined,
+      class_id: product.class_id || undefined,
+      width: product.width || 0,
+      length: product.length || 0,
+      thickness: product.thickness || 0,
+      active: true,
+      nome_impresso: '', // limpar — nova variação comercial
+      ncm_code: product.ncm_code || '',
+      ncm_id: product.ncm_id,
+      cst_icms: product.cst_icms || '',
+      csosn: product.csosn || '',
+      aliquota_icms: product.aliquota_icms,
+      tem_icms_st: product.tem_icms_st || false,
+      aliquota_ipi: product.aliquota_ipi,
+      cst_pis_cofins: product.cst_pis_cofins || '',
+      aliquota_pis: product.aliquota_pis,
+      aliquota_cofins: product.aliquota_cofins,
+      tipo_produto_fiscal: product.tipo_produto_fiscal,
+      ncm_validated_at: product.ncm_validated_at || null,
+      tipo_item: product.tipo_item || '',
+      tipo_ficha: product.tipo_ficha,
+      erp_grupo: product.erp_grupo || '',
+      erp_subgrupo: product.erp_subgrupo || '',
+      erp_empresa: product.erp_empresa || 1,
+      erp_versao: product.erp_versao || '',
+      erp_versao_detalhes: product.erp_versao_detalhes || '',
+      erp_versao_roteiro: product.erp_versao_roteiro,
+      erp_versao_situacao: product.erp_versao_situacao || 'A',
+    };
+    // Regenerar SKU
+    duplicatedData.sku = recalcularSku(duplicatedData);
+    setFormData(duplicatedData);
+    setIsDialogOpen(true);
+    setFormTab('geral');
+    setIsAutoDescription(true);
+    toast.info('Produto duplicado. Ajuste os campos desejados e salve como novo produto.');
+  };
+
   // Helper to get pricing info for a product
   const getProductPricingInfo = (product: Product) => {
     const table = getTableForProduct(product.id);
