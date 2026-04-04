@@ -1000,7 +1000,7 @@ export default function Products() {
                               const newData = { ...formData, width: newWidth };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
-                              const prof = getProductDimensionProfile(getLookupLabel(grupos.items, newData.grupo_id));
+                              const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
                               }
