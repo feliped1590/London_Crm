@@ -38,13 +38,14 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import {
-  getProductDimensionProfile,
+  type DimensionProfile,
   validateRequiredFields,
   generateErpVersion,
   tryGenerateErpVersion,
   hasAutoDimensions,
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
+import { type GroupLookupItem } from '@/hooks/useProductLookups';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
