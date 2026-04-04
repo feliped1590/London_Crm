@@ -157,6 +157,7 @@ export default function Products() {
     length: 0,
     thickness: 0,
     active: true,
+    nome_impresso: '',
     // Campos NCM e Fiscais
     ncm_code: '',
     ncm_id: '' as string | undefined,
