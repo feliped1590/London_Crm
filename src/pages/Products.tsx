@@ -641,10 +641,53 @@ export default function Products() {
     return false;
   };
 
+  // Find products with same structure (for UX alert, not blocking)
+  const findSimilarProducts = async (data: typeof formData) => {
+    if (!activeTenantId) return [];
+    let query = supabase
+      .from('products')
+      .select('id, sku, name, nome_impresso')
+      .eq('tenant_id', activeTenantId)
+      .eq('active', true);
+
+    const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
+    for (const field of uuidFields) {
+      const value = (data as any)[field];
+      if (value) query = query.eq(field, value);
+      else query = query.is(field, null);
+    }
+
+    // Match dimensions
+    if (data.width) query = query.eq('width', data.width);
+    else query = query.is('width', null);
+    if (data.length) query = query.eq('length', data.length);
+    else query = query.is('length', null);
+    if (data.thickness) query = query.eq('thickness', data.thickness);
+    else query = query.is('thickness', null);
+
+    // Do NOT filter by nome_impresso — we want all commercial variations
+    const { data: rows } = await query.limit(10);
+    return (rows || []) as {id: string; sku: string; name: string; nome_impresso: string | null}[];
+  };
+
+  const executeSave = (submitData: typeof formData) => {
+    if (editingProduct) {
+      updateMutation.mutate({ id: editingProduct.id, ...submitData });
+    } else {
+      createMutation.mutate(submitData);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.sku || !formData.name) {
-      toast.error('SKU e Nome são obrigatórios');
+    if (!formData.name) {
+      toast.error('Descrição é obrigatória');
+      return;
+    }
+
+    // SKU é gerado automaticamente — validar que foi gerado
+    if (!formData.sku) {
+      toast.error('SKU não foi gerado. Preencha os campos de classificação.');
       return;
     }
 
@@ -682,14 +725,12 @@ export default function Products() {
         throw err;
       }
     } else {
-      // Perfil 'none': erp_versao deve ser preenchido manualmente
       if (!submitData.erp_versao || submitData.erp_versao.trim() === '') {
         toast.error('O campo Versão (ERP) é obrigatório. Preencha manualmente.');
         return;
       }
     }
 
-    // Se preço unitário não foi informado, usar o fator milheiro calculado
     if (!submitData.unit_price || submitData.unit_price === 0) {
       const fatorMilheiro = recalcularFatorMilheiro(submitData);
       if (fatorMilheiro > 0) {
@@ -699,17 +740,40 @@ export default function Products() {
 
     setIsCheckingDuplicate(true);
     try {
-      const isDuplicate = await checkDuplicateProduct(submitData);
-      if (isDuplicate) return;
+      // Skip duplicate check in edit mode (structural fields are locked)
+      if (!isEditing) {
+        const isDuplicate = await checkDuplicateProduct(submitData);
+        if (isDuplicate) return;
 
-      if (editingProduct) {
-        updateMutation.mutate({ id: editingProduct.id, ...submitData });
-      } else {
-        createMutation.mutate(submitData);
+        // Check for similar structures (alert, not blocking)
+        const similar = await findSimilarProducts(submitData);
+        if (similar.length > 0) {
+          setSimilarProducts(similar);
+          setPendingSubmitData(submitData);
+          setShowSimilarAlert(true);
+          return;
+        }
       }
+
+      executeSave(submitData);
     } finally {
       setIsCheckingDuplicate(false);
     }
+  };
+
+  const handleConfirmSimilar = () => {
+    if (pendingSubmitData) {
+      executeSave(pendingSubmitData);
+    }
+    setShowSimilarAlert(false);
+    setPendingSubmitData(null);
+    setSimilarProducts([]);
+  };
+
+  const handleCancelSimilar = () => {
+    setShowSimilarAlert(false);
+    setPendingSubmitData(null);
+    setSimilarProducts([]);
   };
 
   const handleEdit = (product: Product) => {
