@@ -1113,8 +1113,10 @@ export default function Products() {
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
+                        disabled={isEditing}
                         onValueChange={(v) => {
                           const updated = { ...formData, family_id: v === 'none' ? undefined : v };
+                          updated.sku = recalcularSku(updated);
                           if (isAutoDescription) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
