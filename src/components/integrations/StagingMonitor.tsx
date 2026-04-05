@@ -183,12 +183,15 @@ export function StagingMonitor() {
 
         if (error) throw error;
 
-        const batch = data?.summary;
-        const batchTotal = (batch?.promoted || 0) + (batch?.skipped_type || 0) + (batch?.errors || 0);
+        const batch = data?.summary ?? {};
+        const batchPromoted = Number(batch?.promoted ?? 0);
+        const batchSkipped = Number(batch?.skipped ?? batch?.skipped_type ?? 0);
+        const batchErrors = Number(batch?.errors ?? 0);
+        const batchTotal = Number(batch?.total ?? (batchPromoted + batchSkipped + batchErrors));
 
-        progress.promoted += batch?.promoted || 0;
-        progress.skipped += batch?.skipped_type || 0;
-        progress.errors += batch?.errors || 0;
+        progress.promoted += batchPromoted;
+        progress.skipped += batchSkipped;
+        progress.errors += batchErrors;
         progress.processed += batchTotal;
         setPromotionProgress({ ...progress });
 
