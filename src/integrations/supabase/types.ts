@@ -8280,6 +8280,7 @@ export type Database = {
           module_path: string
         }[]
       }
+      get_user_tenant_ids: { Args: { p_user_id: string }; Returns: string[] }
       has_module_access: {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
