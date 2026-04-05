@@ -54,40 +54,47 @@ export function StagingMonitor() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch stats using RPC to avoid 1000-row limit
-      const { data: countsData } = await (supabase as any).rpc('staging_status_counts');
+      const [countsResult, latestResult, syncResult] = await Promise.all([
+        (supabase as any).rpc('staging_status_counts'),
+        supabase
+          .from('erp_products_staging')
+          .select('id, erp_code, codigo_tipo_item, status, data_alteracao, hash_data, error_message, retry_count, created_at')
+          .order('created_at', { ascending: false })
+          .limit(20),
+        (supabase as any)
+          .from('erp_sync_control')
+          .select('last_sync_at, last_sync_count')
+          .eq('entity', 'product_promotion')
+          .maybeSingle(),
+      ]);
 
+      const countsData = countsResult.data;
       if (countsData) {
         const s: StagingStats = { total: 0, pending: 0, processed: 0, errors: 0, skipped: 0 };
         for (const row of countsData) {
           const c = Number(row.count) || 0;
           s.total += c;
           if (row.status === 'pending' || row.status === 'processing') s.pending += c;
-          else if (row.status === 'processed') s.processed += c;
+          else if (row.status === 'processed' || row.status === 'promoted') s.processed += c;
           else if (row.status === 'error') s.errors += c;
           else if (row.status === 'skipped') s.skipped += c;
         }
         setStats(s);
       }
 
-      // Fetch latest records
-      const { data: latest } = await supabase
-        .from('erp_products_staging')
-        .select('id, erp_code, codigo_tipo_item, status, data_alteracao, hash_data, error_message, retry_count, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20) as { data: StagingRecord[] | null };
-
+      const latest = latestResult.data as StagingRecord[] | null;
       if (latest) setRecords(latest);
 
-      // Fetch sync control
-      const syncResult = await (supabase as any)
-        .from('erp_sync_control')
-        .select('last_sync_at, last_record_date, records_synced')
-        .eq('entity_type', 'product_staging')
-        .maybeSingle();
-      const sync: SyncControl | null = syncResult?.data ?? null;
-
-      setSyncControl(sync);
+      const syncData = syncResult?.data;
+      setSyncControl(
+        syncData
+          ? {
+              last_sync_at: syncData.last_sync_at,
+              last_record_date: null,
+              records_synced: syncData.last_sync_count ?? 0,
+            }
+          : null
+      );
     } catch (err) {
       console.error('Fetch staging data error:', err);
     } finally {
@@ -100,7 +107,9 @@ export function StagingMonitor() {
   }, []);
 
   const resolvetenantId = async (): Promise<string> => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) throw new Error('Não autenticado');
 
     const { data: profile } = await supabase
@@ -139,7 +148,6 @@ export function StagingMonitor() {
         toast.success(
           `${data.total_received} registros recebidos do ERP. Processamento em background — acompanhe o progresso atualizando o monitor.`
         );
-        // Poll for completion
         setTimeout(() => fetchData(), 5000);
         setTimeout(() => fetchData(), 15000);
         setTimeout(() => fetchData(), 30000);
@@ -184,8 +192,7 @@ export function StagingMonitor() {
         progress.processed += batchTotal;
         setPromotionProgress({ ...progress });
 
-        // If batch processed fewer than BATCH_SIZE, we're done
-        if (batchTotal < BATCH_SIZE) {
+        if (batchTotal === 0 || batchTotal < BATCH_SIZE) {
           hasMore = false;
         }
       }
@@ -207,9 +214,9 @@ export function StagingMonitor() {
     try {
       const { error } = await (supabase
         .from('erp_products_staging')
-        .update({ status: 'pending' }) as any)
+        .update({ status: 'pending', error_message: null } as any)
         .eq('status', 'error')
-        .lt('retry_count', 5);
+        .lt('retry_count', 5));
 
       if (error) throw error;
 
@@ -227,6 +234,7 @@ export function StagingMonitor() {
       pending: { variant: 'outline', label: 'Pendente' },
       processing: { variant: 'secondary', label: 'Processando' },
       processed: { variant: 'default', label: 'Promovido' },
+      promoted: { variant: 'default', label: 'Promovido' },
       error: { variant: 'destructive', label: 'Erro' },
       skipped: { variant: 'secondary', label: 'Ignorado' },
     };
