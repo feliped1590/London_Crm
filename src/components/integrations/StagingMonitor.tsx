@@ -158,24 +158,47 @@ export function StagingMonitor() {
 
   const handlePromote = async () => {
     setIsPromoting(true);
+    cancelRef.current = false;
+    const totalPending = stats.pending;
+    const progress = { processed: 0, total: totalPending, promoted: 0, skipped: 0, errors: 0 };
+    setPromotionProgress({ ...progress });
+
     try {
       const tenantId = await resolvetenantId();
+      const BATCH_SIZE = 500;
+      let hasMore = true;
 
-      const { data, error } = await supabase.functions.invoke('erp-promote-products', {
-        body: { tenant_id: tenantId },
-      });
+      while (hasMore && !cancelRef.current) {
+        const { data, error } = await supabase.functions.invoke('erp-promote-products', {
+          body: { tenant_id: tenantId, batch_size: BATCH_SIZE },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const summary = data?.summary;
+        const batch = data?.summary;
+        const batchTotal = (batch?.promoted || 0) + (batch?.skipped_type || 0) + (batch?.errors || 0);
+
+        progress.promoted += batch?.promoted || 0;
+        progress.skipped += batch?.skipped_type || 0;
+        progress.errors += batch?.errors || 0;
+        progress.processed += batchTotal;
+        setPromotionProgress({ ...progress });
+
+        // If batch processed fewer than BATCH_SIZE, we're done
+        if (batchTotal < BATCH_SIZE) {
+          hasMore = false;
+        }
+      }
+
       toast.success(
-        `Promoção concluída: ${summary?.promoted || 0} promovidos, ${summary?.skipped_hash || 0} sem alteração, ${summary?.errors || 0} erros`
+        `Promoção concluída: ${progress.promoted} promovidos, ${progress.skipped} ignorados, ${progress.errors} erros`
       );
       fetchData();
     } catch (err: any) {
       toast.error('Erro na promoção: ' + (err.message || 'erro desconhecido'));
     } finally {
       setIsPromoting(false);
+      setTimeout(() => setPromotionProgress(null), 3000);
     }
   };
 
