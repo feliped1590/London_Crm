@@ -39,6 +39,7 @@ export function StagingMonitor() {
   const [syncControl, setSyncControl] = useState<SyncControl | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
