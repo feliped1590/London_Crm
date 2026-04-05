@@ -256,12 +256,43 @@ export function StagingMonitor() {
             <RotateCcw className={`h-4 w-4 mr-1 ${isReprocessing ? 'animate-spin' : ''}`} />
             Reprocessar Erros
           </Button>
-          <Button size="sm" onClick={handlePromote} disabled={isPromoting || stats.pending === 0}>
-            <Play className={`h-4 w-4 mr-1 ${isPromoting ? 'animate-spin' : ''}`} />
-            {isPromoting ? 'Promovendo...' : 'Promover Agora'}
-          </Button>
+          {isPromoting ? (
+            <Button size="sm" variant="destructive" onClick={() => { cancelRef.current = true; }}>
+              Cancelar
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handlePromote} disabled={stats.pending === 0}>
+              <Play className="h-4 w-4 mr-1" />
+              Promover Agora
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Progress Bar */}
+      {promotionProgress && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">
+                {isPromoting ? 'Promovendo produtos...' : 'Promoção concluída'}
+              </span>
+              <span className="text-muted-foreground">
+                {promotionProgress.processed} / {promotionProgress.total}
+              </span>
+            </div>
+            <Progress
+              value={promotionProgress.total > 0 ? (promotionProgress.processed / promotionProgress.total) * 100 : 0}
+              className="h-3"
+            />
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span className="text-green-600">✓ {promotionProgress.promoted} promovidos</span>
+              <span>⊘ {promotionProgress.skipped} ignorados</span>
+              <span className="text-destructive">✗ {promotionProgress.errors} erros</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
