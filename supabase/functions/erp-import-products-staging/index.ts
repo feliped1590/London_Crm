@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          const hash_data = await md5Hex(stableStringify(record));
+          const hash_data = await sha256Hex(stableStringify(record));
 
           // Check dedup: same tenant + erp_code + hash already pending?
           const { data: existing } = await supabaseAdmin
