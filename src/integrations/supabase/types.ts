@@ -8387,6 +8387,13 @@ export type Database = {
           status: string
         }[]
       }
+      staging_status_counts: {
+        Args: { p_tenant_id?: string }
+        Returns: {
+          count: number
+          status: string
+        }[]
+      }
       sync_erp_sequence_if_higher: {
         Args: { p_sequence_name: string; p_value: number }
         Returns: undefined
