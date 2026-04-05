@@ -6,6 +6,7 @@ import { MessageCircle, Calendar, RefreshCw, Search, Upload, FileUp } from 'luci
 import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
+import { StagingMonitor } from '@/components/integrations/StagingMonitor';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -98,7 +99,7 @@ export default function Integrations() {
           <GoogleCalendarSettings />
         </TabsContent>
 
-        <TabsContent value="erp" className="mt-6 space-y-4">
+        <TabsContent value="erp" className="mt-6 space-y-6">
           <div className="flex items-center gap-2">
             <Button onClick={() => navigate('/import-companies')} className="gap-2">
               <Upload className="h-4 w-4" />
@@ -120,6 +121,9 @@ export default function Integrations() {
               {isImporting ? 'Importando...' : 'Importar Produtos (CSV)'}
             </Button>
           </div>
+
+          <StagingMonitor />
+
           <UnderDevelopmentBanner 
             title="Integração ERP em Desenvolvimento"
             description="O módulo de integração com o ERP está sendo desenvolvido e será disponibilizado em breve. Funcionalidades como sincronização de clientes, produtos, pedidos e logs estarão disponíveis nesta aba."
