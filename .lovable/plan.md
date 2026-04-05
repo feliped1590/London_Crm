@@ -1,86 +1,63 @@
 
 
-# Plano: Mapeamento Completo ERP → CRM na Promoção
+# Plano: SKU para Produtos Promovidos do ERP
 
 ## Problema
 
-A RPC `promote_staging_products_v2` promove registros da staging para `products` mapeando **apenas o nome** (e usando um campo que nem existe: `ds_material`). Todos os outros campos do ERP são ignorados.
+O `INSERT` na tabela `products` falha porque `sku` é `NOT NULL`, e a RPC `promote_staging_products_v2` não gera SKU.
 
-## Campos do ERP disponíveis vs. destino no CRM
+A regra de SKU do CRM é: `TIPO-FAM-GRP-SUB-CLS-W-L-T` (composto dos **códigos** das tabelas de lookup: `product_types`, `product_groups`, etc.). Porém, os dados do ERP trazem apenas **descrições textuais** (ex: "LISO BOBINA", "4 SOLDAS") que não correspondem diretamente aos códigos das lookups do CRM.
 
-```text
-ERP (raw_data)                    →  products (CRM)
-─────────────────────────────────────────────────────
-desc_completa_item                →  name
-desc_simples_versao               →  erp_versao_detalhes
-produto (ex: "100135/1")          →  erp_product_code + erp_versao
-codigo_ncm                        →  ncm_code
-codigo_unidade                    →  unit_measure
-desc_familia                      →  (lookup ou texto)
-desc_grupo                        →  erp_grupo
-desc_subgrupo                     →  erp_subgrupo
-empresa                           →  erp_empresa
-codigo_tipo_item                  →  tipo_item
-codigo_tipo_ficha                 →  tipo_ficha
-codigo_roteiro                    →  erp_versao_roteiro
-situacao_item                     →  erp_status
-situacao_versao                   →  erp_versao_situacao
-preco_venda                       →  unit_price
-preco_ultima_venda                →  price_cash (ou referência)
-peso_liquido                      →  weight
-referencia                        →  reference
-```
+## Dados Relevantes
 
-## Solução
+- ERP traz: `desc_tipo_item = "PRODUTOS ACABADOS"`, `desc_grupo = "LISO SACO"`, `desc_subgrupo = "4 SOLDAS"`
+- CRM tem: `product_types.value = "PA"` (label "Produto Acabado"), `product_groups.value = "PEBD"`, etc.
+- Não há correspondência automática confiável entre as descrições do ERP e os códigos das lookups
 
-### Migration: Reescrever a RPC `promote_staging_products_v2`
+## Solução Proposta
 
-Atualizar o UPDATE e INSERT para mapear todos os campos relevantes do `raw_data` JSONB:
+### Estratégia: SKU temporário baseado no código ERP + mapeamento posterior
 
-**No UPDATE:**
-```sql
-UPDATE products SET
-  name = COALESCE(rec.raw_data->>'desc_completa_item', name),
-  ncm_code = COALESCE(rec.raw_data->>'codigo_ncm', ncm_code),
-  unit_measure = COALESCE(rec.raw_data->>'codigo_unidade', unit_measure),
-  erp_grupo = COALESCE(rec.raw_data->>'desc_grupo', erp_grupo),
-  erp_subgrupo = COALESCE(rec.raw_data->>'desc_subgrupo', erp_subgrupo),
-  erp_empresa = COALESCE((rec.raw_data->>'empresa')::int, erp_empresa),
-  tipo_item = COALESCE(rec.raw_data->>'desc_tipo_item', tipo_item),
-  tipo_ficha = COALESCE((rec.raw_data->>'codigo_tipo_ficha')::int, tipo_ficha),
-  erp_versao = <parsed from produto field>,
-  erp_versao_detalhes = COALESCE(rec.raw_data->>'desc_simples_versao', erp_versao_detalhes),
-  erp_versao_roteiro = COALESCE((rec.raw_data->>'codigo_roteiro')::int, erp_versao_roteiro),
-  erp_versao_situacao = COALESCE(rec.raw_data->>'situacao_versao', erp_versao_situacao),
-  erp_status = COALESCE(rec.raw_data->>'situacao_item', erp_status),
-  unit_price = COALESCE((rec.raw_data->>'preco_venda')::numeric, unit_price),
-  weight = COALESCE((rec.raw_data->>'peso_liquido')::numeric, weight),
-  reference = COALESCE(rec.raw_data->>'referencia', reference),
-  erp_last_update_date = rec.data_alteracao,
-  erp_synced_at = now(),
-  origem_alteracao = 'ERP'
-WHERE ...
-```
+1. **Na promoção (RPC)**: gerar um SKU provisório usando o `erp_product_code` como base:
+   - Formato: `ERP-{erp_product_code}` (ex: `ERP-100135`)
+   - Isso satisfaz a constraint `NOT NULL` e identifica claramente produtos vindos do ERP que ainda não foram classificados
 
-**No INSERT:** mesmos campos, garantindo que o produto entra completo no CRM.
+2. **Marcar produtos como "não classificados"**: os campos `tipo_id`, `grupo_id`, `subgrupo_id`, `family_id`, `class_id` ficam `NULL`, indicando que o produto precisa de classificação manual
 
-**Parsing do campo `produto`:** o ERP envia `"100135/1"` — a RPC deve separar em `erp_product_code = '100135'` e `erp_versao = '1'` usando `split_part()`.
+3. **Fluxo pós-promoção**: o usuário pode abrir o produto no catálogo e classificá-lo (tipo, grupo, etc.), momento em que o SKU será regenerado automaticamente conforme as regras do CRM
 
-### Considerações
+### Alternativa descartada
+Tentar mapear automaticamente "LISO BOBINA" → algum grupo CRM. Os nomes são completamente diferentes (ERP usa nomenclatura de processo, CRM usa nomenclatura de material), tornando o mapeamento automático não confiável.
 
-- Campos numéricos (`empresa`, `tipo_ficha`, `roteiro`, `preco_venda`, `peso_liquido`) precisam de cast seguro com tratamento de NULL/vazio
-- `COALESCE` garante que campos já preenchidos no CRM não sejam sobrescritos por NULL do ERP
-- A proteção de data (`data_alteracao >= erp_last_update_date`) já existe e será mantida
-- Nenhuma alteração no frontend — apenas a RPC fica mais rica
-
-## Arquivos Impactados
+## Alterações
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | Reescrever `promote_staging_products_v2` com mapeamento completo |
+| Migration SQL | Atualizar `promote_staging_products_v2` para gerar `sku = 'ERP-' \|\| v_erp_code` no INSERT |
+
+## Detalhes Técnicos
+
+Na RPC, alterar apenas o bloco `INSERT`:
+
+```sql
+INSERT INTO products (
+  tenant_id, sku, erp_product_code, name, ...
+) VALUES (
+  p_tenant_id,
+  'ERP-' || v_erp_code,  -- SKU provisório
+  v_erp_code,
+  ...
+);
+```
+
+A trigger `trg_generate_sku_unique` já vai gerar automaticamente o `sku_unique` (ex: `ERP-100135-001`).
+
+Também resetar os ~9.907 registros em `error` na staging de volta para `pending`.
 
 ## Resultado Esperado
 
-- Produtos promovidos chegam com NCM, unidade, grupo, subgrupo, preço, peso, versão, etc.
-- CRM recebe dados completos e utilizáveis, não apenas nome + código
+- INSERT não falha mais (SKU preenchido)
+- Produtos promovidos aparecem no catálogo com SKU `ERP-XXXXX`
+- Classificação pode ser feita depois manualmente
+- Quando classificados, SKU será atualizado conforme regras CRM
 
