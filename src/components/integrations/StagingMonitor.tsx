@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Play, RotateCcw, Database, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { RefreshCw, Play, RotateCcw, Database, CheckCircle, AlertCircle, Clock, Download } from 'lucide-react';
 
 interface StagingStats {
   total: number;
