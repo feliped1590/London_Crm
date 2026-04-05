@@ -57,12 +57,17 @@ function parseErpDate(raw: string | null | undefined): string | null {
 /**
  * Fetch products from ERP Iniflex API
  */
-async function fetchFromErp(since: string): Promise<unknown[]> {
-  const apiUrl = Deno.env.get("INIFLEX_API_URL");
-  const apiToken = Deno.env.get("INIFLEX_API_TOKEN");
+async function fetchFromErp(
+  since: string,
+  configEndpoint?: string,
+  configToken?: string
+): Promise<unknown[]> {
+  // Priority: config from tenant_settings > env vars
+  const apiUrl = configEndpoint || Deno.env.get("INIFLEX_API_URL");
+  const apiToken = configToken || Deno.env.get("INIFLEX_API_TOKEN");
 
   if (!apiUrl || !apiToken) {
-    throw new Error("INIFLEX_API_URL ou INIFLEX_API_TOKEN não configurados");
+    throw new Error("Endpoint e Token do ERP não configurados. Configure na aba ERP em Integrações.");
   }
 
   const payload = {
@@ -273,7 +278,23 @@ Deno.serve(async (req) => {
       const sinceDate = since || "01/01/2000 00:00:00";
       console.log(`[Staging] Mode: ERP fetch, since=${sinceDate}, tenant=${tenant_id}`);
 
-      recordsToProcess = await fetchFromErp(sinceDate);
+      // Load ERP config from tenant_settings
+      let configEndpoint: string | undefined;
+      let configToken: string | undefined;
+      const { data: tenantConfig } = await supabaseAdmin
+        .from("tenant_settings")
+        .select("settings")
+        .eq("tenant_id", tenant_id)
+        .eq("category", "erp_integration")
+        .maybeSingle();
+
+      if (tenantConfig?.settings) {
+        const s = tenantConfig.settings as Record<string, string>;
+        configEndpoint = s.endpoint || undefined;
+        configToken = s.token || undefined;
+      }
+
+      recordsToProcess = await fetchFromErp(sinceDate, configEndpoint, configToken);
       console.log(`[Staging] ERP returned ${recordsToProcess.length} records`);
     } else if (Array.isArray(records) && records.length > 0) {
       // === MODE: Direct records (existing behavior) ===
