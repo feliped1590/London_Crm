@@ -92,7 +92,7 @@ export default function Integrations() {
       const { error } = await (supabase as any)
         .from('tenant_settings')
         .upsert({
-          tenant_id: profile.active_tenant_id,
+          tenant_id: tenantId,
           category: 'erp_integration',
           settings: {
             endpoint: erpEndpoint.trim(),
