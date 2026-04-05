@@ -44,12 +44,22 @@ export default function Integrations() {
         .eq('id', session.user.id)
         .single();
 
-      if (!profile?.active_tenant_id) return;
+      let tenantId = profile?.active_tenant_id;
+      if (!tenantId) {
+        const { data: ut } = await (supabase as any)
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', session.user.id)
+          .limit(1)
+          .maybeSingle();
+        tenantId = ut?.tenant_id;
+      }
+      if (!tenantId) return;
 
       const { data } = await (supabase as any)
         .from('tenant_settings')
         .select('settings')
-        .eq('tenant_id', profile.active_tenant_id)
+        .eq('tenant_id', tenantId)
         .eq('category', 'erp_integration')
         .maybeSingle();
 
