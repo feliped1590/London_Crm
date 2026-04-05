@@ -104,3 +104,9 @@ verify_jwt = false
 
 [functions.lookup-ncm-online]
 verify_jwt = false
+
+[functions.erp-import-products-staging]
+verify_jwt = false
+
+[functions.erp-promote-products]
+verify_jwt = false
