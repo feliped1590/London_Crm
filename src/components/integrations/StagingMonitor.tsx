@@ -90,6 +90,39 @@ export function StagingMonitor() {
     fetchData();
   }, []);
 
+  const handleImportFromErp = async () => {
+    setIsImporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile?.active_tenant_id) throw new Error('Tenant não encontrado');
+
+      toast.info('Importando produtos do ERP... isso pode levar alguns minutos.');
+
+      const { data, error } = await supabase.functions.invoke('erp-import-products-staging', {
+        body: { tenant_id: profile.active_tenant_id, source: 'erp' },
+      });
+
+      if (error) throw error;
+
+      toast.success(
+        `Importação concluída: ${data?.staging_inserted || 0} inseridos, ${data?.staging_skipped_unchanged || 0} sem alteração, ${data?.total_received || 0} recebidos do ERP`
+      );
+      fetchData();
+    } catch (err: any) {
+      toast.error('Erro na importação ERP: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handlePromote = async () => {
     setIsPromoting(true);
     try {
