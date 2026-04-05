@@ -3107,6 +3107,62 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_products_staging: {
+        Row: {
+          codigo_tipo_item: number | null
+          created_at: string
+          data_alteracao: string | null
+          erp_code: string
+          error_message: string | null
+          hash_data: string
+          id: string
+          promoted: boolean
+          promoted_at: string | null
+          raw_data: Json
+          retry_count: number
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          codigo_tipo_item?: number | null
+          created_at?: string
+          data_alteracao?: string | null
+          erp_code: string
+          error_message?: string | null
+          hash_data: string
+          id?: string
+          promoted?: boolean
+          promoted_at?: string | null
+          raw_data: Json
+          retry_count?: number
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          codigo_tipo_item?: number | null
+          created_at?: string
+          data_alteracao?: string | null
+          erp_code?: string
+          error_message?: string | null
+          hash_data?: string
+          id?: string
+          promoted?: boolean
+          promoted_at?: string | null
+          raw_data?: Json
+          retry_count?: number
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_products_staging_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       erp_sequence_logs: {
         Row: {
           created_at: string
@@ -5372,6 +5428,7 @@ export type Database = {
           fator_milheiro: number | null
           grupo_id: string | null
           id: string
+          is_acabado: boolean | null
           length: number | null
           name: string
           ncm_code: string | null
@@ -5441,6 +5498,7 @@ export type Database = {
           fator_milheiro?: number | null
           grupo_id?: string | null
           id?: string
+          is_acabado?: boolean | null
           length?: number | null
           name: string
           ncm_code?: string | null
@@ -5510,6 +5568,7 @@ export type Database = {
           fator_milheiro?: number | null
           grupo_id?: string | null
           id?: string
+          is_acabado?: boolean | null
           length?: number | null
           name?: string
           ncm_code?: string | null
@@ -8214,6 +8273,10 @@ export type Database = {
           p_tenant_id: string
           p_tipo: string
         }
+        Returns: Json
+      }
+      promote_staging_products_v2: {
+        Args: { p_tenant_id: string }
         Returns: Json
       }
       reset_orders: { Args: never; Returns: Json }
