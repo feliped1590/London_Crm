@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { RefreshCw, Play, RotateCcw, Database, CheckCircle, AlertCircle, Clock } from 'lucide-react';
+import { RefreshCw, Play, RotateCcw, Database, CheckCircle, AlertCircle, Clock, Download } from 'lucide-react';
 
 interface StagingStats {
   total: number;
@@ -39,6 +39,7 @@ export function StagingMonitor() {
   const [syncControl, setSyncControl] = useState<SyncControl | null>(null);
   const [isPromoting, setIsPromoting] = useState(false);
   const [isReprocessing, setIsReprocessing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
@@ -88,6 +89,39 @@ export function StagingMonitor() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleImportFromErp = async () => {
+    setIsImporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!profile?.active_tenant_id) throw new Error('Tenant não encontrado');
+
+      toast.info('Importando produtos do ERP... isso pode levar alguns minutos.');
+
+      const { data, error } = await supabase.functions.invoke('erp-import-products-staging', {
+        body: { tenant_id: profile.active_tenant_id, source: 'erp' },
+      });
+
+      if (error) throw error;
+
+      toast.success(
+        `Importação concluída: ${data?.staging_inserted || 0} inseridos, ${data?.staging_skipped_unchanged || 0} sem alteração, ${data?.total_received || 0} recebidos do ERP`
+      );
+      fetchData();
+    } catch (err: any) {
+      toast.error('Erro na importação ERP: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handlePromote = async () => {
     setIsPromoting(true);
@@ -166,6 +200,10 @@ export function StagingMonitor() {
           <Button variant="outline" size="sm" onClick={fetchData} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
             Atualizar
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleImportFromErp} disabled={isImporting}>
+            <Download className={`h-4 w-4 mr-1 ${isImporting ? 'animate-spin' : ''}`} />
+            {isImporting ? 'Importando...' : 'Importar do ERP'}
           </Button>
           <Button variant="outline" size="sm" onClick={handleReprocessErrors} disabled={isReprocessing || stats.errors === 0}>
             <RotateCcw className={`h-4 w-4 mr-1 ${isReprocessing ? 'animate-spin' : ''}`} />
