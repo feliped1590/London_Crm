@@ -70,7 +70,7 @@ export function StagingMonitor() {
       if (latest) setRecords(latest);
 
       // Fetch sync control
-      const syncResult: any = await supabase
+      const syncResult = await (supabase as any)
         .from('erp_sync_control')
         .select('last_sync_at, last_record_date, records_synced')
         .eq('entity_type', 'product_staging')
