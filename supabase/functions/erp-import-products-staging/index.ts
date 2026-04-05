@@ -155,8 +155,16 @@ async function ingestRecords(
 ): Promise<{ inserted: number; skipped: number; errors: string[] }> {
   let inserted = 0;
   let skipped = 0;
+  let skippedNoCode = 0;
   const errors: string[] = [];
   const BATCH_SIZE = 500;
+
+  // Log first record keys for field discovery
+  if (records.length > 0) {
+    const firstRec = records[0] as Record<string, unknown>;
+    console.log(`[Staging] First record keys: ${JSON.stringify(Object.keys(firstRec))}`);
+    console.log(`[Staging] First record sample: ${JSON.stringify(firstRec).substring(0, 500)}`);
+  }
 
   for (let i = 0; i < records.length; i += BATCH_SIZE) {
     const batch = records.slice(i, i + BATCH_SIZE);
@@ -170,21 +178,33 @@ async function ingestRecords(
       hash_data: string;
     }> = [];
 
+    let batchSkippedNoCode = 0;
+
     for (const record of batch) {
       try {
         const rec = record as Record<string, unknown>;
-        const erp_code = String(rec.cd_material || rec.codigo || "").trim();
+        const erp_code = String(
+          rec.cd_material || rec.CD_MATERIAL ||
+          rec.codigo || rec.CODIGO ||
+          rec.cd_produto || rec.CD_PRODUTO ||
+          rec.code || rec.CODE || ""
+        ).trim();
         if (!erp_code) {
+          if (skippedNoCode < 3) {
+            console.warn(`[Staging] Record without erp_code, keys: ${Object.keys(rec).join(",")}`);
+          }
+          skippedNoCode++;
+          batchSkippedNoCode++;
           skipped++;
           continue;
         }
 
         const codigo_tipo_item = parseInt(
-          String(rec.codigo_tipo_item || rec.cd_tipo_item || "0"),
+          String(rec.codigo_tipo_item || rec.cd_tipo_item || rec.CODIGO_TIPO_ITEM || rec.CD_TIPO_ITEM || "0"),
           10
         );
 
-        const rawDate = rec.data_alteracao || rec.dt_alteracao;
+        const rawDate = rec.data_alteracao || rec.dt_alteracao || rec.DATA_ALTERACAO || rec.DT_ALTERACAO;
         const data_alteracao = parseErpDate(rawDate as string);
 
         const hash_data = await sha256Hex(stableStringify(rec));
@@ -201,6 +221,8 @@ async function ingestRecords(
       }
     }
 
+    console.log(`[Staging] Batch ${i}-${i + batch.length}: prepared=${prepared.length}, skippedNoCode=${batchSkippedNoCode}`);
+
     if (prepared.length === 0) continue;
 
     // Step 2: Batch dedup check
@@ -212,9 +234,11 @@ async function ingestRecords(
 
     // Step 3: Filter out duplicates
     const newRows = [];
+    let batchDedupSkipped = 0;
     for (const p of prepared) {
       const key = `${p.erp_code}|${p.hash_data}`;
       if (existingKeys.has(key)) {
+        batchDedupSkipped++;
         skipped++;
         continue;
       }
@@ -228,6 +252,8 @@ async function ingestRecords(
         status: "pending",
       });
     }
+
+    console.log(`[Staging] Batch ${i}: existingKeys=${existingKeys.size}, dedupSkipped=${batchDedupSkipped}, newRows=${newRows.length}`);
 
     if (newRows.length === 0) continue;
 
@@ -247,6 +273,7 @@ async function ingestRecords(
     }
   }
 
+  console.log(`[Staging] Total skippedNoCode=${skippedNoCode}`);
   return { inserted, skipped, errors };
 }
 
