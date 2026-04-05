@@ -140,19 +140,10 @@ export function StagingMonitor() {
   const handlePromote = async () => {
     setIsPromoting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('active_tenant_id')
-        .eq('id', session.user.id)
-        .single();
-
-      if (!profile?.active_tenant_id) throw new Error('Tenant não encontrado');
+      const tenantId = await resolvetenantId();
 
       const { data, error } = await supabase.functions.invoke('erp-promote-products', {
-        body: { tenant_id: profile.active_tenant_id },
+        body: { tenant_id: tenantId },
       });
 
       if (error) throw error;
