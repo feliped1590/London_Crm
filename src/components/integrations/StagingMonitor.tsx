@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -41,6 +42,14 @@ export function StagingMonitor() {
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [promotionProgress, setPromotionProgress] = useState<{
+    processed: number;
+    total: number;
+    promoted: number;
+    skipped: number;
+    errors: number;
+  } | null>(null);
+  const cancelRef = useRef(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -149,24 +158,47 @@ export function StagingMonitor() {
 
   const handlePromote = async () => {
     setIsPromoting(true);
+    cancelRef.current = false;
+    const totalPending = stats.pending;
+    const progress = { processed: 0, total: totalPending, promoted: 0, skipped: 0, errors: 0 };
+    setPromotionProgress({ ...progress });
+
     try {
       const tenantId = await resolvetenantId();
+      const BATCH_SIZE = 500;
+      let hasMore = true;
 
-      const { data, error } = await supabase.functions.invoke('erp-promote-products', {
-        body: { tenant_id: tenantId },
-      });
+      while (hasMore && !cancelRef.current) {
+        const { data, error } = await supabase.functions.invoke('erp-promote-products', {
+          body: { tenant_id: tenantId, batch_size: BATCH_SIZE },
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const summary = data?.summary;
+        const batch = data?.summary;
+        const batchTotal = (batch?.promoted || 0) + (batch?.skipped_type || 0) + (batch?.errors || 0);
+
+        progress.promoted += batch?.promoted || 0;
+        progress.skipped += batch?.skipped_type || 0;
+        progress.errors += batch?.errors || 0;
+        progress.processed += batchTotal;
+        setPromotionProgress({ ...progress });
+
+        // If batch processed fewer than BATCH_SIZE, we're done
+        if (batchTotal < BATCH_SIZE) {
+          hasMore = false;
+        }
+      }
+
       toast.success(
-        `Promoção concluída: ${summary?.promoted || 0} promovidos, ${summary?.skipped_hash || 0} sem alteração, ${summary?.errors || 0} erros`
+        `Promoção concluída: ${progress.promoted} promovidos, ${progress.skipped} ignorados, ${progress.errors} erros`
       );
       fetchData();
     } catch (err: any) {
       toast.error('Erro na promoção: ' + (err.message || 'erro desconhecido'));
     } finally {
       setIsPromoting(false);
+      setTimeout(() => setPromotionProgress(null), 3000);
     }
   };
 
@@ -224,12 +256,43 @@ export function StagingMonitor() {
             <RotateCcw className={`h-4 w-4 mr-1 ${isReprocessing ? 'animate-spin' : ''}`} />
             Reprocessar Erros
           </Button>
-          <Button size="sm" onClick={handlePromote} disabled={isPromoting || stats.pending === 0}>
-            <Play className={`h-4 w-4 mr-1 ${isPromoting ? 'animate-spin' : ''}`} />
-            {isPromoting ? 'Promovendo...' : 'Promover Agora'}
-          </Button>
+          {isPromoting ? (
+            <Button size="sm" variant="destructive" onClick={() => { cancelRef.current = true; }}>
+              Cancelar
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handlePromote} disabled={stats.pending === 0}>
+              <Play className="h-4 w-4 mr-1" />
+              Promover Agora
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Progress Bar */}
+      {promotionProgress && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium">
+                {isPromoting ? 'Promovendo produtos...' : 'Promoção concluída'}
+              </span>
+              <span className="text-muted-foreground">
+                {promotionProgress.processed} / {promotionProgress.total}
+              </span>
+            </div>
+            <Progress
+              value={promotionProgress.total > 0 ? (promotionProgress.processed / promotionProgress.total) * 100 : 0}
+              className="h-3"
+            />
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span className="text-green-600">✓ {promotionProgress.promoted} promovidos</span>
+              <span>⊘ {promotionProgress.skipped} ignorados</span>
+              <span className="text-destructive">✗ {promotionProgress.errors} erros</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
