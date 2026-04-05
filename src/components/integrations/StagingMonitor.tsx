@@ -47,7 +47,7 @@ export function StagingMonitor() {
       // Fetch stats by status
       const { data: allRecords } = await supabase
         .from('erp_products_staging')
-        .select('status');
+        .select('status') as { data: { status: string }[] | null };
 
       if (allRecords) {
         const s: StagingStats = { total: allRecords.length, pending: 0, processed: 0, errors: 0, skipped: 0 };
@@ -65,7 +65,7 @@ export function StagingMonitor() {
         .from('erp_products_staging')
         .select('id, erp_code, codigo_tipo_item, status, data_alteracao, hash_data, error_message, retry_count, created_at')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(20) as { data: StagingRecord[] | null };
 
       if (latest) setRecords(latest);
 
@@ -74,7 +74,7 @@ export function StagingMonitor() {
         .from('erp_sync_control')
         .select('last_sync_at, last_record_date, records_synced')
         .eq('entity_type', 'product_staging')
-        .maybeSingle();
+        .maybeSingle() as { data: SyncControl | null };
 
       setSyncControl(sync);
     } catch (err) {
@@ -123,9 +123,9 @@ export function StagingMonitor() {
   const handleReprocessErrors = async () => {
     setIsReprocessing(true);
     try {
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('erp_products_staging')
-        .update({ status: 'pending' } as any)
+        .update({ status: 'pending' }) as any)
         .eq('status', 'error')
         .lt('retry_count', 5);
 
