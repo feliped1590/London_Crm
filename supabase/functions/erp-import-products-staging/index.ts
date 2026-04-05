@@ -34,12 +34,8 @@ async function sha256Hex(text: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/**
- * Parse date from ERP format "DD/MM/YYYY HH:mm:ss" or ISO string
- */
 function parseErpDate(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  // Try DD/MM/YYYY HH:mm:ss
   const brMatch = String(raw).match(
     /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2}):(\d{2})$/
   );
@@ -48,21 +44,16 @@ function parseErpDate(raw: string | null | undefined): string | null {
     const d = new Date(`${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}`);
     if (!isNaN(d.getTime())) return d.toISOString();
   }
-  // Try ISO / other JS-parseable formats
   const d = new Date(raw);
   if (!isNaN(d.getTime())) return d.toISOString();
   return null;
 }
 
-/**
- * Fetch products from ERP Iniflex API
- */
 async function fetchFromErp(
   since: string,
   configEndpoint?: string,
   configToken?: string
 ): Promise<unknown[]> {
-  // Priority: config from tenant_settings > env vars
   const apiUrl = configEndpoint || Deno.env.get("INIFLEX_API_URL");
   const apiToken = configToken || Deno.env.get("INIFLEX_API_TOKEN");
 
@@ -96,7 +87,6 @@ async function fetchFromErp(
 
   const result = await response.json();
 
-  // The ERP may return data in different structures
   if (Array.isArray(result)) return result;
   if (result?.dados && Array.isArray(result.dados)) return result.dados;
   if (result?.data && Array.isArray(result.data)) return result.data;
@@ -110,10 +100,6 @@ async function fetchFromErp(
   throw new Error("Formato de resposta do ERP não reconhecido");
 }
 
-/**
- * Batch dedup: given a list of {erp_code, hash_data}, return a Set of
- * "erp_code|hash_data" keys that already exist as pending in staging.
- */
 async function batchCheckExisting(
   supabaseAdmin: ReturnType<typeof createClient>,
   tenantId: string,
@@ -122,7 +108,6 @@ async function batchCheckExisting(
   const existingSet = new Set<string>();
   if (keys.length === 0) return existingSet;
 
-  // Query in chunks of 200 erp_codes at a time
   const uniqueCodes = [...new Set(keys.map((k) => k.erp_code))];
   const CHUNK = 200;
 
@@ -146,136 +131,150 @@ async function batchCheckExisting(
 }
 
 /**
- * Process records into staging table
+ * Background processing: ingest records into staging with progress tracking via erp_sync_control
  */
-async function ingestRecords(
+async function processInBackground(
   supabaseAdmin: ReturnType<typeof createClient>,
   tenantId: string,
-  records: unknown[]
-): Promise<{ inserted: number; skipped: number; errors: string[] }> {
+  records: unknown[],
+  syncJobId: string
+) {
   let inserted = 0;
   let skipped = 0;
   let skippedNoCode = 0;
   const errors: string[] = [];
   const BATCH_SIZE = 500;
 
-  // Log first record keys for field discovery
-  if (records.length > 0) {
-    const firstRec = records[0] as Record<string, unknown>;
-    console.log(`[Staging] First record keys: ${JSON.stringify(Object.keys(firstRec))}`);
-    console.log(`[Staging] First record sample: ${JSON.stringify(firstRec).substring(0, 500)}`);
-  }
+  try {
+    // Log first record for field discovery
+    if (records.length > 0) {
+      const firstRec = records[0] as Record<string, unknown>;
+      console.log(`[Staging BG] First record keys: ${JSON.stringify(Object.keys(firstRec))}`);
+    }
 
-  for (let i = 0; i < records.length; i += BATCH_SIZE) {
-    const batch = records.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < records.length; i += BATCH_SIZE) {
+      const batch = records.slice(i, i + BATCH_SIZE);
 
-    // Step 1: Prepare all rows with hashes
-    const prepared: Array<{
-      erp_code: string;
-      codigo_tipo_item: number;
-      data_alteracao: string | null;
-      raw_data: unknown;
-      hash_data: string;
-    }> = [];
+      const prepared: Array<{
+        erp_code: string;
+        codigo_tipo_item: number;
+        data_alteracao: string | null;
+        raw_data: unknown;
+        hash_data: string;
+      }> = [];
 
-    let batchSkippedNoCode = 0;
-
-    for (const record of batch) {
-      try {
-        const rec = record as Record<string, unknown>;
-        const erp_code = String(
-          rec.produto || rec.PRODUTO ||
-          rec.cd_material || rec.CD_MATERIAL ||
-          rec.codigo || rec.CODIGO ||
-          rec.cd_produto || rec.CD_PRODUTO ||
-          rec.code || rec.CODE || ""
-        ).trim();
-        if (!erp_code) {
-          if (skippedNoCode < 3) {
-            console.warn(`[Staging] Record without erp_code, keys: ${Object.keys(rec).join(",")}`);
+      for (const record of batch) {
+        try {
+          const rec = record as Record<string, unknown>;
+          const erp_code = String(
+            rec.produto || rec.PRODUTO ||
+            rec.cd_material || rec.CD_MATERIAL ||
+            rec.codigo || rec.CODIGO ||
+            rec.cd_produto || rec.CD_PRODUTO ||
+            rec.code || rec.CODE || ""
+          ).trim();
+          if (!erp_code) {
+            if (skippedNoCode < 3) {
+              console.warn(`[Staging BG] Record without erp_code, keys: ${Object.keys(rec).join(",")}`);
+            }
+            skippedNoCode++;
+            skipped++;
+            continue;
           }
-          skippedNoCode++;
-          batchSkippedNoCode++;
+
+          const codigo_tipo_item = parseInt(
+            String(rec.codigo_tipo_item || rec.cd_tipo_item || rec.CODIGO_TIPO_ITEM || rec.CD_TIPO_ITEM || "0"),
+            10
+          );
+
+          const rawDate = rec.data_alteracao || rec.dt_alteracao || rec.DATA_ALTERACAO || rec.DT_ALTERACAO;
+          const data_alteracao = parseErpDate(rawDate as string);
+
+          const hash_data = await sha256Hex(stableStringify(rec));
+
+          prepared.push({ erp_code, codigo_tipo_item, data_alteracao, raw_data: rec, hash_data });
+        } catch (e) {
+          errors.push(`Record parse error: ${(e as Error).message}`);
+        }
+      }
+
+      if (prepared.length === 0) continue;
+
+      // Batch dedup check
+      const existingKeys = await batchCheckExisting(
+        supabaseAdmin,
+        tenantId,
+        prepared.map((p) => ({ erp_code: p.erp_code, hash_data: p.hash_data }))
+      );
+
+      const newRows = [];
+      for (const p of prepared) {
+        const key = `${p.erp_code}|${p.hash_data}`;
+        if (existingKeys.has(key)) {
           skipped++;
           continue;
         }
-
-        const codigo_tipo_item = parseInt(
-          String(rec.codigo_tipo_item || rec.cd_tipo_item || rec.CODIGO_TIPO_ITEM || rec.CD_TIPO_ITEM || "0"),
-          10
-        );
-
-        const rawDate = rec.data_alteracao || rec.dt_alteracao || rec.DATA_ALTERACAO || rec.DT_ALTERACAO;
-        const data_alteracao = parseErpDate(rawDate as string);
-
-        const hash_data = await sha256Hex(stableStringify(rec));
-
-        prepared.push({
-          erp_code,
-          codigo_tipo_item,
-          data_alteracao,
-          raw_data: rec,
-          hash_data,
+        newRows.push({
+          tenant_id: tenantId,
+          erp_code: p.erp_code,
+          codigo_tipo_item: p.codigo_tipo_item,
+          data_alteracao: p.data_alteracao,
+          raw_data: p.raw_data,
+          hash_data: p.hash_data,
+          status: "pending",
         });
-      } catch (e) {
-        errors.push(`Record parse error: ${(e as Error).message}`);
+      }
+
+      if (newRows.length === 0) continue;
+
+      // Insert in sub-batches
+      const INSERT_CHUNK = 500;
+      for (let j = 0; j < newRows.length; j += INSERT_CHUNK) {
+        const chunk = newRows.slice(j, j + INSERT_CHUNK);
+        const { error } = await supabaseAdmin
+          .from("erp_products_staging")
+          .insert(chunk);
+
+        if (error) {
+          errors.push(`Batch insert error (offset ${i + j}): ${error.message}`);
+        } else {
+          inserted += chunk.length;
+        }
+      }
+
+      // Update progress every 5 batches
+      if (i % (BATCH_SIZE * 5) === 0 && i > 0) {
+        console.log(`[Staging BG] Progress: ${i}/${records.length} processed, inserted=${inserted}`);
       }
     }
 
-    console.log(`[Staging] Batch ${i}-${i + batch.length}: prepared=${prepared.length}, skippedNoCode=${batchSkippedNoCode}`);
-
-    if (prepared.length === 0) continue;
-
-    // Step 2: Batch dedup check
-    const existingKeys = await batchCheckExisting(
-      supabaseAdmin,
-      tenantId,
-      prepared.map((p) => ({ erp_code: p.erp_code, hash_data: p.hash_data }))
-    );
-
-    // Step 3: Filter out duplicates
-    const newRows = [];
-    let batchDedupSkipped = 0;
-    for (const p of prepared) {
-      const key = `${p.erp_code}|${p.hash_data}`;
-      if (existingKeys.has(key)) {
-        batchDedupSkipped++;
-        skipped++;
-        continue;
-      }
-      newRows.push({
+    // Update sync control with final result
+    await supabaseAdmin
+      .from("erp_sync_control")
+      .upsert({
         tenant_id: tenantId,
-        erp_code: p.erp_code,
-        codigo_tipo_item: p.codigo_tipo_item,
-        data_alteracao: p.data_alteracao,
-        raw_data: p.raw_data,
-        hash_data: p.hash_data,
-        status: "pending",
-      });
-    }
+        entity_type: "products_staging",
+        last_sync_at: new Date().toISOString(),
+        records_synced: inserted,
+        sync_status: errors.length > 0 ? "partial" : "success",
+        error_message: errors.length > 0 ? errors.slice(0, 5).join("; ") : null,
+      }, { onConflict: "tenant_id,entity_type" });
 
-    console.log(`[Staging] Batch ${i}: existingKeys=${existingKeys.size}, dedupSkipped=${batchDedupSkipped}, newRows=${newRows.length}`);
-
-    if (newRows.length === 0) continue;
-
-    // Step 4: Insert in sub-batches (Supabase limit ~1000 rows per insert)
-    const INSERT_CHUNK = 500;
-    for (let j = 0; j < newRows.length; j += INSERT_CHUNK) {
-      const chunk = newRows.slice(j, j + INSERT_CHUNK);
-      const { error } = await supabaseAdmin
-        .from("erp_products_staging")
-        .insert(chunk);
-
-      if (error) {
-        errors.push(`Batch insert error (offset ${i + j}): ${error.message}`);
-      } else {
-        inserted += chunk.length;
-      }
-    }
+    console.log(
+      `[Staging BG] DONE: inserted=${inserted}, skipped=${skipped}, skippedNoCode=${skippedNoCode}, errors=${errors.length}`
+    );
+  } catch (err) {
+    console.error("[Staging BG] Fatal error in background:", (err as Error).message);
+    await supabaseAdmin
+      .from("erp_sync_control")
+      .upsert({
+        tenant_id: tenantId,
+        entity_type: "products_staging",
+        last_sync_at: new Date().toISOString(),
+        sync_status: "error",
+        error_message: (err as Error).message,
+      }, { onConflict: "tenant_id,entity_type" });
   }
-
-  console.log(`[Staging] Total skippedNoCode=${skippedNoCode}`);
-  return { inserted, skipped, errors };
 }
 
 Deno.serve(async (req) => {
@@ -302,11 +301,9 @@ Deno.serve(async (req) => {
     let recordsToProcess: unknown[];
 
     if (source === "erp" || (!records && !source)) {
-      // === MODE: Fetch from ERP API ===
       const sinceDate = since || "01/01/2000 00:00:00";
       console.log(`[Staging] Mode: ERP fetch, since=${sinceDate}, tenant=${tenant_id}`);
 
-      // Load ERP config from tenant_settings
       let configEndpoint: string | undefined;
       let configToken: string | undefined;
       const { data: tenantConfig } = await supabaseAdmin
@@ -325,7 +322,6 @@ Deno.serve(async (req) => {
       recordsToProcess = await fetchFromErp(sinceDate, configEndpoint, configToken);
       console.log(`[Staging] ERP returned ${recordsToProcess.length} records`);
     } else if (Array.isArray(records) && records.length > 0) {
-      // === MODE: Direct records (existing behavior) ===
       console.log(`[Staging] Mode: Direct records, count=${records.length}, tenant=${tenant_id}`);
       recordsToProcess = records;
     } else {
@@ -335,17 +331,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    const result = await ingestRecords(supabaseAdmin, tenant_id, recordsToProcess);
+    // Mark sync as in_progress
+    await supabaseAdmin
+      .from("erp_sync_control")
+      .upsert({
+        tenant_id: tenant_id,
+        entity_type: "products_staging",
+        last_sync_at: new Date().toISOString(),
+        sync_status: "in_progress",
+        records_synced: 0,
+        error_message: null,
+      }, { onConflict: "tenant_id,entity_type" });
 
-    console.log(
-      `[Staging] Done: inserted=${result.inserted}, skipped=${result.skipped}, errors=${result.errors.length}`
+    // Start background processing — returns immediately
+    (globalThis as any).EdgeRuntime.waitUntil(
+      processInBackground(supabaseAdmin, tenant_id, recordsToProcess, "")
     );
 
     return new Response(
       JSON.stringify({
-        staging_inserted: result.inserted,
-        staging_skipped_unchanged: result.skipped,
-        errors: result.errors.length > 0 ? result.errors : undefined,
+        status: "processing",
+        message: `Ingestão de ${recordsToProcess.length} registros iniciada em background. Acompanhe o progresso no monitor.`,
         total_received: recordsToProcess.length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

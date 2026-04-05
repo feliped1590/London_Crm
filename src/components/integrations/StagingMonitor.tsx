@@ -118,7 +118,7 @@ export function StagingMonitor() {
     setIsImporting(true);
     try {
       const tenantId = await resolvetenantId();
-      toast.info('Importando produtos do ERP... isso pode levar alguns minutos.');
+      toast.info('Importando produtos do ERP... processamento em background iniciado.');
 
       const { data, error } = await supabase.functions.invoke('erp-import-products-staging', {
         body: { tenant_id: tenantId, source: 'erp' },
@@ -126,9 +126,19 @@ export function StagingMonitor() {
 
       if (error) throw error;
 
-      toast.success(
-        `Importação concluída: ${data?.staging_inserted || 0} inseridos, ${data?.staging_skipped_unchanged || 0} sem alteração, ${data?.total_received || 0} recebidos do ERP`
-      );
+      if (data?.status === 'processing') {
+        toast.success(
+          `${data.total_received} registros recebidos do ERP. Processamento em background — acompanhe o progresso atualizando o monitor.`
+        );
+        // Poll for completion
+        setTimeout(() => fetchData(), 5000);
+        setTimeout(() => fetchData(), 15000);
+        setTimeout(() => fetchData(), 30000);
+      } else {
+        toast.success(
+          `Importação concluída: ${data?.staging_inserted || 0} inseridos, ${data?.staging_skipped_unchanged || 0} sem alteração`
+        );
+      }
       fetchData();
     } catch (err: any) {
       toast.error('Erro na importação ERP: ' + (err.message || 'erro desconhecido'));
