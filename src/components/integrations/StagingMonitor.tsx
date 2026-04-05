@@ -201,6 +201,10 @@ export function StagingMonitor() {
             <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
+          <Button variant="outline" size="sm" onClick={handleImportFromErp} disabled={isImporting}>
+            <Download className={`h-4 w-4 mr-1 ${isImporting ? 'animate-spin' : ''}`} />
+            {isImporting ? 'Importando...' : 'Importar do ERP'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleReprocessErrors} disabled={isReprocessing || stats.errors === 0}>
             <RotateCcw className={`h-4 w-4 mr-1 ${isReprocessing ? 'animate-spin' : ''}`} />
             Reprocessar Erros
