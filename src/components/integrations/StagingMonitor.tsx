@@ -42,6 +42,14 @@ export function StagingMonitor() {
   const [isReprocessing, setIsReprocessing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [promotionProgress, setPromotionProgress] = useState<{
+    processed: number;
+    total: number;
+    promoted: number;
+    skipped: number;
+    errors: number;
+  } | null>(null);
+  const cancelRef = useRef(false);
 
   const fetchData = async () => {
     setIsLoading(true);
