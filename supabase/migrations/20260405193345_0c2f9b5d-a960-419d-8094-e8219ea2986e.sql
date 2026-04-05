@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.promote_staging_products_v2(uuid);
