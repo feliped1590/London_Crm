@@ -45,18 +45,18 @@ export function StagingMonitor() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Fetch stats by status
-      const { data: allRecords } = await supabase
-        .from('erp_products_staging')
-        .select('status') as { data: { status: string }[] | null };
+      // Fetch stats using RPC to avoid 1000-row limit
+      const { data: countsData } = await (supabase as any).rpc('staging_status_counts');
 
-      if (allRecords) {
-        const s: StagingStats = { total: allRecords.length, pending: 0, processed: 0, errors: 0, skipped: 0 };
-        for (const r of allRecords) {
-          if (r.status === 'pending' || r.status === 'processing') s.pending++;
-          else if (r.status === 'processed') s.processed++;
-          else if (r.status === 'error') s.errors++;
-          else if (r.status === 'skipped') s.skipped++;
+      if (countsData) {
+        const s: StagingStats = { total: 0, pending: 0, processed: 0, errors: 0, skipped: 0 };
+        for (const row of countsData) {
+          const c = Number(row.count) || 0;
+          s.total += c;
+          if (row.status === 'pending' || row.status === 'processing') s.pending += c;
+          else if (row.status === 'processed') s.processed += c;
+          else if (row.status === 'error') s.errors += c;
+          else if (row.status === 'skipped') s.skipped += c;
         }
         setStats(s);
       }
