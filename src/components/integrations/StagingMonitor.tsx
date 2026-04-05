@@ -90,24 +90,38 @@ export function StagingMonitor() {
     fetchData();
   }, []);
 
+  const resolvetenantId = async (): Promise<string> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Não autenticado');
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('active_tenant_id')
+      .eq('id', session.user.id)
+      .single();
+
+    let tenantId = profile?.active_tenant_id;
+    if (!tenantId) {
+      const { data: ut } = await (supabase as any)
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', session.user.id)
+        .limit(1)
+        .maybeSingle();
+      tenantId = ut?.tenant_id;
+    }
+    if (!tenantId) throw new Error('Tenant não encontrado');
+    return tenantId;
+  };
+
   const handleImportFromErp = async () => {
     setIsImporting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('active_tenant_id')
-        .eq('id', session.user.id)
-        .single();
-
-      if (!profile?.active_tenant_id) throw new Error('Tenant não encontrado');
-
+      const tenantId = await resolvetenantId();
       toast.info('Importando produtos do ERP... isso pode levar alguns minutos.');
 
       const { data, error } = await supabase.functions.invoke('erp-import-products-staging', {
-        body: { tenant_id: profile.active_tenant_id, source: 'erp' },
+        body: { tenant_id: tenantId, source: 'erp' },
       });
 
       if (error) throw error;
@@ -126,19 +140,10 @@ export function StagingMonitor() {
   const handlePromote = async () => {
     setIsPromoting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('active_tenant_id')
-        .eq('id', session.user.id)
-        .single();
-
-      if (!profile?.active_tenant_id) throw new Error('Tenant não encontrado');
+      const tenantId = await resolvetenantId();
 
       const { data, error } = await supabase.functions.invoke('erp-promote-products', {
-        body: { tenant_id: profile.active_tenant_id },
+        body: { tenant_id: tenantId },
       });
 
       if (error) throw error;
