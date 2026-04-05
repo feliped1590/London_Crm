@@ -8311,10 +8311,12 @@ export type Database = {
         }
         Returns: Json
       }
-      promote_staging_products_v2: {
-        Args: { p_tenant_id: string }
-        Returns: Json
-      }
+      promote_staging_products_v2:
+        | { Args: { p_tenant_id: string }; Returns: Json }
+        | {
+            Args: { p_batch_size?: number; p_tenant_id: string }
+            Returns: Json
+          }
       reset_orders: { Args: never; Returns: Json }
       resolve_user_for_sales_rep: {
         Args: { p_operation_context?: string; p_sales_rep_id: string }
