@@ -27,7 +27,7 @@ function stableStringify(obj: unknown): string {
   );
 }
 
-async function md5Hex(text: string): Promise<string> {
+async function sha256Hex(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
