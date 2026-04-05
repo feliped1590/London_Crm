@@ -184,6 +184,7 @@ async function ingestRecords(
       try {
         const rec = record as Record<string, unknown>;
         const erp_code = String(
+          rec.produto || rec.PRODUTO ||
           rec.cd_material || rec.CD_MATERIAL ||
           rec.codigo || rec.CODIGO ||
           rec.cd_produto || rec.CD_PRODUTO ||
