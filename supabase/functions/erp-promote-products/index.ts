@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { tenant_id } = await req.json();
+    const { tenant_id, batch_size = 500 } = await req.json();
 
     if (!tenant_id) {
       return new Response(
@@ -26,44 +26,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    const BATCH_SIZE = 500;
-    let totalPromoted = 0;
-    let totalSkippedHash = 0;
-    let totalSkippedType = 0;
-    let totalErrors = 0;
-    let iterations = 0;
-    const MAX_ITERATIONS = 100; // safety limit
+    // Single batch call
+    const { data, error } = await supabaseAdmin.rpc(
+      "promote_staging_products_v2",
+      { p_tenant_id: tenant_id, p_batch_size: batch_size }
+    );
 
-    // Loop calling RPC in batches until no more pending records
-    while (iterations < MAX_ITERATIONS) {
-      iterations++;
-
-      const { data, error } = await supabaseAdmin.rpc(
-        "promote_staging_products_v2",
-        { p_tenant_id: tenant_id, p_batch_size: BATCH_SIZE }
-      );
-
-      if (error) {
-        throw new Error(`RPC error: ${error.message}`);
-      }
-
-      const batch = data as any;
-      totalPromoted += batch?.promoted || 0;
-      totalSkippedHash += batch?.skipped_hash || 0;
-      totalSkippedType += batch?.skipped_type || 0;
-      totalErrors += batch?.errors || 0;
-
-      const batchTotal = (batch?.promoted || 0) + (batch?.skipped_type || 0) + (batch?.errors || 0);
-      console.log(`Batch ${iterations}: promoted=${batch?.promoted}, skipped_type=${batch?.skipped_type}, errors=${batch?.errors}`);
-
-      // If batch processed fewer than BATCH_SIZE, we're done
-      if (batchTotal < BATCH_SIZE) {
-        break;
-      }
+    if (error) {
+      throw new Error(`RPC error: ${error.message}`);
     }
 
     // Sync ERP sequence if needed
-    if (totalPromoted > 0) {
+    if (data?.promoted > 0) {
       try {
         await supabaseAdmin.rpc("sync_erp_sequence_if_higher", {
           p_sequence_name: "product_code",
@@ -76,13 +50,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        summary: {
-          promoted: totalPromoted,
-          skipped_hash: totalSkippedHash,
-          skipped_type: totalSkippedType,
-          errors: totalErrors,
-          batches: iterations,
-        },
+        summary: data,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
