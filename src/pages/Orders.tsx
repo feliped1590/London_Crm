@@ -325,6 +325,13 @@ export default function Orders() {
                               {orderStatusConfig[order.status].label}
                             </Badge>
                           </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {(order as any).erp_order_id ? (
+                              <span className="font-medium">{(order as any).erp_order_id}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             <OrderSyncBadge
                               orderId={order.id}
