@@ -607,7 +607,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <p className="text-xs text-muted-foreground">Separe os dias de cada parcela com /</p>
         </div>
       </div>
-
+      {canEdit && (
 
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
