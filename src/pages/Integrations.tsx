@@ -11,6 +11,7 @@ import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { StagingMonitor } from '@/components/integrations/StagingMonitor';
+import { OrderPayloadSimulator } from '@/components/integrations/OrderPayloadSimulator';
 import { ErpMappingsManager } from '@/components/settings/ErpMappingsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -286,6 +287,8 @@ export default function Integrations() {
           </div>
 
           <StagingMonitor />
+
+          {isDeveloper && <OrderPayloadSimulator />}
 
           {isDeveloper && <ErpMappingsManager />}
         </TabsContent>
