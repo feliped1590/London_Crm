@@ -412,10 +412,16 @@ Deno.serve(async (req) => {
           orderUpdate.erp_order_code = String(erpOrderId);
         }
 
-        await supabase
+        console.log(`[process-order-sync] Atualizando orders ${queueItem.order_id} com:`, JSON.stringify(orderUpdate));
+        const { error: orderUpdateError } = await supabase
           .from('orders')
-          .update(orderUpdate)
+          .update(orderUpdate as any)
           .eq('id', queueItem.order_id);
+        if (orderUpdateError) {
+          console.error(`[process-order-sync] ERRO ao atualizar orders: ${orderUpdateError.message}`, orderUpdateError);
+        } else {
+          console.log(`[process-order-sync] orders atualizado com sucesso`);
+        }
 
         // Log detalhado
         const parsedPayload = JSON.parse(payload);
