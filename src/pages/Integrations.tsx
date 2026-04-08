@@ -286,6 +286,8 @@ export default function Integrations() {
           </div>
 
           <StagingMonitor />
+
+          {isDeveloper && <ErpMappingsManager />}
         </TabsContent>
 
         <TabsContent value="prospecting-api" className="mt-6">
