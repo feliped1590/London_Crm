@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
           .select(`
             id, number, order_date, delivery_date, observations,
             total_discount, freight_type, pedido_terceiro, legal_entity_id,
-            company_id, erp_rep_code,
+            company_id, erp_rep_code, order_type, created_by,
             companies!inner(id, erp_code, cnpj, name),
             legal_entities(id, name, erp_company_code)
           `)
@@ -164,6 +164,40 @@ Deno.serve(async (req) => {
         if (!erpEmpresa || isNaN(erpEmpresa)) {
           throw new Error('Empresa emissora inválida no ERP (erp_company_code não é numérico)');
         }
+
+        // 3.1 Resolver usuário ERP via profiles
+        let erpUsuario = 0;
+        let userName = 'desconhecido';
+        if (order.created_by) {
+          const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('id, full_name, erp_user_code')
+            .eq('id', order.created_by)
+            .maybeSingle();
+
+          if (userProfile) {
+            userName = userProfile.full_name || 'desconhecido';
+            erpUsuario = Number(userProfile.erp_user_code);
+          }
+        }
+        if (!erpUsuario || isNaN(erpUsuario)) {
+          throw new Error('Usuário não integrado ao ERP (erp_user_code não definido)');
+        }
+
+        // 3.2 Resolver fluxo de venda via order_type_erp_mapping
+        const crmOrderType = order.order_type ?? 'producao';
+        const { data: typeMapping } = await supabase
+          .from('order_type_erp_mapping')
+          .select('erp_flow_code, erp_flow_description')
+          .eq('crm_order_type', crmOrderType)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (!typeMapping?.erp_flow_code) {
+          throw new Error(`Tipo de pedido não mapeado para o ERP (crm_order_type: ${crmOrderType})`);
+        }
+
+        console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType} → fluxo=${typeMapping.erp_flow_code} (${typeMapping.erp_flow_description})`);
 
         // 4. Carregar itens com produtos
         const { data: items, error: itemsError } = await supabase
@@ -188,6 +222,8 @@ Deno.serve(async (req) => {
           company_cnpj: company?.cnpj,
           erp_empresa: erpEmpresa,
           pedido_terceiro: queueItem.pedido_terceiro,
+          erp_usuario: erpUsuario,
+          erp_fluxo_venda: typeMapping.erp_flow_code,
           items: (items || []).map((i: any) => ({
             product_erp_code: i.products?.erp_product_code,
             product_erp_versao: i.products?.erp_versao,
@@ -201,7 +237,7 @@ Deno.serve(async (req) => {
           throw new Error(`Validação falhou: ${details}`);
         }
 
-        // 6. Buscar configurações ERP do vendedor
+        // 6. Buscar código vendedor ERP
         let erpVendedor = 0;
         if (order.erp_rep_code) {
           erpVendedor = Number(order.erp_rep_code) || 0;
@@ -217,7 +253,8 @@ Deno.serve(async (req) => {
           delivery_date: order.delivery_date,
           company_cnpj: company.cnpj,
           erp_empresa: erpEmpresa,
-          erp_fluxo_venda: 10,
+          erp_fluxo_venda: typeMapping.erp_flow_code,
+          erp_usuario: erpUsuario,
           erp_vendedor: erpVendedor,
           items: (items || []).map((item: any, idx: number): CRMOrderItemForSync => ({
             seq: idx + 1,
@@ -234,7 +271,7 @@ Deno.serve(async (req) => {
         const projedataOrder = mapCRMOrderToProjedata(crmOrder);
         const payload = buildOrderPayload(projedataOrder);
 
-        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}])`);
+        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}], usuario: ${userName} [${erpUsuario}], fluxo: ${typeMapping.erp_flow_code} ${typeMapping.erp_flow_description})`);
 
         // 8. Enviar ao ERP
         const response = await fetch(apiUrl!, {
@@ -329,6 +366,12 @@ Deno.serve(async (req) => {
             erp_company_code: erpEmpresa,
             customer_name: company.name,
             customer_erp_code: company.erp_code,
+            user_id: order.created_by,
+            user_name: userName,
+            erp_user_code: erpUsuario,
+            crm_order_type: crmOrderType,
+            erp_flow_code: typeMapping.erp_flow_code,
+            erp_flow_description: typeMapping.erp_flow_description,
           },
           response_payload: responseData,
         });

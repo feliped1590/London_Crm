@@ -9,6 +9,8 @@ export interface OrderToValidate {
   company_cnpj?: string | null;
   erp_empresa?: number | null;
   pedido_terceiro?: number | null;
+  erp_usuario?: number | null;
+  erp_fluxo_venda?: number | null;
   items: Array<{
     product_erp_code?: string | null;
     product_erp_versao?: string | null;
@@ -40,7 +42,17 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
     errors.push({ field: 'pedido_terceiro', message: 'pedido_terceiro inválido ou ausente' });
   }
 
-  // 4. Pedido deve ter itens
+  // 5. Usuário ERP obrigatório
+  if (!order.erp_usuario || isNaN(order.erp_usuario)) {
+    errors.push({ field: 'erp_usuario', message: 'Usuário não integrado ao ERP (erp_user_code não definido)' });
+  }
+
+  // 6. Fluxo de venda obrigatório
+  if (!order.erp_fluxo_venda || isNaN(order.erp_fluxo_venda)) {
+    errors.push({ field: 'erp_fluxo_venda', message: 'Tipo de pedido não mapeado para o ERP' });
+  }
+
+  // 7. Pedido deve ter itens
   if (!order.items || order.items.length === 0) {
     errors.push({ field: 'items', message: 'Pedido não possui itens' });
   } else {

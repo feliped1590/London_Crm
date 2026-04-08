@@ -19,8 +19,8 @@ export interface CRMOrderForSync {
   delivery_date?: string | null;
   company_cnpj: string;         // com ou sem formatação
   erp_empresa: number;
-  erp_fluxo_venda?: number;
-  erp_usuario?: number;
+  erp_fluxo_venda: number;
+  erp_usuario: number;
   erp_vendedor?: number;
   items: CRMOrderItemForSync[];
   payment_conditions?: CRMPaymentCondition[];
@@ -108,12 +108,12 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
     data_pedido: formatDateERP(order.order_date),
     empresa: order.erp_empresa,
-    fluxo_venda: order.erp_fluxo_venda ?? 10,
+    fluxo_venda: order.erp_fluxo_venda,
     desconto_pedido: order.total_discount ?? 0,
     id_moeda: 1,
     observacao: order.observations || '',
     pedido_terceiro: order.pedido_terceiro,
-    usuario: order.erp_usuario ?? 0,
+    usuario: order.erp_usuario,
     vendedor: order.erp_vendedor ?? 0,
     frete: order.freight_type || '1',
     itens,
