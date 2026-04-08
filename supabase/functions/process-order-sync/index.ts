@@ -81,13 +81,24 @@ Deno.serve(async (req) => {
             id, number, order_date, delivery_date, observations,
             total_discount, freight_type, pedido_terceiro, legal_entity_id,
             company_id, erp_rep_code,
-            companies!inner(id, erp_code, cnpj, name)
+            companies!inner(id, erp_code, cnpj, name),
+            legal_entities(id, name, erp_company_code)
           `)
           .eq('id', queueItem.order_id)
           .single();
 
         if (orderError || !order) {
           throw new Error(`Pedido não encontrado: ${queueItem.order_id}`);
+        }
+
+        // Resolver empresa emissora via legal_entities
+        const legalEntity = order.legal_entities as any;
+        if (!legalEntity?.erp_company_code) {
+          throw new Error('Empresa emissora não integrada ao ERP (erp_company_code não definido)');
+        }
+        const erpEmpresa = Number(legalEntity.erp_company_code);
+        if (!erpEmpresa || isNaN(erpEmpresa)) {
+          throw new Error('Empresa emissora inválida no ERP (erp_company_code não é numérico)');
         }
 
         // 4. Carregar itens com produtos
@@ -140,7 +151,7 @@ Deno.serve(async (req) => {
           freight_type: order.freight_type || '1',
           delivery_date: order.delivery_date,
           company_cnpj: company.cnpj,
-          erp_empresa: 1,
+          erp_empresa: erpEmpresa,
           erp_fluxo_venda: 10,
           erp_vendedor: erpVendedor,
           items: (items || []).map((item: any, idx: number): CRMOrderItemForSync => ({
@@ -158,7 +169,7 @@ Deno.serve(async (req) => {
         const projedataOrder = mapCRMOrderToProjedata(crmOrder);
         const payload = buildOrderPayload(projedataOrder);
 
-        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro})`);
+        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}])`);
 
         // 8. Enviar ao ERP
         const response = await fetch(apiUrl!, {
