@@ -32,7 +32,7 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
 
   // 1. Cliente deve ter código ERP
   if (!order.company_erp_code) {
-    errors.push({ field: 'company_erp_code', message: 'Cliente não possui código no ERP' });
+    errors.push({ field: 'company_erp_code', message: 'Cliente não sincronizado com ERP. Envie o cliente ao ERP antes de processar o pedido.' });
   }
 
   // 2. Cliente deve ter CNPJ

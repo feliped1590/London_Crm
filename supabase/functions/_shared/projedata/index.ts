@@ -30,3 +30,17 @@ export type {
 
 export { validateOrderForSync } from './order-validator.ts';
 export { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from './order-mapper.ts';
+
+// ─── Clientes (IMP_CLIENTE_V3) ──────────────────────────────────
+export type {
+  ErpCompanyPayload,
+  ErpCompanyAddress,
+  ErpCompanyDeliveryAddress,
+  ErpCompanySeller,
+  CompanySyncContext,
+  CompanyValidationError,
+  CompanyValidationResult,
+} from './company-types.ts';
+
+export { mapCompanyToErp, buildCompanyPayload } from './company-mapper.ts';
+export { validateCompanyForSync } from './company-validator.ts';
