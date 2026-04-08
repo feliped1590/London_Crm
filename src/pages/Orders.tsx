@@ -312,6 +312,7 @@ export default function Orders() {
                               orderId={order.id}
                               erpOrderId={(order as any).erp_order_id}
                               erpSyncedAt={(order as any).erp_synced_at}
+                              updatedAt={(order as any).updated_at}
                             />
                           </TableCell>
                          <TableCell>

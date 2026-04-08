@@ -326,10 +326,35 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (itemsError) throw itemsError;
       return order;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_items'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+
+      // Auto re-sync if order was previously synced to ERP
+      if (order && (order as any).erp_order_id) {
+        try {
+          const { data: existing } = await supabase
+            .from('order_sync_queue')
+            .select('id')
+            .eq('order_id', order.id)
+            .maybeSingle();
+
+          if (existing) {
+            await supabase.from('order_sync_queue')
+              .update({ status: 'pending' as any, attempt_count: 0, error_message: null, next_retry_at: null })
+              .eq('id', existing.id);
+          }
+
+          queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+
+          // Fire-and-forget
+          supabase.functions.invoke('process-order-sync', {
+            body: { order_id: order.id },
+          }).catch(() => {});
+        } catch {}
+      }
+
       toast.success('Pedido atualizado com sucesso!');
       onOpenChange(false);
       onSuccess?.();
