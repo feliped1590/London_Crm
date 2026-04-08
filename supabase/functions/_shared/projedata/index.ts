@@ -29,4 +29,4 @@ export type {
 } from './order-types.ts';
 
 export { validateOrderForSync } from './order-validator.ts';
-export { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro } from './order-mapper.ts';
+export { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from './order-mapper.ts';
