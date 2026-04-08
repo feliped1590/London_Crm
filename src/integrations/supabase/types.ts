@@ -4368,6 +4368,47 @@ export type Database = {
           },
         ]
       }
+      order_type_erp_mapping: {
+        Row: {
+          created_at: string | null
+          crm_order_type: string
+          erp_flow_code: number
+          erp_flow_description: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_order_type: string
+          erp_flow_code: number
+          erp_flow_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_order_type?: string
+          erp_flow_code?: number
+          erp_flow_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_type_erp_mapping_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           approved_at: string | null
@@ -5829,6 +5870,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           email: string | null
+          erp_user_code: number | null
           full_name: string
           id: string
           phone: string | null
@@ -5841,6 +5883,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          erp_user_code?: number | null
           full_name: string
           id?: string
           phone?: string | null
@@ -5853,6 +5896,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           email?: string | null
+          erp_user_code?: number | null
           full_name?: string
           id?: string
           phone?: string | null
