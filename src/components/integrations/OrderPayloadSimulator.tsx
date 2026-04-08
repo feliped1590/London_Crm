@@ -118,7 +118,7 @@ export function OrderPayloadSimulator() {
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, erp_user_code')
-          .eq('id', order.created_by)
+          .eq('user_id', order.created_by)
           .maybeSingle();
         if (profile) {
           userName = profile.full_name || 'N/A';
