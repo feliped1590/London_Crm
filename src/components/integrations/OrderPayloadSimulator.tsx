@@ -389,7 +389,7 @@ export function OrderPayloadSimulator() {
             <SearchableSelect
               options={orderOptions}
               value={selectedOrderId}
-              onValueChange={setSelectedOrderId}
+              onChange={(val) => setSelectedOrderId(val || '')}
               placeholder="Selecione um pedido..."
             />
           </div>
