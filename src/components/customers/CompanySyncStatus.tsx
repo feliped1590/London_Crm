@@ -42,7 +42,25 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
   },
 };
 
-export function CompanySyncBadge({ companyId, erpCode }: CompanySyncStatusProps) {
+export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyncStatusProps) {
+  // Fetch erp_code from companies if not provided
+  const { data: companyData } = useQuery({
+    queryKey: ['company_erp_code', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('erp_code')
+        .eq('id', companyId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 30_000,
+    enabled: erpCodeProp === undefined,
+  });
+
+  const erpCode = erpCodeProp ?? companyData?.erp_code;
+
   const { data: queueEntry } = useQuery({
     queryKey: ['company_sync_status', companyId],
     queryFn: async () => {
