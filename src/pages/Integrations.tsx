@@ -288,6 +288,8 @@ export default function Integrations() {
 
           <StagingMonitor />
 
+          {isDeveloper && <OrderPayloadSimulator />}
+
           {isDeveloper && <ErpMappingsManager />}
         </TabsContent>
 
