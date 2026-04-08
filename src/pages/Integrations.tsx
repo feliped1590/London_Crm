@@ -20,8 +20,19 @@ import { useQuery } from '@tanstack/react-query';
 export default function Integrations() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('whatsapp');
   const [isImporting, setIsImporting] = useState(false);
+
+  const { data: isDeveloper = false } = useQuery({
+    queryKey: ['is-developer', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data } = await (supabase as any).rpc('has_role', { _user_id: user.id, _role: 'desenvolvedor' });
+      return !!data;
+    },
+    enabled: !!user?.id,
+  });
 
   // ERP Config state
   const [erpEndpoint, setErpEndpoint] = useState('');
