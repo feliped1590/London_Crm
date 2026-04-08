@@ -241,6 +241,7 @@ Deno.serve(async (req) => {
         const payload = buildCompanyPayload(mapped);
 
         console.log(`[process-company-sync] Enviando cliente ${company.name} (CNPJ: ${company.cnpj})`);
+        console.log('[process-company-sync] [payload]', payload);
 
         // 10. Enviar ao ERP
         const response = await fetch(apiUrl!, {
@@ -276,21 +277,25 @@ Deno.serve(async (req) => {
 
         // Extrair cd_correntista do retorno
         let erpCode: string | null = null;
-        if (typeof retorno === 'string') {
-          // Tentativa de extrair código do retorno (ex: "CORRENTISTA#12345")
-          const parts = retorno.split('#');
-          if (parts.length >= 2 && parts[1]) {
-            erpCode = parts[1];
+
+        // Prioridade 1: campo direto
+        erpCode = retornoObj?.cd_correntista?.toString() || null;
+
+        // Prioridade 2: outros nomes possíveis
+        if (!erpCode) {
+          erpCode = retornoObj?.codigo?.toString() || null;
+        }
+
+        // Prioridade 3: parse string
+        if (!erpCode && typeof retorno === 'string') {
+          const match = retorno.match(/\d+/);
+          if (match) {
+            erpCode = match[0];
           }
         }
 
         if (!erpCode) {
-          // Tentar extrair de outros campos
-          erpCode = retornoObj?.cd_correntista?.toString() || retornoObj?.codigo?.toString() || null;
-        }
-
-        if (!erpCode) {
-          throw new Error(`ERP não retornou código do cliente. Resposta: ${JSON.stringify(retornoObj)}`);
+          throw new Error(`Não foi possível extrair código ERP. Retorno: ${JSON.stringify(retornoObj)}`);
         }
 
         // 12. Sucesso - atualizar
