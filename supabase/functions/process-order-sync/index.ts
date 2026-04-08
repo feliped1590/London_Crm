@@ -366,6 +366,12 @@ Deno.serve(async (req) => {
             erp_company_code: erpEmpresa,
             customer_name: company.name,
             customer_erp_code: company.erp_code,
+            user_id: order.created_by,
+            user_name: userName,
+            erp_user_code: erpUsuario,
+            crm_order_type: crmOrderType,
+            erp_flow_code: typeMapping.erp_flow_code,
+            erp_flow_description: typeMapping.erp_flow_description,
           },
           response_payload: responseData,
         });
