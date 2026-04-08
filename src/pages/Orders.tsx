@@ -302,11 +302,18 @@ export default function Orders() {
                               <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </TableCell>
-                         <TableCell>
-                           <Badge className={orderStatusConfig[order.status].color}>
-                             {orderStatusConfig[order.status].label}
-                           </Badge>
-                         </TableCell>
+                          <TableCell>
+                            <Badge className={orderStatusConfig[order.status].color}>
+                              {orderStatusConfig[order.status].label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <OrderSyncBadge
+                              orderId={order.id}
+                              erpOrderId={(order as any).erp_order_id}
+                              erpSyncedAt={(order as any).erp_synced_at}
+                            />
+                          </TableCell>
                          <TableCell>
                            {order.delivery_date && (
                              <div className="flex items-center gap-2">
