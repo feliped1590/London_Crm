@@ -70,6 +70,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   const [orderType, setOrderType] = useState<OrderType>('producao');
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -95,6 +97,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   // --- Queries ---
   const [orderCompanySearch, setOrderCompanySearch] = useState('');
+
+  const { data: paymentMethods = [] } = useQuery({
+    queryKey: ['payment-methods-mapping'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payment_method_erp_mapping')
+        .select('crm_payment_method, erp_payment_description')
+        .eq('is_active', true)
+        .order('crm_payment_method');
+      return (data || []) as Array<{ crm_payment_method: string; erp_payment_description: string }>;
+    },
+  });
+
   const { data: companiesRaw } = useQuery({
     queryKey: ['companies-search-orders', orderCompanySearch],
     queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
@@ -209,6 +224,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
@@ -285,6 +301,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
@@ -343,6 +360,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
       setOrderType((order as any).order_type || 'producao');
+      setPaymentMethod((order as any).payment_method || '');
+      setPaymentTerms((order as any).payment_terms || '');
       const logistics = extractLogisticsFromRecord(order);
       setCarrierId(logistics.carrierId);
       setFreightType(logistics.freightType);
@@ -384,6 +403,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setLegalEntityId(''); setOrderType('producao');
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
+      setPaymentMethod(''); setPaymentTerms('');
     }
   }, [open]);
 
@@ -562,7 +582,33 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Forma de Pagamento</Label>
+          <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={!canEdit}>
+            <SelectTrigger><SelectValue placeholder="Selecione a forma de pagamento" /></SelectTrigger>
+            <SelectContent>
+              {paymentMethods.map((pm) => (
+                <SelectItem key={pm.crm_payment_method} value={pm.crm_payment_method}>
+                  {pm.erp_payment_description}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Condições de Pagamento (dias)</Label>
+          <Input
+            value={paymentTerms}
+            onChange={(e) => setPaymentTerms(e.target.value)}
+            placeholder="Ex: 28/35/42"
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">Separe os dias de cada parcela com /</p>
+        </div>
+      </div>
       {canEdit && (
+
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
           <div className="flex gap-2">
