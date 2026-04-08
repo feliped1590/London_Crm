@@ -32,6 +32,7 @@ export default function Orders() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
 
   const { data: orders, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['orders', filterStatus],
@@ -118,12 +119,18 @@ export default function Orders() {
   };
 
   const filteredOrders = orders?.filter((o) => {
+    const erpId = String((o as any).erp_order_id || '');
     const matchesSearch =
       o.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      erpId.includes(searchTerm);
     const matchesCarrier =
       filterCarrier === 'all' || (o as any).carrier?.id === filterCarrier;
-    return matchesSearch && matchesCarrier;
+    const matchesErpStatus =
+      filterErpStatus === 'all' ||
+      (filterErpStatus === 'synced' && (o as any).erp_order_id) ||
+      (filterErpStatus === 'not_synced' && !(o as any).erp_order_id);
+    return matchesSearch && matchesCarrier && matchesErpStatus;
   });
 
   const getStatusStats = () => {
@@ -214,6 +221,16 @@ export default function Orders() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status ERP" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos (ERP)</SelectItem>
+                <SelectItem value="synced">Sincronizados</SelectItem>
+                <SelectItem value="not_synced">Não enviados</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -235,7 +252,8 @@ export default function Orders() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Logística</TableHead>
                      <TableHead>Status</TableHead>
-                     <TableHead>ERP</TableHead>
+                     <TableHead>Pedido ERP</TableHead>
+                     <TableHead>Sinc. ERP</TableHead>
                     <TableHead>Entrega Prevista</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead>Data Criação</TableHead>
@@ -306,6 +324,13 @@ export default function Orders() {
                             <Badge className={orderStatusConfig[order.status].color}>
                               {orderStatusConfig[order.status].label}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {(order as any).erp_order_id ? (
+                              <span className="font-medium">{(order as any).erp_order_id}</span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <OrderSyncBadge
