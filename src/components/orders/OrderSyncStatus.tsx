@@ -115,10 +115,10 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      // 1. Inserir/resetar na fila diretamente (instantâneo)
+      // 1. Resetar na fila diretamente (instantâneo)
       const { data: existing } = await supabase
         .from('order_sync_queue')
-        .select('id, status')
+        .select('id')
         .eq('order_id', orderId)
         .maybeSingle();
 
@@ -126,9 +126,6 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
         await supabase.from('order_sync_queue')
           .update({ status: 'pending' as any, attempt_count: 0, error_message: null })
           .eq('id', existing.id);
-      } else {
-        await supabase.from('order_sync_queue')
-          .insert({ order_id: orderId, status: 'pending' as any });
       }
 
       toast.success('Pedido adicionado à fila de envio');
