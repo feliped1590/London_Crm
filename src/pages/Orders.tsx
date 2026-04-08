@@ -234,11 +234,12 @@ export default function Orders() {
                     <TableHead>Empresa</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Logística</TableHead>
-                    <TableHead>Status</TableHead>
-                   <TableHead>Entrega Prevista</TableHead>
-                   <TableHead>Valor Total</TableHead>
-                   <TableHead>Data Criação</TableHead>
-                   <TableHead className="text-right">Ações</TableHead>
+                     <TableHead>Status</TableHead>
+                     <TableHead>ERP</TableHead>
+                    <TableHead>Entrega Prevista</TableHead>
+                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Data Criação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
