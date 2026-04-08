@@ -76,7 +76,7 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
   let displayStatus: string;
   if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
-  } else if (erpOrderId && erpSyncedAt && updatedAt && new Date(updatedAt) > new Date(erpSyncedAt)) {
+  } else if (erpOrderId && erpSyncedAt && updatedAt && (new Date(updatedAt).getTime() - new Date(erpSyncedAt).getTime()) > 5000) {
     displayStatus = 'outdated';
   } else if (erpOrderId) {
     displayStatus = 'completed';
