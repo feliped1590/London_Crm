@@ -324,8 +324,16 @@ export default function Orders() {
                          </TableCell>
                          <TableCell className="font-medium">{formatCurrency(order.total_value || 0)}</TableCell>
                          <TableCell className="text-muted-foreground">{formatDate(order.created_at)}</TableCell>
-                         <TableCell className="text-right">
-                           <div className="flex items-center justify-end gap-1">
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <OrderSyncButton
+                                orderId={order.id}
+                                erpOrderId={(order as any).erp_order_id}
+                                onSyncTriggered={() => {
+                                  queryClient.invalidateQueries({ queryKey: ['orders'] });
+                                  queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                                }}
+                              />
                              {canEditOrder(order) && (
                                <Button 
                                  variant="ghost" 
