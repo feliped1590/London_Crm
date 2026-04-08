@@ -1,61 +1,63 @@
 
 
-# Plano: ErpMappingsManager com Acesso Restrito a Desenvolvedor
+# Plano: Campo de Código de Versão ERP para Itens de Pedido
 
-## Resumo
+## Problema
 
-Criar o componente `ErpMappingsManager` com 6 tabs de CRUD para mappings ERP, visivel apenas para desenvolvedores. Atualizar as RLS policies das 4 tabelas de mapping para permitir gerenciamento por `desenvolvedor` (hoje apenas `admin`).
+O campo `erp_versao` na tabela `products` armazena a string de dimensão (ex: `100x150x0,120`), que é o **detalhe** da versão. Porém, o payload de pedidos (`IMP_PEDIDO_V3`) espera o **código** da versão (ex: `"1"`), que é o identificador numérico da versão no ERP.
 
-## Etapa 1 — Migration: Atualizar RLS policies
+Hoje o mapper envia `versao: "100x150x0,120"` quando deveria enviar `versao: "1"`.
 
-As 4 tabelas de mapping possuem policies de ALL apenas para `admin`. Precisamos incluir `desenvolvedor`:
+## Solução
+
+Adicionar campo `erp_versao_codigo` na tabela `products` com default `'1'`, e usar esse campo no payload de pedidos.
+
+## Etapa 1 — Migration
 
 ```sql
--- Dropar policies existentes de ALL e recriar com admin OR desenvolvedor
--- Para cada tabela: freight_type_erp_mapping, sale_type_erp_mapping, 
--- payment_method_erp_mapping, order_type_erp_mapping
+ALTER TABLE products 
+  ADD COLUMN erp_versao_codigo TEXT DEFAULT '1';
 
-DROP POLICY "Admins can manage freight mappings" ON freight_type_erp_mapping;
-CREATE POLICY "Admins and devs can manage freight mappings"
-  ON freight_type_erp_mapping FOR ALL TO authenticated
-  USING (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'desenvolvedor'))
-  WITH CHECK (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'desenvolvedor'));
--- (repetir para as outras 3 tabelas)
+-- Preencher registros existentes
+UPDATE products SET erp_versao_codigo = '1' WHERE erp_versao_codigo IS NULL;
+
+COMMENT ON COLUMN products.erp_versao_codigo IS 
+  'Código da versão no ERP (ex: 1, 2). Usado no payload de pedidos (IMP_PEDIDO_V3).';
 ```
 
-## Etapa 2 — Componente `ErpMappingsManager.tsx`
+## Etapa 2 — Atualizar Edge Function `process-order-sync`
 
-**Arquivo:** `src/components/settings/ErpMappingsManager.tsx`
+Na query de itens, incluir `erp_versao_codigo` no SELECT:
 
-Componente com sub-tabs internas usando o pattern do `ProductLookupManager`:
+```sql
+products!inner(id, erp_product_code, erp_versao, erp_versao_codigo, name)
+```
 
-| Tab | Tabela | Campos |
-|-----|--------|--------|
-| Tipos de Pedido | `order_type_erp_mapping` | crm_order_type, erp_flow_code (INT), erp_flow_description |
-| Frete | `freight_type_erp_mapping` | crm_freight_type, erp_freight_code (TEXT), erp_freight_description |
-| Tipo de Venda | `sale_type_erp_mapping` | crm_sale_type, erp_sale_type_code (INT), erp_sale_type_description |
-| Forma Pagamento | `payment_method_erp_mapping` | crm_payment_method, erp_payment_code (INT), erp_payment_description |
-| Usuários ERP | `profiles` | full_name (readonly), erp_user_code (edit) |
-| Vendedores ERP | `sales_reps` | name (readonly), erp_vendor_code (edit) |
+No mapeamento dos itens, usar `erp_versao_codigo` ao invés de `erp_versao`:
 
-Funcionalidades por tab:
-- Listar registros em tabela
-- Criar/Editar via Dialog
-- Toggle ativo/inativo via Switch (nas 4 tabelas de mapping)
-- Validação: campos obrigatórios + duplicidade (toast de erro)
-- Loading states, paginação
+```typescript
+erp_versao: item.products.erp_versao_codigo || '1',
+```
 
-## Etapa 3 — Controle de acesso no frontend
+## Etapa 3 — Atualizar Mapper e Validator
 
-No `Integrations.tsx`, dentro da tab ERP:
-- Query `has_role(auth.uid(), 'desenvolvedor')` via React Query
-- Renderizar `<ErpMappingsManager />` apenas se `isDeveloper === true`
+- `order-mapper.ts`: O campo `erp_versao` da interface `CRMOrderItemForSync` passa a receber o código (`"1"`), sem mudança na interface
+- `order-validator.ts`: Validação existente de `product_erp_versao` continua funcionando
+
+## Etapa 4 — Atualizar Simulador de Payload
+
+Em `OrderPayloadSimulator.tsx`, ajustar a query e o mapeamento para usar `erp_versao_codigo` no campo `versao` do payload simulado.
+
+## Etapa 5 — Import de Produtos ERP
+
+Na função `erp-import-products`, mapear o campo `versao` do ERP (código) para `erp_versao_codigo`, mantendo `erp_versao` para a string de dimensão/detalhe.
 
 ## Arquivos impactados
 
 | Arquivo | Ação |
 |---------|------|
-| Nova migration SQL | Atualizar 4 policies (admin OR desenvolvedor) |
-| `src/components/settings/ErpMappingsManager.tsx` | Criar (componente principal) |
-| `src/pages/Integrations.tsx` | Editar (importar + renderizar condicionalmente) |
+| Migration SQL (nova) | Adicionar coluna `erp_versao_codigo` |
+| `process-order-sync/index.ts` | Usar `erp_versao_codigo` no SELECT e mapeamento |
+| `OrderPayloadSimulator.tsx` | Usar `erp_versao_codigo` na simulação |
+| `erp-import-products/index.ts` | Mapear código de versão do ERP |
 
