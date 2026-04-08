@@ -325,17 +325,24 @@ Deno.serve(async (req) => {
           erp_fluxo_venda: typeMapping.erp_flow_code,
           erp_usuario: erpUsuario,
           erp_vendedor: erpVendedor,
-          items: (items || []).map((item: any, idx: number): CRMOrderItemForSync => ({
-            seq: idx + 1,
-            erp_product_code: item.products.erp_product_code,
-            erp_versao: item.products.erp_versao,
-            quantity: Number(item.quantity),
-            unit_price: Number(item.unit_price),
-            discount_percent: Number(item.discount_percent) || 0,
-            tipo_venda: saleTypeMap.get(item.sale_type || 'venda_tributada')!,
-            delivery_date: item.delivery_date || order.delivery_date,
-            observations: item.description || '',
-          })),
+          items: (items || []).map((item: any, idx: number): CRMOrderItemForSync => {
+            const itemSaleType = item.sale_type || 'venda_tributada';
+            const tipoVenda = saleTypeMap.get(itemSaleType);
+            if (!tipoVenda && tipoVenda !== 0) {
+              throw new Error(`Item ${idx + 1}: tipo de venda "${itemSaleType}" não mapeado para o ERP`);
+            }
+            return {
+              seq: idx + 1,
+              erp_product_code: item.products.erp_product_code,
+              erp_versao: item.products.erp_versao,
+              quantity: Number(item.quantity) || 0,
+              unit_price: Number(item.unit_price) || 0,
+              discount_percent: Number(item.discount_percent) || 0,
+              tipo_venda: tipoVenda,
+              delivery_date: item.delivery_date || order.delivery_date,
+              observations: item.description || '',
+            };
+          }),
           payment_conditions: paymentConditions,
         };
 
