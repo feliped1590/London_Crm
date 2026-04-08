@@ -168,7 +168,10 @@ Deno.serve(async (req) => {
           .eq('uf', company.state || '')
           .maybeSingle();
 
-        const cidadeCodigo = cityMapping?.codigo_erp || 0;
+        if (!cityMapping?.codigo_erp) {
+          throw new Error(`Cidade não mapeada no ERP: ${company.city}/${company.state}. Cadastre em Settings → ERP Mappings → Cidades.`);
+        }
+        const cidadeCodigo = cityMapping.codigo_erp;
 
         // 5. Resolver vendedor ERP
         let vendedorCodigo = 0;
