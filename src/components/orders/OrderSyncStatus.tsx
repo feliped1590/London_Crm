@@ -124,7 +124,7 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
 
       if (existing) {
         await supabase.from('order_sync_queue')
-          .update({ status: 'pending' as any, attempt_count: 0, error_message: null })
+          .update({ status: 'pending' as any, attempt_count: 0, error_message: null, next_retry_at: null })
           .eq('id', existing.id);
       }
 
