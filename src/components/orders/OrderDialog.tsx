@@ -97,6 +97,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   // --- Queries ---
   const [orderCompanySearch, setOrderCompanySearch] = useState('');
+
+  const { data: paymentMethods = [] } = useQuery({
+    queryKey: ['payment-methods-mapping'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payment_method_erp_mapping')
+        .select('crm_payment_method, erp_payment_description')
+        .eq('is_active', true)
+        .order('crm_payment_method');
+      return (data || []) as Array<{ crm_payment_method: string; erp_payment_description: string }>;
+    },
+  });
+
   const { data: companiesRaw } = useQuery({
     queryKey: ['companies-search-orders', orderCompanySearch],
     queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
