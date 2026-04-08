@@ -61,18 +61,18 @@ Deno.serve(async (req) => {
 
         const pedidoTerceiro = parseInt((orderInfo.number || '').replace(/\D/g, ''), 10) || Date.now();
 
-        const { data: failedEntry } = await supabase
+        // Check for any existing entry (failed, completed, etc.) to reset
+        const { data: existingEntry } = await supabase
           .from('order_sync_queue')
           .select('id')
           .eq('order_id', targetOrderId)
-          .eq('status', 'failed')
           .maybeSingle();
 
-        if (failedEntry) {
+        if (existingEntry) {
           await supabase
             .from('order_sync_queue')
-            .update({ status: 'pending', attempt_count: 0, error_message: null, next_retry_at: null, updated_at: new Date().toISOString() })
-            .eq('id', failedEntry.id);
+            .update({ status: 'pending', attempt_count: 0, error_message: null, next_retry_at: null, processed_at: null, updated_at: new Date().toISOString() })
+            .eq('id', existingEntry.id);
         } else {
           await supabase
             .from('order_sync_queue')
