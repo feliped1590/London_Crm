@@ -70,6 +70,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   const [orderType, setOrderType] = useState<OrderType>('producao');
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('');
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
