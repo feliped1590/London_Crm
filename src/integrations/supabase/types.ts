@@ -3277,6 +3277,39 @@ export type Database = {
         }
         Relationships: []
       }
+      freight_type_erp_mapping: {
+        Row: {
+          created_at: string | null
+          crm_freight_type: string
+          erp_freight_code: string
+          erp_freight_description: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_freight_type: string
+          erp_freight_code: string
+          erp_freight_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_freight_type?: string
+          erp_freight_code?: string
+          erp_freight_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       google_calendar_connections: {
         Row: {
           access_token_encrypted: string | null
@@ -4165,6 +4198,7 @@ export type Database = {
           order_id: string
           product_id: string | null
           quantity: number
+          sale_type: string | null
           sort_order: number | null
           subtotal: number
           subtotal_item: number
@@ -4193,6 +4227,7 @@ export type Database = {
           order_id: string
           product_id?: string | null
           quantity?: number
+          sale_type?: string | null
           sort_order?: number | null
           subtotal?: number
           subtotal_item?: number
@@ -4221,6 +4256,7 @@ export type Database = {
           order_id?: string
           product_id?: string | null
           quantity?: number
+          sale_type?: string | null
           sort_order?: number | null
           subtotal?: number
           subtotal_item?: number
@@ -4445,8 +4481,11 @@ export type Database = {
           order_date: string | null
           order_type: string
           origin: string
+          payment_method: string | null
+          payment_terms: string | null
           pedido_terceiro: number | null
           proposal_id: string | null
+          sales_rep_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal_products: number
           tenant_id: string
@@ -4492,8 +4531,11 @@ export type Database = {
           order_date?: string | null
           order_type?: string
           origin?: string
+          payment_method?: string | null
+          payment_terms?: string | null
           pedido_terceiro?: number | null
           proposal_id?: string | null
+          sales_rep_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
           tenant_id?: string
@@ -4539,8 +4581,11 @@ export type Database = {
           order_date?: string | null
           order_type?: string
           origin?: string
+          payment_method?: string | null
+          payment_terms?: string | null
           pedido_terceiro?: number | null
           proposal_id?: string | null
+          sales_rep_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
           tenant_id?: string
@@ -4595,6 +4640,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -4602,6 +4654,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_method_erp_mapping: {
+        Row: {
+          created_at: string | null
+          crm_payment_method: string
+          erp_payment_code: number
+          erp_payment_description: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_payment_method: string
+          erp_payment_code: number
+          erp_payment_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_payment_method?: string
+          erp_payment_code?: number
+          erp_payment_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       pipeline_automations: {
         Row: {
@@ -6627,6 +6712,39 @@ export type Database = {
           },
         ]
       }
+      sale_type_erp_mapping: {
+        Row: {
+          created_at: string | null
+          crm_sale_type: string
+          erp_sale_type_code: number
+          erp_sale_type_description: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_sale_type: string
+          erp_sale_type_code: number
+          erp_sale_type_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_sale_type?: string
+          erp_sale_type_code?: number
+          erp_sale_type_description?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       sales_goals: {
         Row: {
           created_at: string | null
@@ -6671,6 +6789,7 @@ export type Database = {
           active: boolean | null
           created_at: string | null
           email: string | null
+          erp_vendor_code: number | null
           id: string
           name: string
           phone: string | null
@@ -6681,6 +6800,7 @@ export type Database = {
           active?: boolean | null
           created_at?: string | null
           email?: string | null
+          erp_vendor_code?: number | null
           id?: string
           name: string
           phone?: string | null
@@ -6691,6 +6811,7 @@ export type Database = {
           active?: boolean | null
           created_at?: string | null
           email?: string | null
+          erp_vendor_code?: number | null
           id?: string
           name?: string
           phone?: string | null
