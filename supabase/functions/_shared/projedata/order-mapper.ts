@@ -3,6 +3,7 @@
  *
  * Gera o JSON interno do envelope ASDCOMANDO.
  * Todos os tipos seguem o payload validado com o ERP.
+ * NENHUM fallback — todos os campos são obrigatórios.
  */
 
 import type { ProjedataOrder, ProjedataOrderItem, ProjedataOrderDelivery, ProjedataOrderPayment } from './order-types.ts';
@@ -15,15 +16,15 @@ export interface CRMOrderForSync {
   order_date: string;           // ISO date
   observations?: string | null;
   total_discount?: number | null;
-  freight_type?: string | null;
+  freight_type: string;         // código ERP resolvido (obrigatório)
   delivery_date?: string | null;
   company_cnpj: string;         // com ou sem formatação
-  erp_empresa: number;
-  erp_fluxo_venda: number;
-  erp_usuario: number;
-  erp_vendedor?: number;
+  erp_empresa: number;          // obrigatório
+  erp_fluxo_venda: number;      // obrigatório
+  erp_usuario: number;          // obrigatório
+  erp_vendedor: number;         // obrigatório
   items: CRMOrderItemForSync[];
-  payment_conditions?: CRMPaymentCondition[];
+  payment_conditions: CRMPaymentCondition[]; // obrigatório (não-vazio)
 }
 
 export interface CRMOrderItemForSync {
@@ -33,7 +34,7 @@ export interface CRMOrderItemForSync {
   quantity: number;
   unit_price: number;
   discount_percent?: number;
-  tipo_venda?: number;
+  tipo_venda: number;           // obrigatório
   delivery_date?: string | null;   // ISO date
   observations?: string | null;
   observations_pcp?: string | null;
@@ -43,7 +44,7 @@ export interface CRMOrderItemForSync {
 export interface CRMPaymentCondition {
   parcela: number;
   dias: number;
-  forma_recebimento?: number;
+  forma_recebimento: number;    // obrigatório
   tipo?: string;
 }
 
@@ -69,6 +70,24 @@ export function generatePedidoTerceiro(orderNumber: string): number {
   return Number(digits);
 }
 
+/**
+ * Parser de condições de pagamento.
+ * Converte "28/35/42" + forma de recebimento em array de parcelas.
+ */
+export function parsePaymentTerms(
+  terms: string,
+  formaRecebimento: number
+): CRMPaymentCondition[] {
+  const dias = terms.split('/').map(Number).filter(d => d > 0);
+  if (dias.length === 0) throw new Error(`payment_terms inválido: "${terms}"`);
+  return dias.map((d, i) => ({
+    parcela: i + 1,
+    dias: d,
+    forma_recebimento: formaRecebimento,
+    tipo: 'P',
+  }));
+}
+
 // ─── Mapper principal ───────────────────────────────────────────
 
 export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
@@ -86,7 +105,7 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     return {
       item: item.erp_product_code,
       seq_item: item.seq,
-      tipo_venda: item.tipo_venda ?? 1,
+      tipo_venda: item.tipo_venda,
       desconto_item: item.discount_percent ?? 0,
       unitario: item.unit_price,
       versao: item.erp_versao,
@@ -94,15 +113,12 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     };
   });
 
-  // Pagamento padrão se não informado
-  const pagto: ProjedataOrderPayment[] = order.payment_conditions && order.payment_conditions.length > 0
-    ? order.payment_conditions.map(p => ({
-        dias: p.dias,
-        forma_recebimento: p.forma_recebimento ?? 1,
-        parcela: p.parcela,
-        tipo: p.tipo ?? 'P',
-      }))
-    : [{ dias: 30, forma_recebimento: 1, parcela: 1, tipo: 'P' }];
+  const pagto: ProjedataOrderPayment[] = order.payment_conditions.map(p => ({
+    dias: p.dias,
+    forma_recebimento: p.forma_recebimento,
+    parcela: p.parcela,
+    tipo: p.tipo ?? 'P',
+  }));
 
   return {
     cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
@@ -114,8 +130,8 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     observacao: order.observations || '',
     pedido_terceiro: order.pedido_terceiro,
     usuario: order.erp_usuario,
-    vendedor: order.erp_vendedor ?? 0,
-    frete: order.freight_type || '1',
+    vendedor: order.erp_vendedor,
+    frete: order.freight_type,
     itens,
     pagto,
   };

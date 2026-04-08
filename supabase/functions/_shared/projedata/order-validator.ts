@@ -11,11 +11,19 @@ export interface OrderToValidate {
   pedido_terceiro?: number | null;
   erp_usuario?: number | null;
   erp_fluxo_venda?: number | null;
+  erp_vendedor?: number | null;
+  erp_frete?: string | null;
   items: Array<{
     product_erp_code?: string | null;
     product_erp_versao?: string | null;
     quantity?: number | null;
     unit_price?: number | null;
+    tipo_venda?: number | null;
+  }>;
+  payment_conditions?: Array<{
+    dias?: number | null;
+    forma_recebimento?: number | null;
+    parcela?: number | null;
   }>;
 }
 
@@ -52,7 +60,17 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
     errors.push({ field: 'erp_fluxo_venda', message: 'Tipo de pedido não mapeado para o ERP' });
   }
 
-  // 7. Pedido deve ter itens
+  // 7. Vendedor ERP obrigatório
+  if (!order.erp_vendedor || isNaN(order.erp_vendedor)) {
+    errors.push({ field: 'erp_vendedor', message: 'Vendedor não integrado ao ERP (erp_vendor_code não definido)' });
+  }
+
+  // 8. Frete mapeado obrigatório
+  if (!order.erp_frete && order.erp_frete !== '0') {
+    errors.push({ field: 'erp_frete', message: 'Frete não mapeado para o ERP' });
+  }
+
+  // 9. Pedido deve ter itens
   if (!order.items || order.items.length === 0) {
     errors.push({ field: 'items', message: 'Pedido não possui itens' });
   } else {
@@ -68,6 +86,23 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
       }
       if (item.unit_price == null || item.unit_price < 0) {
         errors.push({ field: `items[${idx}].unit_price`, message: `Item ${idx + 1}: preço unitário inválido` });
+      }
+      if (!item.tipo_venda || isNaN(item.tipo_venda)) {
+        errors.push({ field: `items[${idx}].tipo_venda`, message: `Item ${idx + 1}: tipo de venda não mapeado para o ERP` });
+      }
+    });
+  }
+
+  // 10. Condições de pagamento obrigatórias
+  if (!order.payment_conditions || order.payment_conditions.length === 0) {
+    errors.push({ field: 'payment_conditions', message: 'Condições de pagamento não definidas' });
+  } else {
+    order.payment_conditions.forEach((p, idx) => {
+      if (!p.forma_recebimento || isNaN(p.forma_recebimento)) {
+        errors.push({ field: `payment_conditions[${idx}].forma_recebimento`, message: `Parcela ${idx + 1}: forma de recebimento não mapeada para o ERP` });
+      }
+      if (!p.dias || p.dias <= 0) {
+        errors.push({ field: `payment_conditions[${idx}].dias`, message: `Parcela ${idx + 1}: dias inválido` });
       }
     });
   }
