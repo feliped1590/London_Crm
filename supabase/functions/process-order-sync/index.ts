@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
           .select(`
             id, quantity, unit_price, discount_percent, sort_order,
             delivery_date, description, sale_type,
-            products!inner(id, erp_product_code, erp_versao, name)
+            products!inner(id, erp_product_code, erp_versao, erp_versao_codigo, name)
           `)
           .eq('order_id', queueItem.order_id)
           .order('sort_order', { ascending: true });
@@ -334,7 +334,7 @@ Deno.serve(async (req) => {
             return {
               seq: idx + 1,
               erp_product_code: item.products.erp_product_code,
-              erp_versao: item.products.erp_versao,
+              erp_versao: item.products.erp_versao_codigo || '1',
               quantity: Number(item.quantity) || 0,
               unit_price: Number(item.unit_price) || 0,
               discount_percent: Number(item.discount_percent) || 0,

@@ -275,7 +275,7 @@ export function OrderPayloadSimulator() {
         .select(`
           id, quantity, unit_price, discount_percent, sort_order,
           delivery_date, description, sale_type,
-          products!inner(id, erp_product_code, erp_versao, name)
+          products!inner(id, erp_product_code, erp_versao, erp_versao_codigo, name)
         `)
         .eq('order_id', selectedOrderId)
         .order('sort_order', { ascending: true });
@@ -329,7 +329,7 @@ export function OrderPayloadSimulator() {
             tipo_venda: saleTypeMap.get(itemSaleType) ?? null,
             desconto_item: Number(item.discount_percent) || 0,
             unitario: Number(item.unit_price) || 0,
-            versao: item.products?.erp_versao || null,
+            versao: item.products?.erp_versao_codigo || '1',
             entregas: [{
               ordem_compra: '0',
               observacao: item.description || '',

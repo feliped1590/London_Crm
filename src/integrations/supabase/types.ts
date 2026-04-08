@@ -5672,6 +5672,7 @@ export type Database = {
           erp_subgrupo: string | null
           erp_synced_at: string | null
           erp_versao: string | null
+          erp_versao_codigo: string | null
           erp_versao_detalhes: string | null
           erp_versao_roteiro: number | null
           erp_versao_situacao: string | null
@@ -5742,6 +5743,7 @@ export type Database = {
           erp_subgrupo?: string | null
           erp_synced_at?: string | null
           erp_versao?: string | null
+          erp_versao_codigo?: string | null
           erp_versao_detalhes?: string | null
           erp_versao_roteiro?: number | null
           erp_versao_situacao?: string | null
@@ -5812,6 +5814,7 @@ export type Database = {
           erp_subgrupo?: string | null
           erp_synced_at?: string | null
           erp_versao?: string | null
+          erp_versao_codigo?: string | null
           erp_versao_detalhes?: string | null
           erp_versao_roteiro?: number | null
           erp_versao_situacao?: string | null
