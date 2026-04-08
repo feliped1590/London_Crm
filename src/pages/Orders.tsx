@@ -252,7 +252,8 @@ export default function Orders() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Logística</TableHead>
                      <TableHead>Status</TableHead>
-                     <TableHead>ERP</TableHead>
+                     <TableHead>Pedido ERP</TableHead>
+                     <TableHead>Sinc. ERP</TableHead>
                     <TableHead>Entrega Prevista</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead>Data Criação</TableHead>
