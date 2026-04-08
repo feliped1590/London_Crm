@@ -1,63 +1,35 @@
 
 
-# Plano: Campo de Código de Versão ERP para Itens de Pedido
+# Plano: Destravar Envio do PED-2026-0054
 
 ## Problema
 
-O campo `erp_versao` na tabela `products` armazena a string de dimensão (ex: `100x150x0,120`), que é o **detalhe** da versão. Porém, o payload de pedidos (`IMP_PEDIDO_V3`) espera o **código** da versão (ex: `"1"`), que é o identificador numérico da versão no ERP.
+A Edge Function `process-order-sync` falha na validação porque `companies.erp_code` é `null` para a empresa do pedido. O campo `erp_code` **não é usado no payload** (o payload usa CNPJ), mas o validator exige que esteja preenchido.
 
-Hoje o mapper envia `versao: "100x150x0,120"` quando deveria enviar `versao: "1"`.
+## Solução (2 ações)
 
-## Solução
+### 1. Preencher `erp_code` na empresa
 
-Adicionar campo `erp_versao_codigo` na tabela `products` com default `'1'`, e usar esse campo no payload de pedidos.
-
-## Etapa 1 — Migration
+Atualizar a empresa "004268 - FELIPE DUARTE" (id: `87d95473-fa0e-4827-a11a-56bdf2875ed0`) com `erp_code = '004268'` via migration SQL:
 
 ```sql
-ALTER TABLE products 
-  ADD COLUMN erp_versao_codigo TEXT DEFAULT '1';
-
--- Preencher registros existentes
-UPDATE products SET erp_versao_codigo = '1' WHERE erp_versao_codigo IS NULL;
-
-COMMENT ON COLUMN products.erp_versao_codigo IS 
-  'Código da versão no ERP (ex: 1, 2). Usado no payload de pedidos (IMP_PEDIDO_V3).';
+UPDATE companies 
+SET erp_code = '004268' 
+WHERE id = '87d95473-fa0e-4827-a11a-56bdf2875ed0';
 ```
 
-## Etapa 2 — Atualizar Edge Function `process-order-sync`
+### 2. Resetar o pedido na fila e disparar
 
-Na query de itens, incluir `erp_versao_codigo` no SELECT:
+Resetar o item na `order_sync_queue` para `status = 'pending'` e `attempt_count = 0`, e então disparar a Edge Function.
 
-```sql
-products!inner(id, erp_product_code, erp_versao, erp_versao_codigo, name)
-```
+## Alternativa (se `erp_code` não for necessário para outros fluxos)
 
-No mapeamento dos itens, usar `erp_versao_codigo` ao invés de `erp_versao`:
-
-```typescript
-erp_versao: item.products.erp_versao_codigo || '1',
-```
-
-## Etapa 3 — Atualizar Mapper e Validator
-
-- `order-mapper.ts`: O campo `erp_versao` da interface `CRMOrderItemForSync` passa a receber o código (`"1"`), sem mudança na interface
-- `order-validator.ts`: Validação existente de `product_erp_versao` continua funcionando
-
-## Etapa 4 — Atualizar Simulador de Payload
-
-Em `OrderPayloadSimulator.tsx`, ajustar a query e o mapeamento para usar `erp_versao_codigo` no campo `versao` do payload simulado.
-
-## Etapa 5 — Import de Produtos ERP
-
-Na função `erp-import-products`, mapear o campo `versao` do ERP (código) para `erp_versao_codigo`, mantendo `erp_versao` para a string de dimensão/detalhe.
+Remover a validação de `company_erp_code` do validator, já que o payload utiliza apenas CNPJ. Porém, manter é mais seguro para garantir que clientes estejam cadastrados no ERP.
 
 ## Arquivos impactados
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL (nova) | Adicionar coluna `erp_versao_codigo` |
-| `process-order-sync/index.ts` | Usar `erp_versao_codigo` no SELECT e mapeamento |
-| `OrderPayloadSimulator.tsx` | Usar `erp_versao_codigo` na simulação |
-| `erp-import-products/index.ts` | Mapear código de versão do ERP |
+| Migration SQL | UPDATE na empresa |
+| Nenhum código alterado | Apenas dados |
 
