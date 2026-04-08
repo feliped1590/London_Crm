@@ -7,6 +7,7 @@ import type { OrderValidationResult, OrderValidationError } from './order-types.
 export interface OrderToValidate {
   company_erp_code?: string | null;
   company_cnpj?: string | null;
+  erp_empresa?: number | null;
   pedido_terceiro?: number | null;
   items: Array<{
     product_erp_code?: string | null;
@@ -29,7 +30,12 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
     errors.push({ field: 'company_cnpj', message: 'Cliente não possui CNPJ' });
   }
 
-  // 3. pedido_terceiro deve ser válido
+  // 3. Empresa emissora deve ter código ERP
+  if (!order.erp_empresa || isNaN(order.erp_empresa)) {
+    errors.push({ field: 'erp_empresa', message: 'Empresa emissora não integrada ao ERP (erp_company_code não definido)' });
+  }
+
+  // 4. pedido_terceiro deve ser válido
   if (!order.pedido_terceiro || order.pedido_terceiro <= 0) {
     errors.push({ field: 'pedido_terceiro', message: 'pedido_terceiro inválido ou ausente' });
   }
