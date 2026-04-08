@@ -221,6 +221,16 @@ export default function Orders() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status ERP" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos (ERP)</SelectItem>
+                <SelectItem value="synced">Sincronizados</SelectItem>
+                <SelectItem value="not_synced">Não enviados</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
