@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
         const validation = validateOrderForSync({
           company_erp_code: company?.erp_code,
           company_cnpj: company?.cnpj,
+          erp_empresa: erpEmpresa,
           pedido_terceiro: queueItem.pedido_terceiro,
           items: (items || []).map((i: any) => ({
             product_erp_code: i.products?.erp_product_code,
@@ -258,6 +259,13 @@ Deno.serve(async (req) => {
           status: 'success',
           external_id: erpOrderId ? String(erpOrderId) : null,
           request_payload: parsedPayload,
+          metadata: {
+            pedido_terceiro: queueItem.pedido_terceiro,
+            company_name: legalEntity.name,
+            erp_company_code: erpEmpresa,
+            customer_name: company.name,
+            customer_erp_code: company.erp_code,
+          },
           response_payload: responseData,
         });
 
