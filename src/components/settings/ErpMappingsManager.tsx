@@ -446,6 +446,10 @@ export function ErpMappingsManager() {
           <TabsContent value="vendors" className="mt-4">
             <ErpVendorsTable />
           </TabsContent>
+
+          <TabsContent value="cities" className="mt-4">
+            <ErpCitiesManager />
+          </TabsContent>
         </Tabs>
       </CardContent>
     </Card>
