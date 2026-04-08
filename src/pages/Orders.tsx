@@ -32,6 +32,7 @@ export default function Orders() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
 
   const { data: orders, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['orders', filterStatus],
