@@ -1604,6 +1604,79 @@ export type Database = {
           },
         ]
       }
+      company_sync_queue: {
+        Row: {
+          attempts: number
+          company_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          payload: Json | null
+          processed_at: string | null
+          response: Json | null
+          scheduled_at: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          scheduled_at?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          scheduled_at?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_sync_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_sync_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "company_sync_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_erp_data: {
         Row: {
           contact_id: string
@@ -3106,6 +3179,44 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      erp_cities: {
+        Row: {
+          codigo_erp: number
+          created_at: string
+          id: string
+          nome: string
+          tenant_id: string
+          uf: string
+          updated_at: string
+        }
+        Insert: {
+          codigo_erp: number
+          created_at?: string
+          id?: string
+          nome: string
+          tenant_id: string
+          uf: string
+          updated_at?: string
+        }
+        Update: {
+          codigo_erp?: number
+          created_at?: string
+          id?: string
+          nome?: string
+          tenant_id?: string
+          uf?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_cities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       erp_products_staging: {
         Row: {
