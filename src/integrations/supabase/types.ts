@@ -4254,6 +4254,120 @@ export type Database = {
           },
         ]
       }
+      order_sync_log: {
+        Row: {
+          created_at: string
+          direction: string
+          error_message: string | null
+          id: string
+          order_id: string
+          pedido_terceiro: number | null
+          queue_item_id: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          id?: string
+          order_id: string
+          pedido_terceiro?: number | null
+          queue_item_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string
+          pedido_terceiro?: number | null
+          queue_item_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_sync_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_sync_log_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_sync_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_sync_queue: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          order_id: string
+          pedido_terceiro: number
+          processed_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          order_id: string
+          pedido_terceiro: number
+          processed_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          order_id?: string
+          pedido_terceiro?: number
+          processed_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_sync_queue_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_sync_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           approved_at: string | null
@@ -4272,10 +4386,13 @@ export type Database = {
           delivery_same_as_company: boolean | null
           delivery_state: string | null
           delivery_zip_code: string | null
+          erp_last_sync_at: string | null
           erp_last_update_date: string | null
           erp_order_code: string | null
+          erp_order_id: number | null
           erp_rep_code: string | null
           erp_status: string | null
+          erp_sync_status: string
           erp_synced_at: string | null
           freight_type: string | null
           freight_value: number | null
@@ -4287,6 +4404,7 @@ export type Database = {
           order_date: string | null
           order_type: string
           origin: string
+          pedido_terceiro: number | null
           proposal_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal_products: number
@@ -4315,10 +4433,13 @@ export type Database = {
           delivery_same_as_company?: boolean | null
           delivery_state?: string | null
           delivery_zip_code?: string | null
+          erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_order_code?: string | null
+          erp_order_id?: number | null
           erp_rep_code?: string | null
           erp_status?: string | null
+          erp_sync_status?: string
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
@@ -4330,6 +4451,7 @@ export type Database = {
           order_date?: string | null
           order_type?: string
           origin?: string
+          pedido_terceiro?: number | null
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
@@ -4358,10 +4480,13 @@ export type Database = {
           delivery_same_as_company?: boolean | null
           delivery_state?: string | null
           delivery_zip_code?: string | null
+          erp_last_sync_at?: string | null
           erp_last_update_date?: string | null
           erp_order_code?: string | null
+          erp_order_id?: number | null
           erp_rep_code?: string | null
           erp_status?: string | null
+          erp_sync_status?: string
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
@@ -4373,6 +4498,7 @@ export type Database = {
           order_date?: string | null
           order_type?: string
           origin?: string
+          pedido_terceiro?: number | null
           proposal_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
@@ -7899,6 +8025,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      generate_pedido_terceiro: {
+        Args: { order_number: string }
+        Returns: number
       }
       get_active_sessions_admin: {
         Args: never
