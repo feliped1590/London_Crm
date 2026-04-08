@@ -11,6 +11,7 @@ interface OrderSyncStatusProps {
   orderId: string;
   erpOrderId?: string | null;
   erpSyncedAt?: string | null;
+  updatedAt?: string | null;
   showAction?: boolean;
   onSyncTriggered?: () => void;
 }
@@ -22,6 +23,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     label: 'Não enviado',
     icon: CloudOff,
     className: 'bg-muted text-muted-foreground border-border',
+  },
+  outdated: {
+    label: 'Desatualizado',
+    icon: AlertTriangle,
+    className: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
   },
   pending: {
     label: 'Na fila',
@@ -45,7 +51,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
   },
 };
 
-export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt }: OrderSyncStatusProps) {
+export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
   const { data: queueEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
     queryFn: async () => {
@@ -68,7 +74,11 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt }: OrderSyncSt
 
   // Determine display status
   let displayStatus: string;
-  if (erpOrderId) {
+  if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
+    displayStatus = queueEntry.status;
+  } else if (erpOrderId && erpSyncedAt && updatedAt && new Date(updatedAt) > new Date(erpSyncedAt)) {
+    displayStatus = 'outdated';
+  } else if (erpOrderId) {
     displayStatus = 'completed';
   } else if (queueEntry) {
     displayStatus = queueEntry.status;
@@ -143,7 +153,7 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
     }
   };
 
-  if (erpOrderId) return null;
+  const tooltipLabel = erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
     <TooltipProvider>
@@ -154,7 +164,7 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
             size="icon"
             onClick={handleSync}
             disabled={isSyncing}
-            title="Enviar ao ERP"
+            title={tooltipLabel}
           >
             {isSyncing ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -163,7 +173,7 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
             )}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Enviar ao ERP</TooltipContent>
+        <TooltipContent>{tooltipLabel}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
