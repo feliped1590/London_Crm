@@ -582,7 +582,33 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </div>
       </div>
 
-      {canEdit && (
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Forma de Pagamento</Label>
+          <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={!canEdit}>
+            <SelectTrigger><SelectValue placeholder="Selecione a forma de pagamento" /></SelectTrigger>
+            <SelectContent>
+              {paymentMethods.map((pm) => (
+                <SelectItem key={pm.crm_payment_method} value={pm.crm_payment_method}>
+                  {pm.erp_payment_description}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Condições de Pagamento (dias)</Label>
+          <Input
+            value={paymentTerms}
+            onChange={(e) => setPaymentTerms(e.target.value)}
+            placeholder="Ex: 28/35/42"
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">Separe os dias de cada parcela com /</p>
+        </div>
+      </div>
+
+
         <div className="space-y-2">
           <Label>Adicionar Produto</Label>
           <div className="flex gap-2">
