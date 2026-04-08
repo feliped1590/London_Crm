@@ -1,10 +1,11 @@
 /**
  * Edge Function: process-order-sync
  * Processa a fila order_sync_queue enviando pedidos pendentes ao ERP Projedata (IMP_PEDIDO_V3).
+ * Todos os campos são resolvidos dinamicamente — NENHUM hardcode.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro } from '../_shared/projedata/order-mapper.ts';
+import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from '../_shared/projedata/order-mapper.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 
@@ -23,13 +24,8 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  // Buscar configuração ERP do tenant
-  let apiUrl: string | undefined;
-  let apiToken: string | undefined;
-
-  // Tentar configuração via tenant_settings primeiro, fallback para env vars
-  apiUrl = Deno.env.get('PROJEDATA_API_URL');
-  apiToken = Deno.env.get('PROJEDATA_API_TOKEN');
+  const apiUrl = Deno.env.get('PROJEDATA_API_URL');
+  const apiToken = Deno.env.get('PROJEDATA_API_TOKEN');
 
   if (!apiUrl || !apiToken) {
     return errorResponse(500, 'PROJEDATA_API_URL e PROJEDATA_API_TOKEN não configurados');
@@ -45,7 +41,6 @@ Deno.serve(async (req) => {
 
     // If specific order_id provided, ensure it's in the queue
     if (targetOrderId) {
-      // Check if already in queue
       const { data: existing } = await supabase
         .from('order_sync_queue')
         .select('id, status')
@@ -54,7 +49,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!existing) {
-        // Get order info to enqueue
         const { data: orderInfo, error: orderInfoError } = await supabase
           .from('orders')
           .select('id, number, tenant_id')
@@ -67,7 +61,6 @@ Deno.serve(async (req) => {
 
         const pedidoTerceiro = parseInt((orderInfo.number || '').replace(/\D/g, ''), 10) || Date.now();
 
-        // Reset failed status or insert new
         const { data: failedEntry } = await supabase
           .from('order_sync_queue')
           .select('id')
@@ -145,7 +138,8 @@ Deno.serve(async (req) => {
             id, number, order_date, delivery_date, observations,
             total_discount, freight_type, pedido_terceiro, legal_entity_id,
             company_id, erp_rep_code, order_type, created_by,
-            companies!inner(id, erp_code, cnpj, name),
+            payment_terms, payment_method, sales_rep_id,
+            companies!inner(id, erp_code, cnpj, name, sales_rep_id),
             legal_entities(id, name, erp_company_code)
           `)
           .eq('id', queueItem.order_id)
@@ -155,7 +149,7 @@ Deno.serve(async (req) => {
           throw new Error(`Pedido não encontrado: ${queueItem.order_id}`);
         }
 
-        // Resolver empresa emissora via legal_entities
+        // ─── Resolver empresa emissora ───────────────────────
         const legalEntity = order.legal_entities as any;
         if (!legalEntity?.erp_company_code) {
           throw new Error('Empresa emissora não integrada ao ERP (erp_company_code não definido)');
@@ -165,7 +159,7 @@ Deno.serve(async (req) => {
           throw new Error('Empresa emissora inválida no ERP (erp_company_code não é numérico)');
         }
 
-        // 3.1 Resolver usuário ERP via profiles
+        // ─── Resolver usuário ERP ────────────────────────────
         let erpUsuario = 0;
         let userName = 'desconhecido';
         if (order.created_by) {
@@ -184,7 +178,7 @@ Deno.serve(async (req) => {
           throw new Error('Usuário não integrado ao ERP (erp_user_code não definido)');
         }
 
-        // 3.2 Resolver fluxo de venda via order_type_erp_mapping
+        // ─── Resolver fluxo de venda ─────────────────────────
         const crmOrderType = order.order_type ?? 'producao';
         const { data: typeMapping } = await supabase
           .from('order_type_erp_mapping')
@@ -197,14 +191,73 @@ Deno.serve(async (req) => {
           throw new Error(`Tipo de pedido não mapeado para o ERP (crm_order_type: ${crmOrderType})`);
         }
 
-        console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType} → fluxo=${typeMapping.erp_flow_code} (${typeMapping.erp_flow_description})`);
+        // ─── Resolver vendedor ERP ───────────────────────────
+        const company = order.companies as any;
+        const salesRepId = order.sales_rep_id || company?.sales_rep_id;
+        let erpVendedor = 0;
+        let sellerName = 'desconhecido';
+
+        if (salesRepId) {
+          const { data: salesRep } = await supabase
+            .from('sales_reps')
+            .select('id, name, erp_vendor_code')
+            .eq('id', salesRepId)
+            .maybeSingle();
+
+          if (salesRep) {
+            sellerName = salesRep.name || 'desconhecido';
+            erpVendedor = Number(salesRep.erp_vendor_code);
+          }
+        }
+        if (!erpVendedor || isNaN(erpVendedor)) {
+          throw new Error('Vendedor não integrado ao ERP (erp_vendor_code não definido)');
+        }
+
+        // ─── Resolver frete ─────────────────────────────────
+        const crmFreightType = order.freight_type;
+        if (!crmFreightType) {
+          throw new Error('Tipo de frete não definido no pedido');
+        }
+        const { data: freightMapping } = await supabase
+          .from('freight_type_erp_mapping')
+          .select('erp_freight_code, erp_freight_description')
+          .eq('crm_freight_type', crmFreightType)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (!freightMapping) {
+          throw new Error(`Frete não mapeado para o ERP (freight_type: ${crmFreightType})`);
+        }
+
+        // ─── Resolver forma de pagamento ─────────────────────
+        const crmPaymentMethod = order.payment_method;
+        if (!crmPaymentMethod) {
+          throw new Error('Forma de pagamento não definida no pedido');
+        }
+        const { data: paymentMapping } = await supabase
+          .from('payment_method_erp_mapping')
+          .select('erp_payment_code, erp_payment_description')
+          .eq('crm_payment_method', crmPaymentMethod)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (!paymentMapping) {
+          throw new Error(`Forma de pagamento não mapeada para o ERP (payment_method: ${crmPaymentMethod})`);
+        }
+
+        // ─── Parsear condições de pagamento ──────────────────
+        const paymentTermsStr = order.payment_terms;
+        if (!paymentTermsStr) {
+          throw new Error('Condições de pagamento (payment_terms) não definidas no pedido');
+        }
+        const paymentConditions = parsePaymentTerms(paymentTermsStr, paymentMapping.erp_payment_code);
 
         // 4. Carregar itens com produtos
         const { data: items, error: itemsError } = await supabase
           .from('order_items')
           .select(`
             id, quantity, unit_price, discount_percent, sort_order,
-            delivery_date, description,
+            delivery_date, description, sale_type,
             products!inner(id, erp_product_code, erp_versao, name)
           `)
           .eq('order_id', queueItem.order_id)
@@ -214,7 +267,25 @@ Deno.serve(async (req) => {
           throw new Error(`Erro ao carregar itens: ${itemsError.message}`);
         }
 
-        const company = order.companies as any;
+        // ─── Resolver tipo de venda por item ─────────────────
+        const distinctSaleTypes = [...new Set((items || []).map((i: any) => i.sale_type || 'venda_tributada'))];
+        const { data: saleTypeMappings } = await supabase
+          .from('sale_type_erp_mapping')
+          .select('crm_sale_type, erp_sale_type_code, erp_sale_type_description')
+          .in('crm_sale_type', distinctSaleTypes)
+          .eq('is_active', true);
+
+        const saleTypeMap = new Map<string, number>();
+        (saleTypeMappings || []).forEach((m: any) => saleTypeMap.set(m.crm_sale_type, m.erp_sale_type_code));
+
+        // Verificar se todos os tipos de venda foram mapeados
+        for (const st of distinctSaleTypes) {
+          if (!saleTypeMap.has(st)) {
+            throw new Error(`Tipo de venda não mapeado para o ERP (sale_type: ${st})`);
+          }
+        }
+
+        console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType}→${typeMapping.erp_flow_code}, vendedor=${sellerName} (erp:${erpVendedor}), frete=${crmFreightType}→${freightMapping.erp_freight_code}, pagto=${crmPaymentMethod}→${paymentMapping.erp_payment_code}, parcelas=${paymentTermsStr}`);
 
         // 5. Validar
         const validation = validateOrderForSync({
@@ -224,12 +295,16 @@ Deno.serve(async (req) => {
           pedido_terceiro: queueItem.pedido_terceiro,
           erp_usuario: erpUsuario,
           erp_fluxo_venda: typeMapping.erp_flow_code,
+          erp_vendedor: erpVendedor,
+          erp_frete: freightMapping.erp_freight_code,
           items: (items || []).map((i: any) => ({
             product_erp_code: i.products?.erp_product_code,
             product_erp_versao: i.products?.erp_versao,
             quantity: i.quantity,
             unit_price: i.unit_price,
+            tipo_venda: saleTypeMap.get(i.sale_type || 'venda_tributada'),
           })),
+          payment_conditions: paymentConditions,
         });
 
         if (!validation.valid) {
@@ -237,19 +312,13 @@ Deno.serve(async (req) => {
           throw new Error(`Validação falhou: ${details}`);
         }
 
-        // 6. Buscar código vendedor ERP
-        let erpVendedor = 0;
-        if (order.erp_rep_code) {
-          erpVendedor = Number(order.erp_rep_code) || 0;
-        }
-
-        // 7. Montar payload
+        // 6. Montar payload
         const crmOrder: CRMOrderForSync = {
           pedido_terceiro: queueItem.pedido_terceiro,
           order_date: order.order_date || new Date().toISOString(),
           observations: order.observations,
           total_discount: Number(order.total_discount) || 0,
-          freight_type: order.freight_type || '1',
+          freight_type: freightMapping.erp_freight_code,
           delivery_date: order.delivery_date,
           company_cnpj: company.cnpj,
           erp_empresa: erpEmpresa,
@@ -263,17 +332,19 @@ Deno.serve(async (req) => {
             quantity: Number(item.quantity),
             unit_price: Number(item.unit_price),
             discount_percent: Number(item.discount_percent) || 0,
+            tipo_venda: saleTypeMap.get(item.sale_type || 'venda_tributada')!,
             delivery_date: item.delivery_date || order.delivery_date,
             observations: item.description || '',
           })),
+          payment_conditions: paymentConditions,
         };
 
         const projedataOrder = mapCRMOrderToProjedata(crmOrder);
         const payload = buildOrderPayload(projedataOrder);
 
-        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}], usuario: ${userName} [${erpUsuario}], fluxo: ${typeMapping.erp_flow_code} ${typeMapping.erp_flow_description})`);
+        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro})`);
 
-        // 8. Enviar ao ERP
+        // 7. Enviar ao ERP
         const response = await fetch(apiUrl!, {
           method: 'POST',
           headers: {
@@ -290,7 +361,7 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // 9. Parse retorno
+        // 8. Parse retorno
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
@@ -301,7 +372,6 @@ Deno.serve(async (req) => {
         const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
         const retorno = retornoObj?.['#out#p_retorno'] || retornoObj?.p_retorno || '';
 
-        // Verificar erro do ERP
         if (typeof retorno === 'string' && retorno.includes('#ERRO#')) {
           throw new Error(`ERP retornou erro: ${retorno}`);
         }
@@ -315,7 +385,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // 10. Sucesso - atualizar tudo
+        // 9. Sucesso - atualizar tudo
         await supabase
           .from('order_sync_queue')
           .update({
@@ -352,7 +422,13 @@ Deno.serve(async (req) => {
           response_payload: responseData,
         });
 
-        // Log em erp_sync_logs (observabilidade centralizada)
+        // Observabilidade centralizada com TODOS os mapeamentos
+        const itemsSaleTypes = (items || []).map((i: any) => ({
+          product: i.products?.erp_product_code,
+          sale_type: i.sale_type,
+          erp_sale_type_code: saleTypeMap.get(i.sale_type || 'venda_tributada'),
+        }));
+
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'order',
           entity_id: queueItem.order_id,
@@ -372,6 +448,16 @@ Deno.serve(async (req) => {
             crm_order_type: crmOrderType,
             erp_flow_code: typeMapping.erp_flow_code,
             erp_flow_description: typeMapping.erp_flow_description,
+            seller_name: sellerName,
+            erp_vendor_code: erpVendedor,
+            freight_type: crmFreightType,
+            erp_freight_code: freightMapping.erp_freight_code,
+            erp_freight_description: freightMapping.erp_freight_description,
+            payment_method: crmPaymentMethod,
+            erp_payment_code: paymentMapping.erp_payment_code,
+            erp_payment_description: paymentMapping.erp_payment_description,
+            payment_terms: paymentTermsStr,
+            items_sale_types: itemsSaleTypes,
           },
           response_payload: responseData,
         });
@@ -405,7 +491,6 @@ Deno.serve(async (req) => {
           .update({ erp_sync_status: newAttempt >= 5 ? 'error' : 'pending' })
           .eq('id', queueItem.order_id);
 
-        // Log de erro
         await supabase.from('order_sync_log').insert({
           order_id: queueItem.order_id,
           queue_item_id: queueItem.id,
