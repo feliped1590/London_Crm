@@ -118,12 +118,18 @@ export default function Orders() {
   };
 
   const filteredOrders = orders?.filter((o) => {
+    const erpId = String((o as any).erp_order_id || '');
     const matchesSearch =
       o.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      erpId.includes(searchTerm);
     const matchesCarrier =
       filterCarrier === 'all' || (o as any).carrier?.id === filterCarrier;
-    return matchesSearch && matchesCarrier;
+    const matchesErpStatus =
+      filterErpStatus === 'all' ||
+      (filterErpStatus === 'synced' && (o as any).erp_order_id) ||
+      (filterErpStatus === 'not_synced' && !(o as any).erp_order_id);
+    return matchesSearch && matchesCarrier && matchesErpStatus;
   });
 
   const getStatusStats = () => {
