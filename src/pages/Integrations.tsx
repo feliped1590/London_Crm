@@ -11,14 +11,28 @@ import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { StagingMonitor } from '@/components/integrations/StagingMonitor';
+import { ErpMappingsManager } from '@/components/settings/ErpMappingsManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Integrations() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('whatsapp');
   const [isImporting, setIsImporting] = useState(false);
+
+  const { data: isDeveloper = false } = useQuery({
+    queryKey: ['is-developer', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data } = await (supabase as any).rpc('has_role', { _user_id: user.id, _role: 'desenvolvedor' });
+      return !!data;
+    },
+    enabled: !!user?.id,
+  });
 
   // ERP Config state
   const [erpEndpoint, setErpEndpoint] = useState('');
@@ -272,6 +286,8 @@ export default function Integrations() {
           </div>
 
           <StagingMonitor />
+
+          {isDeveloper && <ErpMappingsManager />}
         </TabsContent>
 
         <TabsContent value="prospecting-api" className="mt-6">
