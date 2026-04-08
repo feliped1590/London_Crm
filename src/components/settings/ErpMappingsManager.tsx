@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ErpCitiesManager } from './ErpCitiesManager';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -383,6 +384,7 @@ export function ErpMappingsManager() {
             <TabsTrigger value="payment">Forma Pagamento</TabsTrigger>
             <TabsTrigger value="users">Usuários ERP</TabsTrigger>
             <TabsTrigger value="vendors">Vendedores ERP</TabsTrigger>
+            <TabsTrigger value="cities">Cidades ERP</TabsTrigger>
           </TabsList>
 
           <TabsContent value="order-types" className="mt-4">
