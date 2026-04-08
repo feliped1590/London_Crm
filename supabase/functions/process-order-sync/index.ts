@@ -36,15 +36,79 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Buscar itens pendentes da fila (máx 10 por execução)
-    const { data: queue, error: queueError } = await supabase
+    // Parse request body for optional order_id (manual sync)
+    let targetOrderId: string | null = null;
+    try {
+      const body = await req.json();
+      targetOrderId = body?.order_id || null;
+    } catch { /* no body = batch mode */ }
+
+    // If specific order_id provided, ensure it's in the queue
+    if (targetOrderId) {
+      // Check if already in queue
+      const { data: existing } = await supabase
+        .from('order_sync_queue')
+        .select('id, status')
+        .eq('order_id', targetOrderId)
+        .in('status', ['pending', 'processing'])
+        .maybeSingle();
+
+      if (!existing) {
+        // Get order info to enqueue
+        const { data: orderInfo, error: orderInfoError } = await supabase
+          .from('orders')
+          .select('id, number, tenant_id')
+          .eq('id', targetOrderId)
+          .single();
+
+        if (orderInfoError || !orderInfo) {
+          return errorResponse(404, `Pedido não encontrado: ${targetOrderId}`);
+        }
+
+        const pedidoTerceiro = parseInt((orderInfo.number || '').replace(/\D/g, ''), 10) || Date.now();
+
+        // Reset failed status or insert new
+        const { data: failedEntry } = await supabase
+          .from('order_sync_queue')
+          .select('id')
+          .eq('order_id', targetOrderId)
+          .eq('status', 'failed')
+          .maybeSingle();
+
+        if (failedEntry) {
+          await supabase
+            .from('order_sync_queue')
+            .update({ status: 'pending', attempt_count: 0, error_message: null, next_retry_at: null, updated_at: new Date().toISOString() })
+            .eq('id', failedEntry.id);
+        } else {
+          await supabase
+            .from('order_sync_queue')
+            .insert({
+              order_id: targetOrderId,
+              tenant_id: orderInfo.tenant_id,
+              pedido_terceiro: pedidoTerceiro,
+              status: 'pending',
+            });
+        }
+      }
+    }
+
+    // 1. Buscar itens pendentes da fila
+    let queueQuery = supabase
       .from('order_sync_queue')
       .select('id, order_id, pedido_terceiro, attempt_count, tenant_id')
       .eq('status', 'pending')
       .lt('attempt_count', 5)
       .or('next_retry_at.is.null,next_retry_at.lte.' + new Date().toISOString())
-      .order('created_at', { ascending: true })
-      .limit(10);
+      .order('created_at', { ascending: true });
+
+    if (targetOrderId) {
+      queueQuery = queueQuery.eq('order_id', targetOrderId);
+    } else {
+      queueQuery = queueQuery.limit(10);
+    }
+
+    const { data: queue, error: queueError } = await queueQuery;
 
     if (queueError) {
       console.error('[process-order-sync] Erro ao ler fila:', queueError.message);

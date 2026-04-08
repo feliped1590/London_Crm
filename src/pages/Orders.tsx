@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw } from 'lucide-react';
+import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -233,11 +234,12 @@ export default function Orders() {
                     <TableHead>Empresa</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Logística</TableHead>
-                    <TableHead>Status</TableHead>
-                   <TableHead>Entrega Prevista</TableHead>
-                   <TableHead>Valor Total</TableHead>
-                   <TableHead>Data Criação</TableHead>
-                   <TableHead className="text-right">Ações</TableHead>
+                     <TableHead>Status</TableHead>
+                     <TableHead>ERP</TableHead>
+                    <TableHead>Entrega Prevista</TableHead>
+                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Data Criação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
@@ -300,11 +302,18 @@ export default function Orders() {
                               <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </TableCell>
-                         <TableCell>
-                           <Badge className={orderStatusConfig[order.status].color}>
-                             {orderStatusConfig[order.status].label}
-                           </Badge>
-                         </TableCell>
+                          <TableCell>
+                            <Badge className={orderStatusConfig[order.status].color}>
+                              {orderStatusConfig[order.status].label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <OrderSyncBadge
+                              orderId={order.id}
+                              erpOrderId={(order as any).erp_order_id}
+                              erpSyncedAt={(order as any).erp_synced_at}
+                            />
+                          </TableCell>
                          <TableCell>
                            {order.delivery_date && (
                              <div className="flex items-center gap-2">
@@ -315,8 +324,16 @@ export default function Orders() {
                          </TableCell>
                          <TableCell className="font-medium">{formatCurrency(order.total_value || 0)}</TableCell>
                          <TableCell className="text-muted-foreground">{formatDate(order.created_at)}</TableCell>
-                         <TableCell className="text-right">
-                           <div className="flex items-center justify-end gap-1">
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <OrderSyncButton
+                                orderId={order.id}
+                                erpOrderId={(order as any).erp_order_id}
+                                onSyncTriggered={() => {
+                                  queryClient.invalidateQueries({ queryKey: ['orders'] });
+                                  queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                                }}
+                              />
                              {canEditOrder(order) && (
                                <Button 
                                  variant="ghost" 
