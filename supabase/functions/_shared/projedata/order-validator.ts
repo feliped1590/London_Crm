@@ -66,7 +66,7 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
   }
 
   // 8. Frete mapeado obrigatório
-  if (!order.erp_frete && order.erp_frete !== '0') {
+  if (order.erp_frete === null || order.erp_frete === undefined) {
     errors.push({ field: 'erp_frete', message: 'Frete não mapeado para o ERP' });
   }
 
