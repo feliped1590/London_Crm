@@ -19,8 +19,8 @@ export interface CRMOrderForSync {
   delivery_date?: string | null;
   company_cnpj: string;         // com ou sem formatação
   erp_empresa: number;
-  erp_fluxo_venda?: number;
-  erp_usuario?: number;
+  erp_fluxo_venda: number;
+  erp_usuario: number;
   erp_vendedor?: number;
   items: CRMOrderItemForSync[];
   payment_conditions?: CRMPaymentCondition[];
