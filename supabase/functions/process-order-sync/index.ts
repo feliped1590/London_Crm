@@ -271,7 +271,7 @@ Deno.serve(async (req) => {
         const projedataOrder = mapCRMOrderToProjedata(crmOrder);
         const payload = buildOrderPayload(projedataOrder);
 
-        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}])`);
+        console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro}, empresa: ${legalEntity.name} [${erpEmpresa}], usuario: ${userName} [${erpUsuario}], fluxo: ${typeMapping.erp_flow_code} ${typeMapping.erp_flow_description})`);
 
         // 8. Enviar ao ERP
         const response = await fetch(apiUrl!, {
