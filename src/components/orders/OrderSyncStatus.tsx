@@ -59,7 +59,11 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt }: OrderSyncSt
       if (error) throw error;
       return data;
     },
-    staleTime: 10_000,
+    staleTime: 5_000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
+    },
   });
 
   // Determine display status
@@ -111,18 +115,27 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('process-order-sync', {
-        body: { order_id: orderId },
-      });
+      // 1. Resetar na fila diretamente (instantâneo)
+      const { data: existing } = await supabase
+        .from('order_sync_queue')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle();
 
-      if (error) throw error;
-
-      if (data?.error) {
-        toast.error(`Erro na sincronização: ${data.error}`);
-      } else {
-        toast.success('Pedido enviado ao ERP com sucesso!');
-        onSyncTriggered?.();
+      if (existing) {
+        await supabase.from('order_sync_queue')
+          .update({ status: 'pending' as any, attempt_count: 0, error_message: null })
+          .eq('id', existing.id);
       }
+
+      toast.success('Pedido adicionado à fila de envio');
+      onSyncTriggered?.();
+
+      // 2. Disparar Edge Function em background (fire-and-forget)
+      supabase.functions.invoke('process-order-sync', {
+        body: { order_id: orderId },
+      }).catch(() => {});
+
     } catch (err: any) {
       toast.error(`Erro ao enviar pedido: ${err.message}`);
     } finally {
