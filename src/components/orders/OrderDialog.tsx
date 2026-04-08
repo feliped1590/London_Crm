@@ -224,6 +224,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
@@ -300,6 +301,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
@@ -358,6 +360,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
       setOrderType((order as any).order_type || 'producao');
+      setPaymentMethod((order as any).payment_method || '');
+      setPaymentTerms((order as any).payment_terms || '');
       const logistics = extractLogisticsFromRecord(order);
       setCarrierId(logistics.carrierId);
       setFreightType(logistics.freightType);
@@ -399,6 +403,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setLegalEntityId(''); setOrderType('producao');
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
+      setPaymentMethod(''); setPaymentTerms('');
     }
   }, [open]);
 
