@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
           const { data: userProfile } = await supabase
             .from('profiles')
             .select('id, full_name, erp_user_code')
-            .eq('id', order.created_by)
+            .eq('user_id', order.created_by)
             .maybeSingle();
 
           if (userProfile) {
