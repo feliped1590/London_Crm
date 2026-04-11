@@ -1,10 +1,11 @@
 /**
  * Edge Function: process-company-sync
  * Processa a fila company_sync_queue enviando clientes ao ERP Projedata (IMP_CLIENTE_V3).
+ * Inclui consulta EXP_CLIENTES_V2 para anti-duplicidade e recuperação de erp_code.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { mapCompanyToErp, buildCompanyPayload } from '../_shared/projedata/company-mapper.ts';
+import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj } from '../_shared/projedata/company-mapper.ts';
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
@@ -73,7 +74,6 @@ Deno.serve(async (req) => {
           return errorResponse(404, 'Empresa não encontrada');
         }
 
-        // Check for any existing entry to reset
         const { data: existingEntry } = await supabase
           .from('company_sync_queue')
           .select('id')
@@ -138,11 +138,19 @@ Deno.serve(async (req) => {
 
     for (const queueItem of queue) {
       try {
-        // 2. Marcar como processing
-        await supabase
+        // 2. Marcar como processing (lock de concorrência)
+        const { data: locked } = await supabase
           .from('company_sync_queue')
           .update({ status: 'processing', updated_at: new Date().toISOString() })
-          .eq('id', queueItem.id);
+          .eq('id', queueItem.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+
+        if (!locked) {
+          console.log(`[process-company-sync] Item ${queueItem.id} já em processamento, pulando`);
+          continue;
+        }
 
         // 3. Carregar empresa completa
         const { data: company, error: companyError } = await supabase
@@ -159,6 +167,46 @@ Deno.serve(async (req) => {
         if (companyError || !company) {
           throw new Error(`Empresa não encontrada: ${queueItem.company_id}`);
         }
+
+        // ═══ FASE A: Consulta pré-envio (EXP_CLIENTES_V2) ═══
+        if (company.cnpj) {
+          console.log(`[process-company-sync] Fase A: Buscando ${company.name} no ERP por CNPJ`);
+          const existingErpCode = await searchClienteByCnpj(company.cnpj, apiUrl, apiToken);
+
+          if (existingErpCode) {
+            console.log(`[process-company-sync] Cliente já existe no ERP: ${existingErpCode}`);
+
+            await supabase
+              .from('companies')
+              .update({ erp_code: existingErpCode, erp_synced_at: new Date().toISOString() })
+              .eq('id', queueItem.company_id);
+
+            await supabase
+              .from('company_sync_queue')
+              .update({
+                status: 'completed',
+                processed_at: new Date().toISOString(),
+                response: { found_existing: true, erp_code: existingErpCode },
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', queueItem.id);
+
+            await supabase.from('erp_sync_logs').insert({
+              entity_type: 'company',
+              entity_id: queueItem.company_id,
+              direction: 'crm_to_erp',
+              status: 'found_existing',
+              response_received: { erp_code: existingErpCode },
+              tenant_id: queueItem.tenant_id,
+            });
+
+            successCount++;
+            results.push({ company_id: queueItem.company_id, status: 'found_existing', erp_code: existingErpCode });
+            continue;
+          }
+        }
+
+        // ═══ FASE B: Validação + Envio IMP_CLIENTE_V3 ═══
 
         // 4. Buscar cidade_codigo
         const { data: cityMapping } = await supabase
@@ -240,18 +288,32 @@ Deno.serve(async (req) => {
         const mapped = mapCompanyToErp(crmCompany, context);
         const payload = buildCompanyPayload(mapped);
 
-        console.log(`[process-company-sync] Enviando cliente ${company.name} (CNPJ: ${company.cnpj})`);
+        console.log(`[process-company-sync] Fase B: Enviando ${company.name} (CNPJ: ${company.cnpj})`);
         console.log('[process-company-sync] [payload]', payload);
 
-        // 10. Enviar ao ERP
-        const response = await fetch(apiUrl!, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiToken}`,
-          },
-          body: payload,
-        });
+        // 10. Enviar ao ERP com timeout de 30s
+        const fetchController = new AbortController();
+        const fetchTimeout = setTimeout(() => fetchController.abort(), 30000);
+
+        let response: Response;
+        try {
+          response = await fetch(apiUrl!, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiToken}`,
+            },
+            body: payload,
+            signal: fetchController.signal,
+          });
+        } catch (fetchErr: any) {
+          clearTimeout(fetchTimeout);
+          if (fetchErr.name === 'AbortError') {
+            throw new Error('Timeout (30s) ao enviar cliente ao ERP');
+          }
+          throw fetchErr;
+        }
+        clearTimeout(fetchTimeout);
 
         const responseText = await response.text();
         console.log(`[process-company-sync] Resposta ERP (${response.status}): ${responseText}`);
@@ -269,68 +331,90 @@ Deno.serve(async (req) => {
         }
 
         const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
-        const retorno = retornoObj?.['#out#p_retorno'] || retornoObj?.p_retorno || '';
+        const retorno = retornoObj?.['#out#p_retorno'] ?? retornoObj?.p_retorno ?? null;
 
+        // Verificar erro explícito
         if (typeof retorno === 'string' && retorno.includes('#ERRO#')) {
           throw new Error(`ERP retornou erro: ${retorno}`);
         }
 
-        // Extrair cd_correntista do retorno
+        // Tentar extrair código do retorno direto
         let erpCode: string | null = null;
-
-        // Prioridade 1: campo direto
         erpCode = retornoObj?.cd_correntista?.toString() || null;
-
-        // Prioridade 2: outros nomes possíveis
-        if (!erpCode) {
-          erpCode = retornoObj?.codigo?.toString() || null;
-        }
-
-        // Prioridade 3: parse string
-        if (!erpCode && typeof retorno === 'string') {
+        if (!erpCode) erpCode = retornoObj?.codigo?.toString() || null;
+        if (!erpCode && typeof retorno === 'string' && retorno) {
           const match = retorno.match(/\d+/);
-          if (match) {
-            erpCode = match[0];
-          }
+          if (match) erpCode = match[0];
         }
 
-        if (!erpCode) {
-          throw new Error(`Não foi possível extrair código ERP. Retorno: ${JSON.stringify(retornoObj)}`);
+        // ═══ FASE C: Lookup pós-envio (se p_retorno = null ou sem código) ═══
+        if (!erpCode && company.cnpj) {
+          console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
+          // Pequeno delay para propagação no ERP
+          await new Promise(r => setTimeout(r, 2000));
+          erpCode = await searchClienteByCnpj(company.cnpj, apiUrl, apiToken);
         }
 
-        // 12. Sucesso - atualizar
-        await supabase
-          .from('company_sync_queue')
-          .update({
-            status: 'completed',
-            processed_at: new Date().toISOString(),
-            payload: JSON.parse(payload),
-            response: responseData,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', queueItem.id);
+        if (erpCode) {
+          // Sucesso completo
+          const syncStatus = retorno === null ? 'created_then_found' : 'completed';
 
-        await supabase
-          .from('companies')
-          .update({
-            erp_code: erpCode,
-            erp_synced_at: new Date().toISOString(),
-          })
-          .eq('id', queueItem.company_id);
+          await supabase
+            .from('company_sync_queue')
+            .update({
+              status: 'completed',
+              processed_at: new Date().toISOString(),
+              payload: JSON.parse(payload),
+              response: responseData,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
 
-        // Log
-        await supabase.from('erp_sync_logs').insert({
-          entity_type: 'company',
-          entity_id: queueItem.company_id,
-          direction: 'crm_to_erp',
-          status: 'success',
-          payload_sent: JSON.parse(payload),
-          response_received: responseData,
-          tenant_id: queueItem.tenant_id,
-        });
+          await supabase
+            .from('companies')
+            .update({ erp_code: erpCode, erp_synced_at: new Date().toISOString() })
+            .eq('id', queueItem.company_id);
 
-        successCount++;
-        results.push({ company_id: queueItem.company_id, status: 'completed', erp_code: erpCode });
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'company',
+            entity_id: queueItem.company_id,
+            direction: 'crm_to_erp',
+            status: syncStatus,
+            payload_sent: JSON.parse(payload),
+            response_received: responseData,
+            tenant_id: queueItem.tenant_id,
+          });
+
+          successCount++;
+          results.push({ company_id: queueItem.company_id, status: syncStatus, erp_code: erpCode });
+        } else {
+          // Enviou com sucesso mas ainda não encontrou código — retry automático
+          console.log('[process-company-sync] Enviado com sucesso mas erp_code não disponível ainda');
+
+          await supabase
+            .from('company_sync_queue')
+            .update({
+              status: 'pending',
+              error_message: 'Aguardando propagação no ERP — código ainda não disponível',
+              payload: JSON.parse(payload),
+              response: responseData,
+              next_retry_at: new Date(Date.now() + 120_000).toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
+
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'company',
+            entity_id: queueItem.company_id,
+            direction: 'crm_to_erp',
+            status: 'waiting_propagation',
+            payload_sent: JSON.parse(payload),
+            response_received: responseData,
+            tenant_id: queueItem.tenant_id,
+          });
+
+          results.push({ company_id: queueItem.company_id, status: 'waiting_propagation' });
+        }
 
       } catch (err: any) {
         console.error(`[process-company-sync] Erro:`, err.message);
