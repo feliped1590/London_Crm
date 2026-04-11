@@ -11,6 +11,7 @@ import { InstanceManager } from '@/components/whatsapp/InstanceManager';
 import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSettings';
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { StagingMonitor } from '@/components/integrations/StagingMonitor';
+import { IntegrationValidationPanel } from '@/components/integrations/IntegrationValidationPanel';
 import { OrderPayloadSimulator } from '@/components/integrations/OrderPayloadSimulator';
 import { ErpMappingsManager } from '@/components/settings/ErpMappingsManager';
 import { supabase } from '@/integrations/supabase/client';
@@ -285,6 +286,8 @@ export default function Integrations() {
               {isImporting ? 'Importando...' : 'Importar Produtos (CSV)'}
             </Button>
           </div>
+
+          <IntegrationValidationPanel />
 
           <StagingMonitor />
 

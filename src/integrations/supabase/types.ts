@@ -1012,6 +1012,7 @@ export type Database = {
           iniflex_synced_at: string | null
           inscricao_estadual: string | null
           inscricao_municipal: string | null
+          integration_status: string | null
           is_matriz: boolean | null
           last_reviewed_at: string | null
           legal_entity_id: string | null
@@ -1073,6 +1074,7 @@ export type Database = {
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          integration_status?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null
@@ -1136,6 +1138,7 @@ export type Database = {
           iniflex_synced_at?: string | null
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          integration_status?: string | null
           is_matriz?: boolean | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null

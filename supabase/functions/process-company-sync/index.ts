@@ -476,6 +476,12 @@ Deno.serve(async (req) => {
           })
           .eq('id', queueItem.id);
 
+        // Marcar integration_status como sync_error (trigger não cobre erros de sync)
+        await supabase
+          .from('companies')
+          .update({ integration_status: 'sync_error' })
+          .eq('id', queueItem.company_id);
+
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'company',
           entity_id: queueItem.company_id,
