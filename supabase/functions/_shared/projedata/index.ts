@@ -42,5 +42,5 @@ export type {
   CompanyValidationResult,
 } from './company-types.ts';
 
-export { mapCompanyToErp, buildCompanyPayload } from './company-mapper.ts';
+export { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj } from './company-mapper.ts';
 export { validateCompanyForSync } from './company-validator.ts';
