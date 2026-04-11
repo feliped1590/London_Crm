@@ -101,19 +101,45 @@ export async function searchClienteByCnpj(
   cnpj: string,
   apiUrl: string,
   apiToken: string,
+  supabaseAdmin?: { from: (table: string) => any },
 ): Promise<string | null> {
   const cnpjNorm = onlyNumbers(cnpj);
   if (!cnpjNorm) return null;
 
+  // ─── L2: Cache persistente (erp_clients_cache) ───
+  if (supabaseAdmin) {
+    try {
+      const { data: cached } = await supabaseAdmin
+        .from('erp_clients_cache')
+        .select('codigo_erp')
+        .eq('cnpj', cnpjNorm)
+        .maybeSingle();
+
+      if (cached?.codigo_erp) {
+        console.log(`[searchClienteByCnpj] Cache hit: ${cnpjNorm} → ${cached.codigo_erp}`);
+        // Fire-and-forget: atualizar last_seen
+        supabaseAdmin
+          .from('erp_clients_cache')
+          .update({ last_seen: new Date().toISOString() })
+          .eq('cnpj', cnpjNorm)
+          .then(() => {})
+          .catch(() => {});
+        return cached.codigo_erp;
+      }
+    } catch (cacheErr: any) {
+      console.warn(`[searchClienteByCnpj] Cache read error: ${cacheErr.message}`);
+    }
+  }
+
+  // ─── L3: Consulta ERP (EXP_CLIENTES_V2) ───
   const payload = JSON.stringify({
     tipoComando: 'ASDCOMANDOJSONTMP',
     grupoComando: 'EXP_CLIENTES_V2',
     data_alteracao: '01/01/2000 00:00:00',
   });
 
-  console.log(`[searchClienteByCnpj] Consultando ERP por CNPJ ${cnpjNorm}`);
+  console.log(`[searchClienteByCnpj] L3: Consultando ERP por CNPJ ${cnpjNorm}`);
 
-  // Timeout de 15s para não travar a Edge Function
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -144,10 +170,8 @@ export async function searchClienteByCnpj(
       return null;
     }
 
-    // O ERP retorna array de clientes (ou objeto com lista)
     const lista = Array.isArray(data) ? data : (data?.clientes || data?.lista || []);
 
-    // Early return no primeiro match — normaliza ambos os lados
     for (const cliente of lista) {
       const erpCnpj = onlyNumbers(String(cliente.cnpj_cpf ?? ''));
       if (erpCnpj === cnpjNorm) {
@@ -156,6 +180,22 @@ export async function searchClienteByCnpj(
           || cliente.codigo?.toString()
           || null;
         console.log(`[searchClienteByCnpj] Encontrado: codigo_erp=${codigo}`);
+
+        // Salvar no cache persistente (L2)
+        if (codigo && supabaseAdmin) {
+          try {
+            await supabaseAdmin
+              .from('erp_clients_cache')
+              .upsert(
+                { cnpj: cnpjNorm, codigo_erp: codigo, last_seen: new Date().toISOString() },
+                { onConflict: 'cnpj' }
+              );
+            console.log(`[searchClienteByCnpj] Cache saved: ${cnpjNorm} → ${codigo}`);
+          } catch (cacheErr: any) {
+            console.warn(`[searchClienteByCnpj] Cache write error: ${cacheErr.message}`);
+          }
+        }
+
         return codigo;
       }
     }
