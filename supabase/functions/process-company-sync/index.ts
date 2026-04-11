@@ -309,7 +309,7 @@ Deno.serve(async (req) => {
         // Recheck anti-duplicidade antes do envio (cenário de concorrência)
         if (company.cnpj) {
           await new Promise(r => setTimeout(r, 500));
-          erpLookupCache.delete(company.cnpj.replace(/\D/g, '')); // invalidar cache
+          invalidateCache(company.cnpj);
           const recheck = await searchWithCache(company.cnpj);
           if (recheck) {
             console.log(`[process-company-sync] Recheck: cliente apareceu no ERP (${recheck}), evitando duplicata`);
@@ -387,7 +387,7 @@ Deno.serve(async (req) => {
           const delays = [2000, 5000, 10000];
           for (const delay of delays) {
             await new Promise(r => setTimeout(r, delay));
-            erpLookupCache.delete(company.cnpj!.replace(/\D/g, '')); // invalidar cache
+            invalidateCache(company.cnpj);
             erpCode = await searchWithCache(company.cnpj!);
             if (erpCode) {
               console.log(`[process-company-sync] Fase C: encontrado após ${delay}ms: ${erpCode}`);
