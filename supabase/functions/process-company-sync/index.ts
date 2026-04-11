@@ -136,6 +136,16 @@ Deno.serve(async (req) => {
     let errorCount = 0;
     const results: Array<{ company_id: string; status: string; error?: string; erp_code?: string }> = [];
 
+    // Cache em memória para evitar chamadas duplicadas ao EXP_CLIENTES_V2 na mesma execução
+    const erpLookupCache = new Map<string, string | null>();
+    async function searchWithCache(cnpj: string): Promise<string | null> {
+      const norm = cnpj.replace(/\D/g, '');
+      if (erpLookupCache.has(norm)) return erpLookupCache.get(norm)!;
+      const result = await searchClienteByCnpj(cnpj, apiUrl!, apiToken!);
+      erpLookupCache.set(norm, result);
+      return result;
+    }
+
     for (const queueItem of queue) {
       try {
         // 2. Marcar como processing (lock de concorrência)
@@ -171,7 +181,7 @@ Deno.serve(async (req) => {
         // ═══ FASE A: Consulta pré-envio (EXP_CLIENTES_V2) ═══
         if (company.cnpj) {
           console.log(`[process-company-sync] Fase A: Buscando ${company.name} no ERP por CNPJ`);
-          const existingErpCode = await searchClienteByCnpj(company.cnpj, apiUrl, apiToken);
+          const existingErpCode = await searchWithCache(company.cnpj);
 
           if (existingErpCode) {
             console.log(`[process-company-sync] Cliente já existe no ERP: ${existingErpCode}`);
@@ -288,6 +298,22 @@ Deno.serve(async (req) => {
         const mapped = mapCompanyToErp(crmCompany, context);
         const payload = buildCompanyPayload(mapped);
 
+        // Recheck anti-duplicidade antes do envio (cenário de concorrência)
+        if (company.cnpj) {
+          await new Promise(r => setTimeout(r, 500));
+          erpLookupCache.delete(company.cnpj.replace(/\D/g, '')); // invalidar cache
+          const recheck = await searchWithCache(company.cnpj);
+          if (recheck) {
+            console.log(`[process-company-sync] Recheck: cliente apareceu no ERP (${recheck}), evitando duplicata`);
+            await supabase.from('companies').update({ erp_code: recheck, erp_synced_at: new Date().toISOString() }).eq('id', queueItem.company_id);
+            await supabase.from('company_sync_queue').update({ status: 'completed', processed_at: new Date().toISOString(), response: { found_existing: true, erp_code: recheck, via: 'recheck' }, updated_at: new Date().toISOString() }).eq('id', queueItem.id);
+            await supabase.from('erp_sync_logs').insert({ entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'found_existing', response_received: { erp_code: recheck, via: 'recheck' }, tenant_id: queueItem.tenant_id });
+            successCount++;
+            results.push({ company_id: queueItem.company_id, status: 'found_existing', erp_code: recheck });
+            continue;
+          }
+        }
+
         console.log(`[process-company-sync] Fase B: Enviando ${company.name} (CNPJ: ${company.cnpj})`);
         console.log('[process-company-sync] [payload]', payload);
 
@@ -347,12 +373,19 @@ Deno.serve(async (req) => {
           if (match) erpCode = match[0];
         }
 
-        // ═══ FASE C: Lookup pós-envio (se p_retorno = null ou sem código) ═══
+        // ═══ FASE C: Lookup pós-envio com retry progressivo ═══
         if (!erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
-          // Pequeno delay para propagação no ERP
-          await new Promise(r => setTimeout(r, 2000));
-          erpCode = await searchClienteByCnpj(company.cnpj, apiUrl, apiToken);
+          const delays = [2000, 5000, 10000];
+          for (const delay of delays) {
+            await new Promise(r => setTimeout(r, delay));
+            erpLookupCache.delete(company.cnpj!.replace(/\D/g, '')); // invalidar cache
+            erpCode = await searchWithCache(company.cnpj!);
+            if (erpCode) {
+              console.log(`[process-company-sync] Fase C: encontrado após ${delay}ms: ${erpCode}`);
+              break;
+            }
+          }
         }
 
         if (erpCode) {
