@@ -3218,6 +3218,27 @@ export type Database = {
           },
         ]
       }
+      erp_clients_cache: {
+        Row: {
+          cnpj: string
+          codigo_erp: string
+          created_at: string | null
+          last_seen: string | null
+        }
+        Insert: {
+          cnpj: string
+          codigo_erp: string
+          created_at?: string | null
+          last_seen?: string | null
+        }
+        Update: {
+          cnpj?: string
+          codigo_erp?: string
+          created_at?: string | null
+          last_seen?: string | null
+        }
+        Relationships: []
+      }
       erp_products_staging: {
         Row: {
           codigo_tipo_item: number | null
