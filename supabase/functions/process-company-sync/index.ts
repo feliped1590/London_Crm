@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
       const norm = normalizeCnpj(cnpj);
       if (erpLookupCache.has(norm)) return erpLookupCache.get(norm)!;
       const start = Date.now();
-      const result = await searchClienteByCnpj(cnpj, apiUrl!, apiToken!);
+      const result = await searchClienteByCnpj(cnpj, apiUrl!, apiToken!, supabase);
       console.log(`[ERP lookup] ${Date.now() - start}ms | CNPJ ${norm} | ${result ? 'encontrado' : 'não encontrado'}`);
       if (result) erpLookupCache.set(norm, result);
       return result;
