@@ -136,14 +136,22 @@ Deno.serve(async (req) => {
     let errorCount = 0;
     const results: Array<{ company_id: string; status: string; error?: string; erp_code?: string }> = [];
 
-    // Cache em memória para evitar chamadas duplicadas ao EXP_CLIENTES_V2 na mesma execução
-    const erpLookupCache = new Map<string, string | null>();
+    // Normalização centralizada de CNPJ
+    const normalizeCnpj = (v: string) => v.replace(/\D/g, '');
+
+    // Cache em memória — só cacheia resultados positivos (não bloqueia retries)
+    const erpLookupCache = new Map<string, string>();
     async function searchWithCache(cnpj: string): Promise<string | null> {
-      const norm = cnpj.replace(/\D/g, '');
+      const norm = normalizeCnpj(cnpj);
       if (erpLookupCache.has(norm)) return erpLookupCache.get(norm)!;
+      const start = Date.now();
       const result = await searchClienteByCnpj(cnpj, apiUrl!, apiToken!);
-      erpLookupCache.set(norm, result);
+      console.log(`[ERP lookup] ${Date.now() - start}ms | CNPJ ${norm} | ${result ? 'encontrado' : 'não encontrado'}`);
+      if (result) erpLookupCache.set(norm, result);
       return result;
+    }
+    function invalidateCache(cnpj: string | null | undefined) {
+      if (cnpj) erpLookupCache.delete(normalizeCnpj(cnpj));
     }
 
     for (const queueItem of queue) {
