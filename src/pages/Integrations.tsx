@@ -287,6 +287,8 @@ export default function Integrations() {
             </Button>
           </div>
 
+          <IntegrationValidationPanel />
+
           <StagingMonitor />
 
           {isDeveloper && <OrderPayloadSimulator />}
