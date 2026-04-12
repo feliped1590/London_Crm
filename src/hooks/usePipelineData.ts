@@ -556,7 +556,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
       console.error('Error checking checklist items:', error);
       updateMutation.mutate({ id: dealId, stage: targetStage });
     }
-  }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation]);
+  }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles]);
 
   return {
     user, isAdmin,
