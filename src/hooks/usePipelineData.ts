@@ -485,6 +485,19 @@ export function usePipelineData(selectedPipelineId: string | null) {
     if (!deal) return;
     if (deal.stage === targetStage) return;
 
+    // ── Stage permission check ──────────────────────────────────────
+    if (!isAdmin) {
+      const targetStageData = pipelineStagesData?.find(s => s.stage === targetStage);
+      const allowedRoles = targetStageData?.allowed_roles;
+      if (allowedRoles && allowedRoles.length > 0) {
+        const hasPermission = userRoles?.some(role => allowedRoles.includes(role));
+        if (!hasPermission) {
+          toast.error('Você não tem permissão para mover para esta etapa');
+          return;
+        }
+      }
+    }
+
     const firstStage = stages[0];
     if (deal.stage === firstStage) {
       if (!deal.company_id && !deal.contact_id) {
