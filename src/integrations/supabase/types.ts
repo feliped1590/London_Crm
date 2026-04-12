@@ -1660,14 +1660,14 @@ export type Database = {
           {
             foreignKeyName: "company_sync_queue_company_id_fkey"
             columns: ["company_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "company_sync_queue_company_id_fkey"
             columns: ["company_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "company_activity_summary"
             referencedColumns: ["company_id"]
           },
