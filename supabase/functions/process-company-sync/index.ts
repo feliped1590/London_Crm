@@ -5,7 +5,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj } from '../_shared/projedata/company-mapper.ts';
+import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj, getSegmentoBySetor } from '../_shared/projedata/company-mapper.ts';
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
@@ -343,6 +343,9 @@ Deno.serve(async (req) => {
           bancoPadraoErp = erpFinancial.banco_padrao_erp;
         }
 
+        // Resolver segmento_mercado pelo setor
+        const segmentoMercado = getSegmentoBySetor(((company as any).setores as any)?.nome);
+
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
@@ -350,6 +353,7 @@ Deno.serve(async (req) => {
           usuario_erp: usuarioErp || 1,
           destino_mercadoria: destinoMercadoria,
           banco_padrao: bancoPadraoErp,
+          segmento: segmentoMercado,
         };
 
         // Inferir tipo_pessoa: CNPJ com 14 dígitos = PJ, 11 dígitos = PF, default = PJ
