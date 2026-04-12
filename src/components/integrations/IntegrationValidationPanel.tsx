@@ -309,7 +309,7 @@ export function IntegrationValidationPanel() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => status === 'not_synced' && handleSync(item.id)}
+                                  onClick={() => (status === 'not_synced' || status === 'sync_error') && handleSync(item.id)}
                                   disabled={isSyncing || status === 'missing_data'}
                                   className={status === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
