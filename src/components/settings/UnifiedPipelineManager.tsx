@@ -669,6 +669,34 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label>Perfis que podem mover para esta etapa</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum selecionado = todos podem mover. Admin sempre tem acesso.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {ROLE_OPTIONS.filter(r => r.value !== 'admin').map((role) => (
+                        <label
+                          key={role.value}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={stageFormData.allowed_roles.includes(role.value)}
+                            onCheckedChange={(checked) => {
+                              setStageFormData(prev => ({
+                                ...prev,
+                                allowed_roles: checked
+                                  ? [...prev.allowed_roles, role.value]
+                                  : prev.allowed_roles.filter(r => r !== role.value),
+                              }));
+                            }}
+                          />
+                          {role.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={resetStageForm}>
                       Cancelar
