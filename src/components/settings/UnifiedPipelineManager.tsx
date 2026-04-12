@@ -282,6 +282,7 @@ export function UnifiedPipelineManager() {
         id: editingStage.id, 
         ...stageFormData,
         pipeline_id: stageFormData.pipeline_id || null,
+        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
       });
     } else {
       createStageMutation.mutate(stageFormData);
