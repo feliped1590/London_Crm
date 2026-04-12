@@ -285,7 +285,10 @@ export function UnifiedPipelineManager() {
         allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
       });
     } else {
-      createStageMutation.mutate(stageFormData);
+      createStageMutation.mutate({
+        ...stageFormData,
+        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+      });
     }
   };
 
@@ -720,6 +723,7 @@ export function UnifiedPipelineManager() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Funil Vinculado</TableHead>
                     <TableHead>Probabilidade</TableHead>
+                    <TableHead>Permissões</TableHead>
                     <TableHead>SLA</TableHead>
                     <TableHead className="w-[100px]">Ações</TableHead>
                   </TableRow>
