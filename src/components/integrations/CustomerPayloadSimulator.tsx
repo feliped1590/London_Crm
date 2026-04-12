@@ -68,8 +68,9 @@ export function CustomerPayloadSimulator() {
         .select(`
           id, name, fantasia, cnpj, tipo_pessoa, email, phone,
           address, address_number, address_complement, neighborhood, city, state, zip_code,
-          inscricao_estadual, sales_rep_id, created_by, legal_entity_id,
-          legal_entities(id, name, erp_company_code)
+          inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id,
+          legal_entities(id, name, erp_company_code),
+          setores(id, nome)
         `)
         .eq('id', selectedCompanyId)
         .single();
@@ -254,7 +255,20 @@ export function CustomerPayloadSimulator() {
         status: cepNum ? 'ok' : 'warning',
       });
 
-      // 10. Build the IMP_CLIENTE_V3 payload
+      // 10. Resolver destino_mercadoria pelo setor
+      const setorData = (company as any).setores as any;
+      const setorNome = setorData?.nome?.toUpperCase?.() || '';
+      const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
+      resolvedSteps.push({
+        label: 'Destino Mercadoria',
+        field: 'destino_mercadoria',
+        crmValue: setorData?.nome || 'Não definido',
+        erpValue: destinoMercadoria,
+        status: 'ok',
+        message: !setorData?.nome ? 'Padrão: C (Consumo)' : `Setor: ${setorData.nome} → ${destinoMercadoria === 'I' ? 'Industrialização' : 'Consumo'}`,
+      });
+
+      // 11. Build the IMP_CLIENTE_V3 payload
       const innerJson = {
         cnpj_cpf: cnpjDigits ? Number(cnpjDigits) : null,
         pfpj,
@@ -268,7 +282,7 @@ export function CustomerPayloadSimulator() {
         rg: '',
         tributacao_ir: '',
         regiao: '',
-        destino_mercadoria: 'N',
+        destino_mercadoria: destinoMercadoria,
         usuario: usuarioErp || 1,
         banco_padrao: 0,
         segmento_mercado: 0,
