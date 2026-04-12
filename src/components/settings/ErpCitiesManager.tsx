@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -19,12 +20,37 @@ interface ErpCity {
 
 export function ErpCitiesManager() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCity, setEditingCity] = useState<ErpCity | null>(null);
   const [nome, setNome] = useState('');
   const [uf, setUf] = useState('');
   const [codigoErp, setCodigoErp] = useState('');
   const [search, setSearch] = useState('');
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolveTenant = async () => {
+      if (!user?.id) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('id', user.id)
+        .single();
+      let tid = profile?.active_tenant_id;
+      if (!tid) {
+        const { data: ut } = await (supabase as any)
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        tid = ut?.tenant_id;
+      }
+      setTenantId(tid || null);
+    };
+    resolveTenant();
+  }, [user?.id]);
 
   const { data: cities = [], isLoading } = useQuery({
     queryKey: ['erp-cities'],
@@ -48,9 +74,10 @@ export function ErpCitiesManager() {
           .eq('id', city.id);
         if (error) throw error;
       } else {
+        if (!tenantId) throw new Error('Tenant não encontrado. Recarregue a página.');
         const { error } = await (supabase as any)
           .from('erp_cities')
-          .insert({ nome: city.nome, uf: city.uf, codigo_erp: city.codigo_erp });
+          .insert({ nome: city.nome, uf: city.uf, codigo_erp: city.codigo_erp, tenant_id: tenantId });
         if (error) throw error;
       }
     },
