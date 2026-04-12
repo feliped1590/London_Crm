@@ -391,28 +391,48 @@ export function IntegrationValidationPanel() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {(baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => (baseStatus === 'not_synced' || baseStatus === 'sync_error') && handleSync(item.id)}
-                                  disabled={isSyncing || baseStatus === 'missing_data'}
-                                  className={baseStatus === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
-                                >
-                                  {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {baseStatus === 'missing_data'
-                                  ? `Complete os dados antes de enviar (falta: ${missing.join(', ')})`
-                                  : baseStatus === 'sync_error' ? 'Retentar envio ao ERP' : 'Enviar ao ERP'}
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
+                        <div className="flex items-center gap-1">
+                          {(baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => (baseStatus === 'not_synced' || baseStatus === 'sync_error') && handleSync(item.id)}
+                                    disabled={isSyncing || baseStatus === 'missing_data'}
+                                    className={baseStatus === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
+                                  >
+                                    {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {baseStatus === 'missing_data'
+                                    ? `Complete os dados antes de enviar (falta: ${missing.join(', ')})`
+                                    : baseStatus === 'sync_error' ? 'Retentar envio ao ERP' : 'Enviar ao ERP'}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          {item._queue && (baseStatus === 'sync_error' || effectiveStatus === 'waiting_propagation' || effectiveStatus === 'pending_retry') && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleClearQueue(item.id)}
+                                    disabled={clearingIds.has(item.id)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    {clearingIds.has(item.id) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Limpar fila e permitir reenvio</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
