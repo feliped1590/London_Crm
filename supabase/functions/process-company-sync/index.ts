@@ -93,12 +93,19 @@ Deno.serve(async (req) => {
       } else {
         await supabase
           .from('company_sync_queue')
-          .insert({
+          .upsert({
             company_id: targetCompanyId,
             tenant_id: companyInfo.tenant_id,
             status: 'pending',
-          });
+          }, { onConflict: 'company_id' });
       }
+
+      // Clear stale sync_error status on manual retry
+      await supabase
+        .from('companies')
+        .update({ integration_status: 'not_synced' })
+        .eq('id', targetCompanyId)
+        .eq('integration_status', 'sync_error');
     }
 
     // 1. Buscar itens pendentes da fila
