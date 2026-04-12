@@ -20,8 +20,8 @@ const defaultStageLabels: Record<string, string> = {
 interface ChecklistValidationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  deal: { id: string; name: string; stage: DealStage } | null;
-  targetStage: DealStage;
+  deal: { id: string; name: string; stage: string } | null;
+  targetStage: string;
   pendingItems: ChecklistItem[];
   onConfirm: () => void;
 }
@@ -92,8 +92,8 @@ export function ChecklistValidationModal({
           <DialogDescription className="space-y-2">
             <span>
               Para mover <strong>{deal?.name}</strong> de{' '}
-              <Badge variant="secondary">{stageLabels[deal?.stage || 'prospeccao']}</Badge>{' '}
-              para <Badge variant="secondary">{stageLabels[targetStage]}</Badge>,{' '}
+              <Badge variant="secondary">{defaultStageLabels[deal?.stage || 'prospeccao'] || deal?.stage}</Badge>{' '}
+              para <Badge variant="secondary">{defaultStageLabels[targetStage] || targetStage}</Badge>,{' '}
               complete os itens obrigatórios:
             </span>
           </DialogDescription>

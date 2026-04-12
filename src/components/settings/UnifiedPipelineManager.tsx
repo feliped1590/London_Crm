@@ -592,7 +592,7 @@ export function UnifiedPipelineManager() {
                     <Label htmlFor="stage-type">Tipo de Etapa *</Label>
                     <Select
                       value={stageFormData.stage}
-                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v as DealStage })}
+                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v })}
                     >
                       <SelectTrigger>
                         <SelectValue />
