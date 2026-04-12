@@ -213,10 +213,10 @@ export function IntegrationValidationPanel() {
     }
   };
 
-  const [clearingQueue, setClearingQueue] = useState(false);
+  const [clearingIds, setClearingIds] = useState<Set<string>>(new Set());
 
   const handleClearQueue = async (companyId: string) => {
-    setClearingQueue(true);
+    setClearingIds(prev => new Set(prev).add(companyId));
     try {
       await (supabase as any)
         .from('company_sync_queue')
@@ -234,7 +234,7 @@ export function IntegrationValidationPanel() {
     } catch (err: any) {
       toast.error('Erro ao limpar fila: ' + (err.message || 'erro desconhecido'));
     } finally {
-      setClearingQueue(false);
+      setClearingIds(prev => { const n = new Set(prev); n.delete(companyId); return n; });
     }
   };
 
