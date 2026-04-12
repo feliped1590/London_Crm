@@ -55,6 +55,21 @@ export function usePipelineData(selectedPipelineId: string | null) {
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
   const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
 
+  // ── User roles (for stage permission check) ───────────────────────
+  const { data: userRoles } = useQuery({
+    queryKey: ['user_roles_list', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return (data || []).map(r => r.role);
+    },
+    enabled: !!user?.id,
+  });
+
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
 
   // ── Pipeline Stages ───────────────────────────────────────────────
