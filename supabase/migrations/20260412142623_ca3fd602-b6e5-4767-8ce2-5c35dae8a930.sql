@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_companies_name_cnpj_search ON companies USING btree (name, cnpj);
