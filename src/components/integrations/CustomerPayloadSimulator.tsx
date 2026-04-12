@@ -324,6 +324,9 @@ export function CustomerPayloadSimulator() {
               value={selectedCompanyId}
               onChange={(val) => setSelectedCompanyId(val || '')}
               placeholder="Selecione um cliente..."
+              searchPlaceholder="Buscar por nome, fantasia ou CNPJ..."
+              onSearchChange={setCompanySearch}
+              emptyMessage={companySearch.trim().length < 2 ? 'Digite pelo menos 2 caracteres...' : 'Nenhum cliente encontrado.'}
             />
           </div>
           <Button onClick={handleSimulate} disabled={!selectedCompanyId || isSimulating} className="gap-2">
