@@ -214,6 +214,18 @@ export function CustomerOverviewTab({
               <Input id="address" value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
+              <Label htmlFor="address_number">Número</Label>
+              <Input id="address_number" value={companyForm.address_number || ''} onChange={(e) => setCompanyForm({ ...companyForm, address_number: e.target.value })} disabled={!isEditing || isErpCustomer} />
+            </div>
+            <div>
+              <Label htmlFor="neighborhood">Bairro</Label>
+              <Input id="neighborhood" value={companyForm.neighborhood || ''} onChange={(e) => setCompanyForm({ ...companyForm, neighborhood: e.target.value })} disabled={!isEditing || isErpCustomer} />
+            </div>
+            <div>
+              <Label htmlFor="zip_code">CEP</Label>
+              <Input id="zip_code" value={companyForm.zip_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, zip_code: e.target.value })} disabled={!isEditing || isErpCustomer} placeholder="00000-000" maxLength={9} />
+            </div>
+            <div>
               <Label htmlFor="city">Cidade</Label>
               <Input id="city" value={companyForm.city} onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
