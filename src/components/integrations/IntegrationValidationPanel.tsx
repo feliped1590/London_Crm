@@ -174,7 +174,7 @@ export function IntegrationValidationPanel() {
         .maybeSingle();
 
       setErrorDetail({
-        open: true, companyName, loading: false,
+        open: true, companyId: companyId, companyName, loading: false,
         queueStatus: data?.status || null,
         errorMessage: data?.error_message || null,
         attempts: data?.attempts || 0,
