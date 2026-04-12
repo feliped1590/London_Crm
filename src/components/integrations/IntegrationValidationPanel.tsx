@@ -62,6 +62,7 @@ const PAGE_SIZE = 20;
 
 interface ErrorDetailState {
   open: boolean;
+  companyId: string | null;
   companyName: string;
   loading: boolean;
   queueStatus: string | null;
