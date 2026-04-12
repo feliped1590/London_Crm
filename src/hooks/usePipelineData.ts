@@ -68,6 +68,8 @@ export function usePipelineData(selectedPipelineId: string | null) {
       return (data || []).map(r => r.role);
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
@@ -490,7 +492,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
     if (!deal) return;
     if (deal.stage === targetStage) return;
 
-    // ── Stage permission check ──────────────────────────────────────
+    // ── Stage permission check (frontend + backend double-check) ──
     if (!isAdmin) {
       const targetStageData = pipelineStagesData?.find(s => s.stage === targetStage);
       const allowedRoles = targetStageData?.allowed_roles;
@@ -500,6 +502,24 @@ export function usePipelineData(selectedPipelineId: string | null) {
           toast.error('Você não tem permissão para mover para esta etapa');
           return;
         }
+      }
+    }
+
+    // Backend validation (defense-in-depth)
+    const effectivePipelineIdForValidation = deal.pipeline_id || defaultPipeline?.id;
+    if (effectivePipelineIdForValidation) {
+      try {
+        const { data: permResult } = await supabase.rpc('validate_stage_permission', {
+          p_deal_id: deal.id,
+          p_target_stage: targetStage,
+          p_pipeline_id: effectivePipelineIdForValidation,
+        });
+        if (permResult && !(permResult as any).allowed) {
+          toast.error('Você não tem permissão para mover para esta etapa');
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend permission check failed (non-blocking):', err);
       }
     }
 

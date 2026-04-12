@@ -5,12 +5,18 @@ import type { Deal, DealStage, StageConfigEntry } from '@/hooks/usePipelineData'
 
 const CARDS_PER_PAGE = 5;
 
+interface StagePermissionInfo {
+  stage: string;
+  allowed: boolean;
+}
+
 interface KanbanBoardProps {
   stages: DealStage[];
   stageConfig: Record<string, StageConfigEntry>;
   filteredDeals: Deal[];
   isMobile: boolean;
   isSalesPipeline?: boolean;
+  stagePermissions?: StagePermissionInfo[];
   onDragStart: (e: React.DragEvent, dealId: string) => void;
   onDrop: (e: React.DragEvent, stage: DealStage) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -26,6 +32,7 @@ export function KanbanBoard({
   filteredDeals,
   isMobile,
   isSalesPipeline = true,
+  stagePermissions,
   onDragStart,
   onDrop,
   onDragOver,
