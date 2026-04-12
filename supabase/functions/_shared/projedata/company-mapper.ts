@@ -34,6 +34,7 @@ export interface CRMCompanyForSync {
   address_number?: string | null;
   neighborhood?: string | null;
   zip_code?: string | null;
+  state?: string | null;
 }
 
 function onlyNumbers(v: string | null | undefined): string {
@@ -43,6 +44,9 @@ function onlyNumbers(v: string | null | undefined): string {
 export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySyncContext): ErpCompanyPayload {
   const cnpjNum = Number(onlyNumbers(company.cnpj));
   const cepNum = Number(onlyNumbers(company.zip_code)) || 0;
+
+  // Resolver região: contexto explícito > inferência por UF
+  const regiaoFinal = context.regiao || getRegiaoByUF(company.state);
 
   return {
     cnpj_cpf: cnpjNum,
