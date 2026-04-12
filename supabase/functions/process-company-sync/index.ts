@@ -258,19 +258,49 @@ Deno.serve(async (req) => {
           vendedorCodigo = Number(salesRep?.erp_vendor_code) || 0;
         }
 
-        // 6. Resolver usuário ERP (obrigatório)
+        // 6. Resolver usuário ERP via vendedor vinculado (sales_rep → user_sales_reps → profiles)
         let usuarioErp = 0;
-        if (company.created_by) {
+        let usuarioErpName = '';
+        if (company.sales_rep_id) {
+          const { data: repLink } = await supabase
+            .from('user_sales_reps')
+            .select('user_id')
+            .eq('sales_rep_id', company.sales_rep_id)
+            .order('is_default', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (repLink?.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('erp_user_code, full_name')
+              .eq('user_id', repLink.user_id)
+              .maybeSingle();
+
+            if (profile) {
+              usuarioErpName = profile.full_name || '';
+              if (!profile.erp_user_code) {
+                throw new Error(`Usuário "${profile.full_name}" (vinculado ao vendedor) não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
+              }
+              usuarioErp = Number(profile.erp_user_code) || 0;
+            }
+          }
+        }
+        // Fallback: created_by se não houver vendedor vinculado
+        if (!usuarioErp && company.created_by) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('erp_user_code, full_name')
             .eq('user_id', company.created_by)
             .maybeSingle();
           
-          if (profile && !profile.erp_user_code) {
-            throw new Error(`Usuário "${profile.full_name}" não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
+          if (profile) {
+            usuarioErpName = profile.full_name || '';
+            if (!profile.erp_user_code) {
+              throw new Error(`Usuário "${profile.full_name}" não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
+            }
+            usuarioErp = Number(profile.erp_user_code) || 0;
           }
-          usuarioErp = Number(profile?.erp_user_code) || 0;
         }
 
         // 7. Resolver empresa emissora
