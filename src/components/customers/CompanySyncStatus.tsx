@@ -89,6 +89,8 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
   let displayStatus: string;
   if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
+  } else if (queueEntry?.status === 'waiting_propagation') {
+    displayStatus = 'waiting_propagation';
   } else if (erpCode) {
     displayStatus = 'completed';
   } else if (queueEntry) {
