@@ -323,7 +323,7 @@ export function IntegrationValidationPanel() {
                               <TooltipContent>
                                 {status === 'missing_data'
                                   ? `Complete os dados antes de enviar (falta: ${missing.join(', ')})`
-                                  : 'Enviar ao ERP'}
+                                  : status === 'sync_error' ? 'Retentar envio ao ERP' : 'Enviar ao ERP'}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
