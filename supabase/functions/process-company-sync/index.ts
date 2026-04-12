@@ -54,53 +54,50 @@ Deno.serve(async (req) => {
       targetCompanyId = body?.company_id || null;
     } catch { /* no body = batch mode */ }
 
-    // If specific company_id provided, ensure it's in the queue
+    // If specific company_id provided, force it back into the queue for immediate processing
     if (targetCompanyId) {
-      const { data: existing } = await supabase
+      const { data: companyInfo } = await supabase
+        .from('companies')
+        .select('id, tenant_id')
+        .eq('id', targetCompanyId)
+        .single();
+
+      if (!companyInfo) {
+        return errorResponse(404, 'Empresa não encontrada');
+      }
+
+      const { data: existingEntry } = await supabase
         .from('company_sync_queue')
         .select('id, status')
         .eq('company_id', targetCompanyId)
-        .in('status', ['pending', 'processing'])
         .maybeSingle();
 
-      if (!existing) {
-        const { data: companyInfo } = await supabase
-          .from('companies')
-          .select('id, tenant_id')
-          .eq('id', targetCompanyId)
-          .single();
+      if (existingEntry?.status === 'processing') {
+        return jsonResponse({ success: true, processed: 0, message: 'Cliente já está sendo processado na fila' });
+      }
 
-        if (!companyInfo) {
-          return errorResponse(404, 'Empresa não encontrada');
-        }
-
-        const { data: existingEntry } = await supabase
+      if (existingEntry) {
+        await supabase
           .from('company_sync_queue')
-          .select('id')
-          .eq('company_id', targetCompanyId)
-          .maybeSingle();
-
-        if (existingEntry) {
-          await supabase
-            .from('company_sync_queue')
-            .update({
-              status: 'pending',
-              attempts: 0,
-              error_message: null,
-              next_retry_at: null,
-              processed_at: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingEntry.id);
-        } else {
-          await supabase
-            .from('company_sync_queue')
-            .insert({
-              company_id: targetCompanyId,
-              tenant_id: companyInfo.tenant_id,
-              status: 'pending',
-            });
-        }
+          .update({
+            status: 'pending',
+            attempts: 0,
+            error_message: null,
+            next_retry_at: null,
+            processed_at: null,
+            payload: null,
+            response: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingEntry.id);
+      } else {
+        await supabase
+          .from('company_sync_queue')
+          .insert({
+            company_id: targetCompanyId,
+            tenant_id: companyInfo.tenant_id,
+            status: 'pending',
+          });
       }
     }
 
