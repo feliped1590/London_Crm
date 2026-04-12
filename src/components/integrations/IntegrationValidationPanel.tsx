@@ -120,6 +120,31 @@ export function IntegrationValidationPanel() {
   const totalPages = Math.ceil((listData?.total || 0) / PAGE_SIZE);
 
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [errorDetail, setErrorDetail] = useState<{ open: boolean; companyName: string; error: string | null; loading: boolean }>({
+    open: false, companyName: '', error: null, loading: false,
+  });
+
+  const handleViewError = async (companyId: string, companyName: string) => {
+    setErrorDetail({ open: true, companyName, error: null, loading: true });
+    try {
+      const { data } = await (supabase as any)
+        .from('company_sync_queue')
+        .select('error_message, attempts, processed_at, created_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setErrorDetail({
+        open: true,
+        companyName,
+        error: data?.error_message || 'Erro desconhecido (sem mensagem registrada)',
+        loading: false,
+      });
+    } catch {
+      setErrorDetail({ open: true, companyName, error: 'Falha ao buscar detalhes do erro', loading: false });
+    }
+  };
 
   const handleSync = async (companyId: string) => {
     setSyncingIds(prev => new Set(prev).add(companyId));
