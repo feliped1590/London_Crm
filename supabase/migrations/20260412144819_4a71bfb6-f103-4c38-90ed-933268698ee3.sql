@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_sales_reps_erp_vendor_code ON sales_reps(erp_vendor_code);
