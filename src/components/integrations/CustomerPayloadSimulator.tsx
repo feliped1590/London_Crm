@@ -68,9 +68,10 @@ export function CustomerPayloadSimulator() {
         .select(`
           id, name, fantasia, cnpj, tipo_pessoa, email, phone,
           address, address_number, address_complement, neighborhood, city, state, zip_code,
-          inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id,
+          inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id, segmento_id,
           legal_entities(id, name, erp_company_code),
-          setores(id, nome)
+          setores(id, nome),
+          segmentos(id, nome, erp_code)
         `)
         .eq('id', selectedCompanyId)
         .single();
@@ -288,6 +289,20 @@ export function CustomerPayloadSimulator() {
         message: `Setor: ${setorData?.nome || 'N/A'} → Código ${segmentoMercado}`,
       });
 
+      // 10c. Resolver subsegmento_mercado pelo segmento do CRM (segmentos.erp_code)
+      const segmentoData = (company as any).segmentos as any;
+      const subsegmentoMercado = segmentoData?.erp_code ?? 0;
+      resolvedSteps.push({
+        label: 'Subsegmento Mercado',
+        field: 'subsegmento_mercado',
+        crmValue: segmentoData?.nome || 'Não definido',
+        erpValue: subsegmentoMercado || null,
+        status: subsegmentoMercado ? 'ok' : 'warning',
+        message: subsegmentoMercado
+          ? `Segmento CRM: ${segmentoData?.nome} → Código ERP ${subsegmentoMercado}`
+          : 'Segmento sem código ERP definido (erp_code). Configure na tabela de Segmentos.',
+      });
+
       // 11. Build the IMP_CLIENTE_V3 payload
       const innerJson = {
         cnpj_cpf: cnpjDigits ? Number(cnpjDigits) : null,
@@ -306,7 +321,7 @@ export function CustomerPayloadSimulator() {
         usuario: usuarioErp || 1,
         banco_padrao: 999,
         segmento_mercado: segmentoMercado,
-        subsegmento_mercado: 0,
+        subsegmento_mercado: subsegmentoMercado,
         enderecos: [{
           cidade: cidadeCodigo,
           tipo_endereco: 'P',
