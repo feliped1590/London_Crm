@@ -539,10 +539,10 @@ export function IntegrationValidationPanel() {
                     variant="destructive"
                     size="sm"
                     className="gap-2"
-                    disabled={clearingQueue}
+                    disabled={!!(errorDetail.companyId && clearingIds.has(errorDetail.companyId))}
                     onClick={() => errorDetail.companyId && handleClearQueue(errorDetail.companyId)}
                   >
-                    {clearingQueue ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    {errorDetail.companyId && clearingIds.has(errorDetail.companyId) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     Limpar Fila e Permitir Reenvio
                   </Button>
                 </div>
