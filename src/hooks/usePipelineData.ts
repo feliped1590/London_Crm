@@ -71,6 +71,8 @@ export function usePipelineData(selectedPipelineId: string | null) {
   });
 
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
+  const currentPipeline = pipelines?.find(p => p.id === currentPipelineId);
+  const isSalesPipeline = currentPipeline?.type === 'sales' || !currentPipeline;
 
   // ── Pipeline Stages ───────────────────────────────────────────────
   const { data: pipelineStagesData } = useQuery({
@@ -279,7 +281,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
       const stageChanged = currentDeal && data.stage && currentDeal.stage !== data.stage;
 
       const updateData: any = { ...data };
-      if (data.stage === 'fechado_ganho' || data.stage === 'fechado_perdido') {
+      // Only set closed_at for sales pipelines
+      const dealPipeline = pipelines?.find(p => p.id === (currentDeal?.pipeline_id || currentPipelineId));
+      const isDealSales = dealPipeline?.type === 'sales' || !dealPipeline;
+      if (isDealSales && (data.stage === 'fechado_ganho' || data.stage === 'fechado_perdido')) {
         updateData.closed_at = new Date().toISOString();
       }
       const { error } = await supabase.from('deals').update(updateData).eq('id', id);
@@ -514,7 +519,8 @@ export function usePipelineData(selectedPipelineId: string | null) {
       }
     }
 
-    if (targetStage === 'fechado_perdido') {
+    // Only require lost_reason for sales pipelines
+    if (isSalesPipeline && targetStage === 'fechado_perdido') {
       callbacks.setPendingLossDeal({ id: dealId, name: deal.name });
       callbacks.setLossReasonModalOpen(true);
       return;
@@ -556,10 +562,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
       console.error('Error checking checklist items:', error);
       updateMutation.mutate({ id: dealId, stage: targetStage });
     }
-  }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles]);
+  }, [deals, stages, isAdmin, isSalesPipeline, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles, pipelines, currentPipelineId]);
 
   return {
-    user, isAdmin,
+    user, isAdmin, isSalesPipeline,
     pipelines, defaultPipeline, currentPipelineId,
     stages, stageConfig,
     deals, isLoading, isFetching, handleRefresh,

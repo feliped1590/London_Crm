@@ -16,6 +16,7 @@ interface KanbanColumnProps {
   pagedDeals: Deal[];
   stageTotal: number;
   isMobile: boolean;
+  isSalesPipeline?: boolean;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -33,6 +34,7 @@ export function KanbanColumn({
   pagedDeals,
   stageTotal,
   isMobile,
+  isSalesPipeline = true,
   page,
   totalPages,
   onPageChange,
@@ -108,9 +110,11 @@ export function KanbanColumn({
                     </div>
                     <div className="mt-2 flex items-center gap-1 flex-wrap">
                       <DaysInStageBadge stageEnteredAt={deal.updated_at} />
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {deal.probability}% prob.
-                      </Badge>
+                      {isSalesPipeline && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          {deal.probability}% prob.
+                        </Badge>
+                      )}
                       {(deal as any).contacts?.email && (
                         <Button
                           variant="ghost"

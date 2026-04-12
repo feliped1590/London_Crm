@@ -46,16 +46,37 @@ function formatDuration(seconds: number): string {
 }
 
 export function useSalesFunnelData() {
-  // Fetch all deals with their current stage
-  const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ['funnel-deals'],
+  // Fetch sales pipeline IDs to filter only commercial deals
+  const { data: salesPipelineIds } = useQuery({
+    queryKey: ['sales-pipeline-ids'],
     queryFn: async () => {
       const { data, error } = await supabase
+        .from('pipelines')
+        .select('id')
+        .eq('type', 'sales')
+        .eq('is_active', true);
+      if (error) throw error;
+      return data?.map(p => p.id) || [];
+    },
+  });
+
+  // Fetch only deals from sales pipelines
+  const { data: deals, isLoading: dealsLoading } = useQuery({
+    queryKey: ['funnel-deals', salesPipelineIds],
+    queryFn: async () => {
+      let query = supabase
         .from('deals')
-        .select('id, stage, value, created_at, closed_at, lost_reason');
+        .select('id, stage, value, created_at, closed_at, lost_reason, pipeline_id');
+      
+      if (salesPipelineIds && salesPipelineIds.length > 0) {
+        query = query.in('pipeline_id', salesPipelineIds);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    enabled: !!salesPipelineIds,
   });
 
   // Fetch stage history for velocity calculations

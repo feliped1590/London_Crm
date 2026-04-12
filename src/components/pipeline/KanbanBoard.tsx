@@ -10,6 +10,7 @@ interface KanbanBoardProps {
   stageConfig: Record<string, StageConfigEntry>;
   filteredDeals: Deal[];
   isMobile: boolean;
+  isSalesPipeline?: boolean;
   onDragStart: (e: React.DragEvent, dealId: string) => void;
   onDrop: (e: React.DragEvent, stage: DealStage) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -24,6 +25,7 @@ export function KanbanBoard({
   stageConfig,
   filteredDeals,
   isMobile,
+  isSalesPipeline = true,
   onDragStart,
   onDrop,
   onDragOver,
@@ -85,6 +87,7 @@ export function KanbanBoard({
           onDragOver={onDragOver}
           onEdit={onEdit}
           onEmailDialog={onEmailDialog}
+          isSalesPipeline={isSalesPipeline}
         />
       ))}
     </div>
