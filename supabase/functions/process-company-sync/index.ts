@@ -463,10 +463,10 @@ Deno.serve(async (req) => {
           if (match) erpCode = match[0];
         }
 
-        // ═══ FASE C: Lookup pós-envio com retry progressivo ═══
+        // ═══ FASE C: Lookup pós-envio (máx 2 tentativas para não estourar timeout) ═══
         if (!erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
-          const delays = [2000, 5000, 10000, 15000, 20000];
+          const delays = [3000, 8000];
           for (const delay of delays) {
             await new Promise(r => setTimeout(r, delay));
             invalidateCache(company.cnpj);
