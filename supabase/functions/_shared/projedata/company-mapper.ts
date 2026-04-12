@@ -6,6 +6,21 @@
 import type { ErpCompanyPayload, CompanySyncContext } from './company-types.ts';
 import { buildEnvelope, serializeEnvelope } from './serializer.ts';
 
+// Mapeamento UF → Região brasileira
+const UF_REGIAO: Record<string, string> = {
+  AC: 'NORTE', AP: 'NORTE', AM: 'NORTE', PA: 'NORTE', RO: 'NORTE', RR: 'NORTE', TO: 'NORTE',
+  AL: 'NORDESTE', BA: 'NORDESTE', CE: 'NORDESTE', MA: 'NORDESTE', PB: 'NORDESTE',
+  PE: 'NORDESTE', PI: 'NORDESTE', RN: 'NORDESTE', SE: 'NORDESTE',
+  DF: 'CENTRO-OESTE', GO: 'CENTRO-OESTE', MT: 'CENTRO-OESTE', MS: 'CENTRO-OESTE',
+  ES: 'SUDESTE', MG: 'SUDESTE', RJ: 'SUDESTE', SP: 'SUDESTE',
+  PR: 'SUL', RS: 'SUL', SC: 'SUL',
+};
+
+export function getRegiaoByUF(uf: string | null | undefined): string {
+  if (!uf) return '';
+  return UF_REGIAO[uf.toUpperCase().trim()] || '';
+}
+
 export interface CRMCompanyForSync {
   cnpj: string;
   tipo_pessoa?: string | null;
