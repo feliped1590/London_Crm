@@ -180,8 +180,9 @@ Deno.serve(async (req) => {
           .select(`
             id, name, fantasia, cnpj, tipo_pessoa, email, phone, 
             address, address_number, address_complement, neighborhood, city, state, zip_code,
-            inscricao_estadual, sales_rep_id, created_by, legal_entity_id,
-            legal_entities(id, erp_company_code)
+            inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id,
+            legal_entities(id, erp_company_code),
+            setores(id, nome)
           `)
           .eq('id', queueItem.company_id)
           .single();
@@ -327,11 +328,16 @@ Deno.serve(async (req) => {
         }
 
         // 9. Gerar payload
+        // Resolver destino_mercadoria pelo setor: Indústria = I, demais = C (padrão)
+        const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
+        const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
+
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
           vendedor_codigo: vendedorCodigo,
           usuario_erp: usuarioErp || 1,
+          destino_mercadoria: destinoMercadoria,
         };
 
         // Inferir tipo_pessoa: CNPJ com 14 dígitos = PJ, 11 dígitos = PF, default = PJ
