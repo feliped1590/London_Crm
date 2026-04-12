@@ -302,7 +302,7 @@ export function IntegrationValidationPanel() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {(status === 'not_synced' || status === 'missing_data') && (
+                        {(status === 'not_synced' || status === 'missing_data' || status === 'sync_error') && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
