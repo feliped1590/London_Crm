@@ -58,28 +58,33 @@ export function IntegrationValidationPanel() {
     setSearchTimer(timer);
   };
 
-  // Summary counts
+  // Summary counts — lightweight grouped query, no full table scan
   const { data: summary } = useQuery({
     queryKey: ['integration-status-summary'],
     queryFn: async () => {
+      // Use raw SQL via RPC for optimal grouped count
       const { data, error } = await (supabase as any).rpc('get_integration_status_summary');
-      if (error) {
-        // Fallback: direct query
-        const { data: fallback, error: fbErr } = await supabase
-          .from('companies')
-          .select('integration_status')
-          .eq('active', true);
-        if (fbErr) throw fbErr;
+      if (!error && data) {
         const counts: Record<string, number> = { ready: 0, not_synced: 0, missing_data: 0, sync_error: 0 };
-        (fallback || []).forEach((c: any) => {
-          const s = c.integration_status || 'not_synced';
-          counts[s] = (counts[s] || 0) + 1;
+        (data || []).forEach((r: any) => {
+          counts[r.status] = Number(r.count);
         });
         return counts;
       }
+      // Fallback: 4 lightweight HEAD requests (count only, no rows transferred)
+      const statuses = ['ready', 'not_synced', 'missing_data', 'sync_error'] as const;
+      const results = await Promise.all(
+        statuses.map(s =>
+          supabase
+            .from('companies')
+            .select('id', { count: 'exact', head: true })
+            .eq('active', true)
+            .eq('integration_status', s)
+        )
+      );
       const counts: Record<string, number> = { ready: 0, not_synced: 0, missing_data: 0, sync_error: 0 };
-      (data || []).forEach((r: any) => {
-        counts[r.status] = Number(r.count);
+      statuses.forEach((s, i) => {
+        counts[s] = results[i].count ?? 0;
       });
       return counts;
     },
@@ -119,10 +124,11 @@ export function IntegrationValidationPanel() {
     setSyncingIds(prev => new Set(prev).add(companyId));
     try {
       toast.success('Cliente adicionado à fila de envio ao ERP');
-      supabase.functions.invoke('process-company-sync', {
+      await supabase.functions.invoke('process-company-sync', {
         body: { company_id: companyId },
       }).catch(() => {});
-      setTimeout(() => refetch(), 3000);
+      // Refetch after response instead of fixed timeout
+      refetch();
     } finally {
       setTimeout(() => {
         setSyncingIds(prev => {
@@ -130,7 +136,7 @@ export function IntegrationValidationPanel() {
           next.delete(companyId);
           return next;
         });
-      }, 3000);
+      }, 2000);
     }
   };
 
@@ -259,15 +265,16 @@ export function IntegrationValidationPanel() {
                         </TooltipProvider>
                       </TableCell>
                       <TableCell>
-                        {status === 'not_synced' && (
+                        {(status === 'not_synced' || status === 'missing_data') && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => handleSync(item.id)}
-                                  disabled={isSyncing}
+                                  onClick={() => status === 'not_synced' && handleSync(item.id)}
+                                  disabled={isSyncing || status === 'missing_data'}
+                                  className={status === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
                                   {isSyncing ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -276,7 +283,11 @@ export function IntegrationValidationPanel() {
                                   )}
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Enviar ao ERP</TooltipContent>
+                              <TooltipContent>
+                                {status === 'missing_data'
+                                  ? `Complete os dados antes de enviar (falta: ${missing.join(', ')})`
+                                  : 'Enviar ao ERP'}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         )}
