@@ -1315,6 +1315,7 @@ export type Database = {
       company_erp_financial: {
         Row: {
           agencia: string | null
+          banco_padrao_erp: number
           banco_preferencial: string | null
           company_id: string
           condicao_pagamento: string | null
@@ -1341,6 +1342,7 @@ export type Database = {
         }
         Insert: {
           agencia?: string | null
+          banco_padrao_erp?: number
           banco_preferencial?: string | null
           company_id: string
           condicao_pagamento?: string | null
@@ -1367,6 +1369,7 @@ export type Database = {
         }
         Update: {
           agencia?: string | null
+          banco_padrao_erp?: number
           banco_preferencial?: string | null
           company_id?: string
           condicao_pagamento?: string | null

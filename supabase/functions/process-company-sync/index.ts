@@ -332,12 +332,24 @@ Deno.serve(async (req) => {
         const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
         const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
 
+        // Resolver banco_padrao_erp da tabela financeira (default: 999 = CAIXA/CARTEIRA)
+        let bancoPadraoErp = 999;
+        const { data: erpFinancial } = await supabase
+          .from('company_erp_financial')
+          .select('banco_padrao_erp')
+          .eq('company_id', queueItem.company_id)
+          .maybeSingle();
+        if (erpFinancial?.banco_padrao_erp != null) {
+          bancoPadraoErp = erpFinancial.banco_padrao_erp;
+        }
+
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
           vendedor_codigo: vendedorCodigo,
           usuario_erp: usuarioErp || 1,
           destino_mercadoria: destinoMercadoria,
+          banco_padrao: bancoPadraoErp,
         };
 
         // Inferir tipo_pessoa: CNPJ com 14 dígitos = PJ, 11 dígitos = PF, default = PJ

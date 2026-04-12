@@ -91,6 +91,53 @@ export function CustomerOverviewTab({
   const [showOwnerInterventionModal, setShowOwnerInterventionModal] = useState(false);
   const [pendingOwnerChange, setPendingOwnerChange] = useState<string | null>(null);
 
+  // Banco padrão ERP
+  const { data: erpFinancial } = useQuery({
+    queryKey: ['erp-financial', customerId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('company_erp_financial')
+        .select('id, banco_padrao_erp, tenant_id')
+        .eq('company_id', customerId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const [bancoPadraoErp, setBancoPadraoErp] = useState<number>(999);
+
+  // Sync state when data loads
+  React.useEffect(() => {
+    if (erpFinancial?.banco_padrao_erp != null) {
+      setBancoPadraoErp(erpFinancial.banco_padrao_erp);
+    }
+  }, [erpFinancial]);
+
+  const saveBancoPadraoMutation = useMutation({
+    mutationFn: async (value: number) => {
+      if (erpFinancial?.id) {
+        const { error } = await supabase
+          .from('company_erp_financial')
+          .update({ banco_padrao_erp: value })
+          .eq('id', erpFinancial.id);
+        if (error) throw error;
+      } else {
+        // Get tenant_id from customer
+        const tenantId = customer.tenant_id;
+        if (!tenantId) throw new Error('Tenant não encontrado');
+        const { error } = await supabase
+          .from('company_erp_financial')
+          .insert({ company_id: customerId, tenant_id: tenantId, banco_padrao_erp: value });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['erp-financial', customerId] });
+      toast.success('Banco padrão ERP salvo');
+    },
+    onError: (err: any) => toast.error(err.message || 'Erro ao salvar banco padrão'),
+  });
+
   const isErpCustomer = customer.source === 'erp';
   const currentCompanyDealsCount = customer.deals?.length ?? 0;
   const groupCompanyCount = sameGroupCompanies.length + 1;
@@ -138,6 +185,26 @@ export function CustomerOverviewTab({
             <div>
               <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
               <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} />
+            </div>
+            <div>
+              <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="banco_padrao_erp"
+                  type="number"
+                  value={bancoPadraoErp}
+                  onChange={(e) => setBancoPadraoErp(Number(e.target.value))}
+                  disabled={!isEditing}
+                  placeholder="999"
+                  className="flex-1"
+                />
+                {isEditing && bancoPadraoErp !== (erpFinancial?.banco_padrao_erp ?? 999) && (
+                  <Button size="sm" variant="outline" onClick={() => saveBancoPadraoMutation.mutate(bancoPadraoErp)} disabled={saveBancoPadraoMutation.isPending}>
+                    Salvar
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Código do banco no ERP (999 = Caixa/Carteira)</p>
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
