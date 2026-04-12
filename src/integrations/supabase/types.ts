@@ -2809,9 +2809,9 @@ export type Database = {
           created_at: string
           deal_id: string
           duration_seconds: number | null
-          from_stage: Database["public"]["Enums"]["deal_stage"] | null
+          from_stage: string | null
           id: string
-          to_stage: Database["public"]["Enums"]["deal_stage"]
+          to_stage: string
         }
         Insert: {
           changed_at?: string
@@ -2819,9 +2819,9 @@ export type Database = {
           created_at?: string
           deal_id: string
           duration_seconds?: number | null
-          from_stage?: Database["public"]["Enums"]["deal_stage"] | null
+          from_stage?: string | null
           id?: string
-          to_stage: Database["public"]["Enums"]["deal_stage"]
+          to_stage: string
         }
         Update: {
           changed_at?: string
@@ -2829,9 +2829,9 @@ export type Database = {
           created_at?: string
           deal_id?: string
           duration_seconds?: number | null
-          from_stage?: Database["public"]["Enums"]["deal_stage"] | null
+          from_stage?: string | null
           id?: string
-          to_stage?: Database["public"]["Enums"]["deal_stage"]
+          to_stage?: string
         }
         Relationships: [
           {
@@ -2860,7 +2860,7 @@ export type Database = {
           owner_id: string | null
           pipeline_id: string | null
           probability: number | null
-          stage: Database["public"]["Enums"]["deal_stage"]
+          stage: string
           stagnation_reason: string | null
           tenant_id: string
           updated_at: string
@@ -2882,7 +2882,7 @@ export type Database = {
           owner_id?: string | null
           pipeline_id?: string | null
           probability?: number | null
-          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage?: string
           stagnation_reason?: string | null
           tenant_id?: string
           updated_at?: string
@@ -2904,7 +2904,7 @@ export type Database = {
           owner_id?: string | null
           pipeline_id?: string | null
           probability?: number | null
-          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage?: string
           stagnation_reason?: string | null
           tenant_id?: string
           updated_at?: string
@@ -4835,7 +4835,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
-          trigger_stage: Database["public"]["Enums"]["deal_stage"]
+          trigger_stage: string
           trigger_type: Database["public"]["Enums"]["automation_trigger"]
           updated_at: string
         }
@@ -4847,7 +4847,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
-          trigger_stage: Database["public"]["Enums"]["deal_stage"]
+          trigger_stage: string
           trigger_type: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }
@@ -4859,7 +4859,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
-          trigger_stage?: Database["public"]["Enums"]["deal_stage"]
+          trigger_stage?: string
           trigger_type?: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }
@@ -4867,6 +4867,7 @@ export type Database = {
       }
       pipeline_stages: {
         Row: {
+          allowed_roles: string[] | null
           color: string | null
           created_at: string
           default_owner_id: string | null
@@ -4877,9 +4878,10 @@ export type Database = {
           sla_hours: number | null
           sla_warning_hours: number | null
           sort_order: number
-          stage: Database["public"]["Enums"]["deal_stage"]
+          stage: string
         }
         Insert: {
+          allowed_roles?: string[] | null
           color?: string | null
           created_at?: string
           default_owner_id?: string | null
@@ -4890,9 +4892,10 @@ export type Database = {
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order: number
-          stage: Database["public"]["Enums"]["deal_stage"]
+          stage: string
         }
         Update: {
+          allowed_roles?: string[] | null
           color?: string | null
           created_at?: string
           default_owner_id?: string | null
@@ -4903,7 +4906,7 @@ export type Database = {
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order?: number
-          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage?: string
         }
         Relationships: [
           {
@@ -7181,7 +7184,7 @@ export type Database = {
           is_required: boolean | null
           pipeline_id: string | null
           sort_order: number | null
-          stage: Database["public"]["Enums"]["deal_stage"]
+          stage: string
           title: string
           validation_type: string | null
         }
@@ -7194,7 +7197,7 @@ export type Database = {
           is_required?: boolean | null
           pipeline_id?: string | null
           sort_order?: number | null
-          stage: Database["public"]["Enums"]["deal_stage"]
+          stage: string
           title: string
           validation_type?: string | null
         }
@@ -7207,7 +7210,7 @@ export type Database = {
           is_required?: boolean | null
           pipeline_id?: string | null
           sort_order?: number | null
-          stage?: Database["public"]["Enums"]["deal_stage"]
+          stage?: string
           title?: string
           validation_type?: string | null
         }
@@ -8857,7 +8860,15 @@ export type Database = {
     }
     Enums: {
       access_level: "restrito" | "total"
-      app_role: "admin" | "vendedor" | "atendente" | "desenvolvedor"
+      app_role:
+        | "admin"
+        | "vendedor"
+        | "atendente"
+        | "desenvolvedor"
+        | "financeiro"
+        | "faturamento"
+        | "logistica"
+        | "qualidade"
       automation_action:
         | "send_whatsapp"
         | "create_task"
@@ -8901,13 +8912,6 @@ export type Database = {
         | "email"
         | "phone"
         | "currency"
-      deal_stage:
-        | "prospeccao"
-        | "qualificacao"
-        | "proposta"
-        | "negociacao"
-        | "fechado_ganho"
-        | "fechado_perdido"
       dimension_profile: "full" | "partial" | "none"
       ipi_mode: "destacar" | "incluso" | "isento"
       lifecycle_stage:
@@ -9127,7 +9131,16 @@ export const Constants = {
   public: {
     Enums: {
       access_level: ["restrito", "total"],
-      app_role: ["admin", "vendedor", "atendente", "desenvolvedor"],
+      app_role: [
+        "admin",
+        "vendedor",
+        "atendente",
+        "desenvolvedor",
+        "financeiro",
+        "faturamento",
+        "logistica",
+        "qualidade",
+      ],
       automation_action: [
         "send_whatsapp",
         "create_task",
@@ -9175,14 +9188,6 @@ export const Constants = {
         "email",
         "phone",
         "currency",
-      ],
-      deal_stage: [
-        "prospeccao",
-        "qualificacao",
-        "proposta",
-        "negociacao",
-        "fechado_ganho",
-        "fechado_perdido",
       ],
       dimension_profile: ["full", "partial", "none"],
       ipi_mode: ["destacar", "incluso", "isento"],

@@ -1,4 +1,4 @@
-export type DealStage = 'prospeccao' | 'qualificacao' | 'proposta' | 'negociacao' | 'fechado_ganho' | 'fechado_perdido';
+export type DealStage = string;
 export type TaskStatus = 'pendente' | 'em_andamento' | 'concluida' | 'cancelada';
 export type TaskPriority = 'baixa' | 'media' | 'alta' | 'urgente';
 export type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'email' | 'phone' | 'currency';

@@ -14,11 +14,7 @@ import { Plus, Pencil, Trash2, GripVertical, CheckSquare, AlertCircle } from 'lu
 import { useStageChecklistItems, useChecklistMutations, type ChecklistItem } from '@/hooks/useStageChecklists';
 import { usePipelines } from '@/hooks/usePipelines';
 import { cn } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type DealStage = Database['public']['Enums']['deal_stage'];
-
-const stageLabels: Record<DealStage, string> = {
+const defaultStageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
   qualificacao: 'Qualificação',
   proposta: 'Proposta',
@@ -27,7 +23,7 @@ const stageLabels: Record<DealStage, string> = {
   fechado_perdido: 'Fechado (Perdido)',
 };
 
-const stageColors: Record<DealStage, string> = {
+const defaultStageColors: Record<string, string> = {
   prospeccao: 'bg-slate-500',
   qualificacao: 'bg-blue-500',
   proposta: 'bg-yellow-500',
@@ -52,7 +48,7 @@ export function StageChecklistManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
   const [formData, setFormData] = useState({
-    stage: 'prospeccao' as DealStage,
+    stage: 'prospeccao' as string,
     title: '',
     description: '',
     is_required: true,
@@ -114,9 +110,9 @@ export function StageChecklistManager() {
     if (!acc[item.stage]) acc[item.stage] = [];
     acc[item.stage].push(item);
     return acc;
-  }, {} as Record<DealStage, ChecklistItem[]>) || {};
+  }, {} as Record<string, ChecklistItem[]>) || {};
 
-  const stages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao'];
+  const stages: string[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao'];
 
   return (
     <div className="space-y-6">
@@ -160,7 +156,7 @@ export function StageChecklistManager() {
                   <Label>Etapa</Label>
                   <Select 
                     value={formData.stage} 
-                    onValueChange={(value) => setFormData({ ...formData, stage: value as DealStage })}
+                    onValueChange={(value) => setFormData({ ...formData, stage: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -168,7 +164,7 @@ export function StageChecklistManager() {
                     <SelectContent>
                       {stages.map((stage) => (
                         <SelectItem key={stage} value={stage}>
-                          {stageLabels[stage]}
+                          {defaultStageLabels[stage] || stage}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -255,8 +251,8 @@ export function StageChecklistManager() {
               <Card key={stage}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-3 h-3 rounded-full', stageColors[stage])} />
-                    <CardTitle className="text-base">{stageLabels[stage]}</CardTitle>
+                    <div className={cn('w-3 h-3 rounded-full', defaultStageColors[stage] || 'bg-slate-500')} />
+                    <CardTitle className="text-base">{defaultStageLabels[stage] || stage}</CardTitle>
                     <Badge variant="secondary" className="ml-auto">
                       {items.length} {items.length === 1 ? 'item' : 'itens'}
                     </Badge>

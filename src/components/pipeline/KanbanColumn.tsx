@@ -45,9 +45,8 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col bg-muted/30 rounded-lg min-w-[280px] shrink-0",
+        "flex flex-col bg-muted/30 rounded-lg min-w-[220px] shrink-0",
         isMobile && "snap-center",
-        "xl:min-w-0 xl:shrink"
       )}
       onDrop={(e) => onDrop(e, stage)}
       onDragOver={onDragOver}

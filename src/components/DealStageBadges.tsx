@@ -1,14 +1,11 @@
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TrendingUp } from 'lucide-react';
-import type { Tables } from '@/integrations/supabase/types';
-
-type DealStage = Tables<'deals'>['stage'];
 
 interface Deal {
   id: string;
   name: string;
-  stage: DealStage;
+  stage: string;
   value: number | null;
 }
 
@@ -16,7 +13,7 @@ interface DealStageBadgesProps {
   deals: Deal[];
 }
 
-const stageLabels: Record<DealStage, string> = {
+const stageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
   qualificacao: 'Qualificação',
   proposta: 'Proposta',
@@ -25,7 +22,7 @@ const stageLabels: Record<DealStage, string> = {
   fechado_perdido: 'Perdido',
 };
 
-const stageColors: Record<DealStage, string> = {
+const stageColors: Record<string, string> = {
   prospeccao: 'bg-slate-100 text-slate-700 border-slate-300',
   qualificacao: 'bg-blue-100 text-blue-700 border-blue-300',
   proposta: 'bg-amber-100 text-amber-700 border-amber-300',
@@ -34,7 +31,7 @@ const stageColors: Record<DealStage, string> = {
   fechado_perdido: 'bg-red-100 text-red-700 border-red-300',
 };
 
-const stageOrder: DealStage[] = [
+const stageOrder: string[] = [
   'prospeccao',
   'qualificacao', 
   'proposta',
@@ -60,7 +57,7 @@ export function DealStageBadges({ deals }: DealStageBadgesProps) {
     }
     acc[deal.stage].push(deal);
     return acc;
-  }, {} as Record<DealStage, Deal[]>);
+  }, {} as Record<string, Deal[]>);
 
   const formatCurrency = (value: number | null) => {
     if (value === null || value === 0) return '';
@@ -80,10 +77,10 @@ export function DealStageBadges({ deals }: DealStageBadgesProps) {
             <TooltipTrigger asChild>
               <Badge 
                 variant="outline" 
-                className={`text-xs cursor-default gap-1 ${stageColors[stage as DealStage]}`}
+                className={`text-xs cursor-default gap-1 ${stageColors[stage] || 'bg-slate-100 text-slate-700 border-slate-300'}`}
               >
                 <TrendingUp className="h-3 w-3" />
-                {stageLabels[stage as DealStage]}
+                {stageLabels[stage] || stage}
                 {stageDeals.length > 1 && (
                   <span className="ml-0.5 bg-white/50 rounded-full px-1 text-[10px]">
                     {stageDeals.length}
@@ -94,7 +91,7 @@ export function DealStageBadges({ deals }: DealStageBadgesProps) {
             <TooltipContent side="top" className="max-w-xs">
               <div className="space-y-1">
                 <p className="font-semibold text-sm">
-                  {stageDeals.length} negócio{stageDeals.length > 1 ? 's' : ''} em {stageLabels[stage as DealStage]}
+                  {stageDeals.length} negócio{stageDeals.length > 1 ? 's' : ''} em {stageLabels[stage] || stage}
                 </p>
                 <ul className="text-xs space-y-0.5">
                   {stageDeals.map((deal) => (
