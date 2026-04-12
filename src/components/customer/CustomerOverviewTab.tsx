@@ -186,6 +186,26 @@ export function CustomerOverviewTab({
               <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
               <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
+            <div>
+              <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
+              <div className="flex gap-2">
+                <Input
+                  id="banco_padrao_erp"
+                  type="number"
+                  value={bancoPadraoErp}
+                  onChange={(e) => setBancoPadraoErp(Number(e.target.value))}
+                  disabled={!isEditing}
+                  placeholder="999"
+                  className="flex-1"
+                />
+                {isEditing && bancoPadraoErp !== (erpFinancial?.banco_padrao_erp ?? 999) && (
+                  <Button size="sm" variant="outline" onClick={() => saveBancoPadraoMutation.mutate(bancoPadraoErp)} disabled={saveBancoPadraoMutation.isPending}>
+                    Salvar
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Código do banco no ERP (999 = Caixa/Carteira)</p>
+            </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <Label htmlFor="contribuinte_ipi" className="text-sm font-medium">Contribuinte de IPI</Label>
