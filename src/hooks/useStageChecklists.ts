@@ -2,13 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from './useAuth';
-import type { Database } from '@/integrations/supabase/types';
-
-type DealStage = Database['public']['Enums']['deal_stage'];
-
 export type ChecklistItem = {
   id: string;
-  stage: DealStage;
+  stage: string;
   pipeline_id: string | null;
   title: string;
   description: string | null;
