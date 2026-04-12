@@ -418,7 +418,7 @@ Deno.serve(async (req) => {
         const retorno = retornoObj?.['#out#p_retorno'] ?? retornoObj?.p_retorno ?? null;
 
         // Verificar erro explícito
-        if (typeof retorno === 'string' && retorno.includes('#ERRO#')) {
+        if (typeof retorno === 'string' && (retorno.includes('#ERRO#') || retorno.startsWith('ERRO#'))) {
           throw new Error(`ERP retornou erro: ${retorno}`);
         }
 
