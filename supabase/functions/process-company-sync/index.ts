@@ -274,10 +274,14 @@ Deno.serve(async (req) => {
         const empresaCodigo = Number(legalEntity?.erp_company_code) || 1;
 
         // 8. Validar
+        // Inferir tipo_pessoa antes da validação
+        const cnpjDigitsForValidation = (company.cnpj || '').replace(/\D/g, '');
+        const tipoPessoaInferred = company.tipo_pessoa || (cnpjDigitsForValidation.length === 11 ? 'PF' : 'PJ');
+
         const validation = validateCompanyForSync({
           cnpj: company.cnpj,
           name: company.name,
-          tipo_pessoa: company.tipo_pessoa,
+          tipo_pessoa: tipoPessoaInferred,
           cidade_codigo: cidadeCodigo,
           address: company.address,
           zip_code: company.zip_code,
