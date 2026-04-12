@@ -12,6 +12,7 @@ import { GoogleCalendarSettings } from '@/components/settings/GoogleCalendarSett
 import { ProspectingApiConfig } from '@/components/settings/ProspectingApiConfig';
 import { StagingMonitor } from '@/components/integrations/StagingMonitor';
 import { IntegrationValidationPanel } from '@/components/integrations/IntegrationValidationPanel';
+import { CustomerPayloadSimulator } from '@/components/integrations/CustomerPayloadSimulator';
 import { OrderPayloadSimulator } from '@/components/integrations/OrderPayloadSimulator';
 import { ErpMappingsManager } from '@/components/settings/ErpMappingsManager';
 import { supabase } from '@/integrations/supabase/client';
