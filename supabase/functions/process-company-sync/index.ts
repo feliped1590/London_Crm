@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
               entity_id: queueItem.company_id,
               direction: 'crm_to_erp',
               status: 'found_existing',
-              response_received: { erp_code: existingErpCode },
-              tenant_id: queueItem.tenant_id,
+              external_id: existingErpCode,
+              response_payload: { erp_code: existingErpCode },
             });
 
             successCount++;
