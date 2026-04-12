@@ -336,6 +336,10 @@ export default function CustomerNew() {
       if (!validateCnpjField()) {
         return;
       }
+      if (!companyForm.fantasia?.trim()) {
+        toast.error('Informe o nome fantasia');
+        return;
+      }
     }
     
     // Telefone obrigatório
@@ -343,10 +347,42 @@ export default function CustomerNew() {
       toast.error('Informe o telefone do cliente');
       return;
     }
+
+    // Email obrigatório
+    if (!companyForm.email?.trim()) {
+      toast.error('Informe o email do cliente');
+      return;
+    }
     
     // Setor obrigatório para todos os tipos de cliente
     if (!companyForm.setor_id) {
       toast.error('Informe o setor do cliente');
+      return;
+    }
+
+    // Endereço completo obrigatório para ERP
+    if (!companyForm.address?.trim()) {
+      toast.error('Informe o endereço (logradouro)');
+      return;
+    }
+    if (!companyForm.address_number?.trim()) {
+      toast.error('Informe o número do endereço');
+      return;
+    }
+    if (!companyForm.neighborhood?.trim()) {
+      toast.error('Informe o bairro');
+      return;
+    }
+    if (!companyForm.zip_code?.trim()) {
+      toast.error('Informe o CEP');
+      return;
+    }
+    if (!companyForm.city?.trim()) {
+      toast.error('Informe a cidade');
+      return;
+    }
+    if (!companyForm.state?.trim()) {
+      toast.error('Informe o estado (UF)');
       return;
     }
     

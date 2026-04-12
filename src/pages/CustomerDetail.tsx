@@ -148,6 +148,48 @@ export default function CustomerDetail() {
   }
 
   const handleSaveCompany = () => {
+    // Validações de campos obrigatórios para ERP
+    if (!companyForm.name?.trim()) {
+      toast.error('Razão Social é obrigatória');
+      return;
+    }
+    if (!companyForm.fantasia?.trim()) {
+      toast.error('Nome Fantasia é obrigatório');
+      return;
+    }
+    if (!companyForm.phone?.trim()) {
+      toast.error('Telefone é obrigatório');
+      return;
+    }
+    if (!companyForm.email?.trim()) {
+      toast.error('Email é obrigatório');
+      return;
+    }
+    if (!companyForm.address?.trim()) {
+      toast.error('Endereço (logradouro) é obrigatório');
+      return;
+    }
+    if (!companyForm.address_number?.trim()) {
+      toast.error('Número do endereço é obrigatório');
+      return;
+    }
+    if (!companyForm.neighborhood?.trim()) {
+      toast.error('Bairro é obrigatório');
+      return;
+    }
+    if (!companyForm.zip_code?.trim()) {
+      toast.error('CEP é obrigatório');
+      return;
+    }
+    if (!companyForm.city?.trim()) {
+      toast.error('Cidade é obrigatória');
+      return;
+    }
+    if (!companyForm.state?.trim()) {
+      toast.error('Estado (UF) é obrigatório');
+      return;
+    }
+
     const cnpjLimpo = companyForm.cnpj ? cleanDocument(companyForm.cnpj) : null;
     updateCompanyMutation.mutate(
       { ...companyForm, cnpj: cnpjLimpo, custom_fields: customFieldsData as Json },
