@@ -77,6 +77,7 @@ export function UnifiedPipelineManager() {
     pipeline_id: string;
     sla_hours: number | null;
     sla_warning_hours: number | null;
+    allowed_roles: string[];
   }>({
     name: '',
     color: '#6366f1',
@@ -86,6 +87,7 @@ export function UnifiedPipelineManager() {
     pipeline_id: '',
     sla_hours: null,
     sla_warning_hours: null,
+    allowed_roles: [],
   });
 
   // Fetch pipeline stages with pipeline info
@@ -251,6 +253,7 @@ export function UnifiedPipelineManager() {
       pipeline_id: '',
       sla_hours: null,
       sla_warning_hours: null,
+      allowed_roles: [],
     });
     setEditingStage(null);
     setIsStageDialogOpen(false);
@@ -267,6 +270,7 @@ export function UnifiedPipelineManager() {
       pipeline_id: stage.pipeline_id || '',
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
+      allowed_roles: (stage as any).allowed_roles || [],
     });
     setIsStageDialogOpen(true);
   };
@@ -278,9 +282,13 @@ export function UnifiedPipelineManager() {
         id: editingStage.id, 
         ...stageFormData,
         pipeline_id: stageFormData.pipeline_id || null,
+        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
       });
     } else {
-      createStageMutation.mutate(stageFormData);
+      createStageMutation.mutate({
+        ...stageFormData,
+        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+      });
     }
   };
 
@@ -665,6 +673,34 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label>Perfis que podem mover para esta etapa</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Nenhum selecionado = todos podem mover. Admin sempre tem acesso.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {ROLE_OPTIONS.filter(r => r.value !== 'admin').map((role) => (
+                        <label
+                          key={role.value}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
+                        >
+                          <Checkbox
+                            checked={stageFormData.allowed_roles.includes(role.value)}
+                            onCheckedChange={(checked) => {
+                              setStageFormData(prev => ({
+                                ...prev,
+                                allowed_roles: checked
+                                  ? [...prev.allowed_roles, role.value]
+                                  : prev.allowed_roles.filter(r => r !== role.value),
+                              }));
+                            }}
+                          />
+                          {role.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={resetStageForm}>
                       Cancelar
@@ -687,6 +723,7 @@ export function UnifiedPipelineManager() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Funil Vinculado</TableHead>
                     <TableHead>Probabilidade</TableHead>
+                    <TableHead>Permissões</TableHead>
                     <TableHead>SLA</TableHead>
                     <TableHead className="w-[100px]">Ações</TableHead>
                   </TableRow>
@@ -719,6 +756,19 @@ export function UnifiedPipelineManager() {
                         )}
                       </TableCell>
                       <TableCell>{stage.probability}%</TableCell>
+                      <TableCell>
+                        {(stage as any).allowed_roles?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {((stage as any).allowed_roles as string[]).map((role: string) => (
+                              <Badge key={role} variant="secondary" className="text-[10px]">
+                                {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Todos</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {stage.sla_hours ? `${stage.sla_hours}h` : '-'}
                       </TableCell>
