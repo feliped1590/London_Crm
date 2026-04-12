@@ -60,6 +60,7 @@ export interface CompanySyncContext {
   vendedor_codigo?: number;
   usuario_erp?: number;
   regiao?: string;
+  destino_mercadoria?: string;
   banco_padrao?: number;
   segmento?: number;
   subsegmento?: number;
