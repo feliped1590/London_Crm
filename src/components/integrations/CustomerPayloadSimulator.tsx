@@ -303,6 +303,44 @@ export function CustomerPayloadSimulator() {
           : 'Segmento sem código ERP definido (erp_code). Configure na tabela de Segmentos.',
       });
 
+      // 10d. Resolver região pela UF
+      const UF_REGIAO: Record<string, string> = {
+        AC: 'NORTE', AP: 'NORTE', AM: 'NORTE', PA: 'NORTE', RO: 'NORTE', RR: 'NORTE', TO: 'NORTE',
+        AL: 'NORDESTE', BA: 'NORDESTE', CE: 'NORDESTE', MA: 'NORDESTE', PB: 'NORDESTE',
+        PE: 'NORDESTE', PI: 'NORDESTE', RN: 'NORDESTE', SE: 'NORDESTE',
+        DF: 'CENTRO-OESTE', GO: 'CENTRO-OESTE', MT: 'CENTRO-OESTE', MS: 'CENTRO-OESTE',
+        ES: 'SUDESTE', MG: 'SUDESTE', RJ: 'SUDESTE', SP: 'SUDESTE',
+        PR: 'SUL', RS: 'SUL', SC: 'SUL',
+      };
+      const regiao = company.state ? (UF_REGIAO[company.state.toUpperCase().trim()] || '') : '';
+      resolvedSteps.push({
+        label: 'Região',
+        field: 'regiao',
+        crmValue: company.state || 'Não definido',
+        erpValue: regiao || null,
+        status: regiao ? 'ok' : 'warning',
+        message: regiao ? `UF: ${company.state} → ${regiao}` : 'UF não definida',
+      });
+
+      // 10e. Resolver banco_padrao_erp
+      let bancoPadrao = 999;
+      const { data: erpFinancial } = await supabase
+        .from('company_erp_financial')
+        .select('banco_padrao_erp')
+        .eq('company_id', selectedCompanyId)
+        .maybeSingle();
+      if (erpFinancial?.banco_padrao_erp != null) {
+        bancoPadrao = erpFinancial.banco_padrao_erp;
+      }
+      resolvedSteps.push({
+        label: 'Banco Padrão',
+        field: 'banco_padrao',
+        crmValue: erpFinancial?.banco_padrao_erp != null ? `Código ${erpFinancial.banco_padrao_erp}` : 'Não definido',
+        erpValue: bancoPadrao,
+        status: 'ok',
+        message: erpFinancial?.banco_padrao_erp == null ? 'Padrão: 999 (CAIXA/CARTEIRA)' : undefined,
+      });
+
       // 11. Build the IMP_CLIENTE_V3 payload
       const innerJson = {
         cnpj_cpf: cnpjDigits ? Number(cnpjDigits) : null,
@@ -316,15 +354,15 @@ export function CustomerPayloadSimulator() {
         tipo_correntista: 'C',
         rg: '',
         tributacao_ir: '',
-        regiao: '',
+        regiao,
         destino_mercadoria: destinoMercadoria,
         usuario: usuarioErp || 1,
-        banco_padrao: 999,
+        banco_padrao: bancoPadrao,
         segmento_mercado: segmentoMercado,
         subsegmento_mercado: subsegmentoMercado,
         enderecos: [{
           cidade: cidadeCodigo,
-          tipo_endereco: 'P',
+          tipo_endereco: 'L',
           endereco: company.address || '',
           complemento: company.address_complement || '',
           numero_endereco: company.address_number || '',
