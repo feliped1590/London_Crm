@@ -274,21 +274,32 @@ export function IntegrationValidationPanel() {
                       </TableCell>
                       <TableCell className="text-sm">{item.erp_code || '—'}</TableCell>
                       <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className={`gap-1 ${config.color}`}>
-                                <Icon className="h-3 w-3" />
-                                {config.label}
-                              </Badge>
-                            </TooltipTrigger>
-                            {missing.length > 0 && (
-                              <TooltipContent>
-                                <p className="text-xs">Faltando: {missing.join(', ')}</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        {status === 'sync_error' ? (
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 cursor-pointer hover:opacity-80 ${config.color}`}
+                            onClick={() => handleViewError(item.id, item.name)}
+                          >
+                            <Icon className="h-3 w-3" />
+                            {config.label}
+                          </Badge>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className={`gap-1 ${config.color}`}>
+                                  <Icon className="h-3 w-3" />
+                                  {config.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              {missing.length > 0 && (
+                                <TooltipContent>
+                                  <p className="text-xs">Faltando: {missing.join(', ')}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </TableCell>
                       <TableCell>
                         {(status === 'not_synced' || status === 'missing_data') && (
