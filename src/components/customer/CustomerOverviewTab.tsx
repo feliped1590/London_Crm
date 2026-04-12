@@ -183,6 +183,11 @@ export function CustomerOverviewTab({
               <Input id="cnpj" value={companyForm.cnpj} onChange={(e) => setCompanyForm({ ...companyForm, cnpj: formatCNPJ(e.target.value) })} disabled={!isEditing || isErpCustomer} maxLength={18} />
             </div>
             <div>
+              <Label htmlFor="erp_code">Código ERP</Label>
+              <Input id="erp_code" value={companyForm.erp_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, erp_code: e.target.value })} disabled={!isEditing} placeholder="Ex: 12345" />
+              <p className="text-xs text-muted-foreground mt-1">Preencha manualmente se o sistema não retornou</p>
+            </div>
+            <div>
               <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
               <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
