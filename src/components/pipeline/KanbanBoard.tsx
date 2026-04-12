@@ -5,12 +5,18 @@ import type { Deal, DealStage, StageConfigEntry } from '@/hooks/usePipelineData'
 
 const CARDS_PER_PAGE = 5;
 
+interface StagePermissionInfo {
+  stage: string;
+  allowed: boolean;
+}
+
 interface KanbanBoardProps {
   stages: DealStage[];
   stageConfig: Record<string, StageConfigEntry>;
   filteredDeals: Deal[];
   isMobile: boolean;
   isSalesPipeline?: boolean;
+  stagePermissions?: StagePermissionInfo[];
   onDragStart: (e: React.DragEvent, dealId: string) => void;
   onDrop: (e: React.DragEvent, stage: DealStage) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -26,6 +32,7 @@ export function KanbanBoard({
   filteredDeals,
   isMobile,
   isSalesPipeline = true,
+  stagePermissions,
   onDragStart,
   onDrop,
   onDragOver,
@@ -70,26 +77,31 @@ export function KanbanBoard({
         isMobile && "snap-x snap-mandatory",
       )}
     >
-      {stages.map((stage) => (
-        <KanbanColumn
-          key={stage}
-          stage={stage}
-          config={stageConfig[stage] || { label: stage, color: 'bg-slate-500' }}
-          allStageDeals={getStageDeals(stage)}
-          pagedDeals={getPagedStageDeals(stage)}
-          stageTotal={getStageTotal(stage)}
-          isMobile={isMobile}
-          page={getStagePage(stage)}
-          totalPages={getStageTotalPages(stage)}
-          onPageChange={(page) => setStagePages(prev => ({ ...prev, [stage]: page }))}
-          onDragStart={onDragStart}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onEdit={onEdit}
-          onEmailDialog={onEmailDialog}
-          isSalesPipeline={isSalesPipeline}
-        />
-      ))}
+      {stages.map((stage) => {
+        const permInfo = stagePermissions?.find(p => p.stage === stage);
+        const isBlocked = permInfo ? !permInfo.allowed : false;
+        return (
+          <KanbanColumn
+            key={stage}
+            stage={stage}
+            config={stageConfig[stage] || { label: stage, color: 'bg-slate-500' }}
+            allStageDeals={getStageDeals(stage)}
+            pagedDeals={getPagedStageDeals(stage)}
+            stageTotal={getStageTotal(stage)}
+            isMobile={isMobile}
+            isBlocked={isBlocked}
+            page={getStagePage(stage)}
+            totalPages={getStageTotalPages(stage)}
+            onPageChange={(page) => setStagePages(prev => ({ ...prev, [stage]: page }))}
+            onDragStart={onDragStart}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onEdit={onEdit}
+            onEmailDialog={onEmailDialog}
+            isSalesPipeline={isSalesPipeline}
+          />
+        );
+      })}
     </div>
   );
 }

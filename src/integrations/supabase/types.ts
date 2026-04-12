@@ -8857,6 +8857,14 @@ export type Database = {
         Returns: boolean
       }
       validate_app_session: { Args: { p_session_id: string }; Returns: Json }
+      validate_stage_permission: {
+        Args: {
+          p_deal_id: string
+          p_pipeline_id: string
+          p_target_stage: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       access_level: "restrito" | "total"

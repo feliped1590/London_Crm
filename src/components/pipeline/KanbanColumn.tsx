@@ -2,7 +2,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { DollarSign, Calendar, Building2, User, GripVertical, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DollarSign, Calendar, Building2, User, GripVertical, Mail, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
 import { DelegationBadge } from '@/components/pipeline/DelegationBadge';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -17,6 +18,7 @@ interface KanbanColumnProps {
   stageTotal: number;
   isMobile: boolean;
   isSalesPipeline?: boolean;
+  isBlocked?: boolean;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -35,6 +37,7 @@ export function KanbanColumn({
   stageTotal,
   isMobile,
   isSalesPipeline = true,
+  isBlocked = false,
   page,
   totalPages,
   onPageChange,
@@ -49,9 +52,18 @@ export function KanbanColumn({
       className={cn(
         "flex flex-col bg-muted/30 rounded-lg min-w-[220px] shrink-0",
         isMobile && "snap-center",
+        isBlocked && "opacity-60 ring-1 ring-destructive/30",
       )}
       onDrop={(e) => onDrop(e, stage)}
-      onDragOver={onDragOver}
+      onDragOver={(e) => {
+        if (isBlocked) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'none';
+        } else {
+          onDragOver(e);
+        }
+      }}
+      style={isBlocked ? { cursor: 'not-allowed' } : undefined}
     >
       <div className="p-3 border-b bg-muted/50 rounded-t-lg">
         <div className="flex items-center gap-2 mb-1">
@@ -60,6 +72,14 @@ export function KanbanColumn({
             style={config?.hexColor ? { backgroundColor: config.hexColor } : undefined}
           />
           <h3 className="font-semibold text-sm">{config?.label || stage}</h3>
+          {isBlocked && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+              </TooltipTrigger>
+              <TooltipContent>Sem permissão para mover para esta etapa</TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>{allStageDeals.length} negócios</span>
