@@ -149,11 +149,29 @@ export function IntegrationValidationPanel() {
   const handleSync = async (companyId: string) => {
     setSyncingIds(prev => new Set(prev).add(companyId));
     try {
-      toast.success('Cliente adicionado à fila de envio ao ERP');
-      await supabase.functions.invoke('process-company-sync', {
+      const { data, error } = await supabase.functions.invoke('process-company-sync', {
         body: { company_id: companyId },
-      }).catch(() => {});
-      // Refetch after response instead of fixed timeout
+      });
+
+      if (error) throw error;
+
+      const result = data as {
+        success?: boolean;
+        processed?: number;
+        message?: string;
+        error_count?: number;
+        results?: Array<{ error?: string }>;
+      } | null;
+
+      if (result?.error_count && result.error_count > 0) {
+        const firstError = result.results?.find(item => item.error)?.error;
+        toast.error(firstError || 'Falha ao enviar cliente ao ERP');
+      } else if (result?.message) {
+        toast.info(result.message);
+      } else {
+        toast.success('Cliente enviado para processamento no ERP');
+      }
+
       refetch();
     } finally {
       setTimeout(() => {
