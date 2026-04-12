@@ -284,7 +284,7 @@ export function CustomerPayloadSimulator() {
         regiao: '',
         destino_mercadoria: destinoMercadoria,
         usuario: usuarioErp || 1,
-        banco_padrao: 0,
+        banco_padrao: 999,
         segmento_mercado: 0,
         subsegmento_mercado: 0,
         enderecos: [{
