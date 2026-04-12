@@ -30,6 +30,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: Loader2,
     className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
   },
+  waiting_propagation: {
+    label: 'Aguardando ERP',
+    icon: Cloud,
+    className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  },
   completed: {
     label: 'Sincronizado',
     icon: Check,
