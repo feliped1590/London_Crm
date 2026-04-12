@@ -44,7 +44,7 @@ export default function Pipeline() {
   // Data hook
   const pipeline = usePipelineData(selectedPipelineId);
   const {
-    user, isAdmin,
+    user, isAdmin, isSalesPipeline,
     currentPipelineId, stages, stageConfig, defaultPipeline,
     deals, isLoading, isFetching, handleRefresh,
     sellers,
@@ -564,6 +564,7 @@ export default function Pipeline() {
           stageConfig={stageConfig}
           filteredDeals={filteredDeals}
           isMobile={isMobile}
+          isSalesPipeline={isSalesPipeline}
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
