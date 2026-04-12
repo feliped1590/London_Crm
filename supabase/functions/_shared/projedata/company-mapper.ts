@@ -91,7 +91,7 @@ export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySync
     enderecos: [
       {
         cidade: context.cidade_codigo,
-        tipo_endereco: 'P',
+        tipo_endereco: 'L',
         endereco: company.address || '',
         complemento: company.address_complement || '',
         numero_endereco: company.address_number || '',
