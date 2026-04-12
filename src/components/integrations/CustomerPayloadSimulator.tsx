@@ -211,14 +211,14 @@ export function CustomerPayloadSimulator() {
 
       // 8. Empresa emissora
       const legalEntity = company.legal_entities as any;
-      const empresaCodigo = Number(legalEntity?.erp_company_code) || 0;
+      const empresaCodigo = Number(legalEntity?.erp_company_code) || 1;
       resolvedSteps.push({
         label: 'Empresa Emissora',
         field: 'empresa',
         crmValue: legalEntity?.name || 'Não definida',
-        erpValue: empresaCodigo || null,
-        status: empresaCodigo ? 'ok' : 'warning',
-        message: !empresaCodigo ? 'Será usado padrão (1)' : undefined,
+        erpValue: empresaCodigo,
+        status: 'ok',
+        message: empresaCodigo === 1 && !legalEntity?.erp_company_code ? 'Padrão (1)' : undefined,
       });
 
       // 9. Endereço
