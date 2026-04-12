@@ -6,6 +6,28 @@
 import type { ErpCompanyPayload, CompanySyncContext } from './company-types.ts';
 import { buildEnvelope, serializeEnvelope } from './serializer.ts';
 
+// Mapeamento Setor CRM → Segmento ERP (código numérico)
+const SETOR_SEGMENTO: Record<string, number> = {
+  'INDUSTRIA': 1,
+  'INDÚSTRIA': 1,
+  'FORNECEDORES': 2,
+  'FORNECEDOR': 2,
+  'DISTRIBUIDORA': 3,
+  'DISTRIBUIDOR': 3,
+  'COMERCIO': 4,
+  'COMÉRCIO': 4,
+  'SERVICOS': 4,
+  'SERVIÇOS': 4,
+  'AGROPECUARIA': 4,
+  'AGROPECUÁRIA': 4,
+};
+
+export function getSegmentoBySetor(setorNome: string | null | undefined): number {
+  if (!setorNome) return 4; // Padrão: COMERCIO
+  const key = setorNome.toUpperCase().trim();
+  return SETOR_SEGMENTO[key] ?? 4;
+}
+
 // Mapeamento UF → Região brasileira
 const UF_REGIAO: Record<string, string> = {
   AC: 'NORTE', AP: 'NORTE', AM: 'NORTE', PA: 'NORTE', RO: 'NORTE', RR: 'NORTE', TO: 'NORTE',

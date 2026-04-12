@@ -268,6 +268,26 @@ export function CustomerPayloadSimulator() {
         message: !setorData?.nome ? 'Padrão: C (Consumo)' : `Setor: ${setorData.nome} → ${destinoMercadoria === 'I' ? 'Industrialização' : 'Consumo'}`,
       });
 
+      // 10b. Resolver segmento_mercado pelo setor
+      const SETOR_SEGMENTO: Record<string, number> = {
+        'INDUSTRIA': 1, 'INDÚSTRIA': 1,
+        'FORNECEDORES': 2, 'FORNECEDOR': 2,
+        'DISTRIBUIDORA': 3, 'DISTRIBUIDOR': 3,
+        'COMERCIO': 4, 'COMÉRCIO': 4,
+        'SERVICOS': 4, 'SERVIÇOS': 4,
+        'AGROPECUARIA': 4, 'AGROPECUÁRIA': 4,
+      };
+      const segmentoMercado = setorNome ? (SETOR_SEGMENTO[setorNome.trim()] ?? 4) : 4;
+      const segmentoLabels: Record<number, string> = { 1: 'INDUSTRIA', 2: 'FORNECEDORES', 3: 'DISTRIBUIDORA', 4: 'COMERCIO' };
+      resolvedSteps.push({
+        label: 'Segmento Mercado',
+        field: 'segmento_mercado',
+        crmValue: setorData?.nome || 'Não definido',
+        erpValue: `${segmentoMercado} (${segmentoLabels[segmentoMercado] || 'COMERCIO'})`,
+        status: 'ok',
+        message: `Setor: ${setorData?.nome || 'N/A'} → Código ${segmentoMercado}`,
+      });
+
       // 11. Build the IMP_CLIENTE_V3 payload
       const innerJson = {
         cnpj_cpf: cnpjDigits ? Number(cnpjDigits) : null,
@@ -285,7 +305,7 @@ export function CustomerPayloadSimulator() {
         destino_mercadoria: destinoMercadoria,
         usuario: usuarioErp || 1,
         banco_padrao: 999,
-        segmento_mercado: 0,
+        segmento_mercado: segmentoMercado,
         subsegmento_mercado: 0,
         enderecos: [{
           cidade: cidadeCodigo,
