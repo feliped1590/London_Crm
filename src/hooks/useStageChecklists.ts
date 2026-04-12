@@ -70,7 +70,7 @@ export function useChecklistMutations() {
 
   const createItem = useMutation({
     mutationFn: async (data: {
-      stage: DealStage;
+      stage: string;
       pipeline_id: string | null;
       title: string;
       description: string | null;
@@ -94,7 +94,7 @@ export function useChecklistMutations() {
   const updateItem = useMutation({
     mutationFn: async ({ id, ...data }: { 
       id: string;
-      stage?: DealStage;
+      stage?: string;
       pipeline_id?: string | null;
       title?: string;
       description?: string | null;
@@ -174,7 +174,7 @@ export function useChecklistMutations() {
  * @param fromStage - The stage the deal is LEAVING (current stage)
  * @param pipelineId - Optional pipeline ID for pipeline-specific checklists
  */
-export async function getPendingChecklistItems(dealId: string, fromStage: DealStage, pipelineId?: string | null): Promise<ChecklistItem[]> {
+export async function getPendingChecklistItems(dealId: string, fromStage: string, pipelineId?: string | null): Promise<ChecklistItem[]> {
   // Get required checklist items for the stage the deal is LEAVING
   // These items must be completed before the deal can move to a new stage
   let query = supabase

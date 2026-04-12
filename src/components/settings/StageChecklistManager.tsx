@@ -14,11 +14,7 @@ import { Plus, Pencil, Trash2, GripVertical, CheckSquare, AlertCircle } from 'lu
 import { useStageChecklistItems, useChecklistMutations, type ChecklistItem } from '@/hooks/useStageChecklists';
 import { usePipelines } from '@/hooks/usePipelines';
 import { cn } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type DealStage = Database['public']['Enums']['deal_stage'];
-
-const stageLabels: Record<DealStage, string> = {
+const defaultStageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
   qualificacao: 'Qualificação',
   proposta: 'Proposta',
@@ -27,7 +23,7 @@ const stageLabels: Record<DealStage, string> = {
   fechado_perdido: 'Fechado (Perdido)',
 };
 
-const stageColors: Record<DealStage, string> = {
+const defaultStageColors: Record<string, string> = {
   prospeccao: 'bg-slate-500',
   qualificacao: 'bg-blue-500',
   proposta: 'bg-yellow-500',

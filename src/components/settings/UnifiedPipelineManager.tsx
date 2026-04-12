@@ -34,9 +34,7 @@ const ROLE_OPTIONS = [
   { value: 'atendente', label: 'Atendente' },
 ];
 
-type DealStage = 'prospeccao' | 'qualificacao' | 'proposta' | 'negociacao' | 'fechado_ganho' | 'fechado_perdido';
-
-const DEAL_STAGES: { value: DealStage; label: string }[] = [
+const DEAL_STAGES: { value: string; label: string }[] = [
   { value: 'prospeccao', label: 'Prospecção' },
   { value: 'qualificacao', label: 'Qualificação' },
   { value: 'proposta', label: 'Proposta' },
@@ -71,7 +69,7 @@ export function UnifiedPipelineManager() {
     color: string;
     probability: number;
     sort_order: number;
-    stage: DealStage;
+    stage: string;
     pipeline_id: string;
     sla_hours: number | null;
     sla_warning_hours: number | null;

@@ -8,11 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useChecklistMutations, type ChecklistItem } from '@/hooks/useStageChecklists';
 import { cn } from '@/lib/utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type DealStage = Database['public']['Enums']['deal_stage'];
-
-const stageLabels: Record<DealStage, string> = {
+const defaultStageLabels: Record<string, string> = {
   prospeccao: 'Prospecção',
   qualificacao: 'Qualificação',
   proposta: 'Proposta',
