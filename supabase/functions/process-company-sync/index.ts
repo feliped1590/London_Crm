@@ -180,9 +180,10 @@ Deno.serve(async (req) => {
           .select(`
             id, name, fantasia, cnpj, tipo_pessoa, email, phone, 
             address, address_number, address_complement, neighborhood, city, state, zip_code,
-            inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id,
+            inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id, segmento_id,
             legal_entities(id, erp_company_code),
-            setores(id, nome)
+            setores(id, nome),
+            segmentos(id, nome, erp_code)
           `)
           .eq('id', queueItem.company_id)
           .single();
@@ -346,6 +347,10 @@ Deno.serve(async (req) => {
         // Resolver segmento_mercado pelo setor
         const segmentoMercado = getSegmentoBySetor(((company as any).setores as any)?.nome);
 
+        // Resolver subsegmento_mercado pelo segmento do CRM (segmentos.erp_code)
+        const segmentoData = (company as any).segmentos as any;
+        const subsegmentoMercado = segmentoData?.erp_code ?? 0;
+
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
@@ -354,6 +359,7 @@ Deno.serve(async (req) => {
           destino_mercadoria: destinoMercadoria,
           banco_padrao: bancoPadraoErp,
           segmento: segmentoMercado,
+          subsegmento: subsegmentoMercado,
         };
 
         // Inferir tipo_pessoa: CNPJ com 14 dígitos = PJ, 11 dígitos = PF, default = PJ

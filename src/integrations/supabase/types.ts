@@ -6973,6 +6973,7 @@ export type Database = {
         Row: {
           created_at: string | null
           descricao: string | null
+          erp_code: number | null
           id: string
           is_active: boolean | null
           nome: string
@@ -6984,6 +6985,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           descricao?: string | null
+          erp_code?: number | null
           id?: string
           is_active?: boolean | null
           nome: string
@@ -6995,6 +6997,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           descricao?: string | null
+          erp_code?: number | null
           id?: string
           is_active?: boolean | null
           nome?: string
