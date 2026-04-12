@@ -239,14 +239,18 @@ Deno.serve(async (req) => {
         }
         const cidadeCodigo = cityMapping.codigo_erp;
 
-        // 5. Resolver vendedor ERP
+        // 5. Resolver vendedor ERP (obrigatório)
         let vendedorCodigo = 0;
         if (company.sales_rep_id) {
           const { data: salesRep } = await supabase
             .from('sales_reps')
-            .select('erp_vendor_code')
+            .select('erp_vendor_code, name')
             .eq('id', company.sales_rep_id)
             .maybeSingle();
+          
+          if (salesRep && !salesRep.erp_vendor_code) {
+            throw new Error(`Vendedor "${salesRep.name}" não possui código ERP (erp_vendor_code). Configure em Settings → Vendedores.`);
+          }
           vendedorCodigo = Number(salesRep?.erp_vendor_code) || 0;
         }
 
