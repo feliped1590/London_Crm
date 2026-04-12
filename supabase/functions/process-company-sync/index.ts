@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
         }
 
         // Resolver segmento_mercado pelo setor
-        const segmentoMercado = getSegmentoBySetor(setorNome ? ((company as any).setores as any)?.nome : null);
+        const segmentoMercado = getSegmentoBySetor(((company as any).setores as any)?.nome);
 
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
