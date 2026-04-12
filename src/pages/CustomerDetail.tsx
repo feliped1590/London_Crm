@@ -117,7 +117,8 @@ export default function CustomerDetail() {
   const [companyForm, setCompanyForm] = useState({
     name: '', fantasia: '', cnpj: '', inscricao_estadual: '',
     phone: '', email: '', website: '', employee_count: '',
-    address: '', city: '', state: '', country: 'Brasil', notes: '',
+    address: '', address_number: '', neighborhood: '', zip_code: '',
+    city: '', state: '', country: 'Brasil', notes: '',
     setor_id: null as string | null, segmento_id: null as string | null,
     atividade_id: null as string | null, contribuinte_ipi: false,
   });
@@ -131,7 +132,11 @@ export default function CustomerDetail() {
       inscricao_estadual: customer.inscricao_estadual || '',
       phone: customer.phone || '', email: customer.email || '',
       website: customer.website || '', employee_count: customer.employee_count || '',
-      address: customer.address || '', city: customer.city || '',
+      address: customer.address || '',
+      address_number: (customer as any).address_number || '',
+      neighborhood: (customer as any).neighborhood || '',
+      zip_code: (customer as any).zip_code || '',
+      city: customer.city || '',
       state: customer.state || '', country: customer.country || 'Brasil',
       notes: customer.notes || '',
       setor_id: customer.setor_id || null,
