@@ -274,10 +274,14 @@ Deno.serve(async (req) => {
         const empresaCodigo = Number(legalEntity?.erp_company_code) || 1;
 
         // 8. Validar
+        // Inferir tipo_pessoa antes da validação
+        const cnpjDigitsForValidation = (company.cnpj || '').replace(/\D/g, '');
+        const tipoPessoaInferred = company.tipo_pessoa || (cnpjDigitsForValidation.length === 11 ? 'PF' : 'PJ');
+
         const validation = validateCompanyForSync({
           cnpj: company.cnpj,
           name: company.name,
-          tipo_pessoa: company.tipo_pessoa,
+          tipo_pessoa: tipoPessoaInferred,
           cidade_codigo: cidadeCodigo,
           address: company.address,
           zip_code: company.zip_code,
@@ -296,9 +300,13 @@ Deno.serve(async (req) => {
           usuario_erp: usuarioErp || 1,
         };
 
+        // Inferir tipo_pessoa: CNPJ com 14 dígitos = PJ, 11 dígitos = PF, default = PJ
+        const cnpjDigits = (company.cnpj || '').replace(/\D/g, '');
+        const tipoPessoa = company.tipo_pessoa || (cnpjDigits.length === 11 ? 'PF' : 'PJ');
+
         const crmCompany: CRMCompanyForSync = {
           cnpj: company.cnpj!,
-          tipo_pessoa: company.tipo_pessoa,
+          tipo_pessoa: tipoPessoa,
           name: company.name,
           fantasia: company.fantasia,
           phone: company.phone,
