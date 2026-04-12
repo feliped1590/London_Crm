@@ -757,6 +757,19 @@ export function UnifiedPipelineManager() {
                       </TableCell>
                       <TableCell>{stage.probability}%</TableCell>
                       <TableCell>
+                        {(stage as any).allowed_roles?.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {((stage as any).allowed_roles as string[]).map((role: string) => (
+                              <Badge key={role} variant="secondary" className="text-[10px]">
+                                {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">Todos</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         {stage.sla_hours ? `${stage.sla_hours}h` : '-'}
                       </TableCell>
                       <TableCell>
