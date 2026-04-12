@@ -16,6 +16,8 @@ interface ResolutionStep {
   message?: string;
 }
 
+const DEFAULT_ERP_COMPANY_CODE = 1;
+
 export function CustomerPayloadSimulator() {
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [companySearch, setCompanySearch] = useState('');
@@ -211,14 +213,14 @@ export function CustomerPayloadSimulator() {
 
       // 8. Empresa emissora
       const legalEntity = company.legal_entities as any;
-      const empresaCodigo = Number(legalEntity?.erp_company_code) || 1;
+      const empresaCodigo = DEFAULT_ERP_COMPANY_CODE;
       resolvedSteps.push({
         label: 'Empresa Emissora',
         field: 'empresa',
         crmValue: legalEntity?.name || 'Não definida',
         erpValue: empresaCodigo,
         status: 'ok',
-        message: empresaCodigo === 1 && !legalEntity?.erp_company_code ? 'Padrão (1)' : undefined,
+        message: 'Padrão fixo: 1',
       });
 
       // 9. Endereço
@@ -380,7 +382,7 @@ export function CustomerPayloadSimulator() {
           telefone: company.phone || '',
         }],
         vendedores: [{
-          empresa: empresaCodigo || 1,
+          empresa: DEFAULT_ERP_COMPANY_CODE,
           codigo_vendedor: vendedorCodigo || 0,
           digita_pedidos: 'S',
           exibir_historico: 'S',

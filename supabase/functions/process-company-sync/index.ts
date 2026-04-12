@@ -15,6 +15,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const DEFAULT_ERP_COMPANY_CODE = 1;
+
 function errorResponse(status: number, message: string) {
   return new Response(JSON.stringify({ success: false, error: message }), {
     status,
@@ -306,8 +308,9 @@ Deno.serve(async (req) => {
         }
 
         // 7. Resolver empresa emissora
-        const legalEntity = company.legal_entities as any;
-        const empresaCodigo = Number(legalEntity?.erp_company_code) || 1;
+        // Regra atual do projeto: payload de cliente sempre usa empresa 1,
+        // independentemente do código ERP cadastrado na entidade jurídica.
+        const empresaCodigo = DEFAULT_ERP_COMPANY_CODE;
 
         // 8. Validar
         // Inferir tipo_pessoa antes da validação
