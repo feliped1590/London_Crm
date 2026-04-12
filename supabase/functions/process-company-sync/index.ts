@@ -222,8 +222,8 @@ Deno.serve(async (req) => {
               entity_id: queueItem.company_id,
               direction: 'crm_to_erp',
               status: 'found_existing',
-              response_received: { erp_code: existingErpCode },
-              tenant_id: queueItem.tenant_id,
+              external_id: existingErpCode,
+              response_payload: { erp_code: existingErpCode },
             });
 
             successCount++;
@@ -397,7 +397,7 @@ Deno.serve(async (req) => {
             console.log(`[process-company-sync] Recheck: cliente apareceu no ERP (${recheck}), evitando duplicata`);
             await supabase.from('companies').update({ erp_code: recheck, erp_synced_at: new Date().toISOString() }).eq('id', queueItem.company_id);
             await supabase.from('company_sync_queue').update({ status: 'completed', processed_at: new Date().toISOString(), response: { found_existing: true, erp_code: recheck, via: 'recheck' }, updated_at: new Date().toISOString() }).eq('id', queueItem.id);
-            await supabase.from('erp_sync_logs').insert({ entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'found_existing', response_received: { erp_code: recheck, via: 'recheck' }, tenant_id: queueItem.tenant_id });
+            await supabase.from('erp_sync_logs').insert({ entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'found_existing', external_id: recheck, response_payload: { erp_code: recheck, via: 'recheck' } });
             successCount++;
             results.push({ company_id: queueItem.company_id, status: 'found_existing', erp_code: recheck });
             continue;
@@ -466,7 +466,7 @@ Deno.serve(async (req) => {
         // ═══ FASE C: Lookup pós-envio com retry progressivo ═══
         if (!erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
-          const delays = [2000, 5000, 10000];
+          const delays = [2000, 5000, 10000, 15000, 20000];
           for (const delay of delays) {
             await new Promise(r => setTimeout(r, delay));
             invalidateCache(company.cnpj);
@@ -475,6 +475,7 @@ Deno.serve(async (req) => {
               console.log(`[process-company-sync] Fase C: encontrado após ${delay}ms: ${erpCode}`);
               break;
             }
+            console.log(`[process-company-sync] Fase C: não encontrado após ${delay}ms, continuando...`);
           }
         }
 
@@ -498,15 +499,15 @@ Deno.serve(async (req) => {
             .update({ erp_code: erpCode, erp_synced_at: new Date().toISOString() })
             .eq('id', queueItem.company_id);
 
-          await supabase.from('erp_sync_logs').insert({
-            entity_type: 'company',
-            entity_id: queueItem.company_id,
-            direction: 'crm_to_erp',
-            status: syncStatus,
-            payload_sent: JSON.parse(payload),
-            response_received: responseData,
-            tenant_id: queueItem.tenant_id,
-          });
+           await supabase.from('erp_sync_logs').insert({
+              entity_type: 'company',
+              entity_id: queueItem.company_id,
+              direction: 'crm_to_erp',
+              status: syncStatus,
+              external_id: erpCode,
+              request_payload: JSON.parse(payload),
+              response_payload: responseData,
+            });
 
           successCount++;
           results.push({ company_id: queueItem.company_id, status: syncStatus, erp_code: erpCode });
@@ -526,15 +527,14 @@ Deno.serve(async (req) => {
             })
             .eq('id', queueItem.id);
 
-          await supabase.from('erp_sync_logs').insert({
-            entity_type: 'company',
-            entity_id: queueItem.company_id,
-            direction: 'crm_to_erp',
-            status: 'waiting_propagation',
-            payload_sent: JSON.parse(payload),
-            response_received: responseData,
-            tenant_id: queueItem.tenant_id,
-          });
+           await supabase.from('erp_sync_logs').insert({
+              entity_type: 'company',
+              entity_id: queueItem.company_id,
+              direction: 'crm_to_erp',
+              status: 'waiting_propagation',
+              request_payload: JSON.parse(payload),
+              response_payload: responseData,
+            });
 
           results.push({ company_id: queueItem.company_id, status: 'waiting_propagation' });
         }
@@ -570,7 +570,6 @@ Deno.serve(async (req) => {
           direction: 'crm_to_erp',
           status: 'error',
           error_message: err.message,
-          tenant_id: queueItem.tenant_id,
         });
 
         errorCount++;

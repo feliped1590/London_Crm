@@ -128,11 +128,43 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
       toast.success('Cliente adicionado à fila de envio ao ERP');
       onSyncTriggered?.();
 
-      // Fire-and-forget
-      supabase.functions.invoke('process-company-sync', {
+      const { data, error } = await supabase.functions.invoke('process-company-sync', {
         body: { company_id: companyId },
-      }).catch(() => {});
+      });
 
+      if (error) {
+        console.error('[CompanySyncButton] Erro:', error);
+        toast.error('Erro ao processar sincronização');
+        return;
+      }
+
+      const result = data?.results?.[0];
+      if (result?.erp_code) {
+        toast.success(`Cliente sincronizado! Código ERP: ${result.erp_code}`);
+      } else if (result?.status === 'waiting_propagation') {
+        toast.info('Cliente enviado ao ERP. Tentando recuperar código...');
+        // Auto-retry after 30s
+        setTimeout(async () => {
+          try {
+            const { data: retryData } = await supabase.functions.invoke('process-company-sync', {
+              body: { company_id: companyId },
+            });
+            const retryResult = retryData?.results?.[0];
+            if (retryResult?.erp_code) {
+              toast.success(`Código ERP recuperado: ${retryResult.erp_code}`);
+            } else {
+              toast.warning('Código ERP ainda não disponível. Tente novamente em alguns minutos.');
+            }
+            onSyncTriggered?.();
+          } catch {
+            // silent
+          }
+        }, 30000);
+      } else if (result?.status === 'found_existing') {
+        toast.success(`Cliente já existia no ERP: ${result.erp_code}`);
+      }
+
+      onSyncTriggered?.();
     } catch (err: any) {
       toast.error(`Erro ao enviar cliente: ${err.message}`);
     } finally {
