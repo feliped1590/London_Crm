@@ -511,6 +511,22 @@ export function IntegrationValidationPanel() {
                   </pre>
                 </div>
               )}
+
+              {/* Clear Queue Action */}
+              {errorDetail.companyId && errorDetail.queueStatus && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-2"
+                    disabled={clearingQueue}
+                    onClick={() => errorDetail.companyId && handleClearQueue(errorDetail.companyId)}
+                  >
+                    {clearingQueue ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Limpar Fila e Permitir Reenvio
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
