@@ -38,6 +38,7 @@ export interface UnifiedCustomer {
   last_reviewed_at?: string | null;
   active?: boolean;
   contribuinte_ipi?: boolean;
+  erp_code?: string | null;
   owner_id?: string | null;
   sales_rep_id?: string | null;
   tenant_id?: string | null;
