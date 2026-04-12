@@ -254,14 +254,18 @@ Deno.serve(async (req) => {
           vendedorCodigo = Number(salesRep?.erp_vendor_code) || 0;
         }
 
-        // 6. Resolver usuário ERP
+        // 6. Resolver usuário ERP (obrigatório)
         let usuarioErp = 0;
         if (company.created_by) {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('erp_user_code')
+            .select('erp_user_code, full_name')
             .eq('user_id', company.created_by)
             .maybeSingle();
+          
+          if (profile && !profile.erp_user_code) {
+            throw new Error(`Usuário "${profile.full_name}" não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
+          }
           usuarioErp = Number(profile?.erp_user_code) || 0;
         }
 

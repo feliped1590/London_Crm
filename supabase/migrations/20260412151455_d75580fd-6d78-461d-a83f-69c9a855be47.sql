@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_profiles_erp_user_code ON profiles(erp_user_code);
