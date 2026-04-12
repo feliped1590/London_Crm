@@ -565,7 +565,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
   }, [deals, stages, isAdmin, isSalesPipeline, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles, pipelines, currentPipelineId]);
 
   return {
-    user, isAdmin,
+    user, isAdmin, isSalesPipeline,
     pipelines, defaultPipeline, currentPipelineId,
     stages, stageConfig,
     deals, isLoading, isFetching, handleRefresh,
