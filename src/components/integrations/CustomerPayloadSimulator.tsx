@@ -159,10 +159,33 @@ export function CustomerPayloadSimulator() {
       });
       if (!vendedorCodigo) errs.push('Vendedor sem código ERP');
 
-      // 7. Usuário ERP
+      // 7. Usuário ERP (via vendedor vinculado → user_sales_reps → profiles)
       let usuarioErp = 0;
       let userName = 'N/A';
-      if (company.created_by) {
+      let userSource = '';
+      if (company.sales_rep_id) {
+        const { data: repLink } = await supabase
+          .from('user_sales_reps')
+          .select('user_id')
+          .eq('sales_rep_id', company.sales_rep_id)
+          .order('is_default', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (repLink?.user_id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name, erp_user_code')
+            .eq('user_id', repLink.user_id)
+            .maybeSingle();
+          if (profile) {
+            userName = profile.full_name || 'N/A';
+            usuarioErp = Number(profile.erp_user_code) || 0;
+            userSource = 'via vendedor';
+          }
+        }
+      }
+      // Fallback: created_by
+      if (!usuarioErp && company.created_by) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, erp_user_code')
@@ -171,15 +194,16 @@ export function CustomerPayloadSimulator() {
         if (profile) {
           userName = profile.full_name || 'N/A';
           usuarioErp = Number(profile.erp_user_code) || 0;
+          userSource = 'via criador';
         }
       }
       resolvedSteps.push({
         label: 'Usuário ERP',
         field: 'usuario',
-        crmValue: userName,
+        crmValue: `${userName}${userSource ? ` (${userSource})` : ''}`,
         erpValue: usuarioErp || null,
         status: usuarioErp ? 'ok' : 'error',
-        message: !usuarioErp ? 'erp_user_code não definido no perfil' : undefined,
+        message: !usuarioErp ? 'Usuário sem código ERP' : undefined,
       });
       if (!usuarioErp) errs.push('Usuário sem código ERP');
 
