@@ -229,7 +229,7 @@ function ErpUsersTable() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, erp_user_code }: { id: string; erp_user_code: number | null }) => {
-      const { error } = await supabase.from('profiles').update({ erp_user_code } as any).eq('id', id);
+      const { error } = await supabase.from('profiles').update({ erp_user_code }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
