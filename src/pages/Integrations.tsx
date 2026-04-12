@@ -292,6 +292,8 @@ export default function Integrations() {
 
           <StagingMonitor />
 
+          {isDeveloper && <CustomerPayloadSimulator />}
+
           {isDeveloper && <OrderPayloadSimulator />}
 
           {isDeveloper && <ErpMappingsManager />}
