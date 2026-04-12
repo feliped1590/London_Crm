@@ -87,6 +87,7 @@ export function KanbanBoard({
           onDragOver={onDragOver}
           onEdit={onEdit}
           onEmailDialog={onEmailDialog}
+          isSalesPipeline={isSalesPipeline}
         />
       ))}
     </div>
