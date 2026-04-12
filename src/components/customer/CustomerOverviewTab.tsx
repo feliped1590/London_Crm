@@ -171,11 +171,11 @@ export function CustomerOverviewTab({
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <Label htmlFor="name">Razão Social</Label>
+              <Label htmlFor="name">Razão Social <span className="text-destructive">*</span></Label>
               <Input id="name" value={companyForm.name} onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="fantasia">Nome Fantasia</Label>
+              <Label htmlFor="fantasia">Nome Fantasia <span className="text-destructive">*</span></Label>
               <Input id="fantasia" value={companyForm.fantasia} onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
@@ -253,11 +253,11 @@ export function CustomerOverviewTab({
               <div><Label>Tipo de Pessoa</Label><Input value={customer.tipo_pessoa === 'J' ? 'Jurídica' : 'Física'} disabled /></div>
             )}
             <div>
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">Telefone <span className="text-destructive">*</span></Label>
               <Input id="phone" value={companyForm.phone} onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input id="email" type="email" value={companyForm.email} onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             {!isErpCustomer && (
@@ -277,27 +277,27 @@ export function CustomerOverviewTab({
               </div>
             )}
             <div className="col-span-2">
-              <Label htmlFor="address">Endereço</Label>
+              <Label htmlFor="address">Endereço <span className="text-destructive">*</span></Label>
               <Input id="address" value={companyForm.address} onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="address_number">Número</Label>
+              <Label htmlFor="address_number">Número <span className="text-destructive">*</span></Label>
               <Input id="address_number" value={companyForm.address_number || ''} onChange={(e) => setCompanyForm({ ...companyForm, address_number: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="neighborhood">Bairro</Label>
+              <Label htmlFor="neighborhood">Bairro <span className="text-destructive">*</span></Label>
               <Input id="neighborhood" value={companyForm.neighborhood || ''} onChange={(e) => setCompanyForm({ ...companyForm, neighborhood: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="zip_code">CEP</Label>
+              <Label htmlFor="zip_code">CEP <span className="text-destructive">*</span></Label>
               <Input id="zip_code" value={companyForm.zip_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, zip_code: e.target.value })} disabled={!isEditing || isErpCustomer} placeholder="00000-000" maxLength={9} />
             </div>
             <div>
-              <Label htmlFor="city">Cidade</Label>
+              <Label htmlFor="city">Cidade <span className="text-destructive">*</span></Label>
               <Input id="city" value={companyForm.city} onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="state">Estado</Label>
+              <Label htmlFor="state">Estado <span className="text-destructive">*</span></Label>
               <Input id="state" value={companyForm.state} onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             {!isErpCustomer && (
