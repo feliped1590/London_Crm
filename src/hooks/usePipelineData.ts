@@ -35,6 +35,7 @@ export interface PipelineStageRow {
   color: string | null;
   sort_order: number;
   pipeline_id: string;
+  allowed_roles?: string[] | null;
 }
 
 export interface StageConfigEntry {
@@ -53,6 +54,21 @@ export function usePipelineData(selectedPipelineId: string | null) {
   const { pipelines, defaultPipeline } = usePipelines();
   const { requiresJustification, logIntervention } = usePortfolioGovernance();
   const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
+
+  // ── User roles (for stage permission check) ───────────────────────
+  const { data: userRoles } = useQuery({
+    queryKey: ['user_roles_list', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      return (data || []).map(r => r.role);
+    },
+    enabled: !!user?.id,
+  });
 
   const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
 
@@ -469,6 +485,19 @@ export function usePipelineData(selectedPipelineId: string | null) {
     if (!deal) return;
     if (deal.stage === targetStage) return;
 
+    // ── Stage permission check ──────────────────────────────────────
+    if (!isAdmin) {
+      const targetStageData = pipelineStagesData?.find(s => s.stage === targetStage);
+      const allowedRoles = targetStageData?.allowed_roles;
+      if (allowedRoles && allowedRoles.length > 0) {
+        const hasPermission = userRoles?.some(role => allowedRoles.includes(role));
+        if (!hasPermission) {
+          toast.error('Você não tem permissão para mover para esta etapa');
+          return;
+        }
+      }
+    }
+
     const firstStage = stages[0];
     if (deal.stage === firstStage) {
       if (!deal.company_id && !deal.contact_id) {
@@ -527,7 +556,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
       console.error('Error checking checklist items:', error);
       updateMutation.mutate({ id: dealId, stage: targetStage });
     }
-  }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation]);
+  }, [deals, stages, isAdmin, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles]);
 
   return {
     user, isAdmin,
