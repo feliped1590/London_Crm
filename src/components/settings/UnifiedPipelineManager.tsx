@@ -32,6 +32,10 @@ const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrador' },
   { value: 'vendedor', label: 'Vendedor' },
   { value: 'atendente', label: 'Atendente' },
+  { value: 'financeiro', label: 'Financeiro' },
+  { value: 'faturamento', label: 'Faturamento' },
+  { value: 'logistica', label: 'Logística' },
+  { value: 'qualidade', label: 'Qualidade' },
 ];
 
 const DEAL_STAGES: { value: string; label: string }[] = [

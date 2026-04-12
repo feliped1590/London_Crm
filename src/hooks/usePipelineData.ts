@@ -15,9 +15,9 @@ import type { Tables, TablesInsert } from '@/integrations/supabase/types';
 import { logOwnershipWarning } from '@/lib/ownership';
 
 export type Deal = Tables<'deals'>;
-export type DealStage = Tables<'deals'>['stage'];
+export type DealStage = string;
 
-export const defaultStageConfig: Record<DealStage, { label: string; color: string }> = {
+export const defaultStageConfig: Record<string, { label: string; color: string }> = {
   prospeccao: { label: 'Prospecção', color: 'bg-slate-500' },
   qualificacao: { label: 'Qualificação', color: 'bg-blue-500' },
   proposta: { label: 'Proposta', color: 'bg-yellow-500' },

@@ -66,13 +66,6 @@ export function KanbanBoard({
         "h-[calc(100vh-280px)] sm:h-[calc(100vh-300px)]",
         "flex gap-3 overflow-x-auto pb-4 -mx-2 px-2",
         isMobile && "snap-x snap-mandatory",
-        "xl:grid xl:gap-4 xl:overflow-x-visible xl:pb-0 xl:mx-0 xl:px-0",
-        stages.length === 1 && "xl:grid-cols-1",
-        stages.length === 2 && "xl:grid-cols-2",
-        stages.length === 3 && "xl:grid-cols-3",
-        stages.length === 4 && "xl:grid-cols-4",
-        stages.length === 5 && "xl:grid-cols-5",
-        stages.length >= 6 && "xl:grid-cols-6"
       )}
     >
       {stages.map((stage) => (
