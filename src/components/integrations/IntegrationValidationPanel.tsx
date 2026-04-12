@@ -357,6 +357,37 @@ export function IntegrationValidationPanel() {
           </div>
         </div>
       )}
+
+      {/* Error Detail Dialog */}
+      <Dialog open={errorDetail.open} onOpenChange={(open) => setErrorDetail(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Erro de Sincronização
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Cliente</p>
+              <p className="font-medium">{errorDetail.companyName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Detalhes do erro</p>
+              {errorDetail.loading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Carregando...</span>
+                </div>
+              ) : (
+                <pre className="mt-1 p-3 bg-muted rounded-md text-sm whitespace-pre-wrap break-words max-h-[300px] overflow-y-auto">
+                  {errorDetail.error}
+                </pre>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
