@@ -627,11 +627,12 @@ export default function CustomerNew() {
                     />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <Label htmlFor="fantasia">Nome Fantasia</Label>
+                    <Label htmlFor="fantasia">Nome Fantasia *</Label>
                     <Input
                       id="fantasia"
                       value={companyForm.fantasia}
                       onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })}
+                      required
                     />
                   </div>
                   <div className="col-span-2">
@@ -717,68 +718,75 @@ export default function CustomerNew() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   value={companyForm.email}
                   onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+                  required
                 />
               </div>
               
               <div className="col-span-2">
-                <Label htmlFor="address">Endereço</Label>
+                <Label htmlFor="address">Endereço *</Label>
                 <Input
                   id="address"
                   value={companyForm.address}
                   onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                  required
                 />
               </div>
 
               <div>
-                <Label htmlFor="address_number">Número</Label>
+                <Label htmlFor="address_number">Número *</Label>
                 <Input
                   id="address_number"
                   value={companyForm.address_number}
                   onChange={(e) => setCompanyForm({ ...companyForm, address_number: e.target.value })}
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="neighborhood">Bairro</Label>
+                <Label htmlFor="neighborhood">Bairro *</Label>
                 <Input
                   id="neighborhood"
                   value={companyForm.neighborhood}
                   onChange={(e) => setCompanyForm({ ...companyForm, neighborhood: e.target.value })}
+                  required
                 />
               </div>
 
               <div>
-                <Label htmlFor="zip_code">CEP</Label>
+                <Label htmlFor="zip_code">CEP *</Label>
                 <Input
                   id="zip_code"
                   value={companyForm.zip_code}
                   onChange={(e) => setCompanyForm({ ...companyForm, zip_code: e.target.value })}
                   placeholder="00000-000"
                   maxLength={9}
+                  required
                 />
               </div>
               
               <div>
-                <Label htmlFor="city">Cidade</Label>
+                <Label htmlFor="city">Cidade *</Label>
                 <Input
                   id="city"
                   value={companyForm.city}
                   onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="state">Estado</Label>
+                <Label htmlFor="state">Estado *</Label>
                 <Input
                   id="state"
                   value={companyForm.state}
                   onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })}
                   maxLength={2}
                   placeholder="UF"
+                  required
                 />
               </div>
             </div>
