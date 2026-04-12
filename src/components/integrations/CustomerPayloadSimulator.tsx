@@ -18,6 +18,7 @@ interface ResolutionStep {
 
 export function CustomerPayloadSimulator() {
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
+  const [companySearch, setCompanySearch] = useState('');
   const [isSimulating, setIsSimulating] = useState(false);
   const [payload, setPayload] = useState<any>(null);
   const [steps, setSteps] = useState<ResolutionStep[]>([]);
@@ -25,21 +26,29 @@ export function CustomerPayloadSimulator() {
   const [copied, setCopied] = useState(false);
 
   const { data: companies = [] } = useQuery({
-    queryKey: ['companies-for-simulator'],
+    queryKey: ['companies-for-simulator', companySearch],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('companies')
-        .select('id, name, cnpj')
+        .select('id, name, cnpj, fantasia')
         .eq('active', true)
         .order('name')
-        .limit(200);
+        .limit(50);
+
+      if (companySearch.trim().length >= 2) {
+        const term = companySearch.trim();
+        query = query.or(`name.ilike.%${term}%,cnpj.ilike.%${term}%,fantasia.ilike.%${term}%`);
+      }
+
+      const { data } = await query;
       return (data || []) as any[];
     },
+    enabled: companySearch.trim().length >= 2,
   });
 
   const companyOptions = companies.map((c: any) => ({
     value: c.id,
-    label: `${c.name}${c.cnpj ? ` — ${c.cnpj}` : ''}`,
+    label: `${c.name}${c.fantasia ? ` (${c.fantasia})` : ''}${c.cnpj ? ` — ${c.cnpj}` : ''}`,
   }));
 
   const handleSimulate = async () => {
