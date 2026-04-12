@@ -213,6 +213,31 @@ export function IntegrationValidationPanel() {
     }
   };
 
+  const [clearingQueue, setClearingQueue] = useState(false);
+
+  const handleClearQueue = async (companyId: string) => {
+    setClearingQueue(true);
+    try {
+      await (supabase as any)
+        .from('company_sync_queue')
+        .delete()
+        .eq('company_id', companyId);
+
+      await supabase
+        .from('companies')
+        .update({ integration_status: 'not_synced' } as any)
+        .eq('id', companyId);
+
+      toast.success('Fila limpa. O cliente pode ser reenviado.');
+      setErrorDetail(prev => ({ ...prev, open: false }));
+      refetch();
+    } catch (err: any) {
+      toast.error('Erro ao limpar fila: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setClearingQueue(false);
+    }
+  };
+
   const getEffectiveStatus = (item: any) => {
     const status = item.integration_status || 'not_synced';
     if (status !== 'sync_error') return status;
