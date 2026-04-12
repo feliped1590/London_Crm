@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw } from 'lucide-react';
+import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; cardColor: string }> = {
@@ -62,6 +62,7 @@ const PAGE_SIZE = 20;
 
 interface ErrorDetailState {
   open: boolean;
+  companyId: string | null;
   companyName: string;
   loading: boolean;
   queueStatus: string | null;
@@ -82,7 +83,7 @@ export function IntegrationValidationPanel() {
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
 
   const [errorDetail, setErrorDetail] = useState<ErrorDetailState>({
-    open: false, companyName: '', loading: false,
+    open: false, companyId: null, companyName: '', loading: false,
     queueStatus: null, errorMessage: null, attempts: 0,
     nextRetry: null, payload: null, response: null, processedAt: null,
   });
@@ -161,7 +162,7 @@ export function IntegrationValidationPanel() {
 
   const handleViewError = async (companyId: string, companyName: string) => {
     setErrorDetail({
-      open: true, companyName, loading: true,
+      open: true, companyId: companyId, companyName, loading: true,
       queueStatus: null, errorMessage: null, attempts: 0,
       nextRetry: null, payload: null, response: null, processedAt: null,
     });
@@ -173,7 +174,7 @@ export function IntegrationValidationPanel() {
         .maybeSingle();
 
       setErrorDetail({
-        open: true, companyName, loading: false,
+        open: true, companyId: companyId, companyName, loading: false,
         queueStatus: data?.status || null,
         errorMessage: data?.error_message || null,
         attempts: data?.attempts || 0,
@@ -209,6 +210,31 @@ export function IntegrationValidationPanel() {
       setTimeout(() => {
         setSyncingIds(prev => { const next = new Set(prev); next.delete(companyId); return next; });
       }, 2000);
+    }
+  };
+
+  const [clearingQueue, setClearingQueue] = useState(false);
+
+  const handleClearQueue = async (companyId: string) => {
+    setClearingQueue(true);
+    try {
+      await (supabase as any)
+        .from('company_sync_queue')
+        .delete()
+        .eq('company_id', companyId);
+
+      await supabase
+        .from('companies')
+        .update({ integration_status: 'not_synced' } as any)
+        .eq('id', companyId);
+
+      toast.success('Fila limpa. O cliente pode ser reenviado.');
+      setErrorDetail(prev => ({ ...prev, open: false }));
+      refetch();
+    } catch (err: any) {
+      toast.error('Erro ao limpar fila: ' + (err.message || 'erro desconhecido'));
+    } finally {
+      setClearingQueue(false);
     }
   };
 
@@ -483,6 +509,22 @@ export function IntegrationValidationPanel() {
                   <pre className="p-3 bg-muted rounded-md text-xs whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
                     {JSON.stringify(errorDetail.response, null, 2)}
                   </pre>
+                </div>
+              )}
+
+              {/* Clear Queue Action */}
+              {errorDetail.companyId && errorDetail.queueStatus && (
+                <div className="flex justify-end pt-2 border-t">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-2"
+                    disabled={clearingQueue}
+                    onClick={() => errorDetail.companyId && handleClearQueue(errorDetail.companyId)}
+                  >
+                    {clearingQueue ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Limpar Fila e Permitir Reenvio
+                  </Button>
                 </div>
               )}
             </div>
