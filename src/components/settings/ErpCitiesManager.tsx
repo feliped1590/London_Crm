@@ -74,9 +74,10 @@ export function ErpCitiesManager() {
           .eq('id', city.id);
         if (error) throw error;
       } else {
+        if (!tenantId) throw new Error('Tenant não encontrado. Recarregue a página.');
         const { error } = await (supabase as any)
           .from('erp_cities')
-          .insert({ nome: city.nome, uf: city.uf, codigo_erp: city.codigo_erp });
+          .insert({ nome: city.nome, uf: city.uf, codigo_erp: city.codigo_erp, tenant_id: tenantId });
         if (error) throw error;
       }
     },
