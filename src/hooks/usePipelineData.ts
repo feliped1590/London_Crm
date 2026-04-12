@@ -35,6 +35,7 @@ export interface PipelineStageRow {
   color: string | null;
   sort_order: number;
   pipeline_id: string;
+  allowed_roles?: string[] | null;
 }
 
 export interface StageConfigEntry {
