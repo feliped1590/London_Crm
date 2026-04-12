@@ -162,7 +162,7 @@ export function IntegrationValidationPanel() {
 
   const handleViewError = async (companyId: string, companyName: string) => {
     setErrorDetail({
-      open: true, companyName, loading: true,
+      open: true, companyId: companyId, companyName, loading: true,
       queueStatus: null, errorMessage: null, attempts: 0,
       nextRetry: null, payload: null, response: null, processedAt: null,
     });
