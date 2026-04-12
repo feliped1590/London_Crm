@@ -20,12 +20,37 @@ interface ErpCity {
 
 export function ErpCitiesManager() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCity, setEditingCity] = useState<ErpCity | null>(null);
   const [nome, setNome] = useState('');
   const [uf, setUf] = useState('');
   const [codigoErp, setCodigoErp] = useState('');
   const [search, setSearch] = useState('');
+  const [tenantId, setTenantId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolveTenant = async () => {
+      if (!user?.id) return;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('id', user.id)
+        .single();
+      let tid = profile?.active_tenant_id;
+      if (!tid) {
+        const { data: ut } = await (supabase as any)
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+        tid = ut?.tenant_id;
+      }
+      setTenantId(tid || null);
+    };
+    resolveTenant();
+  }, [user?.id]);
 
   const { data: cities = [], isLoading } = useQuery({
     queryKey: ['erp-cities'],
