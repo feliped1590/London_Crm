@@ -63,8 +63,22 @@ export function useDashboardData(filterUserId?: string | null) {
   // Determine effective filter: default to current user
   const effectiveUserId = filterUserId === 'all' ? null : (filterUserId || user?.id || null);
 
+  // Fetch sales pipeline IDs to filter commercial metrics
+  const { data: salesPipelineIds } = useQuery({
+    queryKey: ['dashboard-sales-pipeline-ids'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipelines')
+        .select('id')
+        .eq('type', 'sales')
+        .eq('is_active', true);
+      if (error) throw error;
+      return data?.map(p => p.id) || [];
+    },
+  });
+
   const { data: deals } = useQuery({
-    queryKey: ['dashboard-deals', effectiveUserId],
+    queryKey: ['dashboard-deals', effectiveUserId, salesPipelineIds],
     queryFn: async () => {
       let query = supabase
         .from('deals')
@@ -74,12 +88,17 @@ export function useDashboardData(filterUserId?: string | null) {
       if (effectiveUserId) {
         query = query.eq('owner_id', effectiveUserId);
       }
+
+      // Only include deals from sales pipelines for dashboard metrics
+      if (salesPipelineIds && salesPipelineIds.length > 0) {
+        query = query.in('pipeline_id', salesPipelineIds);
+      }
       
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!salesPipelineIds,
   });
 
   const { data: tasks } = useQuery({
