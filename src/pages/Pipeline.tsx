@@ -565,6 +565,7 @@ export default function Pipeline() {
           filteredDeals={filteredDeals}
           isMobile={isMobile}
           isSalesPipeline={isSalesPipeline}
+          stagePermissions={pipeline.stagePermissions}
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragOver={handleDragOver}

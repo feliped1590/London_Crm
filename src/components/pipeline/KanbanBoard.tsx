@@ -77,26 +77,31 @@ export function KanbanBoard({
         isMobile && "snap-x snap-mandatory",
       )}
     >
-      {stages.map((stage) => (
-        <KanbanColumn
-          key={stage}
-          stage={stage}
-          config={stageConfig[stage] || { label: stage, color: 'bg-slate-500' }}
-          allStageDeals={getStageDeals(stage)}
-          pagedDeals={getPagedStageDeals(stage)}
-          stageTotal={getStageTotal(stage)}
-          isMobile={isMobile}
-          page={getStagePage(stage)}
-          totalPages={getStageTotalPages(stage)}
-          onPageChange={(page) => setStagePages(prev => ({ ...prev, [stage]: page }))}
-          onDragStart={onDragStart}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          onEdit={onEdit}
-          onEmailDialog={onEmailDialog}
-          isSalesPipeline={isSalesPipeline}
-        />
-      ))}
+      {stages.map((stage) => {
+        const permInfo = stagePermissions?.find(p => p.stage === stage);
+        const isBlocked = permInfo ? !permInfo.allowed : false;
+        return (
+          <KanbanColumn
+            key={stage}
+            stage={stage}
+            config={stageConfig[stage] || { label: stage, color: 'bg-slate-500' }}
+            allStageDeals={getStageDeals(stage)}
+            pagedDeals={getPagedStageDeals(stage)}
+            stageTotal={getStageTotal(stage)}
+            isMobile={isMobile}
+            isBlocked={isBlocked}
+            page={getStagePage(stage)}
+            totalPages={getStageTotalPages(stage)}
+            onPageChange={(page) => setStagePages(prev => ({ ...prev, [stage]: page }))}
+            onDragStart={onDragStart}
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+            onEdit={onEdit}
+            onEmailDialog={onEmailDialog}
+            isSalesPipeline={isSalesPipeline}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -584,10 +584,22 @@ export function usePipelineData(selectedPipelineId: string | null) {
     }
   }, [deals, stages, isAdmin, isSalesPipeline, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles, pipelines, currentPipelineId]);
 
+  // ── Stage permissions for visual feedback ──────────────────────────
+  const stagePermissions = useMemo(() => {
+    if (!pipelineStagesData) return [];
+    return pipelineStagesData.map(s => {
+      if (isAdmin) return { stage: s.stage, allowed: true };
+      const roles = s.allowed_roles;
+      if (!roles || roles.length === 0) return { stage: s.stage, allowed: true };
+      const hasPermission = userRoles?.some(role => roles.includes(role)) ?? false;
+      return { stage: s.stage, allowed: hasPermission };
+    });
+  }, [pipelineStagesData, userRoles, isAdmin]);
+
   return {
     user, isAdmin, isSalesPipeline,
     pipelines, defaultPipeline, currentPipelineId,
-    stages, stageConfig,
+    stages, stageConfig, stagePermissions,
     deals, isLoading, isFetching, handleRefresh,
     sellers,
     mySalesRepIds,
