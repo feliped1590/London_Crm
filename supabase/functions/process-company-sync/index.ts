@@ -351,6 +351,7 @@ Deno.serve(async (req) => {
           address_number: company.address_number,
           neighborhood: company.neighborhood,
           zip_code: company.zip_code,
+          state: company.state,
         };
 
         const mapped = mapCompanyToErp(crmCompany, context);
@@ -418,7 +419,7 @@ Deno.serve(async (req) => {
         const retorno = retornoObj?.['#out#p_retorno'] ?? retornoObj?.p_retorno ?? null;
 
         // Verificar erro explícito
-        if (typeof retorno === 'string' && retorno.includes('#ERRO#')) {
+        if (typeof retorno === 'string' && (retorno.includes('#ERRO#') || retorno.startsWith('ERRO#'))) {
           throw new Error(`ERP retornou erro: ${retorno}`);
         }
 
