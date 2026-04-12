@@ -121,6 +121,7 @@ export default function CustomerDetail() {
     city: '', state: '', country: 'Brasil', notes: '',
     setor_id: null as string | null, segmento_id: null as string | null,
     atividade_id: null as string | null, contribuinte_ipi: false,
+    erp_code: '',
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
@@ -143,6 +144,7 @@ export default function CustomerDetail() {
       segmento_id: customer.segmento_id || null,
       atividade_id: customer.atividade_id || null,
       contribuinte_ipi: customer.contribuinte_ipi ?? false,
+      erp_code: customer.erp_code || '',
     });
     setCustomFieldsData((customer.custom_fields as Record<string, unknown>) || {});
   }
