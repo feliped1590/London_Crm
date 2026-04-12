@@ -463,10 +463,10 @@ Deno.serve(async (req) => {
           if (match) erpCode = match[0];
         }
 
-        // ═══ FASE C: Lookup pós-envio com retry progressivo ═══
+        // ═══ FASE C: Lookup pós-envio (máx 2 tentativas para não estourar timeout) ═══
         if (!erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
-          const delays = [2000, 5000, 10000, 15000, 20000];
+          const delays = [3000, 8000];
           for (const delay of delays) {
             await new Promise(r => setTimeout(r, delay));
             invalidateCache(company.cnpj);
@@ -512,17 +512,17 @@ Deno.serve(async (req) => {
           successCount++;
           results.push({ company_id: queueItem.company_id, status: syncStatus, erp_code: erpCode });
         } else {
-          // Enviou com sucesso mas ainda não encontrou código — retry automático
+          // Enviou com sucesso mas ainda não encontrou código — marcar para retry pelo front
           console.log('[process-company-sync] Enviado com sucesso mas erp_code não disponível ainda');
 
           await supabase
             .from('company_sync_queue')
             .update({
-              status: 'pending',
-              error_message: 'Aguardando propagação no ERP — código ainda não disponível',
+              status: 'waiting_propagation',
+              error_message: 'Cliente enviado ao ERP com sucesso. Aguardando propagação do código.',
               payload: JSON.parse(payload),
               response: responseData,
-              next_retry_at: new Date(Date.now() + 120_000).toISOString(),
+              next_retry_at: new Date(Date.now() + 60_000).toISOString(),
               updated_at: new Date().toISOString(),
             })
             .eq('id', queueItem.id);

@@ -30,6 +30,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: Loader2,
     className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
   },
+  waiting_propagation: {
+    label: 'Aguardando ERP',
+    icon: Cloud,
+    className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
+  },
   completed: {
     label: 'Sincronizado',
     icon: Check,
@@ -84,6 +89,8 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
   let displayStatus: string;
   if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
+  } else if (queueEntry?.status === 'waiting_propagation') {
+    displayStatus = 'waiting_propagation';
   } else if (erpCode) {
     displayStatus = 'completed';
   } else if (queueEntry) {
