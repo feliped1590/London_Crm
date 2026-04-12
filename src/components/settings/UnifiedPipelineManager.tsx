@@ -77,6 +77,7 @@ export function UnifiedPipelineManager() {
     pipeline_id: string;
     sla_hours: number | null;
     sla_warning_hours: number | null;
+    allowed_roles: string[];
   }>({
     name: '',
     color: '#6366f1',
@@ -86,6 +87,7 @@ export function UnifiedPipelineManager() {
     pipeline_id: '',
     sla_hours: null,
     sla_warning_hours: null,
+    allowed_roles: [],
   });
 
   // Fetch pipeline stages with pipeline info
@@ -251,6 +253,7 @@ export function UnifiedPipelineManager() {
       pipeline_id: '',
       sla_hours: null,
       sla_warning_hours: null,
+      allowed_roles: [],
     });
     setEditingStage(null);
     setIsStageDialogOpen(false);
@@ -267,6 +270,7 @@ export function UnifiedPipelineManager() {
       pipeline_id: stage.pipeline_id || '',
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
+      allowed_roles: (stage as any).allowed_roles || [],
     });
     setIsStageDialogOpen(true);
   };
