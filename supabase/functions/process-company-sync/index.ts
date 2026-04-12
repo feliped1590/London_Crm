@@ -351,6 +351,7 @@ Deno.serve(async (req) => {
           address_number: company.address_number,
           neighborhood: company.neighborhood,
           zip_code: company.zip_code,
+          state: company.state,
         };
 
         const mapped = mapCompanyToErp(crmCompany, context);
