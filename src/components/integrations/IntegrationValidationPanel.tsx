@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -119,6 +120,31 @@ export function IntegrationValidationPanel() {
   const totalPages = Math.ceil((listData?.total || 0) / PAGE_SIZE);
 
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [errorDetail, setErrorDetail] = useState<{ open: boolean; companyName: string; error: string | null; loading: boolean }>({
+    open: false, companyName: '', error: null, loading: false,
+  });
+
+  const handleViewError = async (companyId: string, companyName: string) => {
+    setErrorDetail({ open: true, companyName, error: null, loading: true });
+    try {
+      const { data } = await (supabase as any)
+        .from('company_sync_queue')
+        .select('error_message, attempts, processed_at, created_at')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setErrorDetail({
+        open: true,
+        companyName,
+        error: data?.error_message || 'Erro desconhecido (sem mensagem registrada)',
+        loading: false,
+      });
+    } catch {
+      setErrorDetail({ open: true, companyName, error: 'Falha ao buscar detalhes do erro', loading: false });
+    }
+  };
 
   const handleSync = async (companyId: string) => {
     setSyncingIds(prev => new Set(prev).add(companyId));
@@ -248,31 +274,42 @@ export function IntegrationValidationPanel() {
                       </TableCell>
                       <TableCell className="text-sm">{item.erp_code || '—'}</TableCell>
                       <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className={`gap-1 ${config.color}`}>
-                                <Icon className="h-3 w-3" />
-                                {config.label}
-                              </Badge>
-                            </TooltipTrigger>
-                            {missing.length > 0 && (
-                              <TooltipContent>
-                                <p className="text-xs">Faltando: {missing.join(', ')}</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        {status === 'sync_error' ? (
+                          <Badge
+                            variant="outline"
+                            className={`gap-1 cursor-pointer hover:opacity-80 ${config.color}`}
+                            onClick={() => handleViewError(item.id, item.name)}
+                          >
+                            <Icon className="h-3 w-3" />
+                            {config.label}
+                          </Badge>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className={`gap-1 ${config.color}`}>
+                                  <Icon className="h-3 w-3" />
+                                  {config.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              {missing.length > 0 && (
+                                <TooltipContent>
+                                  <p className="text-xs">Faltando: {missing.join(', ')}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </TableCell>
                       <TableCell>
-                        {(status === 'not_synced' || status === 'missing_data') && (
+                        {(status === 'not_synced' || status === 'missing_data' || status === 'sync_error') && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => status === 'not_synced' && handleSync(item.id)}
+                                  onClick={() => (status === 'not_synced' || status === 'sync_error') && handleSync(item.id)}
                                   disabled={isSyncing || status === 'missing_data'}
                                   className={status === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
                                 >
@@ -286,7 +323,7 @@ export function IntegrationValidationPanel() {
                               <TooltipContent>
                                 {status === 'missing_data'
                                   ? `Complete os dados antes de enviar (falta: ${missing.join(', ')})`
-                                  : 'Enviar ao ERP'}
+                                  : status === 'sync_error' ? 'Retentar envio ao ERP' : 'Enviar ao ERP'}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -320,6 +357,37 @@ export function IntegrationValidationPanel() {
           </div>
         </div>
       )}
+
+      {/* Error Detail Dialog */}
+      <Dialog open={errorDetail.open} onOpenChange={(open) => setErrorDetail(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Erro de Sincronização
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm text-muted-foreground">Cliente</p>
+              <p className="font-medium">{errorDetail.companyName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Detalhes do erro</p>
+              {errorDetail.loading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Carregando...</span>
+                </div>
+              ) : (
+                <pre className="mt-1 p-3 bg-muted rounded-md text-sm whitespace-pre-wrap break-words max-h-[300px] overflow-y-auto">
+                  {errorDetail.error}
+                </pre>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
