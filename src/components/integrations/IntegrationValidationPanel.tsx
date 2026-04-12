@@ -83,7 +83,7 @@ export function IntegrationValidationPanel() {
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
 
   const [errorDetail, setErrorDetail] = useState<ErrorDetailState>({
-    open: false, companyName: '', loading: false,
+    open: false, companyId: null, companyName: '', loading: false,
     queueStatus: null, errorMessage: null, attempts: 0,
     nextRetry: null, payload: null, response: null, processedAt: null,
   });
