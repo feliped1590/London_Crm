@@ -69,6 +69,9 @@ export default function CustomerNew() {
     segmento_id: null as string | null,
     atividade_id: null as string | null,
     address: '',
+    address_number: '',
+    neighborhood: '',
+    zip_code: '',
     city: '',
     state: '',
   });
@@ -105,7 +108,10 @@ export default function CustomerNew() {
           name: prev.name || data.razao_social,
           fantasia: prev.fantasia || data.nome_fantasia,
           phone: prev.phone || data.telefone,
-          address: prev.address || [data.endereco.logradouro, data.endereco.numero].filter(Boolean).join(', '),
+          address: prev.address || data.endereco.logradouro || '',
+          address_number: prev.address_number || data.endereco.numero || '',
+          neighborhood: prev.neighborhood || data.endereco.bairro || '',
+          zip_code: prev.zip_code || data.endereco.cep || '',
           city: prev.city || data.endereco.cidade,
           state: prev.state || data.endereco.uf,
         }));
@@ -244,6 +250,9 @@ export default function CustomerNew() {
         segmento_id: companyForm.segmento_id || null,
         atividade_id: companyForm.atividade_id || null,
         address: companyForm.address || null,
+        address_number: companyForm.address_number || null,
+        neighborhood: companyForm.neighborhood || null,
+        zip_code: companyForm.zip_code || null,
         city: companyForm.city || null,
         state: companyForm.state || null,
         created_by: user?.id,
@@ -687,6 +696,34 @@ export default function CustomerNew() {
                   id="address"
                   value={companyForm.address}
                   onChange={(e) => setCompanyForm({ ...companyForm, address: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="address_number">Número</Label>
+                <Input
+                  id="address_number"
+                  value={companyForm.address_number}
+                  onChange={(e) => setCompanyForm({ ...companyForm, address_number: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="neighborhood">Bairro</Label>
+                <Input
+                  id="neighborhood"
+                  value={companyForm.neighborhood}
+                  onChange={(e) => setCompanyForm({ ...companyForm, neighborhood: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="zip_code">CEP</Label>
+                <Input
+                  id="zip_code"
+                  value={companyForm.zip_code}
+                  onChange={(e) => setCompanyForm({ ...companyForm, zip_code: e.target.value })}
+                  placeholder="00000-000"
+                  maxLength={9}
                 />
               </div>
               
