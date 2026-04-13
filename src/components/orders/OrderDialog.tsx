@@ -15,7 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search, ExternalLink } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search, Pencil } from 'lucide-react';
+import { OrderItemEditDialog } from './OrderItemEditDialog';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -78,6 +79,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -705,13 +707,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                     <TableCell>
                       <div
                         className="cursor-pointer group"
-                        onClick={() => window.open(`/products?edit=${item.product_id}`, '_blank')}
-                        title="Clique para editar o produto"
+                        onClick={() => setEditingItemIndex(index)}
+                        title="Clique para editar este item"
                       >
                         <p className="text-xs text-muted-foreground font-mono group-hover:text-primary transition-colors">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium group-hover:text-primary group-hover:underline transition-colors flex items-center gap-1">
                           {item.description}
-                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </p>
                       </div>
                     </TableCell>
@@ -871,6 +873,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onOpenChange={setAdvancedSearchOpen}
         onSelect={(product) => addProductById(product.id, product)}
       />
+
+      {editingItemIndex !== null && items[editingItemIndex] && (
+        <OrderItemEditDialog
+          open={true}
+          onOpenChange={(v) => { if (!v) setEditingItemIndex(null); }}
+          item={items[editingItemIndex]}
+          canEdit={canEdit}
+          onSave={(updated) => {
+            setItems(prev => prev.map((it, i) => i === editingItemIndex ? updated : it));
+            setEditingItemIndex(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
