@@ -14,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
 import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
@@ -78,8 +78,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
-  const [commissionType, setCommissionType] = useState<'percentage' | 'fixed'>('percentage');
-  const [commissionValue, setCommissionValue] = useState<number>(0);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -203,6 +201,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         id: item.id, product_id: item.product_id || '', description: item.description,
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
+        commission_pct: item.commission_pct || 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
       }));
     },
@@ -222,7 +221,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        commission_type: commissionType, commission_value: commissionValue,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
@@ -238,6 +236,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
+          commission_pct: item.commission_pct || 0,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -300,7 +299,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        commission_type: commissionType, commission_value: commissionValue,
+        
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
@@ -319,6 +318,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
+          commission_pct: item.commission_pct || 0,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -386,8 +386,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOrderType((order as any).order_type || 'producao');
       setPaymentMethod((order as any).payment_method || '');
       setPaymentTerms((order as any).payment_terms || '');
-      setCommissionType((order as any).commission_type || 'percentage');
-      setCommissionValue((order as any).commission_value || 0);
       const logistics = extractLogisticsFromRecord(order);
       setCarrierId(logistics.carrierId);
       setFreightType(logistics.freightType);
@@ -430,7 +428,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
-      setCommissionType('percentage'); setCommissionValue(0);
+      
     }
   }, [open]);
 
@@ -452,7 +450,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     addItem({
       product_id: product.id, description: product.name, quantity: 1,
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, width: product.width || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource,
     });
@@ -688,6 +686,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                     <TableHead className="w-28 text-right">IPI R$</TableHead>
                   </>
                 )}
+                <TableHead className="w-20 text-right">Com %</TableHead>
                 <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
@@ -725,6 +724,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         <TableCell className="text-right text-sm">{formatCurrency(ipiVal)}</TableCell>
                       </>
                     )}
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={item.commission_pct || ''}
+                        onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
+                        className="w-16 text-right text-sm"
+                        placeholder="0"
+                        disabled={!canEdit}
+                      />
+                    </TableCell>
                     <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
@@ -745,59 +757,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} />
       )}
 
-      {/* Comissão (informativo) */}
-      <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Comissão (opcional)</Label>
-          <span className="text-xs text-muted-foreground">Valor apenas para registro — não afeta totais</span>
-        </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <RadioGroup
-            value={commissionType}
-            onValueChange={(v) => { setCommissionType(v as 'percentage' | 'fixed'); setCommissionValue(0); }}
-            className="flex gap-4"
-            disabled={!canEdit}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="percentage" id="comm-pct" />
-              <Label htmlFor="comm-pct" className="text-sm cursor-pointer">Percentual (%)</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="fixed" id="comm-fixed" />
-              <Label htmlFor="comm-fixed" className="text-sm cursor-pointer">Valor fixo (R$)</Label>
-            </div>
-          </RadioGroup>
-
-          <div className="w-40">
-            {commissionType === 'percentage' ? (
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step={0.01}
-                value={commissionValue || ''}
-                onChange={(e) => setCommissionValue(Number(e.target.value) || 0)}
-                placeholder="0,00%"
-                disabled={!canEdit}
-              />
-            ) : (
-              <CurrencyInput
-                value={commissionValue}
-                onChange={(val) => setCommissionValue(val)}
-                disabled={!canEdit}
-              />
-            )}
-          </div>
-
-          {commissionValue > 0 && orderTotal > 0 && (
-            <span className="text-xs text-muted-foreground italic">
-              {commissionType === 'percentage'
-                ? `≈ ${formatCurrency(Math.round(orderTotal * commissionValue) / 100)}`
-                : `≈ ${(Math.round((commissionValue / orderTotal) * 10000) / 100).toFixed(2)}% do total`}
-            </span>
-          )}
-        </div>
-      </div>
 
       <DocumentLogisticsSection
         carrierId={carrierId} setCarrierId={setCarrierId}
