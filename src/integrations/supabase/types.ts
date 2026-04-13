@@ -4587,6 +4587,8 @@ export type Database = {
         Row: {
           approved_at: string | null
           carrier_id: string | null
+          commission_type: string | null
+          commission_value: number | null
           company_id: string | null
           contact_id: string | null
           created_at: string
@@ -4637,6 +4639,8 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           carrier_id?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
@@ -4687,6 +4691,8 @@ export type Database = {
         Update: {
           approved_at?: string | null
           carrier_id?: string | null
+          commission_type?: string | null
+          commission_value?: number | null
           company_id?: string | null
           contact_id?: string | null
           created_at?: string
