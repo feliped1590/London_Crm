@@ -222,6 +222,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
+        commission_type: commissionType, commission_value: commissionValue,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
@@ -299,6 +300,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
+        commission_type: commissionType, commission_value: commissionValue,
         ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
