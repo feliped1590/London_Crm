@@ -57,12 +57,20 @@ async function fetchProducts(filters: ProductSearchFilters, page: number, limit:
 export function useProductSearch({ filters, page = 0, limit = 20, enabled = true }: UseProductSearchOptions) {
   const queryClient = useQueryClient();
 
+  // Cancel stale queries on filter change
+  useEffect(() => {
+    return () => {
+      queryClient.cancelQueries({ queryKey: ['products-search'] });
+    };
+  }, [filters, queryClient]);
+
   const { data, isLoading, isFetching } = useQuery({
     queryKey: ['products-search', filters, page, limit],
     queryFn: () => fetchProducts(filters, page, limit),
     enabled,
     staleTime: 120_000,
     gcTime: 5 * 60_000,
+    placeholderData: (prev) => prev, // Keep previous data while fetching
   });
 
   const totalPages = Math.ceil((data?.total ?? 0) / limit);

@@ -58,9 +58,14 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
     enabled: open,
   });
 
-  // Auto-select when single result
+  // Auto-select when single result (only if search input is focused)
   useEffect(() => {
-    if (products.length === 1 && !isLoading && debouncedText.length >= 3) {
+    if (
+      products.length === 1 &&
+      !isLoading &&
+      debouncedText.length >= 3 &&
+      document.activeElement === searchInputRef.current
+    ) {
       handleSelectRef.current?.(products[0]);
     }
   }, [products, isLoading, debouncedText]);
@@ -199,7 +204,13 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-auto border rounded-lg">
+        <div className="flex-1 overflow-auto border rounded-lg relative">
+          {/* Light fetching indicator (not full loading) */}
+          {isFetching && !isLoading && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/20 overflow-hidden">
+              <div className="h-full w-1/3 bg-primary animate-pulse rounded" />
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
