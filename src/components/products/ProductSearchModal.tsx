@@ -57,6 +57,13 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
     enabled: open,
   });
 
+  // Auto-select when single result
+  useEffect(() => {
+    if (products.length === 1 && !isLoading && debouncedText.length >= 3) {
+      handleSelectRef.current?.(products[0]);
+    }
+  }, [products, isLoading, debouncedText]);
+
   const { recentProducts, addRecent } = useRecentProducts();
   const { familias, grupos, subgrupos, classes } = useProductLookups();
 
