@@ -842,6 +842,18 @@ export default function Products() {
     }
   };
 
+  // Deep-link: auto-open product edit from ?edit=ID
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId || !products || products.length === 0) return;
+    const product = products.find(p => p.id === editId);
+    if (product) {
+      handleEdit(product);
+      searchParams.delete('edit');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [products, searchParams]);
+
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
     const duplicatedData = {
