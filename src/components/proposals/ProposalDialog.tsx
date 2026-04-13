@@ -627,6 +627,12 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
           onConfirm={handlePriceOverrideConfirmWithAudit}
         />
       )}
+
+      <ProductSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        onSelect={(product) => addProductById(product.id, product)}
+      />
     </Dialog>
   );
 }
