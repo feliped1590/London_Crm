@@ -14,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -37,6 +37,9 @@ import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
+import { ProductSearchModal } from '@/components/products/ProductSearchModal';
+import { useRecentProducts } from '@/hooks/useRecentProducts';
+import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 
 interface OrderDialogProps {
   open: boolean;
@@ -70,6 +73,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
   const [orderType, setOrderType] = useState<OrderType>('producao');
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
 
@@ -183,18 +188,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   }, [contactsRaw, orderContactData]);
 
   const [productSearch, setProductSearch] = useState('');
-  const { data: products } = useQuery({
-    queryKey: ['products-active-search', productSearch],
-    queryFn: async (): Promise<ProductLookup[]> => {
-      let query = supabase.from('products')
-        .select('id, sku, name, tipo_id, unit_price, width, length, thickness, aliquota_ipi')
-        .eq('active', true).order('name').limit(50);
-      if (productSearch.trim()) query = query.or(`name.ilike.%${productSearch.trim()}%,sku.ilike.%${productSearch.trim()}%`);
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data ?? []) as unknown as ProductLookup[];
-    },
-  });
+  const { products } = useProductSimpleSearch(productSearch);
 
   const { data: existingOrderItems } = useQuery({
     queryKey: ['order_items_for_edit', order?.id],
@@ -443,9 +437,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   }, [companyFiscalData]);
 
   // --- Handlers ---
-  const addProductToItems = () => {
-    if (!selectedProductId) return;
-    const product = products?.find(p => p.id === selectedProductId);
+  const addProductById = useCallback((productId: string, productData?: any) => {
+    const product = productData || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
@@ -455,8 +448,26 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource,
     });
+    addRecent(product.id);
     setSelectedProductId('');
+  }, [products, ipiMode, resolveProductPricing, addItem, addRecent]);
+
+  const addProductToItems = () => {
+    if (!selectedProductId) return;
+    addProductById(selectedProductId);
   };
+
+  // F9 shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'F9' && open && !advancedSearchOpen) {
+        e.preventDefault();
+        setAdvancedSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, advancedSearchOpen]);
 
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
     if (field === 'quantity') {
@@ -643,6 +654,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
               emptyMessage="Nenhum produto encontrado" className="flex-1" onSearchChange={setProductSearch}
               options={(products ?? []).map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` }))}
             />
+            <Button variant="outline" size="icon" onClick={() => setAdvancedSearchOpen(true)} title="Pesquisa Avançada (F9)">
+              <Search className="h-4 w-4" />
+            </Button>
             <Button onClick={addProductToItems} disabled={!selectedProductId}>
               <Plus className="h-4 w-4 mr-2" />Adicionar
             </Button>
@@ -819,6 +833,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         open={showProtectionModal}
         onOpenChange={setShowProtectionModal}
         info={protectionInfo}
+      />
+
+      <ProductSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        onSelect={(product) => addProductById(product.id, product)}
       />
     </Dialog>
   );
