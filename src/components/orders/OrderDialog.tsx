@@ -14,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -37,6 +37,9 @@ import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
+import { ProductSearchModal } from '@/components/products/ProductSearchModal';
+import { useRecentProducts } from '@/hooks/useRecentProducts';
+import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 
 interface OrderDialogProps {
   open: boolean;
