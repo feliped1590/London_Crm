@@ -686,6 +686,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                     <TableHead className="w-28 text-right">IPI R$</TableHead>
                   </>
                 )}
+                <TableHead className="w-20 text-right">Com %</TableHead>
                 <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
@@ -723,6 +724,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         <TableCell className="text-right text-sm">{formatCurrency(ipiVal)}</TableCell>
                       </>
                     )}
+                    <TableCell className="text-right">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.01}
+                        value={item.commission_pct || ''}
+                        onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
+                        className="w-16 text-right text-sm"
+                        placeholder="0"
+                        disabled={!canEdit}
+                      />
+                    </TableCell>
                     <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
@@ -743,59 +757,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} />
       )}
 
-      {/* Comissão (informativo) */}
-      <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium">Comissão (opcional)</Label>
-          <span className="text-xs text-muted-foreground">Valor apenas para registro — não afeta totais</span>
-        </div>
-        <div className="flex flex-wrap items-end gap-4">
-          <RadioGroup
-            value={commissionType}
-            onValueChange={(v) => { setCommissionType(v as 'percentage' | 'fixed'); setCommissionValue(0); }}
-            className="flex gap-4"
-            disabled={!canEdit}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="percentage" id="comm-pct" />
-              <Label htmlFor="comm-pct" className="text-sm cursor-pointer">Percentual (%)</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="fixed" id="comm-fixed" />
-              <Label htmlFor="comm-fixed" className="text-sm cursor-pointer">Valor fixo (R$)</Label>
-            </div>
-          </RadioGroup>
-
-          <div className="w-40">
-            {commissionType === 'percentage' ? (
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step={0.01}
-                value={commissionValue || ''}
-                onChange={(e) => setCommissionValue(Number(e.target.value) || 0)}
-                placeholder="0,00%"
-                disabled={!canEdit}
-              />
-            ) : (
-              <CurrencyInput
-                value={commissionValue}
-                onChange={(val) => setCommissionValue(val)}
-                disabled={!canEdit}
-              />
-            )}
-          </div>
-
-          {commissionValue > 0 && orderTotal > 0 && (
-            <span className="text-xs text-muted-foreground italic">
-              {commissionType === 'percentage'
-                ? `≈ ${formatCurrency(Math.round(orderTotal * commissionValue) / 100)}`
-                : `≈ ${(Math.round((commissionValue / orderTotal) * 10000) / 100).toFixed(2)}% do total`}
-            </span>
-          )}
-        </div>
-      </div>
 
       <DocumentLogisticsSection
         carrierId={carrierId} setCarrierId={setCarrierId}
