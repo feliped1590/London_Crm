@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, ChevronsUpDown } from 'lucide-react';
+import { Plus, Trash2, Package, FileText, Check, X, Download, Link2, Loader2, DollarSign, ChevronsUpDown, Search } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,8 @@ import { DocumentTotals } from '@/components/documents/DocumentTotals';
 import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload, extractLogisticsFromRecord } from '@/components/documents/DocumentLogisticsSection';
 import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
+import { ProductSearchModal } from '@/components/products/ProductSearchModal';
+import { useRecentProducts } from '@/hooks/useRecentProducts';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -77,6 +79,8 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   const [approvalLink, setApprovalLink] = useState('');
   const [approvalExpires, setApprovalExpires] = useState<string | null>(null);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
+  const { addRecent } = useRecentProducts();
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -269,9 +273,8 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   }, [companyFiscalData]);
 
   // --- Handlers ---
-  const addProductToItems = () => {
-    if (!selectedProductId) return;
-    const product = products?.find(p => p.id === selectedProductId);
+  const addProductById = useCallback((productId: string, productData?: any) => {
+    const product = productData || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, formData.ipi_mode);
     addItem({
@@ -280,8 +283,26 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
       thickness: product.thickness, discount_percent: discountPercent,
       subtotal: unitPrice, ipi_rate: ipiRate, product, calculated_price_source: priceSource,
     });
+    addRecent(product.id);
     setSelectedProductId('');
+  }, [products, formData.ipi_mode, resolveProductPricing, addItem, addRecent]);
+
+  const addProductToItems = () => {
+    if (!selectedProductId) return;
+    addProductById(selectedProductId);
   };
+
+  // F9 shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'F9' && open && !advancedSearchOpen) {
+        e.preventDefault();
+        setAdvancedSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, advancedSearchOpen]);
 
   const updateItem = (index: number, field: keyof ProposalItem, value: any) => {
     const updatedItems = [...items];
