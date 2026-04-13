@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search, ExternalLink } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -195,7 +195,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     queryKey: ['order_items_for_edit', order?.id],
     queryFn: async (): Promise<OrderItemDraft[]> => {
       if (!order) return [];
-      const { data, error } = await supabase.from('order_items').select('*, product:products(sku, erp_code, fator_kg)').eq('order_id', order.id).order('sort_order');
+      const { data, error } = await supabase.from('order_items').select('*, product:products(sku, erp_code)').eq('order_id', order.id).order('sort_order');
       if (error) throw error;
       return (data ?? []).map((item: any) => ({
         id: item.id, product_id: item.product_id || '', product_code: item.product?.sku || item.product?.erp_code || '',
@@ -203,7 +203,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
-        fator_kg: item.product?.fator_kg || 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
       }));
     },
@@ -452,8 +451,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     addItem({
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0,
-      width: product.width || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource,
     });
@@ -681,7 +679,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 <TableHead>Produto</TableHead>
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
-                <TableHead className="w-28 text-right">Fator KG</TableHead>
+                <TableHead className="w-24">Desc %</TableHead>
                 <TableHead className="w-28 text-right">Subtotal</TableHead>
                 {ipiMode !== 'isento' && (
                   <>
@@ -703,16 +701,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 return (
                   <TableRow key={index}>
                     <TableCell>
-                      <div
-                        className="cursor-pointer group"
-                        onClick={() => window.open(`/products?edit=${item.product_id}`, '_blank')}
-                        title="Clique para editar o produto"
-                      >
-                        <p className="text-xs text-muted-foreground font-mono group-hover:text-primary transition-colors">{item.product_code || product?.sku || ''}</p>
-                        <p className="font-medium group-hover:text-primary group-hover:underline transition-colors flex items-center gap-1">
-                          {item.description}
-                          <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </p>
+                      <div>
+                        <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
+                        <p className="font-medium">{item.description}</p>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -724,8 +715,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {(item.fator_kg || product?.fator_kg) ? formatCurrency(item.fator_kg || product?.fator_kg || 0) : '—'}
+                    <TableCell>
+                      {item.discount_percent > 0 && (<span className="text-primary font-medium">{item.discount_percent}%</span>)}
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
