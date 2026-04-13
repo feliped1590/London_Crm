@@ -384,6 +384,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOrderType((order as any).order_type || 'producao');
       setPaymentMethod((order as any).payment_method || '');
       setPaymentTerms((order as any).payment_terms || '');
+      setCommissionType((order as any).commission_type || 'percentage');
+      setCommissionValue((order as any).commission_value || 0);
       const logistics = extractLogisticsFromRecord(order);
       setCarrierId(logistics.carrierId);
       setFreightType(logistics.freightType);
