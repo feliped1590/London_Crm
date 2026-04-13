@@ -23,6 +23,7 @@ export interface ProductLookup {
 export interface OrderItemDraft {
   id?: string;
   product_id: string;
+  product_code?: string;
   description: string;
   quantity: number;
   unit_price: number;

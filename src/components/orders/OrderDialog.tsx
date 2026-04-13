@@ -448,7 +448,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
-      product_id: product.id, description: product.name, quantity: 1,
+      product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
@@ -701,8 +701,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                   <TableRow key={index}>
                     <TableCell>
                       <div>
+                        <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-muted-foreground font-mono">{product?.sku}</p>
                       </div>
                     </TableCell>
                     <TableCell>
