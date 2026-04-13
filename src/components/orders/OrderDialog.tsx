@@ -792,8 +792,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           {commissionValue > 0 && orderTotal > 0 && (
             <span className="text-xs text-muted-foreground italic">
               {commissionType === 'percentage'
-                ? `≈ ${formatCurrency(orderTotal * commissionValue / 100)}`
-                : `≈ ${((commissionValue / orderTotal) * 100).toFixed(2)}% do total`}
+                ? `≈ ${formatCurrency(Math.round(orderTotal * commissionValue) / 100)}`
+                : `≈ ${(Math.round((commissionValue / orderTotal) * 10000) / 100).toFixed(2)}% do total`}
             </span>
           )}
         </div>
