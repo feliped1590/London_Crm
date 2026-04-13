@@ -78,6 +78,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [commissionType, setCommissionType] = useState<'percentage' | 'fixed'>('percentage');
+  const [commissionValue, setCommissionValue] = useState<number>(0);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
