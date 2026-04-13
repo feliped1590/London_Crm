@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function Products() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
@@ -840,6 +842,17 @@ export default function Products() {
     }
   };
 
+  // Deep-link: auto-open product edit from ?edit=ID
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    if (!editId || !products || products.length === 0) return;
+    const product = products.find(p => p.id === editId);
+    if (product) {
+      handleEdit(product);
+      searchParams.delete('edit');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [products, searchParams]);
 
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
