@@ -28,6 +28,7 @@ const PAGE_SIZE = 20;
 
 export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSearchModalProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
   const handleSelectRef = useRef<(p: ProductSearchResult) => void>();
   const { filters, setFilter, clearFilters, hasActiveFilters, page, setPage } = useProductSearchState();
   const [debouncedText, setDebouncedText] = useState(filters.text || '');
@@ -84,13 +85,21 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
   // Keep ref in sync for auto-select effect
   handleSelectRef.current = handleSelect;
 
-  // ENTER selects first item
+  // ENTER selects first, ESC closes
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && products.length > 0) {
       e.preventDefault();
       handleSelect(products[0]);
     }
-  }, [products, handleSelect]);
+    if (e.key === 'Escape') {
+      onOpenChange(false);
+    }
+  }, [products, handleSelect, onOpenChange]);
+
+  // Scroll to top on page change
+  useEffect(() => {
+    tableRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [page]);
 
   const handleClear = useCallback(() => {
     clearFilters();
@@ -204,7 +213,7 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-auto border rounded-lg relative">
+        <div ref={tableRef} className="flex-1 overflow-auto border rounded-lg relative">
           {/* Light fetching indicator (not full loading) */}
           {isFetching && !isLoading && (
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary/20 overflow-hidden">
@@ -232,8 +241,8 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
               <TableBody>
                 {products.map(p => (
                   <TableRow key={p.id} className="cursor-pointer hover:bg-accent/50" onDoubleClick={() => handleSelect(p)}>
-                    <TableCell className="font-mono text-xs">{p.sku}</TableCell>
-                    <TableCell className="truncate max-w-[300px]">{p.name}</TableCell>
+                    <TableCell className="font-mono text-xs">{highlightMatch(p.sku, debouncedText)}</TableCell>
+                    <TableCell className="truncate max-w-[300px]">{highlightMatch(p.name, debouncedText)}</TableCell>
                     <TableCell className="text-right text-sm">{p.unit_price ? formatCurrency(p.unit_price) : '-'}</TableCell>
                     <TableCell>
                       <Button size="sm" variant="outline" onClick={() => handleSelect(p)}>
