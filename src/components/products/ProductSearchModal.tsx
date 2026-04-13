@@ -76,6 +76,9 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
     onOpenChange(false);
   }, [addRecent, onSelect, onOpenChange]);
 
+  // Keep ref in sync for auto-select effect
+  handleSelectRef.current = handleSelect;
+
   // ENTER selects first item
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && products.length > 0) {
