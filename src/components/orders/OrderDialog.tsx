@@ -195,10 +195,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     queryKey: ['order_items_for_edit', order?.id],
     queryFn: async (): Promise<OrderItemDraft[]> => {
       if (!order) return [];
-      const { data, error } = await supabase.from('order_items').select('*').eq('order_id', order.id).order('sort_order');
+      const { data, error } = await supabase.from('order_items').select('*, product:products(sku, erp_code)').eq('order_id', order.id).order('sort_order');
       if (error) throw error;
       return (data ?? []).map((item: any) => ({
-        id: item.id, product_id: item.product_id || '', description: item.description,
+        id: item.id, product_id: item.product_id || '', product_code: item.product?.sku || item.product?.erp_code || '',
+        description: item.description,
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
@@ -448,7 +449,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
-      product_id: product.id, description: product.name, quantity: 1,
+      product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
@@ -701,8 +702,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                   <TableRow key={index}>
                     <TableCell>
                       <div>
+                        <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
-                        <p className="text-sm text-muted-foreground font-mono">{product?.sku}</p>
                       </div>
                     </TableCell>
                     <TableCell>
