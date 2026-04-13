@@ -386,8 +386,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOrderType((order as any).order_type || 'producao');
       setPaymentMethod((order as any).payment_method || '');
       setPaymentTerms((order as any).payment_terms || '');
-      setCommissionType((order as any).commission_type || 'percentage');
-      setCommissionValue((order as any).commission_value || 0);
       const logistics = extractLogisticsFromRecord(order);
       setCarrierId(logistics.carrierId);
       setFreightType(logistics.freightType);
@@ -430,7 +428,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
-      setCommissionType('percentage'); setCommissionValue(0);
+      
     }
   }, [open]);
 
@@ -452,7 +450,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     addItem({
       product_id: product.id, description: product.name, quantity: 1,
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, width: product.width || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource,
     });
