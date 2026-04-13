@@ -54,7 +54,6 @@ type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
 
 export default function Products() {
-  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
