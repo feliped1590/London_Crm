@@ -1,49 +1,49 @@
 
 
-# Plano: Exibir Fator KG e Permitir Edição de Produto nos Itens do Pedido
+# Plano: Edição Inline de Item do Pedido ao Clicar no Produto
 
-## O Que Será Feito
+## Problema Atual
+Clicar no produto abre uma nova aba para a página de Produtos (link externo). O usuário quer editar os dados **do item no pedido** diretamente, sem sair do dialog.
 
-### 1. Substituir coluna "Desc %" por "Fator KG"
+## Solução
 
-A coluna "Desc %" será substituída pela coluna "Fator KG (R$/kg)" que exibe o valor do `fator_kg` cadastrado no produto. Este valor é somente leitura (vem do cadastro do produto).
+Substituir o `window.open` por um **sub-dialog de edição do item** que abre dentro do OrderDialog. O sub-dialog mostra todos os campos editáveis do item em layout espaçoso. Alterações afetam apenas o pedido atual (estado local `items`).
 
-**Arquivos alterados:**
-- `src/components/orders/OrderDialog.tsx` — trocar header "Desc %" por "Fator KG" e renderizar `product.fator_kg` formatado como moeda
-- `src/types/documents.ts` — adicionar `fator_kg?: number` ao `OrderItemDraft`
+### 1. Criar componente `OrderItemEditDialog`
 
-**Detalhes:**
-- Na adição do item (`addProductById`), capturar `fator_kg: product.fator_kg || 0`
-- Na carga de itens existentes, fazer join com `products(sku, erp_code, fator_kg)` para recuperar o valor
-- Exibir na célula como `R$ 25,00` (somente leitura)
-- O campo `discount_percent` continua existindo no draft e na persistência (usado internamente pela pricing engine), apenas sai da UI
+Novo arquivo: `src/components/orders/OrderItemEditDialog.tsx`
 
-### 2. Produto clicável para abrir edição
+- Dialog pequeno que recebe o `OrderItemDraft` e callbacks
+- Campos editáveis: Quantidade, Preço Unitário, Comissão %, IPI %
+- Campos somente leitura: SKU, Descrição, Fator KG
+- Botões: Salvar (aplica ao estado local) / Cancelar
+- Ao salvar, chama `onSave(updatedItem)` que atualiza o `items[index]` no OrderDialog
 
-Transformar o nome/código do produto na tabela de itens em um link clicável que abre a página de Produtos com o produto em edição.
+### 2. Alterar `OrderDialog.tsx`
 
-**Abordagem:** Como a edição de produtos é feita via dialog na página `/products` (não há rota individual), a melhor UX é abrir o produto em nova aba via `window.open('/products?edit=PRODUCT_ID', '_blank')`.
+- Remover `ExternalLink` import e o `window.open`
+- Adicionar estado: `editingItemIndex: number | null`
+- No `onClick` do produto: `setEditingItemIndex(index)`
+- Trocar ícone `ExternalLink` por `Edit` (lápis)
+- Renderizar `<OrderItemEditDialog>` passando `items[editingItemIndex]`
+- No `onSave`: atualizar item via `setItems` e fechar o sub-dialog
 
-**Arquivos alterados:**
-- `src/components/orders/OrderDialog.tsx` — envolver nome/código do produto em um botão/link clicável com `cursor-pointer` e ícone `ExternalLink`
-- `src/pages/Products.tsx` — adicionar leitura do query param `edit` no mount para auto-abrir o dialog de edição do produto correspondente
+### 3. Comportamento
 
-**Detalhes:**
-- No `OrderDialog`, a célula do produto terá um `onClick` que faz `window.open(\`/products?edit=${item.product_id}\`, '_blank')`
-- No `Products.tsx`, um `useEffect` lê `searchParams.get('edit')`, busca o produto e chama `handleEdit(product)`
-- Visual: texto do produto com `hover:underline text-primary cursor-pointer` e ícone `ExternalLink` pequeno
+- Alterações ficam apenas no estado local (`items[]`) até o pedido ser salvo
+- Nenhum outro pedido é afetado
+- O sub-dialog respeita `canEdit` (campos desabilitados se não pode editar)
 
-## Resumo de Arquivos
+## Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/types/documents.ts` | Adicionar `fator_kg` ao `OrderItemDraft` |
-| `src/components/orders/OrderDialog.tsx` | Trocar coluna Desc% por Fator KG; produto clicável |
-| `src/pages/Products.tsx` | Suporte a query param `?edit=ID` para auto-abrir edição |
+| `src/components/orders/OrderItemEditDialog.tsx` | Criar — sub-dialog de edição do item |
+| `src/components/orders/OrderDialog.tsx` | Alterar — trocar link externo por abertura do sub-dialog |
 
 ## Sem Impacto
 
-- Nenhum cálculo de total alterado
-- `discount_percent` continua sendo persistido normalmente (usado pela pricing engine)
-- Nenhuma migration necessária (`fator_kg` já existe na tabela `products`)
+- Nenhuma migration necessária
+- Nenhum cálculo alterado
+- Persistência continua igual (só salva quando o pedido é salvo)
 
