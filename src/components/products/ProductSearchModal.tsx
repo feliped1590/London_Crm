@@ -26,6 +26,19 @@ interface ProductSearchModalProps {
 
 const PAGE_SIZE = 20;
 
+/** Highlight matching text portions */
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query?.trim() || !text) return text;
+  const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.trim().toLowerCase()
+      ? <mark key={i} className="bg-primary/20 text-foreground rounded-sm px-0.5">{part}</mark>
+      : part
+  );
+}
+
 export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSearchModalProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const tableRef = useRef<HTMLDivElement>(null);
