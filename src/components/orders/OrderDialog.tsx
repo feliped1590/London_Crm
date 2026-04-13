@@ -14,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
