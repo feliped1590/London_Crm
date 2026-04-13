@@ -195,10 +195,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     queryKey: ['order_items_for_edit', order?.id],
     queryFn: async (): Promise<OrderItemDraft[]> => {
       if (!order) return [];
-      const { data, error } = await supabase.from('order_items').select('*').eq('order_id', order.id).order('sort_order');
+      const { data, error } = await supabase.from('order_items').select('*, product:products(sku, erp_code)').eq('order_id', order.id).order('sort_order');
       if (error) throw error;
       return (data ?? []).map((item: any) => ({
-        id: item.id, product_id: item.product_id || '', description: item.description,
+        id: item.id, product_id: item.product_id || '', product_code: item.product?.sku || item.product?.erp_code || '',
+        description: item.description,
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
