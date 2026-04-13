@@ -28,6 +28,8 @@ const PAGE_SIZE = 20;
 
 export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSearchModalProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const handleSelectRef = useRef<(p: ProductSearchResult) => void>();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const { filters, setFilter, clearFilters, hasActiveFilters, page, setPage } = useProductSearchState();
   const [debouncedText, setDebouncedText] = useState(filters.text || '');
   const [textInput, setTextInput] = useState(filters.text || '');
