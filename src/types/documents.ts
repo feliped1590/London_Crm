@@ -29,6 +29,7 @@ export interface OrderItemDraft {
   subtotal: number;
   discount_percent: number;
   ipi_rate: number;
+  commission_pct: number;
   width?: number;
   length?: number;
   thickness?: number;
