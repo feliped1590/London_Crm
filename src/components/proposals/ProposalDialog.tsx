@@ -516,6 +516,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                     </PopoverContent>
                   </Popover>
                 </div>
+                <Button variant="outline" size="icon" type="button" onClick={() => setAdvancedSearchOpen(true)} title="Pesquisa Avançada (F9)">
+                  <Search className="h-4 w-4" />
+                </Button>
                 <Button type="button" onClick={addProductToItems} disabled={!selectedProductId}>
                   <Plus className="h-4 w-4 mr-2" />Adicionar
                 </Button>
