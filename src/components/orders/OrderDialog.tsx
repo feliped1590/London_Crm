@@ -834,6 +834,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onOpenChange={setShowProtectionModal}
         info={protectionInfo}
       />
+
+      <ProductSearchModal
+        open={advancedSearchOpen}
+        onOpenChange={setAdvancedSearchOpen}
+        onSelect={(product) => addProductById(product.id, product)}
+      />
     </Dialog>
   );
 }
