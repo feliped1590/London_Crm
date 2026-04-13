@@ -28,6 +28,7 @@ const PAGE_SIZE = 20;
 
 export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSearchModalProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const handleSelectRef = useRef<(p: ProductSearchResult) => void>();
   const { filters, setFilter, clearFilters, hasActiveFilters, page, setPage } = useProductSearchState();
   const [debouncedText, setDebouncedText] = useState(filters.text || '');
   const [textInput, setTextInput] = useState(filters.text || '');
@@ -57,6 +58,13 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
     enabled: open,
   });
 
+  // Auto-select when single result
+  useEffect(() => {
+    if (products.length === 1 && !isLoading && debouncedText.length >= 3) {
+      handleSelectRef.current?.(products[0]);
+    }
+  }, [products, isLoading, debouncedText]);
+
   const { recentProducts, addRecent } = useRecentProducts();
   const { familias, grupos, subgrupos, classes } = useProductLookups();
 
@@ -67,6 +75,9 @@ export function ProductSearchModal({ open, onOpenChange, onSelect }: ProductSear
     onSelect(product);
     onOpenChange(false);
   }, [addRecent, onSelect, onOpenChange]);
+
+  // Keep ref in sync for auto-select effect
+  handleSelectRef.current = handleSelect;
 
   // ENTER selects first item
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
