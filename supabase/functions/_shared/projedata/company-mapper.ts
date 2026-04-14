@@ -87,7 +87,7 @@ export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySync
     usuario: context.usuario_erp || 1,
     banco_padrao: context.banco_padrao ?? 999,
     segmento_mercado: context.segmento || 0,
-    subsegmento_mercado: context.subsegmento || 0,
+    subsegmento_mercado: context.subsegmento || 1,
     enderecos: [
       {
         cidade: context.cidade_codigo,
