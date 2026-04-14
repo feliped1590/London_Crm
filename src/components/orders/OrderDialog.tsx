@@ -15,7 +15,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, CheckCircle2, History, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { OrderItemDetailModal } from './OrderItemDetailModal';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -78,6 +81,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
+  const [showExitAlert, setShowExitAlert] = useState(false);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -205,6 +211,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         commission_pct: item.commission_pct || 0,
         fator_kg: item.product?.fator_kg || 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
+        is_locked: item.is_locked || false,
       }));
     },
     enabled: !!order?.id && open,
@@ -239,6 +246,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          is_locked: item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -321,6 +329,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          is_locked: item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -430,7 +439,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
-      
+      setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
     }
   }, [open]);
 
@@ -454,7 +463,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
-      calculated_price_source: priceSource,
+      calculated_price_source: priceSource, is_locked: false,
     });
     addRecent(product.id);
     setSelectedProductId('');
@@ -477,7 +486,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return () => window.removeEventListener('keydown', handler);
   }, [open, advancedSearchOpen]);
 
+  const toggleItemLock = useCallback((index: number) => {
+    // Only allow unlock if order is pendente or new
+    const currentItem = items[index];
+    if (!currentItem) return;
+    if (currentItem.is_locked && order && order.status !== 'pendente') {
+      toast.error('Itens só podem ser desbloqueados em pedidos pendentes');
+      return;
+    }
+    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: !item.is_locked } : item));
+  }, [items, order, setItems]);
+
+  const handleItemDetailUpdate = useCallback((index: number, updatedItem: OrderItemDraft) => {
+    setItems(prev => prev.map((item, i) => i === index ? updatedItem : item));
+  }, [setItems]);
+
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
+    // Guard: locked items cannot be edited
+    if (items[index]?.is_locked) return;
+
     if (field === 'quantity') {
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
         item.quantity = Number(value) || 1;
@@ -506,6 +533,22 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       hookUpdateItem(index, field, value);
     }
   };
+
+  const handleRemoveItem = useCallback((index: number) => {
+    if (items[index]?.is_locked) return;
+    removeItem(index);
+  }, [items, removeItem]);
+
+  const unlockedCount = useMemo(() => items.filter(i => !i.is_locked).length, [items]);
+
+  const handleDialogClose = useCallback((shouldClose: boolean) => {
+    if (!shouldClose) return;
+    if (items.length > 0 && unlockedCount > 0 && canEdit) {
+      setShowExitAlert(true);
+      return;
+    }
+    onOpenChange(false);
+  }, [items, unlockedCount, canEdit, onOpenChange]);
 
   // Portfolio protection
   const {
@@ -673,10 +716,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
       {items.length > 0 && (
+        <TooltipProvider>
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
@@ -699,20 +744,45 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
+                const locked = item.is_locked;
                 return (
-                  <TableRow key={index}>
+                  <TableRow key={index} className={cn(locked && 'bg-muted/40')}>
+                    <TableCell className="px-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => toggleItemLock(index)}
+                            disabled={!canEdit}
+                          >
+                            {locked
+                              ? <Lock className="h-4 w-4 text-amber-500" />
+                              : <LockOpen className="h-4 w-4 text-muted-foreground" />
+                            }
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {locked ? 'Item finalizado (não pode ser alterado)' : 'Item editável — clique para finalizar'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>
-                      <div>
+                      <div
+                        className="cursor-pointer hover:underline"
+                        onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
+                      >
                         <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit || locked} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit} />
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit || locked} />
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
@@ -736,14 +806,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
                         className="w-16 text-right text-sm"
                         placeholder="0"
-                        disabled={!canEdit}
+                        disabled={!canEdit || locked}
                       />
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={locked}>
+                          <Trash2 className={cn('h-4 w-4', locked ? 'text-muted-foreground' : 'text-destructive')} />
                         </Button>
                       </TableCell>
                     )}
@@ -753,6 +823,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             </TableBody>
           </Table>
         </div>
+        </TooltipProvider>
       )}
 
       {items.length > 0 && (
@@ -776,7 +847,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-[80vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -839,7 +911,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleDialogClose(true)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
           {canEdit && (
@@ -864,5 +936,35 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onSelect={(product) => addProductById(product.id, product)}
       />
     </Dialog>
+
+    <OrderItemDetailModal
+      open={detailModalOpen}
+      onOpenChange={setDetailModalOpen}
+      item={detailItemIndex >= 0 ? items[detailItemIndex] : null}
+      index={detailItemIndex}
+      onUpdate={handleItemDetailUpdate}
+      canEdit={canEdit && !(items[detailItemIndex]?.is_locked)}
+    />
+
+    <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Itens não finalizados</AlertDialogTitle>
+          <AlertDialogDescription>
+            {unlockedCount === 1
+              ? 'Existe 1 item não finalizado (🔓). Deseja sair mesmo assim?'
+              : `Existem ${unlockedCount} itens não finalizados (🔓). Deseja sair mesmo assim?`
+            }
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { setShowExitAlert(false); onOpenChange(false); }}>
+            Sair mesmo assim
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

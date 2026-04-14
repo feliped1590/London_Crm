@@ -4331,6 +4331,7 @@ export type Database = {
           id: string
           ipi_rate: number
           ipi_value: number
+          is_locked: boolean
           item_date: string | null
           length: number | null
           order_id: string
@@ -4360,6 +4361,7 @@ export type Database = {
           id?: string
           ipi_rate?: number
           ipi_value?: number
+          is_locked?: boolean
           item_date?: string | null
           length?: number | null
           order_id: string
@@ -4389,6 +4391,7 @@ export type Database = {
           id?: string
           ipi_rate?: number
           ipi_value?: number
+          is_locked?: boolean
           item_date?: string | null
           length?: number | null
           order_id?: string
