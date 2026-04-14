@@ -716,10 +716,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
       {items.length > 0 && (
+        <TooltipProvider>
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10"></TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
@@ -742,20 +744,45 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
+                const locked = item.is_locked;
                 return (
-                  <TableRow key={index}>
+                  <TableRow key={index} className={cn(locked && 'bg-muted/40')}>
+                    <TableCell className="px-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => toggleItemLock(index)}
+                            disabled={!canEdit}
+                          >
+                            {locked
+                              ? <Lock className="h-4 w-4 text-amber-500" />
+                              : <LockOpen className="h-4 w-4 text-muted-foreground" />
+                            }
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {locked ? 'Item finalizado (não pode ser alterado)' : 'Item editável — clique para finalizar'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell>
-                      <div>
+                      <div
+                        className="cursor-pointer hover:underline"
+                        onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
+                      >
                         <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit || locked} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit} />
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit || locked} />
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
@@ -779,14 +806,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
                         className="w-16 text-right text-sm"
                         placeholder="0"
-                        disabled={!canEdit}
+                        disabled={!canEdit || locked}
                       />
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={locked}>
+                          <Trash2 className={cn('h-4 w-4', locked ? 'text-muted-foreground' : 'text-destructive')} />
                         </Button>
                       </TableCell>
                     )}
@@ -796,6 +823,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             </TableBody>
           </Table>
         </div>
+        </TooltipProvider>
       )}
 
       {items.length > 0 && (
