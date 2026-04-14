@@ -486,7 +486,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return () => window.removeEventListener('keydown', handler);
   }, [open, advancedSearchOpen]);
 
+  const toggleItemLock = useCallback((index: number) => {
+    // Only allow unlock if order is pendente or new
+    const currentItem = items[index];
+    if (!currentItem) return;
+    if (currentItem.is_locked && order && order.status !== 'pendente') {
+      toast.error('Itens só podem ser desbloqueados em pedidos pendentes');
+      return;
+    }
+    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: !item.is_locked } : item));
+  }, [items, order, setItems]);
+
+  const handleItemDetailUpdate = useCallback((index: number, updatedItem: OrderItemDraft) => {
+    setItems(prev => prev.map((item, i) => i === index ? updatedItem : item));
+  }, [setItems]);
+
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
+    // Guard: locked items cannot be edited
+    if (items[index]?.is_locked) return;
+
     if (field === 'quantity') {
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
         item.quantity = Number(value) || 1;
@@ -515,6 +533,22 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       hookUpdateItem(index, field, value);
     }
   };
+
+  const handleRemoveItem = useCallback((index: number) => {
+    if (items[index]?.is_locked) return;
+    removeItem(index);
+  }, [items, removeItem]);
+
+  const unlockedCount = useMemo(() => items.filter(i => !i.is_locked).length, [items]);
+
+  const handleDialogClose = useCallback((shouldClose: boolean) => {
+    if (!shouldClose) return;
+    if (items.length > 0 && unlockedCount > 0 && canEdit) {
+      setShowExitAlert(true);
+      return;
+    }
+    onOpenChange(false);
+  }, [items, unlockedCount, canEdit, onOpenChange]);
 
   // Portfolio protection
   const {
