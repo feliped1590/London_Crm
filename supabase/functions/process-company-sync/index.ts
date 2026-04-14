@@ -352,7 +352,7 @@ Deno.serve(async (req) => {
 
         // Resolver subsegmento_mercado pelo segmento do CRM (segmentos.erp_code)
         const segmentoData = (company as any).segmentos as any;
-        const subsegmentoMercado = segmentoData?.erp_code ?? 0;
+        const subsegmentoMercado = segmentoData?.erp_code ?? 1;
 
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
