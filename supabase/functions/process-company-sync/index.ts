@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     if (targetCompanyId) {
       queueQuery = queueQuery.eq('company_id', targetCompanyId);
     } else {
-      queueQuery = queueQuery.limit(10);
+      queueQuery = queueQuery.limit(30);
     }
 
     const { data: queue, error: queueError } = await queueQuery;
