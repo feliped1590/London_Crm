@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2, PlayCircle, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; cardColor: string }> = {
@@ -215,6 +216,79 @@ export function IntegrationValidationPanel() {
 
   const [clearingIds, setClearingIds] = useState<Set<string>>(new Set());
 
+  // Bulk sync state
+  const [bulkSync, setBulkSync] = useState<{
+    running: boolean;
+    total: number;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    currentName: string;
+  }>({ running: false, total: 0, processed: 0, succeeded: 0, failed: 0, currentName: '' });
+  const cancelBulkRef = useRef(false);
+
+  const handleBulkSync = useCallback(async () => {
+    cancelBulkRef.current = false;
+
+    // Fetch all not_synced company IDs
+    const { data: companies, error } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('active', true)
+      .eq('integration_status', 'not_synced')
+      .order('name');
+
+    if (error || !companies || companies.length === 0) {
+      toast.info('Nenhum cliente pendente para sincronizar');
+      return;
+    }
+
+    setBulkSync({ running: true, total: companies.length, processed: 0, succeeded: 0, failed: 0, currentName: companies[0].name });
+    toast.info(`Iniciando sincronização de ${companies.length} clientes...`);
+
+    let succeeded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < companies.length; i++) {
+      if (cancelBulkRef.current) {
+        toast.warning(`Sincronização cancelada. ${succeeded} enviados, ${failed} erros.`);
+        break;
+      }
+
+      const company = companies[i];
+      setBulkSync(prev => ({ ...prev, processed: i, currentName: company.name }));
+
+      try {
+        const { data, error: syncError } = await supabase.functions.invoke('process-company-sync', {
+          body: { company_id: company.id },
+        });
+        if (syncError) throw syncError;
+
+        const result = data as any;
+        if (result?.error_count && result.error_count > 0) {
+          failed++;
+        } else {
+          succeeded++;
+        }
+      } catch {
+        failed++;
+      }
+
+      // Small delay between requests to avoid overwhelming the ERP
+      if (i < companies.length - 1 && !cancelBulkRef.current) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    setBulkSync(prev => ({ ...prev, running: false, processed: prev.total, succeeded, failed }));
+    toast.success(`Sincronização concluída: ${succeeded} enviados, ${failed} erros.`);
+    refetch();
+  }, [refetch]);
+
+  const handleCancelBulkSync = useCallback(() => {
+    cancelBulkRef.current = true;
+  }, []);
+
   const handleClearQueue = async (companyId: string) => {
     setClearingIds(prev => new Set(prev).add(companyId));
     try {
@@ -304,23 +378,61 @@ export function IntegrationValidationPanel() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou CNPJ..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9" />
+      {/* Filters + Bulk Sync */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome ou CNPJ..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {bulkSync.running ? (
+            <Button variant="destructive" size="sm" className="gap-2" onClick={handleCancelBulkSync}>
+              <StopCircle className="h-4 w-4" />
+              Cancelar
+            </Button>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleBulkSync} disabled={(summary?.not_synced ?? 0) === 0}>
+                    <PlayCircle className="h-4 w-4" />
+                    Sincronizar Todos
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Envia todos os clientes "Não sincronizados" ao ERP, um por vez</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Todos os status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>{config.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Bulk Sync Progress */}
+        {bulkSync.running && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sincronizando: <span className="font-medium">{bulkSync.currentName}</span>
+                </span>
+                <span className="text-muted-foreground">
+                  {bulkSync.processed}/{bulkSync.total} · {bulkSync.succeeded} ✓ · {bulkSync.failed} ✗
+                </span>
+              </div>
+              <Progress value={bulkSync.total > 0 ? (bulkSync.processed / bulkSync.total) * 100 : 0} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Table */}
