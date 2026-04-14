@@ -463,7 +463,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
-      calculated_price_source: priceSource,
+      calculated_price_source: priceSource, is_locked: false,
     });
     addRecent(product.id);
     setSelectedProductId('');
