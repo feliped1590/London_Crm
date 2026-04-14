@@ -223,65 +223,95 @@ export function IntegrationValidationPanel() {
     processed: number;
     succeeded: number;
     failed: number;
-    currentName: string;
-  }>({ running: false, total: 0, processed: 0, succeeded: 0, failed: 0, currentName: '' });
+    currentBatch: number;
+  }>({ running: false, total: 0, processed: 0, succeeded: 0, failed: 0, currentBatch: 0 });
   const cancelBulkRef = useRef(false);
 
   const handleBulkSync = useCallback(async () => {
     cancelBulkRef.current = false;
 
-    // Fetch all not_synced company IDs
-    const { data: companies, error } = await supabase
-      .from('companies')
-      .select('id, name')
-      .eq('active', true)
-      .eq('integration_status', 'not_synced')
-      .order('name');
+    // Step 1: Enqueue all not_synced companies via RPC
+    const { data: enqueueResult, error: enqueueError } = await (supabase as any).rpc('enqueue_bulk_company_sync');
 
-    if (error || !companies || companies.length === 0) {
+    if (enqueueError) {
+      toast.error('Erro ao enfileirar clientes: ' + enqueueError.message);
+      return;
+    }
+
+    const enqueued = enqueueResult?.enqueued ?? 0;
+    if (enqueued === 0) {
       toast.info('Nenhum cliente pendente para sincronizar');
       return;
     }
 
-    setBulkSync({ running: true, total: companies.length, processed: 0, succeeded: 0, failed: 0, currentName: companies[0].name });
-    toast.info(`Iniciando sincronização de ${companies.length} clientes...`);
+    setBulkSync({ running: true, total: enqueued, processed: 0, succeeded: 0, failed: 0, currentBatch: 0 });
+    toast.info(`${enqueued.toLocaleString('pt-BR')} clientes enfileirados. Processando em lotes de 30...`);
 
-    let succeeded = 0;
-    let failed = 0;
+    let totalProcessed = 0;
+    let totalSucceeded = 0;
+    let totalFailed = 0;
+    let batchNum = 0;
+    let consecutiveErrors = 0;
 
-    for (let i = 0; i < companies.length; i++) {
-      if (cancelBulkRef.current) {
-        toast.warning(`Sincronização cancelada. ${succeeded} enviados, ${failed} erros.`);
-        break;
-      }
-
-      const company = companies[i];
-      setBulkSync(prev => ({ ...prev, processed: i, currentName: company.name }));
+    while (!cancelBulkRef.current) {
+      batchNum++;
 
       try {
-        const { data, error: syncError } = await supabase.functions.invoke('process-company-sync', {
-          body: { company_id: company.id },
+        const { data, error: batchError } = await supabase.functions.invoke('process-company-sync', {
+          body: {},
         });
-        if (syncError) throw syncError;
+
+        if (batchError) throw batchError;
 
         const result = data as any;
-        if (result?.error_count && result.error_count > 0) {
-          failed++;
-        } else {
-          succeeded++;
-        }
-      } catch {
-        failed++;
-      }
+        const processed = result?.processed ?? 0;
 
-      // Small delay between requests to avoid overwhelming the ERP
-      if (i < companies.length - 1 && !cancelBulkRef.current) {
-        await new Promise(r => setTimeout(r, 1500));
+        if (processed === 0) break; // Queue empty
+
+        totalProcessed += processed;
+        totalSucceeded += result?.success_count ?? 0;
+        totalFailed += result?.error_count ?? 0;
+
+        setBulkSync(prev => ({
+          ...prev,
+          processed: totalProcessed,
+          succeeded: totalSucceeded,
+          failed: totalFailed,
+          currentBatch: batchNum,
+        }));
+
+        // Reset consecutive errors on any success
+        if ((result?.success_count ?? 0) > 0) {
+          consecutiveErrors = 0;
+        } else if ((result?.error_count ?? 0) > 0) {
+          consecutiveErrors++;
+        }
+
+        if (consecutiveErrors >= 5) {
+          toast.warning('Muitos erros consecutivos. Sincronização pausada.');
+          break;
+        }
+
+        // Small delay between batches
+        await new Promise(r => setTimeout(r, 1000));
+      } catch (err: any) {
+        consecutiveErrors++;
+        console.error('[bulk-sync] Batch error:', err.message);
+        if (consecutiveErrors >= 5) {
+          toast.error('Muitos erros consecutivos. Sincronização interrompida.');
+          break;
+        }
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
 
-    setBulkSync(prev => ({ ...prev, running: false, processed: prev.total, succeeded, failed }));
-    toast.success(`Sincronização concluída: ${succeeded} enviados, ${failed} erros.`);
+    if (cancelBulkRef.current) {
+      toast.warning(`Cancelado. ${totalSucceeded} enviados, ${totalFailed} erros em ${batchNum} lotes.`);
+    } else {
+      toast.success(`Concluído! ${totalSucceeded} enviados, ${totalFailed} erros em ${batchNum} lotes.`);
+    }
+
+    setBulkSync(prev => ({ ...prev, running: false }));
     refetch();
   }, [refetch]);
 
