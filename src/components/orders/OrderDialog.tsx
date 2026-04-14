@@ -211,6 +211,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         commission_pct: item.commission_pct || 0,
         fator_kg: item.product?.fator_kg || 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
+        is_locked: item.is_locked || false,
       }));
     },
     enabled: !!order?.id && open,
@@ -245,6 +246,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          is_locked: item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -327,6 +329,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          is_locked: item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
