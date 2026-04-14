@@ -215,6 +215,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       }));
     },
     enabled: !!order?.id && open,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // --- Mutations ---
@@ -343,6 +345,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_items'] });
+      queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
 
       // Auto re-sync if order was previously synced to ERP
@@ -429,11 +432,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   }, [open, order, activeLegalEntityId, preSelectedCompanyId]);
 
   useEffect(() => {
+    if (!open || !order?.id) return;
     if (existingOrderItems && existingOrderItems.length > 0) {
       setItems(existingOrderItems);
       setOriginalItems(existingOrderItems);
     }
-  }, [existingOrderItems]);
+  }, [open, order?.id, existingOrderItems]);
 
   useEffect(() => {
     if (!open) {
