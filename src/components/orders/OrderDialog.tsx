@@ -435,7 +435,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!open || !order?.id) return;
     setItems(existingOrderItems ?? []);
     setOriginalItems(existingOrderItems ?? []);
-    }
   }, [open, order?.id, existingOrderItems]);
 
   useEffect(() => {
