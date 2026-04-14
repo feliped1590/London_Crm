@@ -8332,6 +8332,7 @@ export type Database = {
         }
         Returns: Json
       }
+      enqueue_bulk_company_sync: { Args: never; Returns: Json }
       force_replace_session: {
         Args: {
           p_device_info?: string
