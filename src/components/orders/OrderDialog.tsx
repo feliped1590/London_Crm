@@ -234,6 +234,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       }).select().single();
       if (orderError) throw orderError;
 
+      // Auto-lock all items when saving with status ≠ pendente
+      const shouldAutoLock = false; // New orders are always 'pendente'
       const orderItems = items.map((item, index) => {
         const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
         const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
@@ -246,7 +248,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
-          is_locked: item.is_locked || false,
+          is_locked: shouldAutoLock || item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -317,6 +319,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       await logItemChanges(order.id);
       await supabase.from('order_items').delete().eq('order_id', order.id);
 
+      // Auto-lock all items when order status ≠ pendente
+      const shouldAutoLock = order.status !== 'pendente';
       const orderItems = items.map((item, index) => {
         const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
         const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
@@ -329,7 +333,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
-          is_locked: item.is_locked || false,
+          is_locked: shouldAutoLock || item.is_locked || false,
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -494,7 +498,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       toast.error('Itens só podem ser desbloqueados em pedidos pendentes');
       return;
     }
-    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: !item.is_locked } : item));
+    const newLocked = !currentItem.is_locked;
+    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: newLocked } : item));
+    toast.success(newLocked ? 'Item finalizado com sucesso' : 'Item desbloqueado para edição');
   }, [items, order, setItems]);
 
   const handleItemDetailUpdate = useCallback((index: number, updatedItem: OrderItemDraft) => {
@@ -746,7 +752,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const totalItem = getItemTotal(item);
                 const locked = item.is_locked;
                 return (
-                  <TableRow key={index} className={cn(locked && 'bg-muted/40')}>
+                  <TableRow key={index} className={cn(locked && 'bg-muted/40 opacity-80')}>
                     <TableCell className="px-2">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -778,11 +784,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit || locked} />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={cn('w-20', locked && 'cursor-not-allowed')} disabled={!canEdit || locked} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit || locked} />
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted', locked && 'cursor-not-allowed')} disabled={(hasPricingTable && !isAdmin) || !canEdit || locked} />
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
@@ -804,7 +810,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         step={0.01}
                         value={item.commission_pct || ''}
                         onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
-                        className="w-16 text-right text-sm"
+                        className={cn('w-16 text-right text-sm', locked && 'cursor-not-allowed')}
                         placeholder="0"
                         disabled={!canEdit || locked}
                       />
