@@ -439,7 +439,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
-      
+      setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
     }
   }, [open]);
 
