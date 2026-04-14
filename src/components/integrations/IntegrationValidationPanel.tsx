@@ -453,10 +453,10 @@ export function IntegrationValidationPanel() {
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Sincronizando: <span className="font-medium">{bulkSync.currentName}</span>
+                  Processando lote #{bulkSync.currentBatch} <span className="text-muted-foreground">(30 por lote)</span>
                 </span>
                 <span className="text-muted-foreground">
-                  {bulkSync.processed}/{bulkSync.total} · {bulkSync.succeeded} ✓ · {bulkSync.failed} ✗
+                  {bulkSync.processed.toLocaleString('pt-BR')}/{bulkSync.total.toLocaleString('pt-BR')} · {bulkSync.succeeded} ✓ · {bulkSync.failed} ✗
                 </span>
               </div>
               <Progress value={bulkSync.total > 0 ? (bulkSync.processed / bulkSync.total) * 100 : 0} className="h-2" />
