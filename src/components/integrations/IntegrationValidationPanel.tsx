@@ -378,23 +378,61 @@ export function IntegrationValidationPanel() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou CNPJ..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9" />
+      {/* Filters + Bulk Sync */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Buscar por nome ou CNPJ..." value={search} onChange={(e) => handleSearchChange(e.target.value)} className="pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {bulkSync.running ? (
+            <Button variant="destructive" size="sm" className="gap-2" onClick={handleCancelBulkSync}>
+              <StopCircle className="h-4 w-4" />
+              Cancelar
+            </Button>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleBulkSync} disabled={(summary?.not_synced ?? 0) === 0}>
+                    <PlayCircle className="h-4 w-4" />
+                    Sincronizar Todos
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Envia todos os clientes "Não sincronizados" ao ERP, um por vez</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Todos os status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os status</SelectItem>
-            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-              <SelectItem key={key} value={key}>{config.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Bulk Sync Progress */}
+        {bulkSync.running && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sincronizando: <span className="font-medium">{bulkSync.currentName}</span>
+                </span>
+                <span className="text-muted-foreground">
+                  {bulkSync.processed}/{bulkSync.total} · {bulkSync.succeeded} ✓ · {bulkSync.failed} ✗
+                </span>
+              </div>
+              <Progress value={bulkSync.total > 0 ? (bulkSync.processed / bulkSync.total) * 100 : 0} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Table */}
