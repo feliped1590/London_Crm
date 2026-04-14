@@ -216,6 +216,79 @@ export function IntegrationValidationPanel() {
 
   const [clearingIds, setClearingIds] = useState<Set<string>>(new Set());
 
+  // Bulk sync state
+  const [bulkSync, setBulkSync] = useState<{
+    running: boolean;
+    total: number;
+    processed: number;
+    succeeded: number;
+    failed: number;
+    currentName: string;
+  }>({ running: false, total: 0, processed: 0, succeeded: 0, failed: 0, currentName: '' });
+  const cancelBulkRef = useRef(false);
+
+  const handleBulkSync = useCallback(async () => {
+    cancelBulkRef.current = false;
+
+    // Fetch all not_synced company IDs
+    const { data: companies, error } = await supabase
+      .from('companies')
+      .select('id, name')
+      .eq('active', true)
+      .eq('integration_status', 'not_synced')
+      .order('name');
+
+    if (error || !companies || companies.length === 0) {
+      toast.info('Nenhum cliente pendente para sincronizar');
+      return;
+    }
+
+    setBulkSync({ running: true, total: companies.length, processed: 0, succeeded: 0, failed: 0, currentName: companies[0].name });
+    toast.info(`Iniciando sincronização de ${companies.length} clientes...`);
+
+    let succeeded = 0;
+    let failed = 0;
+
+    for (let i = 0; i < companies.length; i++) {
+      if (cancelBulkRef.current) {
+        toast.warning(`Sincronização cancelada. ${succeeded} enviados, ${failed} erros.`);
+        break;
+      }
+
+      const company = companies[i];
+      setBulkSync(prev => ({ ...prev, processed: i, currentName: company.name }));
+
+      try {
+        const { data, error: syncError } = await supabase.functions.invoke('process-company-sync', {
+          body: { company_id: company.id },
+        });
+        if (syncError) throw syncError;
+
+        const result = data as any;
+        if (result?.error_count && result.error_count > 0) {
+          failed++;
+        } else {
+          succeeded++;
+        }
+      } catch {
+        failed++;
+      }
+
+      // Small delay between requests to avoid overwhelming the ERP
+      if (i < companies.length - 1 && !cancelBulkRef.current) {
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    setBulkSync(prev => ({ ...prev, running: false, processed: prev.total, succeeded, failed }));
+    toast.success(`Sincronização concluída: ${succeeded} enviados, ${failed} erros.`);
+    refetch();
+  }, [refetch]);
+
+  const handleCancelBulkSync = useCallback(() => {
+    cancelBulkRef.current = true;
+  }, []);
+
   const handleClearQueue = async (companyId: string) => {
     setClearingIds(prev => new Set(prev).add(companyId));
     try {
