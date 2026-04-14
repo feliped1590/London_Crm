@@ -81,6 +81,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
+  const [showExitAlert, setShowExitAlert] = useState(false);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
