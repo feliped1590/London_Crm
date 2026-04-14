@@ -257,14 +257,19 @@ export function IntegrationValidationPanel() {
       batchNum++;
 
       try {
+        const batchStart = Date.now();
+
         const { data, error: batchError } = await supabase.functions.invoke('process-company-sync', {
           body: {},
         });
 
         if (batchError) throw batchError;
 
+        const batchDuration = Date.now() - batchStart;
         const result = data as any;
         const processed = result?.processed ?? 0;
+
+        console.log(`[bulk-sync] Lote #${batchNum}: ${processed} processados em ${batchDuration}ms | ✓${result?.success_count ?? 0} ✗${result?.error_count ?? 0}`);
 
         if (processed === 0) break; // Queue empty
 
@@ -292,11 +297,12 @@ export function IntegrationValidationPanel() {
           break;
         }
 
-        // Small delay between batches
-        await new Promise(r => setTimeout(r, 1000));
+        // Dynamic delay: fast when healthy, slower on errors
+        const delay = consecutiveErrors > 0 ? 3000 : 500;
+        await new Promise(r => setTimeout(r, delay));
       } catch (err: any) {
         consecutiveErrors++;
-        console.error('[bulk-sync] Batch error:', err.message);
+        console.error(`[bulk-sync] Lote #${batchNum} falhou:`, err.message);
         if (consecutiveErrors >= 5) {
           toast.error('Muitos erros consecutivos. Sincronização interrompida.');
           break;
