@@ -61,7 +61,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
   };
 
   const handleSave = () => {
-    if (!draft) return;
+    if (!draft || draft.is_locked) return;
     onUpdate(index, draft);
     onOpenChange(false);
   };
@@ -137,7 +137,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                 value={draft.description}
                 onChange={(e) => updateDraftField('description', e.target.value)}
                 disabled={!isEditable}
-                className={!isEditable ? 'bg-muted' : ''}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
               />
             </div>
 
@@ -149,7 +149,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.quantity}
                   onChange={(e) => updateDraftField('quantity', Number(e.target.value) || 1)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
               <div className="space-y-2">
@@ -158,7 +158,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.unit_price}
                   onChange={(val) => updateDraftField('unit_price', val)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
             </div>
@@ -171,7 +171,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.width || ''}
                   onChange={(e) => updateDraftField('width', Number(e.target.value) || undefined)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
               <div className="space-y-2">
@@ -181,7 +181,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.length || ''}
                   onChange={(e) => updateDraftField('length', Number(e.target.value) || undefined)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
               <div className="space-y-2">
@@ -191,7 +191,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.thickness || ''}
                   onChange={(e) => updateDraftField('thickness', Number(e.target.value) || undefined)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.ipi_rate || ''}
                   onChange={(e) => updateDraftField('ipi_rate', Number(e.target.value) || 0)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
               <div className="space-y-2">
@@ -218,7 +218,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                   value={draft.commission_pct || ''}
                   onChange={(e) => updateDraftField('commission_pct', Number(e.target.value) || 0)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted' : ''}
+                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
                 />
               </div>
             </div>
