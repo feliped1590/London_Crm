@@ -847,7 +847,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-[80vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -910,7 +911,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleDialogClose(true)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
           {canEdit && (
@@ -935,5 +936,35 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onSelect={(product) => addProductById(product.id, product)}
       />
     </Dialog>
+
+    <OrderItemDetailModal
+      open={detailModalOpen}
+      onOpenChange={setDetailModalOpen}
+      item={detailItemIndex >= 0 ? items[detailItemIndex] : null}
+      index={detailItemIndex}
+      onUpdate={handleItemDetailUpdate}
+      canEdit={canEdit && !(items[detailItemIndex]?.is_locked)}
+    />
+
+    <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Itens não finalizados</AlertDialogTitle>
+          <AlertDialogDescription>
+            {unlockedCount === 1
+              ? 'Existe 1 item não finalizado (🔓). Deseja sair mesmo assim?'
+              : `Existem ${unlockedCount} itens não finalizados (🔓). Deseja sair mesmo assim?`
+            }
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction onClick={() => { setShowExitAlert(false); onOpenChange(false); }}>
+            Sair mesmo assim
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
