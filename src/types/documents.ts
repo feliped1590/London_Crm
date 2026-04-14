@@ -36,6 +36,7 @@ export interface OrderItemDraft {
   length?: number;
   thickness?: number;
   calculated_price_source?: PriceSource;
+  is_locked?: boolean;
 }
 
 /**
