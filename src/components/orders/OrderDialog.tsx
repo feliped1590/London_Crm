@@ -72,7 +72,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return isAdmin;
   }, [order, isAdmin, isOrderLocked]);
   const canUnlock = isAdmin && isOrderLocked;
-  const canLockNow = isEditMode && !isOrderLocked && canEdit && items.length > 0;
 
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
