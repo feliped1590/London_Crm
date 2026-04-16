@@ -1039,18 +1039,32 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Itens não finalizados</AlertDialogTitle>
+          <AlertDialogTitle>Sair sem bloquear?</AlertDialogTitle>
           <AlertDialogDescription>
-            {unlockedCount === 1
-              ? 'Existe 1 item não finalizado (🔓). Deseja sair mesmo assim?'
-              : `Existem ${unlockedCount} itens não finalizados (🔓). Deseja sair mesmo assim?`
-            }
+            Este pedido está editável. Você pode bloqueá-lo agora para impedir alterações futuras
+            (apenas administradores poderão desbloquear), ou sair mantendo-o aberto para edição.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Voltar</AlertDialogCancel>
-          <AlertDialogAction onClick={() => { setShowExitAlert(false); onOpenChange(false); }}>
-            Sair mesmo assim
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { setShowExitAlert(false); onOpenChange(false); }}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+          >
+            Sair sem bloquear
+          </AlertDialogAction>
+          <AlertDialogAction
+            onClick={async () => {
+              setShowExitAlert(false);
+              try {
+                await lockOrderMutation.mutateAsync();
+                onOpenChange(false);
+              } catch { /* toast already shown */ }
+            }}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            Bloquear e sair
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
