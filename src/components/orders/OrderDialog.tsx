@@ -330,8 +330,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       await logItemChanges(order.id);
       await supabase.from('order_items').delete().eq('order_id', order.id);
 
-      // Auto-lock all items when order status ≠ pendente
-      const shouldAutoLock = order.status !== 'pendente';
+      // NOTE: order_items.is_locked is now LEGACY. The lock is enforced at the order level
+      // via orders.is_locked + DB triggers. We keep the column for backward compat but no
+      // longer auto-lock items based on order status.
       const orderItems = items.map((item, index) => {
         const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
         const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
@@ -344,7 +345,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
-          is_locked: shouldAutoLock || item.is_locked || false,
+          is_locked: false, // legacy field — no longer used as business rule
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
