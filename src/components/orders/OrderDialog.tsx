@@ -590,12 +590,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const handleDialogClose = useCallback((shouldClose: boolean) => {
     if (!shouldClose) return;
-    if (items.length > 0 && unlockedCount > 0 && canEdit) {
+    // Show exit alert with lock-and-exit option for editable orders with items
+    if (isEditMode && !isOrderLocked && canEdit && items.length > 0) {
       setShowExitAlert(true);
       return;
     }
     onOpenChange(false);
-  }, [items, unlockedCount, canEdit, onOpenChange]);
+  }, [isEditMode, isOrderLocked, canEdit, items.length, onOpenChange]);
 
   // Portfolio protection
   const {
