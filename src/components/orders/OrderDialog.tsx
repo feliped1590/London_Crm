@@ -62,11 +62,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const isEditMode = !!order;
 
+  // Entity-level lock is now the source of truth.
+  // canEdit = false when the order is locked (only status changes via approval flow allowed)
+  const isOrderLocked = !!order?.is_locked;
   const canEdit = useMemo(() => {
     if (!order) return true;
+    if (isOrderLocked) return false; // Locked orders are read-only (status changes happen via approval actions)
     if (order.status === 'pendente') return true;
     return isAdmin;
-  }, [order, isAdmin]);
+  }, [order, isAdmin, isOrderLocked]);
+  const canUnlock = isAdmin && isOrderLocked;
+  const canLockNow = isEditMode && !isOrderLocked && canEdit && items.length > 0;
 
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
