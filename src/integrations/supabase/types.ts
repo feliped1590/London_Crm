@@ -4616,7 +4616,10 @@ export type Database = {
           freight_value: number | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
+          is_locked: boolean
           legal_entity_id: string
+          locked_at: string | null
+          locked_by: string | null
           number: string
           observations: string | null
           order_date: string | null
@@ -4666,7 +4669,10 @@ export type Database = {
           freight_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
+          is_locked?: boolean
           legal_entity_id: string
+          locked_at?: string | null
+          locked_by?: string | null
           number: string
           observations?: string | null
           order_date?: string | null
@@ -4716,7 +4722,10 @@ export type Database = {
           freight_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
+          is_locked?: boolean
           legal_entity_id?: string
+          locked_at?: string | null
+          locked_by?: string | null
           number?: string
           observations?: string | null
           order_date?: string | null
@@ -8743,6 +8752,7 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      lock_order: { Args: { p_order_id: string }; Returns: Json }
       next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
       process_stock_movement: {
         Args: {
@@ -8858,6 +8868,7 @@ export type Database = {
         }
         Returns: Json
       }
+      unlock_order: { Args: { p_order_id: string }; Returns: Json }
       user_has_sales_rep_access: {
         Args: { p_sales_rep_id: string; p_user_id: string }
         Returns: boolean

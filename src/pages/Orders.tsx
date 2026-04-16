@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw } from 'lucide-react';
+import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw, Lock } from 'lucide-react';
 import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
@@ -268,7 +268,19 @@ export default function Orders() {
 
                      return (
                        <TableRow key={order.id}>
-                         <TableCell className="font-mono font-medium">{order.number}</TableCell>
+                         <TableCell className="font-mono font-medium">
+                           <div className="flex items-center gap-1.5">
+                             {(order as any).is_locked && (
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
+                                   <Lock className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                                 </TooltipTrigger>
+                                 <TooltipContent>Pedido bloqueado</TooltipContent>
+                               </Tooltip>
+                             )}
+                             {order.number}
+                           </div>
+                         </TableCell>
                          <TableCell>
                            {order.company && (
                              <div className="flex items-center gap-2">

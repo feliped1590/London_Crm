@@ -160,6 +160,9 @@ export interface Order {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  is_locked?: boolean;
+  locked_at?: string | null;
+  locked_by?: string | null;
   proposal?: Proposal;
   company?: {
     id: string;

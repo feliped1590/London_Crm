@@ -62,11 +62,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const isEditMode = !!order;
 
+  // Entity-level lock is now the source of truth.
+  // canEdit = false when the order is locked (only status changes via approval flow allowed)
+  const isOrderLocked = !!order?.is_locked;
   const canEdit = useMemo(() => {
     if (!order) return true;
+    if (isOrderLocked) return false; // Locked orders are read-only (status changes happen via approval actions)
     if (order.status === 'pendente') return true;
     return isAdmin;
-  }, [order, isAdmin]);
+  }, [order, isAdmin, isOrderLocked]);
+  const canUnlock = isAdmin && isOrderLocked;
 
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
@@ -240,8 +245,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       }).select().single();
       if (orderError) throw orderError;
 
-      // Auto-lock all items when saving with status ≠ pendente
-      const shouldAutoLock = false; // New orders are always 'pendente'
+      // NOTE: order_items.is_locked is now LEGACY (kept for backward compat).
+      // Lock is enforced at order level via orders.is_locked + DB triggers.
       const orderItems = items.map((item, index) => {
         const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
         const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
@@ -254,7 +259,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
-          is_locked: shouldAutoLock || item.is_locked || false,
+          is_locked: false, // legacy field
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -325,8 +330,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       await logItemChanges(order.id);
       await supabase.from('order_items').delete().eq('order_id', order.id);
 
-      // Auto-lock all items when order status ≠ pendente
-      const shouldAutoLock = order.status !== 'pendente';
+      // NOTE: order_items.is_locked is now LEGACY. The lock is enforced at the order level
+      // via orders.is_locked + DB triggers. We keep the column for backward compat but no
+      // longer auto-lock items based on order status.
       const orderItems = items.map((item, index) => {
         const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
         const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
@@ -339,7 +345,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
-          is_locked: shouldAutoLock || item.is_locked || false,
+          is_locked: false, // legacy field — no longer used as business rule
         };
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -387,7 +393,36 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     },
   });
 
-  // --- Price Validation (shared) ---
+  // --- Lock / Unlock mutations (entity-level) ---
+  const lockOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) throw new Error('Pedido não encontrado');
+      const { data, error } = await supabase.rpc('lock_order', { p_order_id: order.id });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+      toast.success('Pedido bloqueado com sucesso');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao bloquear pedido'),
+  });
+
+  const unlockOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) throw new Error('Pedido não encontrado');
+      const { data, error } = await supabase.rpc('unlock_order', { p_order_id: order.id });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+      toast.success('Pedido desbloqueado');
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao desbloquear pedido'),
+  });
   const priceValidation = usePriceValidation({
     items, setItems, products,
     companyId: companyId || null, contactId: contactId || null,
@@ -555,12 +590,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const handleDialogClose = useCallback((shouldClose: boolean) => {
     if (!shouldClose) return;
-    if (items.length > 0 && unlockedCount > 0 && canEdit) {
+    // Show exit alert with lock-and-exit option for editable orders with items
+    if (isEditMode && !isOrderLocked && canEdit && items.length > 0) {
       setShowExitAlert(true);
       return;
     }
     onOpenChange(false);
-  }, [items, unlockedCount, canEdit, onOpenChange]);
+  }, [isEditMode, isOrderLocked, canEdit, items.length, onOpenChange]);
 
   // Portfolio protection
   const {
@@ -866,7 +902,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <DialogTitle className="flex items-center gap-2">
             {isEditMode ? <Edit className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
             {isEditMode ? `Editar Pedido ${order?.number}` : 'Novo Pedido'}
-            {isEditMode && !canEdit && (
+            {isOrderLocked && (
+              <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300">
+                <Lock className="h-3 w-3 mr-1" />Bloqueado
+              </Badge>
+            )}
+            {isEditMode && !canEdit && !isOrderLocked && (
               <Badge variant="outline" className="ml-2 text-amber-600">
                 <Lock className="h-3 w-3 mr-1" />Somente Leitura
               </Badge>
@@ -887,14 +928,40 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             </TabsList>
 
             <TabsContent value="details" className="space-y-6 mt-4">
-              {!canEdit && (
+              {isOrderLocked && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2">
+                    <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-700 dark:text-amber-300">Pedido bloqueado</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                        Nenhum campo pode ser alterado. Apenas mudanças de status (via Liberações) são permitidas.
+                        {!canUnlock && ' Apenas administradores podem desbloquear.'}
+                      </p>
+                    </div>
+                  </div>
+                  {canUnlock && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => unlockOrderMutation.mutate()}
+                      disabled={unlockOrderMutation.isPending}
+                      className="flex-shrink-0"
+                    >
+                      <LockOpen className="h-3.5 w-3.5 mr-1.5" />
+                      Desbloquear
+                    </Button>
+                  )}
+                </div>
+              )}
+              {!isOrderLocked && !canEdit && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <p className="text-sm text-amber-700 dark:text-amber-300">
                     Este pedido está com status <strong>{orderStatusConfig[order?.status as OrderStatus]?.label}</strong> e só pode ser editado por administradores.
                   </p>
                 </div>
               )}
-              {order?.status !== 'pendente' && canEdit && (
+              {order?.status !== 'pendente' && canEdit && !isOrderLocked && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                   <p className="text-sm text-blue-700 dark:text-blue-300">
                     Alterações neste pedido serão registradas no histórico de auditoria.
@@ -926,6 +993,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Button variant="outline" onClick={() => handleDialogClose(true)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
+          {isEditMode && !isOrderLocked && canEdit && items.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => lockOrderMutation.mutate()}
+              disabled={lockOrderMutation.isPending}
+              className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+            >
+              <Lock className="h-4 w-4 mr-2" />
+              {lockOrderMutation.isPending ? 'Bloqueando...' : 'Bloquear Pedido'}
+            </Button>
+          )}
           {canEdit && (
             <Button onClick={handleSubmit} disabled={isPending || items.length === 0 || (!companyId && !contactId)}>
               {isPending ? 'Salvando...' : isEditMode ? 'Salvar Alterações' : 'Criar Pedido'}
@@ -961,18 +1039,32 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Itens não finalizados</AlertDialogTitle>
+          <AlertDialogTitle>Sair sem bloquear?</AlertDialogTitle>
           <AlertDialogDescription>
-            {unlockedCount === 1
-              ? 'Existe 1 item não finalizado (🔓). Deseja sair mesmo assim?'
-              : `Existem ${unlockedCount} itens não finalizados (🔓). Deseja sair mesmo assim?`
-            }
+            Este pedido está editável. Você pode bloqueá-lo agora para impedir alterações futuras
+            (apenas administradores poderão desbloquear), ou sair mantendo-o aberto para edição.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Voltar</AlertDialogCancel>
-          <AlertDialogAction onClick={() => { setShowExitAlert(false); onOpenChange(false); }}>
-            Sair mesmo assim
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+          <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { setShowExitAlert(false); onOpenChange(false); }}
+            className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+          >
+            Sair sem bloquear
+          </AlertDialogAction>
+          <AlertDialogAction
+            onClick={async () => {
+              setShowExitAlert(false);
+              try {
+                await lockOrderMutation.mutateAsync();
+                onOpenChange(false);
+              } catch { /* toast already shown */ }
+            }}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            Bloquear e sair
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
