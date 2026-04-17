@@ -125,10 +125,24 @@ export function IntegrationValidationPanel() {
     staleTime: 30_000,
   });
 
-  // Paginated list with queue status
+  // Paginated list with queue status — também filtra por issue (validation_fields) quando selecionado
   const { data: listData, isLoading, refetch } = useQuery({
-    queryKey: ['integration-validation-list', statusFilter, debouncedSearch, page],
+    queryKey: ['integration-validation-list', statusFilter, debouncedSearch, page, selectedIssue],
     queryFn: async () => {
+      // Se houver filtro de issue, primeiro pegamos os company_ids da fila com aquele field
+      let restrictedIds: string[] | null = null;
+      if (selectedIssue) {
+        const { data: queueRows } = await (supabase as any)
+          .from('company_sync_queue')
+          .select('company_id')
+          .eq('status', 'blocked_validation')
+          .contains('validation_fields', [selectedIssue]);
+        restrictedIds = (queueRows || []).map((r: any) => r.company_id);
+        if (restrictedIds.length === 0) {
+          return { items: [], total: 0 };
+        }
+      }
+
       let query = supabase
         .from('companies')
         .select('id, name, cnpj, city, state, address, erp_code, integration_status, sales_rep_id', { count: 'exact' })
@@ -136,6 +150,9 @@ export function IntegrationValidationPanel() {
         .order('name')
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
+      if (selectedIssue && restrictedIds) {
+        query = query.in('id', restrictedIds);
+      }
       if (statusFilter !== 'all') query = query.eq('integration_status', statusFilter);
       if (debouncedSearch) query = query.or(`name.ilike.%${debouncedSearch}%,cnpj.ilike.%${debouncedSearch}%`);
 
@@ -144,14 +161,16 @@ export function IntegrationValidationPanel() {
 
       const items = data || [];
 
-      // Enrich with queue status for sync_error items
-      const errorItems = items.filter((i: any) => i.integration_status === 'sync_error');
+      // Enrich with queue status for sync_error AND blocked_validation items
+      const enrichItems = items.filter((i: any) =>
+        i.integration_status === 'sync_error' || i.integration_status === 'missing_data'
+      );
       let queueMap = new Map<string, any>();
-      if (errorItems.length > 0) {
+      if (enrichItems.length > 0) {
         const { data: queueData } = await (supabase as any)
           .from('company_sync_queue')
-          .select('company_id, status, error_message, next_retry_at')
-          .in('company_id', errorItems.map((i: any) => i.id));
+          .select('company_id, status, error_message, next_retry_at, validation_errors, validation_fields')
+          .in('company_id', enrichItems.map((i: any) => i.id));
 
         (queueData || []).forEach((q: any) => queueMap.set(q.company_id, q));
       }
