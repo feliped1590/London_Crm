@@ -83,7 +83,7 @@ export function AppLayout() {
         {/* Page Content */}
         <main className={cn(
           "flex-1 min-w-0",
-          isMobile ? "p-4" : "p-6"
+          isMobile ? "p-3 sm:p-4" : "p-6"
         )}>
           <Outlet />
         </main>
