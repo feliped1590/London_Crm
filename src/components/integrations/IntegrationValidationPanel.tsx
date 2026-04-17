@@ -441,7 +441,85 @@ export function IntegrationValidationPanel() {
         })}
       </div>
 
-      {/* Filters + Bulk Sync */}
+      {/* Breakdown de pendências (clicável) */}
+      {breakdown.length > 0 && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <p className="text-sm font-semibold">Principais pendências</p>
+                <span className="text-xs text-muted-foreground">
+                  (clique para filtrar a tabela)
+                </span>
+              </div>
+              {selectedIssue && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1 h-7"
+                  onClick={() => { setSelectedIssue(null); setPage(0); }}
+                >
+                  <X className="h-3 w-3" />
+                  Limpar filtro
+                </Button>
+              )}
+            </div>
+            <ul className="space-y-1">
+              {breakdown.map((item) => {
+                const isActive = selectedIssue === item.field;
+                return (
+                  <li key={item.field}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedIssue(isActive ? null : item.field);
+                        setStatusFilter('all');
+                        setPage(0);
+                      }}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-warning/10 ${
+                        isActive ? 'bg-warning/15 ring-1 ring-warning/40' : ''
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="truncate">{item.label}</span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="font-semibold tabular-nums">
+                          {item.count.toLocaleString('pt-BR')}
+                        </span>
+                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Indicador de filtro ativo */}
+      {selectedIssue && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-warning/10 border border-warning/30 text-sm">
+          <span className="text-muted-foreground">Filtrando:</span>
+          <span className="font-medium">
+            {breakdown.find((b) => b.field === selectedIssue)?.label ?? selectedIssue}
+          </span>
+          <span className="text-muted-foreground">
+            ({(listData?.total ?? 0).toLocaleString('pt-BR')} clientes)
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto gap-1 h-6"
+            onClick={() => { setSelectedIssue(null); setPage(0); }}
+          >
+            <X className="h-3 w-3" />
+            Limpar
+          </Button>
+        </div>
+      )}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
