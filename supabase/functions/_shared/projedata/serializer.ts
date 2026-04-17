@@ -5,7 +5,7 @@
  * é um JSON SERIALIZADO como STRING com aspas escapadas.
  * 
  * Formato final:
- * {"tipoComando":"ASDCOMANDO","grupoComando":"IMP_ITEM_VERSAO_V1","#out#p_retorno":"T","json":"{\"codigo\":\"800432\", ...}"}
+ * {"tipoComando":"ASDCOMANDO","grupoComando":"IMP_ITEM_VERSAO_V3","#out#p_retorno":"T","json":"{\"codigo\":\"800432\", ...}"}
  */
 
 import type { ProjedataEnvelope } from './types.ts';
@@ -13,7 +13,7 @@ import type { ProjedataEnvelope } from './types.ts';
 /**
  * Monta o envelope completo para envio ao ERP.
  * 
- * @param grupoComando - Comando do ERP (ex: "IMP_ITEM_VERSAO_V1")
+ * @param grupoComando - Comando do ERP (ex: "IMP_ITEM_VERSAO_V3")
  * @param innerJson - Objeto com os dados do produto/versão (será serializado)
  * @returns ProjedataEnvelope pronto para envio
  */

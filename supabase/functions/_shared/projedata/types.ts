@@ -5,7 +5,7 @@
  * O campo "json" do envelope contém um produto com suas versões aninhadas.
  * {
  *   "tipoComando": "ASDCOMANDO",
- *   "grupoComando": "IMP_ITEM_VERSAO_V1",
+ *   "grupoComando": "IMP_ITEM_VERSAO_V3",
  *   "#out#p_retorno": "T",
  *   "json": "{\"codigo\":\"...\",\"descricao\":\"...\",\"empresa\":\"1\",\"grupo\":\"...\",\"versoes\":[{\"versao\":\"1\",...}]}"
  * }
