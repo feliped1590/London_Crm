@@ -854,7 +854,7 @@ export function UnifiedPipelineManager() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {orderedPipelineGroups.map(({ id, pipeline, stages }) => {
                 const isUnassigned = pipeline === null;
                 const TypeIcon = isUnassigned
