@@ -1626,6 +1626,8 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          validation_errors: Json | null
+          validation_fields: string[] | null
         }
         Insert: {
           attempts?: number
@@ -1642,6 +1644,8 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
         }
         Update: {
           attempts?: number
@@ -1658,6 +1662,8 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
         }
         Relationships: [
           {
@@ -8421,6 +8427,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_blocked_validation_count: { Args: never; Returns: number }
       get_companies_for_reallocation:
         | {
             Args: {
@@ -8753,6 +8760,13 @@ export type Database = {
         }[]
       }
       get_user_tenant_ids: { Args: { p_user_id: string }; Returns: string[] }
+      get_validation_breakdown: {
+        Args: never
+        Returns: {
+          count: number
+          field: string
+        }[]
+      }
       has_module_access: {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
