@@ -531,26 +531,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return () => window.removeEventListener('keydown', handler);
   }, [open, advancedSearchOpen]);
 
-  const toggleItemLock = useCallback((index: number) => {
-    // Only allow unlock if order is pendente or new
-    const currentItem = items[index];
-    if (!currentItem) return;
-    if (currentItem.is_locked && order && order.status !== 'pendente') {
-      toast.error('Itens só podem ser desbloqueados em pedidos pendentes');
-      return;
-    }
-    const newLocked = !currentItem.is_locked;
-    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: newLocked } : item));
-    toast.success(newLocked ? 'Item finalizado com sucesso' : 'Item desbloqueado para edição');
-  }, [items, order, setItems]);
-
+  // NOTE: order_items.is_locked is now LEGACY (not a business rule).
+  // Edit/remove/lock at the item level is no longer enforced — the parent
+  // order's is_locked is the single source of truth.
   const handleItemDetailUpdate = useCallback((index: number, updatedItem: OrderItemDraft) => {
+    if (!canEdit) return;
     setItems(prev => prev.map((item, i) => i === index ? updatedItem : item));
-  }, [setItems]);
+  }, [setItems, canEdit]);
 
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
-    // Guard: locked items cannot be edited
-    if (items[index]?.is_locked) return;
+    if (!canEdit) return;
 
     if (field === 'quantity') {
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
@@ -582,15 +572,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   };
 
   const handleRemoveItem = useCallback((index: number) => {
-    if (items[index]?.is_locked) return;
+    if (!canEdit) return;
     removeItem(index);
-  }, [items, removeItem]);
+  }, [canEdit, removeItem]);
 
-  const unlockedCount = useMemo(() => items.filter(i => !i.is_locked).length, [items]);
-
-  const handleDialogClose = useCallback((shouldClose: boolean) => {
-    if (!shouldClose) return;
-    // Show exit alert with lock-and-exit option for editable orders with items
+  // Dialog close handler. Radix calls onOpenChange(false) when the user clicks
+  // the X, the overlay, or presses Escape. We must respect that signal: if the
+  // order is editable (unsaved changes possible) we show the exit alert;
+  // otherwise we close normally.
+  const handleDialogClose = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
     if (isEditMode && !isOrderLocked && canEdit && items.length > 0) {
       setShowExitAlert(true);
       return;
