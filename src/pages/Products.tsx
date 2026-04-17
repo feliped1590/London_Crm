@@ -463,7 +463,7 @@ export default function Products() {
         erp_versao_detalhes: data.erp_versao_detalhes || null,
         erp_versao_roteiro: data.erp_versao_roteiro || null,
         erp_versao_situacao: data.erp_versao_situacao || 'A',
-        erp_product_code: data.erp_product_code?.trim() || null,
+        erp_product_code: (data as any).erp_product_code?.trim() || null,
         nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
       });
       if (error) throw error;
