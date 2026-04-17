@@ -213,15 +213,16 @@ export default function PricingTables() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tabelas de Preços</h1>
-          <p className="text-muted-foreground">Gerencie tabelas de preços e regras de desconto</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Tabelas de Preços</h1>
+          <p className="text-sm text-muted-foreground">Gerencie tabelas de preços e regras de desconto</p>
         </div>
-        <Button onClick={() => setIsTableDialogOpen(true)} className="gap-2">
+        <Button onClick={() => setIsTableDialogOpen(true)} className="gap-2 self-start sm:self-auto" size="sm">
           <Plus className="h-4 w-4" />
-          Nova Tabela
+          <span className="hidden sm:inline">Nova Tabela</span>
+          <span className="sm:hidden">Nova</span>
         </Button>
       </div>
 
