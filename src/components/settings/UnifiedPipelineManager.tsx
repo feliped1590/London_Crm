@@ -15,7 +15,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2, Trophy, XCircle, Circle, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import type { StageStatus } from '@/lib/stageStatus';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -68,12 +70,14 @@ export function UnifiedPipelineManager() {
   // Stage form state
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
+  const [showLegacyType, setShowLegacyType] = useState(false);
   const [stageFormData, setStageFormData] = useState<{
     name: string;
     color: string;
     probability: number;
     sort_order: number;
     stage: string;
+    stage_status: StageStatus;
     pipeline_id: string;
     sla_hours: number | null;
     sla_warning_hours: number | null;
@@ -83,7 +87,8 @@ export function UnifiedPipelineManager() {
     color: '#6366f1',
     probability: 10,
     sort_order: 1,
-    stage: 'prospeccao',
+    stage: '',
+    stage_status: 'open',
     pipeline_id: '',
     sla_hours: null,
     sla_warning_hours: null,
@@ -129,11 +134,12 @@ export function UnifiedPipelineManager() {
         color: data.color,
         probability: data.probability,
         sort_order: data.sort_order,
-        stage: data.stage,
+        stage: data.stage || null,
+        stage_status: data.stage_status,
         pipeline_id: data.pipeline_id || null,
         sla_hours: data.sla_hours,
         sla_warning_hours: data.sla_warning_hours,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -249,13 +255,15 @@ export function UnifiedPipelineManager() {
       color: '#6366f1',
       probability: 10,
       sort_order: 1,
-      stage: 'prospeccao',
+      stage: '',
+      stage_status: 'open',
       pipeline_id: '',
       sla_hours: null,
       sla_warning_hours: null,
       allowed_roles: [],
     });
     setEditingStage(null);
+    setShowLegacyType(false);
     setIsStageDialogOpen(false);
   };
 
@@ -266,30 +274,79 @@ export function UnifiedPipelineManager() {
       color: stage.color || '#6366f1',
       probability: stage.probability || 10,
       sort_order: stage.sort_order,
-      stage: stage.stage,
+      stage: stage.stage || '',
+      stage_status: ((stage as any).stage_status || 'open') as StageStatus,
       pipeline_id: stage.pipeline_id || '',
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
       allowed_roles: (stage as any).allowed_roles || [],
     });
+    setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
+  };
+
+  // Validação client-side: avisar duplicidade de won/lost no mesmo pipeline
+  const validateStageStatus = (): string | null => {
+    const targetPipeline = stageFormData.pipeline_id;
+    if (!targetPipeline) return null;
+    if (stageFormData.stage_status === 'open') return null;
+
+    const conflict = pipelineStages?.find(
+      (s) =>
+        s.pipeline_id === targetPipeline &&
+        (s as any).stage_status === stageFormData.stage_status &&
+        s.id !== editingStage?.id,
+    );
+    if (conflict) {
+      return stageFormData.stage_status === 'won'
+        ? `Já existe uma etapa de Ganho neste funil ("${conflict.name}").`
+        : `Já existe uma etapa de Perdido neste funil ("${conflict.name}").`;
+    }
+    return null;
   };
 
   const handleStageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const conflict = validateStageStatus();
+    if (conflict) {
+      toast.error(conflict);
+      return;
+    }
     if (editingStage) {
-      updateStageMutation.mutate({ 
-        id: editingStage.id, 
+      updateStageMutation.mutate({
+        id: editingStage.id,
         ...stageFormData,
+        stage: stageFormData.stage || null,
         pipeline_id: stageFormData.pipeline_id || null,
         allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      });
+      } as any);
     } else {
       createStageMutation.mutate({
         ...stageFormData,
         allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
       });
     }
+  };
+
+  const stageStatusBadge = (status: string | undefined) => {
+    const s = (status || 'open') as StageStatus;
+    if (s === 'won')
+      return (
+        <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20 gap-1">
+          <Trophy className="h-3 w-3" /> Ganho
+        </Badge>
+      );
+    if (s === 'lost')
+      return (
+        <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 gap-1">
+          <XCircle className="h-3 w-3" /> Perdido
+        </Badge>
+      );
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <Circle className="h-3 w-3" /> Em andamento
+      </Badge>
+    );
   };
 
   const isLoading = pipelinesLoading || stagesLoading;
