@@ -351,13 +351,13 @@ export default function Tasks() {
   const overdueCount = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'concluida').length || 0;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Tarefas</h1>
-          <p className="text-muted-foreground">Gerencie suas atividades e lembretes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Tarefas</h1>
+          <p className="text-sm text-muted-foreground">Gerencie suas atividades e lembretes</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* View Mode Toggle */}
           <div className="flex items-center border rounded-lg p-1">
             <Button
@@ -367,7 +367,7 @@ export default function Tasks() {
               className="gap-1"
             >
               <List className="h-4 w-4" />
-              Lista
+              <span className="hidden sm:inline">Lista</span>
             </Button>
             <Button
               variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
@@ -376,15 +376,16 @@ export default function Tasks() {
               className="gap-1"
             >
               <CalendarDays className="h-4 w-4" />
-              Calendário
+              <span className="hidden sm:inline">Calendário</span>
             </Button>
           </div>
 
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" size="sm">
               <Plus className="h-4 w-4" />
-              Nova Tarefa
+              <span className="hidden sm:inline">Nova Tarefa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
