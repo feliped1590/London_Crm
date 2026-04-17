@@ -907,7 +907,16 @@ export function UnifiedPipelineManager() {
                           return (
                             <div
                               key={stage.id}
-                              className="flex flex-col gap-2 px-4 sm:px-6 py-3 hover:bg-muted/40 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => handleEditStage(stage)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleEditStage(stage);
+                                }
+                              }}
+                              className="flex flex-col gap-2 px-4 sm:px-6 py-3 hover:bg-muted/60 cursor-pointer transition-colors sm:flex-row sm:items-center sm:justify-between focus:outline-none focus-visible:bg-muted/60"
                             >
                               {/* Left: color + name + role badges */}
                               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -917,7 +926,7 @@ export function UnifiedPipelineManager() {
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="font-medium text-sm truncate">{stage.name}</span>
+                                    <span className="font-semibold text-sm text-foreground truncate">{stage.name}</span>
                                     {hasRoles && allowedRoles.map((role) => (
                                       <Badge key={role} variant="outline" className="text-[10px] py-0 h-4">
                                         {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
