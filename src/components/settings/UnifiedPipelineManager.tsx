@@ -333,18 +333,18 @@ export function UnifiedPipelineManager() {
     const s = (status || 'open') as StageStatus;
     if (s === 'won')
       return (
-        <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20 gap-1">
+        <Badge className="bg-success text-success-foreground border-transparent hover:bg-success/90 gap-1 font-semibold shadow-sm">
           <Trophy className="h-3 w-3" /> Ganho
         </Badge>
       );
     if (s === 'lost')
       return (
-        <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 gap-1">
+        <Badge className="bg-destructive text-destructive-foreground border-transparent hover:bg-destructive/90 gap-1 font-semibold shadow-sm">
           <XCircle className="h-3 w-3" /> Perdido
         </Badge>
       );
     return (
-      <Badge variant="secondary" className="gap-1">
+      <Badge variant="secondary" className="gap-1 text-muted-foreground">
         <Circle className="h-3 w-3" /> Em andamento
       </Badge>
     );
