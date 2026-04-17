@@ -621,6 +621,8 @@ export function IntegrationValidationPanel() {
                   const missing = baseStatus === 'missing_data' ? getMissingFields(item) : [];
                   const isSyncing = syncingIds.has(item.id);
                   const isClickable = baseStatus === 'sync_error' || effectiveStatus === 'waiting_propagation' || effectiveStatus === 'pending_retry';
+                  const isBlocked = effectiveStatus === 'blocked_validation';
+                  const validationErrors = (item._queue?.validation_errors || []) as SyncValidationError[];
 
                   return (
                     <TableRow key={item.id}>
@@ -629,7 +631,33 @@ export function IntegrationValidationPanel() {
                       <TableCell className="text-sm">{item.city && item.state ? `${item.city}/${item.state}` : '—'}</TableCell>
                       <TableCell className="text-sm">{item.erp_code || '—'}</TableCell>
                       <TableCell>
-                        {isClickable ? (
+                        {isBlocked ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="outline"
+                                  className={`gap-1 cursor-pointer hover:opacity-80 ${display.color}`}
+                                  onClick={() => openValidationModal(item)}
+                                >
+                                  <Icon className="h-3 w-3" />
+                                  {display.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[280px]">
+                                <p className="text-xs font-semibold mb-1">Pendências:</p>
+                                <ul className="text-xs list-disc pl-4 space-y-0.5">
+                                  {validationErrors.slice(0, 5).map((e, i) => (
+                                    <li key={i}>{e.message}</li>
+                                  ))}
+                                  {validationErrors.length > 5 && (
+                                    <li>+{validationErrors.length - 5} outros</li>
+                                  )}
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : isClickable ? (
                           <Badge
                             variant="outline"
                             className={`gap-1 cursor-pointer hover:opacity-80 ${display.color}`}
@@ -658,7 +686,22 @@ export function IntegrationValidationPanel() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {(baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
+                          {isBlocked ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openValidationModal(item)}
+                                  >
+                                    <Wrench className="h-4 w-4 text-warning" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Corrigir dados pendentes</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
