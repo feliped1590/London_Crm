@@ -839,108 +839,154 @@ export function UnifiedPipelineManager() {
             </Dialog>
           </div>
 
-          <Card>
-            <CardContent className="pt-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Etapa</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Funil Vinculado</TableHead>
-                    <TableHead>Probabilidade</TableHead>
-                    <TableHead>Permissões</TableHead>
-                    <TableHead>SLA</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pipelineStages?.map((stage) => (
-                    <TableRow key={stage.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="h-4 w-4 rounded-full border shrink-0"
-                            style={{ backgroundColor: stage.color || '#6366f1' }}
-                          />
-                          <span className="font-medium">{stage.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {stageStatusBadge((stage as any).stage_status)}
-                      </TableCell>
-                      <TableCell>
-                        {stage.pipeline_id ? (
-                          <div className="flex items-center gap-1">
-                            <Link2 className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{(stage as any).pipelines?.name || 'Funil'}</span>
+          {orderedPipelineGroups.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Palette className="h-12 w-12 text-muted-foreground/50" />
+                <h3 className="mt-4 text-lg font-semibold">Nenhuma etapa cadastrada</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Crie a primeira etapa para começar a estruturar seus funis.
+                </p>
+                <Button className="gap-2" onClick={() => setIsStageDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Nova Etapa
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {orderedPipelineGroups.map(({ id, pipeline, stages }) => {
+                const isUnassigned = pipeline === null;
+                const TypeIcon = isUnassigned
+                  ? Globe
+                  : (typeLabels[pipeline!.type]?.icon || Target);
+                const typeLabel = isUnassigned ? null : typeLabels[pipeline!.type]?.label;
+                const groupTitle = isUnassigned ? 'Etapas sem funil' : pipeline!.name;
+
+                return (
+                  <Card key={id} className="rounded-xl shadow-sm overflow-hidden">
+                    <CardHeader className="bg-muted/30 border-b py-3 px-4 sm:px-6">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
+                            isUnassigned ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                          )}>
+                            <TypeIcon className="h-4 w-4" />
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Global</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{stage.probability}%</TableCell>
-                      <TableCell>
-                        {(stage as any).allowed_roles?.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {((stage as any).allowed_roles as string[]).map((role: string) => (
-                              <Badge key={role} variant="secondary" className="text-[10px]">
-                                {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
-                              </Badge>
-                            ))}
+                          <div className="min-w-0">
+                            <CardTitle className="text-base font-semibold truncate">
+                              {groupTitle}
+                            </CardTitle>
+                            {pipeline?.description && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {pipeline.description}
+                              </p>
+                            )}
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">Todos</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {stage.sla_hours ? `${stage.sla_hours}h` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditStage(stage)}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir etapa?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Isso pode afetar negócios que estão nesta etapa.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteStageMutation.mutate(stage.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {typeLabel && (
+                            <Badge variant="outline" className="text-xs">
+                              {typeLabel}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {stages.length} {stages.length === 1 ? 'etapa' : 'etapas'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y">
+                        {stages.map((stage) => {
+                          const allowedRoles = ((stage as any).allowed_roles || []) as string[];
+                          const hasRoles = allowedRoles.length > 0;
+                          const slaHours = stage.sla_hours;
+
+                          return (
+                            <div
+                              key={stage.id}
+                              className="flex flex-col gap-2 px-4 sm:px-6 py-3 hover:bg-muted/40 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              {/* Left: color + name + role badges */}
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div
+                                  className="h-3 w-3 rounded-full border shrink-0"
+                                  style={{ backgroundColor: stage.color || '#6366f1' }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    <span className="font-medium text-sm truncate">{stage.name}</span>
+                                    {hasRoles && allowedRoles.map((role) => (
+                                      <Badge key={role} variant="outline" className="text-[10px] py-0 h-4">
+                                        {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Right: status + probability + sla + actions */}
+                              <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
+                                {stageStatusBadge((stage as any).stage_status)}
+                                <span className="text-xs font-medium text-muted-foreground tabular-nums min-w-[2.5rem] text-right">
+                                  {stage.probability}%
+                                </span>
+                                {slaHours ? (
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                    ⏱ {slaHours}h
+                                  </span>
+                                ) : null}
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleEditStage(stage)}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir etapa?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Isso pode afetar negócios que estão nesta etapa.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteStageMutation.mutate(stage.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Excluir
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
