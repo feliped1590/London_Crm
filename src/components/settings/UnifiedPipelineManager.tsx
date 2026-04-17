@@ -360,13 +360,30 @@ export function UnifiedPipelineManager() {
     );
   }
 
-  // Group stages by pipeline
-  const stagesByPipeline = pipelineStages?.reduce((acc, stage) => {
-    const key = stage.pipeline_id || 'unassigned';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(stage);
-    return acc;
-  }, {} as Record<string, typeof pipelineStages>);
+  // Group stages by pipeline (memoized)
+  const stagesByPipeline = useMemo(() => {
+    return (pipelineStages || []).reduce((acc, stage) => {
+      const key = stage.pipeline_id || 'unassigned';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(stage);
+      return acc;
+    }, {} as Record<string, NonNullable<typeof pipelineStages>>);
+  }, [pipelineStages]);
+
+  // Ordered pipeline groups: respect allPipelines order, then unassigned last
+  const orderedPipelineGroups = useMemo(() => {
+    const groups: { id: string; pipeline: Pipeline | null; stages: NonNullable<typeof pipelineStages> }[] = [];
+    (allPipelines || []).forEach((p) => {
+      const stages = stagesByPipeline[p.id];
+      if (stages && stages.length > 0) {
+        groups.push({ id: p.id, pipeline: p, stages });
+      }
+    });
+    if (stagesByPipeline['unassigned']?.length) {
+      groups.push({ id: 'unassigned', pipeline: null, stages: stagesByPipeline['unassigned'] });
+    }
+    return groups;
+  }, [allPipelines, stagesByPipeline]);
 
   return (
     <div className="space-y-6">
