@@ -58,9 +58,10 @@ const CUSTOMER_PATTERNS: PatternDef[] = [
     codeIdx: 1,
   },
   // "CLIENTE#CNPJ#9999#012568998984684"
+  // grupo 1 = erpCode (1-10 dígitos); grupo 2 = CNPJ (qualquer sequência numérica que sobrar)
   {
     id: 'customer.created.v1',
-    re: /^CLIENTE#CNPJ#(\d{1,10})#(\d{8,14})/i,
+    re: /^CLIENTE#CNPJ#(\d{1,10})#(\d+)/i,
     action: 'created',
     codeIdx: 1,
     metaIdx: { cnpj: 2 },
