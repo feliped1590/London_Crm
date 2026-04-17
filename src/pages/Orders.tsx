@@ -30,7 +30,7 @@ export default function Orders() {
   const [filterCarrier, setFilterCarrier] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [orderToEdit, setOrderToEdit] = useState<Order | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
   const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
 
@@ -81,9 +81,16 @@ export default function Orders() {
   };
 
   const handleEditOrder = (order: Order) => {
-    setOrderToEdit(order);
+    setEditingOrderId(order.id);
     setIsEditDialogOpen(true);
   };
+
+  // Derive the live order from the query cache so lock/unlock changes
+  // are reflected immediately in the open dialog (no stale snapshot).
+  const editingOrder = useMemo(
+    () => (editingOrderId ? orders?.find((o) => o.id === editingOrderId) ?? null : null),
+    [orders, editingOrderId],
+  );
 
   const handleGeneratePdf = async (order: Order) => {
     setGeneratingPdfId(order.id);
@@ -423,11 +430,13 @@ export default function Orders() {
       {/* Edit Order Dialog */}
       <OrderDialog
         open={isEditDialogOpen}
-        onOpenChange={setIsEditDialogOpen}
-        order={orderToEdit}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) setEditingOrderId(null);
+        }}
+        order={editingOrder}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['orders'] });
-          setOrderToEdit(null);
         }}
       />
     </div>
