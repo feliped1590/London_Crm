@@ -4890,7 +4890,8 @@ export type Database = {
           sla_hours: number | null
           sla_warning_hours: number | null
           sort_order: number
-          stage: string
+          stage: string | null
+          stage_status: string
         }
         Insert: {
           allowed_roles?: string[] | null
@@ -4904,7 +4905,8 @@ export type Database = {
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order: number
-          stage: string
+          stage?: string | null
+          stage_status?: string
         }
         Update: {
           allowed_roles?: string[] | null
@@ -4918,7 +4920,8 @@ export type Database = {
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order?: number
-          stage?: string
+          stage?: string | null
+          stage_status?: string
         }
         Relationships: [
           {
@@ -8644,6 +8647,10 @@ export type Database = {
           total_deals: number
           total_value: number
         }[]
+      }
+      get_pipeline_stage_status: {
+        Args: { p_pipeline_id: string }
+        Returns: Json
       }
       get_portfolio_items: {
         Args: { p_entity_type?: string; p_sales_rep_id: string }
