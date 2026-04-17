@@ -3,20 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send } from 'lucide-react';
+import { CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 
 interface OrderSyncStatusProps {
   orderId: string;
+  orderNumber?: string | null;
   erpOrderId?: string | null;
   erpSyncedAt?: string | null;
   updatedAt?: string | null;
   showAction?: boolean;
   onSyncTriggered?: () => void;
 }
-
-type SyncQueueStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 const syncStatusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   not_synced: {
@@ -49,15 +49,20 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: AlertTriangle,
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
   },
+  blocked_validation: {
+    label: 'Dados incompletos',
+    icon: AlertTriangle,
+    className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+  },
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
   const { data: queueEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('order_sync_queue')
-        .select('status, error_message, attempt_count, processed_at, pedido_terceiro')
+        .select('status, error_message, attempt_count, processed_at, pedido_terceiro, validation_errors')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -67,14 +72,16 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
     },
     staleTime: 5_000,
     refetchInterval: (query) => {
-      const status = query.state.data?.status;
+      const status = (query.state.data as any)?.status;
       return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
     },
   });
 
-  // Determine display status
+  // Prioridade: blocked_validation > pending/processing > outdated > completed > demais
   let displayStatus: string;
-  if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
+  if (queueEntry?.status === 'blocked_validation') {
+    displayStatus = 'blocked_validation';
+  } else if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
   } else if (erpOrderId && erpSyncedAt && updatedAt && (new Date(updatedAt).getTime() - new Date(erpSyncedAt).getTime()) > 5000) {
     displayStatus = 'outdated';
@@ -89,6 +96,7 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
   const config = syncStatusConfig[displayStatus] || syncStatusConfig.not_synced;
   const Icon = config.icon;
   const isAnimated = displayStatus === 'pending' || displayStatus === 'processing';
+  const validationErrors = (queueEntry?.validation_errors || []) as SyncValidationError[];
 
   return (
     <TooltipProvider>
@@ -99,7 +107,7 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
             {config.label}
           </Badge>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs space-y-1 max-w-[250px]">
+        <TooltipContent side="bottom" className="text-xs space-y-1 max-w-[280px]">
           {erpOrderId && <p><span className="text-muted-foreground">Pedido ERP:</span> {erpOrderId}</p>}
           {erpSyncedAt && (
             <p><span className="text-muted-foreground">Sincronizado em:</span> {new Date(erpSyncedAt).toLocaleString('pt-BR')}</p>
@@ -107,7 +115,18 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
           {queueEntry?.pedido_terceiro && (
             <p><span className="text-muted-foreground">Pedido Terceiro:</span> {String(queueEntry.pedido_terceiro)}</p>
           )}
-          {queueEntry?.error_message && (
+          {displayStatus === 'blocked_validation' && validationErrors.length > 0 && (
+            <div className="space-y-0.5">
+              <p className="font-semibold">Pendências:</p>
+              <ul className="list-disc pl-4">
+                {validationErrors.slice(0, 5).map((e, i) => (
+                  <li key={i}>{e.message}</li>
+                ))}
+                {validationErrors.length > 5 && <li>+{validationErrors.length - 5} outros</li>}
+              </ul>
+            </div>
+          )}
+          {displayStatus !== 'blocked_validation' && queueEntry?.error_message && (
             <p className="text-destructive">{queueEntry.error_message}</p>
           )}
           {queueEntry?.attempt_count && queueEntry.attempt_count > 0 && (
@@ -119,33 +138,87 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
   );
 }
 
-export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderSyncStatusProps) {
+export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTriggered }: OrderSyncStatusProps) {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
+  const [entityLabel, setEntityLabel] = useState<string>('');
+
+  // Saber se já está bloqueado para mostrar "Corrigir dados"
+  const { data: queueEntry } = useQuery({
+    queryKey: ['order_sync_status_btn', orderId],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('order_sync_queue')
+        .select('status, validation_errors')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 10_000,
+  });
+
+  const isBlocked = queueEntry?.status === 'blocked_validation';
+
+  const buildLabel = (orderNum?: string | null) =>
+    orderNum ? `Pedido ${orderNum}` : 'Pedido';
+
+  const handleShowBlocked = () => {
+    setValidationErrors((queueEntry?.validation_errors || []) as SyncValidationError[]);
+    setEntityLabel(buildLabel(orderNumber));
+    setValidationOpen(true);
+  };
 
   const handleSync = async () => {
     setIsSyncing(true);
     try {
-      // 1. Resetar na fila diretamente (instantâneo)
-      const { data: existing } = await supabase
+      // 1. Pré-validação
+      const { data: validation, error: validationErr } = await supabase.functions.invoke('validate-order-sync', {
+        body: { order_id: orderId },
+      });
+
+      if (validationErr) {
+        toast.error('Erro ao validar pedido: ' + validationErr.message);
+        return;
+      }
+
+      if (validation && !validation.valid) {
+        setValidationErrors(validation.errors || []);
+        setEntityLabel(buildLabel(validation.order_number ?? orderNumber));
+        setValidationOpen(true);
+        toast.warning('Pedido possui pendências. Corrija antes de enviar ao ERP.');
+        return;
+      }
+
+      // 2. Resetar fila e enfileirar
+      const { data: existing } = await (supabase as any)
         .from('order_sync_queue')
         .select('id')
         .eq('order_id', orderId)
         .maybeSingle();
 
       if (existing) {
-        await supabase.from('order_sync_queue')
-          .update({ status: 'pending' as any, attempt_count: 0, error_message: null, next_retry_at: null })
+        await (supabase as any).from('order_sync_queue')
+          .update({
+            status: 'pending',
+            attempt_count: 0,
+            error_message: null,
+            next_retry_at: null,
+            validation_errors: null,
+            validation_fields: null,
+          })
           .eq('id', existing.id);
       }
 
       toast.success('Pedido adicionado à fila de envio');
       onSyncTriggered?.();
 
-      // 2. Disparar Edge Function em background (fire-and-forget)
+      // 3. Disparar Edge Function em background
       supabase.functions.invoke('process-order-sync', {
         body: { order_id: orderId },
       }).catch(() => {});
-
     } catch (err: any) {
       toast.error(`Erro ao enviar pedido: ${err.message}`);
     } finally {
@@ -153,28 +226,45 @@ export function OrderSyncButton({ orderId, erpOrderId, onSyncTriggered }: OrderS
     }
   };
 
-  const tooltipLabel = erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
+  const tooltipLabel = isBlocked
+    ? 'Corrigir dados pendentes'
+    : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSync}
-            disabled={isSyncing}
-            title={tooltipLabel}
-          >
-            {isSyncing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{tooltipLabel}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isBlocked) handleShowBlocked();
+                else handleSync();
+              }}
+              disabled={isSyncing}
+              title={tooltipLabel}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isBlocked ? (
+                <Wrench className="h-4 w-4 text-warning" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tooltipLabel}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <SyncValidationModal
+        open={validationOpen}
+        onOpenChange={setValidationOpen}
+        entityLabel={entityLabel}
+        errors={validationErrors}
+      />
+    </>
   );
 }

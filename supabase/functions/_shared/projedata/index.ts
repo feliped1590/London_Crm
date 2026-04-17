@@ -29,7 +29,10 @@ export type {
 } from './order-types.ts';
 
 export { validateOrderForSync } from './order-validator.ts';
+export type { OrderToValidate } from './order-validator.ts';
 export { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from './order-mapper.ts';
+export { loadOrderForValidation } from './order-loader.ts';
+export type { LoadedOrderContext } from './order-loader.ts';
 
 // ─── Clientes (IMP_CLIENTE_V3) ──────────────────────────────────
 export type {

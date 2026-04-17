@@ -377,10 +377,12 @@ export default function Orders() {
                             <div className="flex items-center justify-end gap-1">
                               <OrderSyncButton
                                 orderId={order.id}
+                                orderNumber={order.number}
                                 erpOrderId={(order as any).erp_order_id}
                                 onSyncTriggered={() => {
                                   queryClient.invalidateQueries({ queryKey: ['orders'] });
                                   queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                                  queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
                                 }}
                               />
                              {canEditOrder(order) && (

@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
-import { SyncValidationModal, type SyncValidationError } from './SyncValidationModal';
+import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 
 interface CompanySyncStatusProps {
   companyId: string;

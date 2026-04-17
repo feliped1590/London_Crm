@@ -4515,6 +4515,8 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          validation_errors: Json | null
+          validation_fields: string[] | null
         }
         Insert: {
           attempt_count?: number
@@ -4529,6 +4531,8 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
         }
         Update: {
           attempt_count?: number
@@ -4543,6 +4547,8 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
         }
         Relationships: [
           {
