@@ -658,21 +658,71 @@ export function UnifiedPipelineManager() {
                   </div>
 
                   <div>
-                    <Label htmlFor="stage-type">Tipo de Etapa *</Label>
+                    <Label htmlFor="stage-status">Status da Etapa *</Label>
                     <Select
-                      value={stageFormData.stage}
-                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v })}
+                      value={stageFormData.stage_status}
+                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage_status: v as StageStatus })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="stage-status">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DEAL_STAGES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
+                        <SelectItem value="open">
+                          <span className="flex items-center gap-2">
+                            <Circle className="h-3 w-3 text-muted-foreground" /> Em andamento
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="won">
+                          <span className="flex items-center gap-2">
+                            <Trophy className="h-3 w-3 text-success" /> Ganho
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="lost">
+                          <span className="flex items-center gap-2">
+                            <XCircle className="h-3 w-3 text-destructive" /> Perdido
+                          </span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Apenas uma etapa de Ganho e uma de Perdido por funil.
+                    </p>
+                    {validateStageStatus() && (
+                      <p className="text-xs text-destructive mt-1">{validateStageStatus()}</p>
+                    )}
                   </div>
+
+                  <Collapsible open={showLegacyType} onOpenChange={setShowLegacyType}>
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <ChevronDown className={cn('h-3 w-3 transition-transform', showLegacyType && 'rotate-180')} />
+                        Avançado (legado)
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <Label htmlFor="stage-type" className="text-xs">Tipo de Etapa (legado)</Label>
+                      <Select
+                        value={stageFormData.stage || '__NONE__'}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v === '__NONE__' ? '' : v })}
+                      >
+                        <SelectTrigger id="stage-type">
+                          <SelectValue placeholder="Sem tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__NONE__">Sem tipo</SelectItem>
+                          {DEAL_STAGES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mantido apenas por compatibilidade. A regra de negócio agora usa "Status da Etapa".
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -777,7 +827,7 @@ export function UnifiedPipelineManager() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Etapa</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Funil Vinculado</TableHead>
                     <TableHead>Probabilidade</TableHead>
                     <TableHead>Permissões</TableHead>
@@ -798,9 +848,7 @@ export function UnifiedPipelineManager() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {DEAL_STAGES.find(s => s.value === stage.stage)?.label || stage.stage}
-                        </Badge>
+                        {stageStatusBadge((stage as any).stage_status)}
                       </TableCell>
                       <TableCell>
                         {stage.pipeline_id ? (
