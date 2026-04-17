@@ -124,10 +124,11 @@ export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySync
 }
 
 /**
- * Gera o payload final serializado para envio ao ERP (IMP_CLIENTE_V3).
+ * Gera o payload final serializado para envio ao ERP (IMP_CLIENTE_V4_TESTE).
+ * V4 retorna o código ERP do cliente recém-criado em p_retorno (V3 retornava null).
  */
 export function buildCompanyPayload(mapped: ErpCompanyPayload): string {
-  const envelope = buildEnvelope('IMP_CLIENTE_V3', mapped as unknown as Record<string, unknown>);
+  const envelope = buildEnvelope('IMP_CLIENTE_V4_TESTE', mapped as unknown as Record<string, unknown>);
   return serializeEnvelope(envelope);
 }
 
