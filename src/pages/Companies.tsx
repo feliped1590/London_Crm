@@ -239,17 +239,18 @@ export default function Companies() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Empresas</h1>
-          <p className="text-muted-foreground">Gerencie suas empresas e clientes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Empresas</h1>
+          <p className="text-sm text-muted-foreground">Gerencie suas empresas e clientes</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 self-start sm:self-auto" size="sm">
               <Plus className="h-4 w-4" />
-              Nova Empresa
+              <span className="hidden sm:inline">Nova Empresa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
