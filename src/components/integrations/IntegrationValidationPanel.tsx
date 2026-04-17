@@ -10,8 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2, PlayCircle, StopCircle } from 'lucide-react';
+import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2, PlayCircle, StopCircle, ChevronRight as ArrowRight, X, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
+import { useValidationBreakdown } from '@/hooks/useValidationBreakdown';
+import { SyncValidationModal, type SyncValidationError } from '@/components/customers/SyncValidationModal';
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; cardColor: string }> = {
   ready: {

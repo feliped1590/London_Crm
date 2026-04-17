@@ -270,7 +270,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
               {isSyncing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isBlocked ? (
-                <Wrench className="h-4 w-4 text-orange-500" />
+                <Wrench className="h-4 w-4 text-warning" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
