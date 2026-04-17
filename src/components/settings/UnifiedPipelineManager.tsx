@@ -21,6 +21,7 @@ import type { StageStatus } from '@/lib/stageStatus';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
