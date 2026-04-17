@@ -2,11 +2,15 @@
  * Edge Function: process-order-sync
  * Processa a fila order_sync_queue enviando pedidos pendentes ao ERP Projedata (IMP_PEDIDO_V3).
  * Todos os campos são resolvidos dinamicamente — NENHUM hardcode.
+ *
+ * Defesa em profundidade: se a pré-validação falhar, o item da fila é marcado
+ * como 'blocked_validation' (sem consumir retries) em vez de gerar erro infinito.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from '../_shared/projedata/order-mapper.ts';
+import { mapCRMOrderToProjedata, buildOrderPayload, parsePaymentTerms } from '../_shared/projedata/order-mapper.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
+import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
