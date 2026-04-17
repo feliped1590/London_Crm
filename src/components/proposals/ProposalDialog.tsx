@@ -30,6 +30,7 @@ import { useProductAdd } from '@/components/documents/ProductSelector';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
+import { getWonStageForPipeline } from '@/lib/stageStatus';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -192,7 +193,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   const { data: dealData } = useQuery({
     queryKey: ['deal_legal_entity', dealId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('deals').select('legal_entity_id').eq('id', dealId).single();
+      const { data, error } = await supabase.from('deals').select('legal_entity_id, pipeline_id').eq('id', dealId).single();
       if (error) throw error;
       return data;
     },
@@ -352,10 +353,31 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
       })));
     }
     if (proposalData.deal_id) {
-      const { error: dealUpdateError } = await supabase.from('deals').update({ stage: 'fechado_ganho', closed_at: new Date().toISOString() }).eq('id', proposalData.deal_id);
+      // Buscar dinamicamente a etapa "won" do pipeline do deal — sem hardcode de 'fechado_ganho'
+      const { data: dealRow } = await supabase
+        .from('deals')
+        .select('pipeline_id, stage')
+        .eq('id', proposalData.deal_id)
+        .single();
+
+      const { stageCode } = await getWonStageForPipeline(dealRow?.pipeline_id);
+      const newStage = stageCode || 'fechado_ganho';
+
+      const { error: dealUpdateError } = await supabase
+        .from('deals')
+        .update({ stage: newStage, closed_at: new Date().toISOString() })
+        .eq('id', proposalData.deal_id);
+
       if (!dealUpdateError) {
-        await supabase.from('deal_audit_log').insert({ deal_id: proposalData.deal_id, field_name: 'stage', field_label: 'Etapa', old_value: null, new_value: 'fechado_ganho', changed_by: user?.id });
-        toast.success('Negócio movido para Fechado Ganho!');
+        await supabase.from('deal_audit_log').insert({
+          deal_id: proposalData.deal_id,
+          field_name: 'stage',
+          field_label: 'Etapa',
+          old_value: dealRow?.stage ?? null,
+          new_value: newStage,
+          changed_by: user?.id,
+        });
+        toast.success('Negócio movido para a etapa de Ganho!');
       }
     }
     toast.success('Pedido gerado automaticamente!');
