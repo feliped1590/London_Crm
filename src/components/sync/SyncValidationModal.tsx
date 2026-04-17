@@ -14,7 +14,12 @@ export interface SyncValidationError {
 interface SyncValidationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Mantido por retrocompatibilidade — exibido como "Cliente" */
   companyName?: string;
+  /** Identificador customizado do registro (ex.: "Pedido PED-2026-0058") */
+  entityLabel?: string;
+  /** Texto alternativo para o título quando for outra entidade (default = clientes) */
+  title?: string;
   errors: SyncValidationError[];
 }
 
