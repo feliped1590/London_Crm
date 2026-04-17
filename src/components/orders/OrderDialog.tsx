@@ -531,26 +531,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     return () => window.removeEventListener('keydown', handler);
   }, [open, advancedSearchOpen]);
 
-  const toggleItemLock = useCallback((index: number) => {
-    // Only allow unlock if order is pendente or new
-    const currentItem = items[index];
-    if (!currentItem) return;
-    if (currentItem.is_locked && order && order.status !== 'pendente') {
-      toast.error('Itens só podem ser desbloqueados em pedidos pendentes');
-      return;
-    }
-    const newLocked = !currentItem.is_locked;
-    setItems(prev => prev.map((item, i) => i === index ? { ...item, is_locked: newLocked } : item));
-    toast.success(newLocked ? 'Item finalizado com sucesso' : 'Item desbloqueado para edição');
-  }, [items, order, setItems]);
-
+  // NOTE: order_items.is_locked is now LEGACY (not a business rule).
+  // Edit/remove/lock at the item level is no longer enforced — the parent
+  // order's is_locked is the single source of truth.
   const handleItemDetailUpdate = useCallback((index: number, updatedItem: OrderItemDraft) => {
+    if (!canEdit) return;
     setItems(prev => prev.map((item, i) => i === index ? updatedItem : item));
-  }, [setItems]);
+  }, [setItems, canEdit]);
 
   const updateItem = (index: number, field: keyof OrderItemDraft, value: any) => {
-    // Guard: locked items cannot be edited
-    if (items[index]?.is_locked) return;
+    if (!canEdit) return;
 
     if (field === 'quantity') {
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
@@ -582,15 +572,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   };
 
   const handleRemoveItem = useCallback((index: number) => {
-    if (items[index]?.is_locked) return;
+    if (!canEdit) return;
     removeItem(index);
-  }, [items, removeItem]);
+  }, [canEdit, removeItem]);
 
-  const unlockedCount = useMemo(() => items.filter(i => !i.is_locked).length, [items]);
-
-  const handleDialogClose = useCallback((shouldClose: boolean) => {
-    if (!shouldClose) return;
-    // Show exit alert with lock-and-exit option for editable orders with items
+  // Dialog close handler. Radix calls onOpenChange(false) when the user clicks
+  // the X, the overlay, or presses Escape. We must respect that signal: if the
+  // order is editable (unsaved changes possible) we show the exit alert;
+  // otherwise we close normally.
+  const handleDialogClose = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
     if (isEditMode && !isOrderLocked && canEdit && items.length > 0) {
       setShowExitAlert(true);
       return;
@@ -769,7 +763,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10"></TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead className="w-24">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
@@ -792,30 +785,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
-                const locked = item.is_locked;
                 return (
-                  <TableRow key={index} className={cn(locked && 'bg-muted/40 opacity-80')}>
-                    <TableCell className="px-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => toggleItemLock(index)}
-                            disabled={!canEdit}
-                          >
-                            {locked
-                              ? <Lock className="h-4 w-4 text-amber-500" />
-                              : <LockOpen className="h-4 w-4 text-muted-foreground" />
-                            }
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {locked ? 'Item finalizado (não pode ser alterado)' : 'Item editável — clique para finalizar'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TableCell>
+                  <TableRow key={index}>
                     <TableCell>
                       <div
                         className="cursor-pointer hover:underline"
@@ -826,11 +797,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className={cn('w-20', locked && 'cursor-not-allowed')} disabled={!canEdit || locked} />
+                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
-                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted', locked && 'cursor-not-allowed')} disabled={(hasPricingTable && !isAdmin) || !canEdit || locked} />
+                        <CurrencyInput value={item.unit_price} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => priceValidation.handlePriceBlur(index)} className={cn('w-28', hasPricingTable && !isAdmin && 'bg-muted')} disabled={(hasPricingTable && !isAdmin) || !canEdit} />
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
@@ -852,16 +823,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         step={0.01}
                         value={item.commission_pct || ''}
                         onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
-                        className={cn('w-16 text-right text-sm', locked && 'cursor-not-allowed')}
+                        className="w-16 text-right text-sm"
                         placeholder="0"
-                        disabled={!canEdit || locked}
+                        disabled={!canEdit}
                       />
                     </TableCell>
                     <TableCell className="text-right font-bold text-sm">{formatCurrency(totalItem)}</TableCell>
                     {canEdit && (
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)} disabled={locked}>
-                          <Trash2 className={cn('h-4 w-4', locked ? 'text-muted-foreground' : 'text-destructive')} />
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       </TableCell>
                     )}
@@ -1033,7 +1004,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       item={detailItemIndex >= 0 ? items[detailItemIndex] : null}
       index={detailItemIndex}
       onUpdate={handleItemDetailUpdate}
-      canEdit={canEdit && !(items[detailItemIndex]?.is_locked)}
+      canEdit={canEdit}
     />
 
     <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
