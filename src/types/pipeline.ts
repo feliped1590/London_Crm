@@ -1,4 +1,5 @@
 export type { Deal, DealStage, StageConfigEntry, PipelineStageRow } from '@/hooks/usePipelineData';
+export type { StageStatus } from '@/lib/stageStatus';
 
 /**
  * Shape used for the intervention modal pending action.

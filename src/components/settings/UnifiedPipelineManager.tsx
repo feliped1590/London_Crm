@@ -15,10 +15,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2, Trophy, XCircle, Circle, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import type { StageStatus } from '@/lib/stageStatus';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
+import { cn } from '@/lib/utils';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
@@ -68,12 +71,14 @@ export function UnifiedPipelineManager() {
   // Stage form state
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [editingStage, setEditingStage] = useState<PipelineStage | null>(null);
+  const [showLegacyType, setShowLegacyType] = useState(false);
   const [stageFormData, setStageFormData] = useState<{
     name: string;
     color: string;
     probability: number;
     sort_order: number;
     stage: string;
+    stage_status: StageStatus;
     pipeline_id: string;
     sla_hours: number | null;
     sla_warning_hours: number | null;
@@ -83,7 +88,8 @@ export function UnifiedPipelineManager() {
     color: '#6366f1',
     probability: 10,
     sort_order: 1,
-    stage: 'prospeccao',
+    stage: '',
+    stage_status: 'open',
     pipeline_id: '',
     sla_hours: null,
     sla_warning_hours: null,
@@ -129,11 +135,12 @@ export function UnifiedPipelineManager() {
         color: data.color,
         probability: data.probability,
         sort_order: data.sort_order,
-        stage: data.stage,
+        stage: data.stage || null,
+        stage_status: data.stage_status,
         pipeline_id: data.pipeline_id || null,
         sla_hours: data.sla_hours,
         sla_warning_hours: data.sla_warning_hours,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -249,13 +256,15 @@ export function UnifiedPipelineManager() {
       color: '#6366f1',
       probability: 10,
       sort_order: 1,
-      stage: 'prospeccao',
+      stage: '',
+      stage_status: 'open',
       pipeline_id: '',
       sla_hours: null,
       sla_warning_hours: null,
       allowed_roles: [],
     });
     setEditingStage(null);
+    setShowLegacyType(false);
     setIsStageDialogOpen(false);
   };
 
@@ -266,30 +275,79 @@ export function UnifiedPipelineManager() {
       color: stage.color || '#6366f1',
       probability: stage.probability || 10,
       sort_order: stage.sort_order,
-      stage: stage.stage,
+      stage: stage.stage || '',
+      stage_status: ((stage as any).stage_status || 'open') as StageStatus,
       pipeline_id: stage.pipeline_id || '',
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
       allowed_roles: (stage as any).allowed_roles || [],
     });
+    setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
+  };
+
+  // Validação client-side: avisar duplicidade de won/lost no mesmo pipeline
+  const validateStageStatus = (): string | null => {
+    const targetPipeline = stageFormData.pipeline_id;
+    if (!targetPipeline) return null;
+    if (stageFormData.stage_status === 'open') return null;
+
+    const conflict = pipelineStages?.find(
+      (s) =>
+        s.pipeline_id === targetPipeline &&
+        (s as any).stage_status === stageFormData.stage_status &&
+        s.id !== editingStage?.id,
+    );
+    if (conflict) {
+      return stageFormData.stage_status === 'won'
+        ? `Já existe uma etapa de Ganho neste funil ("${conflict.name}").`
+        : `Já existe uma etapa de Perdido neste funil ("${conflict.name}").`;
+    }
+    return null;
   };
 
   const handleStageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const conflict = validateStageStatus();
+    if (conflict) {
+      toast.error(conflict);
+      return;
+    }
     if (editingStage) {
-      updateStageMutation.mutate({ 
-        id: editingStage.id, 
+      updateStageMutation.mutate({
+        id: editingStage.id,
         ...stageFormData,
+        stage: stageFormData.stage || null,
         pipeline_id: stageFormData.pipeline_id || null,
         allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      });
+      } as any);
     } else {
       createStageMutation.mutate({
         ...stageFormData,
         allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
       });
     }
+  };
+
+  const stageStatusBadge = (status: string | undefined) => {
+    const s = (status || 'open') as StageStatus;
+    if (s === 'won')
+      return (
+        <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20 gap-1">
+          <Trophy className="h-3 w-3" /> Ganho
+        </Badge>
+      );
+    if (s === 'lost')
+      return (
+        <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 gap-1">
+          <XCircle className="h-3 w-3" /> Perdido
+        </Badge>
+      );
+    return (
+      <Badge variant="secondary" className="gap-1">
+        <Circle className="h-3 w-3" /> Em andamento
+      </Badge>
+    );
   };
 
   const isLoading = pipelinesLoading || stagesLoading;
@@ -601,21 +659,71 @@ export function UnifiedPipelineManager() {
                   </div>
 
                   <div>
-                    <Label htmlFor="stage-type">Tipo de Etapa *</Label>
+                    <Label htmlFor="stage-status">Status da Etapa *</Label>
                     <Select
-                      value={stageFormData.stage}
-                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v })}
+                      value={stageFormData.stage_status}
+                      onValueChange={(v) => setStageFormData({ ...stageFormData, stage_status: v as StageStatus })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="stage-status">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {DEAL_STAGES.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                        ))}
+                        <SelectItem value="open">
+                          <span className="flex items-center gap-2">
+                            <Circle className="h-3 w-3 text-muted-foreground" /> Em andamento
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="won">
+                          <span className="flex items-center gap-2">
+                            <Trophy className="h-3 w-3 text-success" /> Ganho
+                          </span>
+                        </SelectItem>
+                        <SelectItem value="lost">
+                          <span className="flex items-center gap-2">
+                            <XCircle className="h-3 w-3 text-destructive" /> Perdido
+                          </span>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Apenas uma etapa de Ganho e uma de Perdido por funil.
+                    </p>
+                    {validateStageStatus() && (
+                      <p className="text-xs text-destructive mt-1">{validateStageStatus()}</p>
+                    )}
                   </div>
+
+                  <Collapsible open={showLegacyType} onOpenChange={setShowLegacyType}>
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <ChevronDown className={cn('h-3 w-3 transition-transform', showLegacyType && 'rotate-180')} />
+                        Avançado (legado)
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-2">
+                      <Label htmlFor="stage-type" className="text-xs">Tipo de Etapa (legado)</Label>
+                      <Select
+                        value={stageFormData.stage || '__NONE__'}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage: v === '__NONE__' ? '' : v })}
+                      >
+                        <SelectTrigger id="stage-type">
+                          <SelectValue placeholder="Sem tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__NONE__">Sem tipo</SelectItem>
+                          {DEAL_STAGES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mantido apenas por compatibilidade. A regra de negócio agora usa "Status da Etapa".
+                      </p>
+                    </CollapsibleContent>
+                  </Collapsible>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -720,7 +828,7 @@ export function UnifiedPipelineManager() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Etapa</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Funil Vinculado</TableHead>
                     <TableHead>Probabilidade</TableHead>
                     <TableHead>Permissões</TableHead>
@@ -741,9 +849,7 @@ export function UnifiedPipelineManager() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">
-                          {DEAL_STAGES.find(s => s.value === stage.stage)?.label || stage.stage}
-                        </Badge>
+                        {stageStatusBadge((stage as any).stage_status)}
                       </TableCell>
                       <TableCell>
                         {stage.pipeline_id ? (
