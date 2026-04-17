@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { cn } from '@/lib/utils';
 
 const freightBadgeStyles: Record<string, string> = {
   CIF: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
