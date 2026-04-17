@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         .eq('integration_status', 'sync_error');
     }
 
-    // 1. Buscar itens pendentes da fila
+    // 1. Buscar itens pendentes da fila (excluindo bloqueados por validação e pausados)
     let queueQuery = supabase
       .from('company_sync_queue')
       .select('id, company_id, attempts, tenant_id')
@@ -244,29 +244,26 @@ Deno.serve(async (req) => {
           .eq('uf', company.state || '')
           .maybeSingle();
 
-        if (!cityMapping?.codigo_erp) {
-          throw new Error(`Cidade não mapeada no ERP: ${company.city}/${company.state}. Cadastre em Settings → ERP Mappings → Cidades.`);
-        }
-        const cidadeCodigo = cityMapping.codigo_erp;
+        const cidadeCodigo = cityMapping?.codigo_erp ?? 0;
 
-        // 5. Resolver vendedor ERP (obrigatório)
+        // 5. Resolver vendedor ERP (informativo — validador decide se bloqueia)
         let vendedorCodigo = 0;
+        let salesRepName: string | null = null;
+        const hasSalesRep = !!company.sales_rep_id;
         if (company.sales_rep_id) {
           const { data: salesRep } = await supabase
             .from('sales_reps')
             .select('erp_vendor_code, name')
             .eq('id', company.sales_rep_id)
             .maybeSingle();
-          
-          if (salesRep && !salesRep.erp_vendor_code) {
-            throw new Error(`Vendedor "${salesRep.name}" não possui código ERP (erp_vendor_code). Configure em Settings → Vendedores.`);
-          }
+          salesRepName = salesRep?.name ?? null;
           vendedorCodigo = Number(salesRep?.erp_vendor_code) || 0;
         }
 
         // 6. Resolver usuário ERP via vendedor vinculado (sales_rep → user_sales_reps → profiles)
         let usuarioErp = 0;
         let usuarioErpName = '';
+        let hasErpUser = false;
         if (company.sales_rep_id) {
           const { data: repLink } = await supabase
             .from('user_sales_reps')
@@ -277,6 +274,7 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (repLink?.user_id) {
+            hasErpUser = true;
             const { data: profile } = await supabase
               .from('profiles')
               .select('erp_user_code, full_name')
@@ -285,26 +283,21 @@ Deno.serve(async (req) => {
 
             if (profile) {
               usuarioErpName = profile.full_name || '';
-              if (!profile.erp_user_code) {
-                throw new Error(`Usuário "${profile.full_name}" (vinculado ao vendedor) não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
-              }
               usuarioErp = Number(profile.erp_user_code) || 0;
             }
           }
         }
         // Fallback: created_by se não houver vendedor vinculado
-        if (!usuarioErp && company.created_by) {
+        if (!hasErpUser && company.created_by) {
+          hasErpUser = true;
           const { data: profile } = await supabase
             .from('profiles')
             .select('erp_user_code, full_name')
             .eq('user_id', company.created_by)
             .maybeSingle();
-          
+
           if (profile) {
             usuarioErpName = profile.full_name || '';
-            if (!profile.erp_user_code) {
-              throw new Error(`Usuário "${profile.full_name}" não possui código ERP (erp_user_code). Configure em Settings → Usuários ERP.`);
-            }
             usuarioErp = Number(profile.erp_user_code) || 0;
           }
         }
@@ -314,8 +307,7 @@ Deno.serve(async (req) => {
         // independentemente do código ERP cadastrado na entidade jurídica.
         const empresaCodigo = DEFAULT_ERP_COMPANY_CODE;
 
-        // 8. Validar
-        // Inferir tipo_pessoa antes da validação
+        // 8. Validação estruturada (defesa em profundidade)
         const cnpjDigitsForValidation = (company.cnpj || '').replace(/\D/g, '');
         const tipoPessoaInferred = company.tipo_pessoa || (cnpjDigitsForValidation.length === 11 ? 'PF' : 'PJ');
 
@@ -324,13 +316,47 @@ Deno.serve(async (req) => {
           name: company.name,
           tipo_pessoa: tipoPessoaInferred,
           cidade_codigo: cidadeCodigo,
+          city: company.city,
+          state: company.state,
           address: company.address,
           zip_code: company.zip_code,
+          has_sales_rep: hasSalesRep,
+          sales_rep_name: salesRepName,
+          sales_rep_erp_code: vendedorCodigo || null,
+          has_erp_user: hasErpUser,
+          erp_user_name: usuarioErpName || null,
+          erp_user_code: usuarioErp || null,
         });
 
         if (!validation.valid) {
-          const details = validation.errors.map(e => `${e.field}: ${e.message}`).join('; ');
-          throw new Error(`Validação falhou: ${details}`);
+          // Bloquear sem retry, com erros estruturados
+          await supabase
+            .from('company_sync_queue')
+            .update({
+              status: 'blocked_validation',
+              error_message: validation.errors.map((e) => e.message).join('; '),
+              validation_errors: validation.errors,
+              validation_fields: validation.fields,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
+
+          await supabase
+            .from('companies')
+            .update({ integration_status: 'missing_data' })
+            .eq('id', queueItem.company_id);
+
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'company',
+            entity_id: queueItem.company_id,
+            direction: 'crm_to_erp',
+            status: 'blocked_validation',
+            error_message: validation.errors.map((e) => `${e.field}: ${e.message}`).join('; '),
+          });
+
+          errorCount++;
+          results.push({ company_id: queueItem.company_id, status: 'blocked_validation', error: 'Dados incompletos' });
+          continue;
         }
 
         // 9. Gerar payload

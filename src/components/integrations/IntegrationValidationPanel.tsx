@@ -10,8 +10,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2, PlayCircle, StopCircle } from 'lucide-react';
+import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRight, Send, Loader2, Clock, RefreshCw, Trash2, PlayCircle, StopCircle, ChevronRight as ArrowRight, X, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
+import { useValidationBreakdown } from '@/hooks/useValidationBreakdown';
+import { SyncValidationModal, type SyncValidationError } from '@/components/customers/SyncValidationModal';
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; cardColor: string }> = {
   ready: {
@@ -82,6 +84,12 @@ export function IntegrationValidationPanel() {
   const [page, setPage] = useState(0);
   const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
+  const [validationModal, setValidationModal] = useState<{ open: boolean; companyName: string; errors: SyncValidationError[] }>({
+    open: false, companyName: '', errors: [],
+  });
+
+  const { data: breakdown = [] } = useValidationBreakdown();
 
   const [errorDetail, setErrorDetail] = useState<ErrorDetailState>({
     open: false, companyId: null, companyName: '', loading: false,
@@ -117,10 +125,24 @@ export function IntegrationValidationPanel() {
     staleTime: 30_000,
   });
 
-  // Paginated list with queue status
+  // Paginated list with queue status — também filtra por issue (validation_fields) quando selecionado
   const { data: listData, isLoading, refetch } = useQuery({
-    queryKey: ['integration-validation-list', statusFilter, debouncedSearch, page],
+    queryKey: ['integration-validation-list', statusFilter, debouncedSearch, page, selectedIssue],
     queryFn: async () => {
+      // Se houver filtro de issue, primeiro pegamos os company_ids da fila com aquele field
+      let restrictedIds: string[] | null = null;
+      if (selectedIssue) {
+        const { data: queueRows } = await (supabase as any)
+          .from('company_sync_queue')
+          .select('company_id')
+          .eq('status', 'blocked_validation')
+          .contains('validation_fields', [selectedIssue]);
+        restrictedIds = (queueRows || []).map((r: any) => r.company_id);
+        if (restrictedIds.length === 0) {
+          return { items: [], total: 0 };
+        }
+      }
+
       let query = supabase
         .from('companies')
         .select('id, name, cnpj, city, state, address, erp_code, integration_status, sales_rep_id', { count: 'exact' })
@@ -128,6 +150,9 @@ export function IntegrationValidationPanel() {
         .order('name')
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
+      if (selectedIssue && restrictedIds) {
+        query = query.in('id', restrictedIds);
+      }
       if (statusFilter !== 'all') query = query.eq('integration_status', statusFilter);
       if (debouncedSearch) query = query.or(`name.ilike.%${debouncedSearch}%,cnpj.ilike.%${debouncedSearch}%`);
 
@@ -136,14 +161,16 @@ export function IntegrationValidationPanel() {
 
       const items = data || [];
 
-      // Enrich with queue status for sync_error items
-      const errorItems = items.filter((i: any) => i.integration_status === 'sync_error');
+      // Enrich with queue status for sync_error AND blocked_validation items
+      const enrichItems = items.filter((i: any) =>
+        i.integration_status === 'sync_error' || i.integration_status === 'missing_data'
+      );
       let queueMap = new Map<string, any>();
-      if (errorItems.length > 0) {
+      if (enrichItems.length > 0) {
         const { data: queueData } = await (supabase as any)
           .from('company_sync_queue')
-          .select('company_id, status, error_message, next_retry_at')
-          .in('company_id', errorItems.map((i: any) => i.id));
+          .select('company_id, status, error_message, next_retry_at, validation_errors, validation_fields')
+          .in('company_id', enrichItems.map((i: any) => i.id));
 
         (queueData || []).forEach((q: any) => queueMap.set(q.company_id, q));
       }
@@ -350,10 +377,11 @@ export function IntegrationValidationPanel() {
 
   const getEffectiveStatus = (item: any) => {
     const status = item.integration_status || 'not_synced';
+    const q = item._queue;
+    // Bloqueio por validação tem prioridade visual
+    if (q?.status === 'blocked_validation') return 'blocked_validation';
     if (status !== 'sync_error') return status;
 
-    // Check queue for more accurate status
-    const q = item._queue;
     if (!q) return status;
     if (q.status === 'processing') return 'processing';
     if (q.status === 'pending' && q.error_message?.includes('propagação')) return 'waiting_propagation';
@@ -363,10 +391,22 @@ export function IntegrationValidationPanel() {
   };
 
   const getStatusDisplay = (effectiveStatus: string) => {
+    if (effectiveStatus === 'blocked_validation') {
+      return {
+        label: 'Dados incompletos',
+        icon: AlertTriangle,
+        color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300',
+      };
+    }
     if (QUEUE_STATUS_MAP[effectiveStatus]) {
       return QUEUE_STATUS_MAP[effectiveStatus];
     }
     return STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.not_synced;
+  };
+
+  const openValidationModal = (item: any) => {
+    const errors = (item._queue?.validation_errors || []) as SyncValidationError[];
+    setValidationModal({ open: true, companyName: item.name, errors });
   };
 
   const getMissingFields = (item: any) => {
@@ -414,7 +454,85 @@ export function IntegrationValidationPanel() {
         })}
       </div>
 
-      {/* Filters + Bulk Sync */}
+      {/* Breakdown de pendências (clicável) */}
+      {breakdown.length > 0 && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <p className="text-sm font-semibold">Principais pendências</p>
+                <span className="text-xs text-muted-foreground">
+                  (clique para filtrar a tabela)
+                </span>
+              </div>
+              {selectedIssue && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1 h-7"
+                  onClick={() => { setSelectedIssue(null); setPage(0); }}
+                >
+                  <X className="h-3 w-3" />
+                  Limpar filtro
+                </Button>
+              )}
+            </div>
+            <ul className="space-y-1">
+              {breakdown.map((item) => {
+                const isActive = selectedIssue === item.field;
+                return (
+                  <li key={item.field}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedIssue(isActive ? null : item.field);
+                        setStatusFilter('all');
+                        setPage(0);
+                      }}
+                      className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-warning/10 ${
+                        isActive ? 'bg-warning/15 ring-1 ring-warning/40' : ''
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="truncate">{item.label}</span>
+                      </span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="font-semibold tabular-nums">
+                          {item.count.toLocaleString('pt-BR')}
+                        </span>
+                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Indicador de filtro ativo */}
+      {selectedIssue && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-warning/10 border border-warning/30 text-sm">
+          <span className="text-muted-foreground">Filtrando:</span>
+          <span className="font-medium">
+            {breakdown.find((b) => b.field === selectedIssue)?.label ?? selectedIssue}
+          </span>
+          <span className="text-muted-foreground">
+            ({(listData?.total ?? 0).toLocaleString('pt-BR')} clientes)
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto gap-1 h-6"
+            onClick={() => { setSelectedIssue(null); setPage(0); }}
+          >
+            <X className="h-3 w-3" />
+            Limpar
+          </Button>
+        </div>
+      )}
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
@@ -503,6 +621,8 @@ export function IntegrationValidationPanel() {
                   const missing = baseStatus === 'missing_data' ? getMissingFields(item) : [];
                   const isSyncing = syncingIds.has(item.id);
                   const isClickable = baseStatus === 'sync_error' || effectiveStatus === 'waiting_propagation' || effectiveStatus === 'pending_retry';
+                  const isBlocked = effectiveStatus === 'blocked_validation';
+                  const validationErrors = (item._queue?.validation_errors || []) as SyncValidationError[];
 
                   return (
                     <TableRow key={item.id}>
@@ -511,7 +631,33 @@ export function IntegrationValidationPanel() {
                       <TableCell className="text-sm">{item.city && item.state ? `${item.city}/${item.state}` : '—'}</TableCell>
                       <TableCell className="text-sm">{item.erp_code || '—'}</TableCell>
                       <TableCell>
-                        {isClickable ? (
+                        {isBlocked ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="outline"
+                                  className={`gap-1 cursor-pointer hover:opacity-80 ${display.color}`}
+                                  onClick={() => openValidationModal(item)}
+                                >
+                                  <Icon className="h-3 w-3" />
+                                  {display.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-[280px]">
+                                <p className="text-xs font-semibold mb-1">Pendências:</p>
+                                <ul className="text-xs list-disc pl-4 space-y-0.5">
+                                  {validationErrors.slice(0, 5).map((e, i) => (
+                                    <li key={i}>{e.message}</li>
+                                  ))}
+                                  {validationErrors.length > 5 && (
+                                    <li>+{validationErrors.length - 5} outros</li>
+                                  )}
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : isClickable ? (
                           <Badge
                             variant="outline"
                             className={`gap-1 cursor-pointer hover:opacity-80 ${display.color}`}
@@ -540,7 +686,22 @@ export function IntegrationValidationPanel() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {(baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
+                          {isBlocked ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openValidationModal(item)}
+                                  >
+                                    <Wrench className="h-4 w-4 text-warning" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Corrigir dados pendentes</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (baseStatus === 'not_synced' || baseStatus === 'missing_data' || baseStatus === 'sync_error') && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -699,6 +860,14 @@ export function IntegrationValidationPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de pendências de validação */}
+      <SyncValidationModal
+        open={validationModal.open}
+        onOpenChange={(open) => setValidationModal((prev) => ({ ...prev, open }))}
+        companyName={validationModal.companyName}
+        errors={validationModal.errors}
+      />
     </div>
   );
 }
