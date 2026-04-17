@@ -860,6 +860,14 @@ export function IntegrationValidationPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal de pendências de validação */}
+      <SyncValidationModal
+        open={validationModal.open}
+        onOpenChange={(open) => setValidationModal((prev) => ({ ...prev, open }))}
+        companyName={validationModal.companyName}
+        errors={validationModal.errors}
+      />
     </div>
   );
 }
