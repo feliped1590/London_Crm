@@ -236,17 +236,18 @@ export default function Contacts() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Contatos</h1>
-          <p className="text-muted-foreground">Gerencie seus contatos e leads</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Contatos</h1>
+          <p className="text-sm text-muted-foreground">Gerencie seus contatos e leads</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 self-start sm:self-auto" size="sm">
               <Plus className="h-4 w-4" />
-              Novo Contato
+              <span className="hidden sm:inline">Novo Contato</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

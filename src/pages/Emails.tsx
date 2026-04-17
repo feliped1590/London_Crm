@@ -338,11 +338,11 @@ export default function Emails() {
   const contactsWithEmail = filteredContacts?.filter(c => c.email);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Emails</h1>
-          <p className="text-muted-foreground">Envie, agende e gerencie seus emails</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Emails</h1>
+          <p className="text-sm text-muted-foreground">Envie, agende e gerencie seus emails</p>
         </div>
       </div>
 

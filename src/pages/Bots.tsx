@@ -208,16 +208,17 @@ export default function Bots() {
         description="O construtor de bots está sendo aprimorado para integrar com o WhatsApp. Em breve você poderá criar automações de atendimento."
       />
       
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bots</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Bots</h1>
+          <p className="text-sm text-muted-foreground">
             Crie e gerencie bots de automação para WhatsApp
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} size="sm" className="self-start sm:self-auto">
           <Plus className="mr-2 h-4 w-4" />
-          Novo Bot
+          <span className="hidden sm:inline">Novo Bot</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 

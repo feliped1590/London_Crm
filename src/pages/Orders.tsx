@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { cn } from '@/lib/utils';
 
 const freightBadgeStyles: Record<string, string> = {
   CIF: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
@@ -153,13 +154,13 @@ export default function Orders() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Pedidos</h1>
-          <p className="text-muted-foreground">Gerencie os pedidos de venda</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Pedidos</h1>
+          <p className="text-sm text-muted-foreground">Gerencie os pedidos de venda</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -168,25 +169,26 @@ export default function Orders() {
             className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Atualizar
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Pedido
+          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Novo Pedido</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {getStatusStats().map((stat) => (
           <Card key={stat.status}>
             <CardContent className="pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <Badge className={stat.color}>{stat.label}</Badge>
-                <span className="text-2xl font-bold">{stat.count}</span>
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <Badge className={cn(stat.color, "text-xs")}>{stat.label}</Badge>
+                <span className="text-xl sm:text-2xl font-bold">{stat.count}</span>
               </div>
-              <p className="text-sm text-muted-foreground">{formatCurrency(stat.value)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{formatCurrency(stat.value)}</p>
             </CardContent>
           </Card>
         ))}
@@ -195,8 +197,8 @@ export default function Orders() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por número ou empresa..."
@@ -205,39 +207,41 @@ export default function Orders() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                {Object.entries(orderStatusConfig).map(([value, config]) => (
-                  <SelectItem key={value} value={value}>{config.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterCarrier} onValueChange={setFilterCarrier}>
-              <SelectTrigger className="w-[200px]">
-                <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Transportadora" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas Transportadoras</SelectItem>
-                {carrierFilterOptions.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status ERP" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos (ERP)</SelectItem>
-                <SelectItem value="synced">Sincronizados</SelectItem>
-                <SelectItem value="not_synced">Não enviados</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-1 sm:flex sm:flex-row gap-2 sm:gap-3">
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {Object.entries(orderStatusConfig).map(([value, config]) => (
+                    <SelectItem key={value} value={value}>{config.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterCarrier} onValueChange={setFilterCarrier}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <Truck className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Transportadora" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Transportadoras</SelectItem>
+                  {carrierFilterOptions.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Status ERP" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos (ERP)</SelectItem>
+                  <SelectItem value="synced">Sincronizados</SelectItem>
+                  <SelectItem value="not_synced">Não enviados</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>

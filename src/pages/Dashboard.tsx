@@ -467,10 +467,10 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     <div className="space-y-6">
       {/* Header */}
       {!embedded && (
-        <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
-            <p className="text-muted-foreground">Visão geral do seu funil de vendas</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Visão Geral</h1>
+            <p className="text-sm text-muted-foreground">Visão geral do seu funil de vendas</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <UserFilterSelector />

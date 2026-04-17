@@ -930,24 +930,25 @@ export default function Products() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Produtos</h1>
-          <p className="text-muted-foreground">Catálogo de itens de embalagem</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Produtos</h1>
+          <p className="text-sm text-muted-foreground">Catálogo de itens de embalagem</p>
         </div>
       </div>
 
       <Tabs value={pageTab} onValueChange={setPageTab}>
-        <TabsList>
-          <TabsTrigger value="catalogo" className="gap-2">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="catalogo" className="gap-2 flex-1 sm:flex-none">
             <Package className="h-4 w-4" />
             Catálogo
           </TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="cadastro-basico" className="gap-2">
+            <TabsTrigger value="cadastro-basico" className="gap-2 flex-1 sm:flex-none">
               <Settings2 className="h-4 w-4" />
-              Cadastro Básico
+              <span className="hidden sm:inline">Cadastro Básico</span>
+              <span className="sm:hidden">Cadastro</span>
             </TabsTrigger>
           )}
         </TabsList>
@@ -957,10 +958,10 @@ export default function Products() {
         </TabsContent>
 
         <TabsContent value="catalogo">
-    <div className="space-y-6">
-      <div className="flex items-center justify-end">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-end flex-wrap gap-2">
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
-           <div className="flex items-center gap-2">
+           <div className="flex items-center gap-2 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -970,7 +971,7 @@ export default function Products() {
                   className="gap-2 opacity-60"
                 >
                   <Upload className="h-4 w-4" />
-                  Enviar ao ERP
+                  <span className="hidden sm:inline">Enviar ao ERP</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -985,16 +986,17 @@ export default function Products() {
               className="gap-2"
             >
               <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Atualizar
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" size="sm">
                 <Plus className="h-4 w-4" />
-                Novo Produto
+                <span className="hidden sm:inline">Novo Produto</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             </DialogTrigger>
           </div>
-          <DialogContent className="max-w-[70vw] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-[95vw] sm:max-w-[90vw] lg:max-w-[70vw] max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
             </DialogHeader>

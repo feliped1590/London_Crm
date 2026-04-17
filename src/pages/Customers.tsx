@@ -418,15 +418,15 @@ export default function Customers() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">Gerencie sua carteira de clientes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
+          <p className="text-sm text-muted-foreground">Gerencie sua carteira de clientes</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isDeveloper && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               <Select value={enrichSalesRepId} onValueChange={(v) => setEnrichSalesRepId(v)}>
                 <SelectTrigger className="w-[140px] h-8 text-xs">
                   <SelectValue placeholder="Vendedor" />
@@ -469,17 +469,18 @@ export default function Customers() {
               </TooltipProvider>
               <Button variant="outline" size="sm" className="gap-2" onClick={() => { setEnrichOffset(0); setEnrichResult(null); handleEnrichBatch(0); }} disabled={isEnriching}>
                 <Wand2 className={cn("h-4 w-4", isEnriching && "animate-spin")} />
-                {isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}
+                <span className="hidden sm:inline">{isEnriching ? 'Enriquecendo...' : 'Enriquecer dados'}</span>
               </Button>
             </div>
           )}
           <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
             <Settings2 className="h-4 w-4" />
-            Personalizar painel
+            <span className="hidden sm:inline">Personalizar painel</span>
           </Button>
-          <Button className="gap-2" onClick={() => navigate('/customers/new')}>
+          <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
             <Plus className="h-4 w-4" />
-            Novo Cliente
+            <span className="hidden sm:inline">Novo Cliente</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </div>
@@ -490,8 +491,8 @@ export default function Customers() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar clientes por nome, CNPJ, contato..."
@@ -500,90 +501,92 @@ export default function Customers() {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as StatusFilter); setCurrentPage(1); }}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Ativos</SelectItem>
-                <SelectItem value="inactive">Inativos</SelectItem>
-                <SelectItem value="all">Todos</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v as StatusFilter); setCurrentPage(1); }}>
+                <SelectTrigger className="w-[120px] sm:w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativos</SelectItem>
+                  <SelectItem value="inactive">Inativos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
 
-            {/* Filters popover */}
-            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 relative">
-                  <Filter className="h-4 w-4" />
-                  Filtros
-                  {activeFiltersCount > 0 && (
-                    <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                      {activeFiltersCount}
-                    </Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80" align="end">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium text-sm">Filtros</h4>
+              {/* Filters popover */}
+              <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 relative">
+                    <Filter className="h-4 w-4" />
+                    <span className="hidden sm:inline">Filtros</span>
                     {activeFiltersCount > 0 && (
-                      <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs gap-1">
-                        <X className="h-3 w-3" /> Limpar
-                      </Button>
+                      <Badge className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                        {activeFiltersCount}
+                      </Badge>
                     )}
-                  </div>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Filtros</h4>
+                      {activeFiltersCount > 0 && (
+                        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs gap-1">
+                          <X className="h-3 w-3" /> Limpar
+                        </Button>
+                      )}
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Estado</Label>
-                    <Select value={filterState} onValueChange={(v) => { setFilterState(v === '_all' ? '' : v); setCurrentPage(1); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_all">Todos</SelectItem>
-                        {(filterOptions?.states || []).map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Estado</Label>
+                      <Select value={filterState} onValueChange={(v) => { setFilterState(v === '_all' ? '' : v); setCurrentPage(1); }}>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_all">Todos</SelectItem>
+                          {(filterOptions?.states || []).map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Cidade</Label>
-                    <Input
-                      className="h-8 text-sm"
-                      placeholder="Digite para filtrar..."
-                      value={filterCity}
-                      onChange={(e) => { setFilterCity(e.target.value); setCurrentPage(1); }}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cidade</Label>
+                      <Input
+                        className="h-8 text-sm"
+                        placeholder="Digite para filtrar..."
+                        value={filterCity}
+                        onChange={(e) => { setFilterCity(e.target.value); setCurrentPage(1); }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs">Vendedor</Label>
+                      <Select value={filterOwner} onValueChange={(v) => { setFilterOwner(v === '_all' ? '' : v); setCurrentPage(1); }}>
+                        <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_all">Todos</SelectItem>
+                          {(filterOptions?.owners || []).map((o: any) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <ClassificacaoCascade
+                      setorId={filterSetorId}
+                      segmentoId={filterSegmentoId}
+                      atividadeId={filterAtividadeId}
+                      onSetorChange={(v) => { setFilterSetorId(v); setCurrentPage(1); }}
+                      onSegmentoChange={(v) => { setFilterSegmentoId(v); setCurrentPage(1); }}
+                      onAtividadeChange={(v) => { setFilterAtividadeId(v); setCurrentPage(1); }}
+                      compact
                     />
                   </div>
+                </PopoverContent>
+              </Popover>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs">Vendedor</Label>
-                    <Select value={filterOwner} onValueChange={(v) => { setFilterOwner(v === '_all' ? '' : v); setCurrentPage(1); }}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Todos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_all">Todos</SelectItem>
-                        {(filterOptions?.owners || []).map((o: any) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <ClassificacaoCascade
-                    setorId={filterSetorId}
-                    segmentoId={filterSegmentoId}
-                    atividadeId={filterAtividadeId}
-                    onSetorChange={(v) => { setFilterSetorId(v); setCurrentPage(1); }}
-                    onSegmentoChange={(v) => { setFilterSegmentoId(v); setCurrentPage(1); }}
-                    onAtividadeChange={(v) => { setFilterAtividadeId(v); setCurrentPage(1); }}
-                    compact
-                  />
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              Atualizar
-            </Button>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Atualizar</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
