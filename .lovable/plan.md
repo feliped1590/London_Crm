@@ -1,80 +1,85 @@
 
+## Plano: Pré-Validação ERP para Pedidos
 
-## Plano: Corrigir Pipeline para usar `id` da etapa como chave única
+Replicar o mesmo padrão dos clientes (`blocked_validation` + modal de pendências) para pedidos, evitando que itens fiquem na fila eternamente acumulando retries.
 
-### Causa raiz (confirmada no banco)
+### 1. Banco — `order_sync_queue`
 
-Após a refatoração que tornou `stage` opcional, etapas novas estão sendo criadas com `stage = NULL`. O Kanban atual usa o campo `stage` como identificador de coluna em três lugares críticos:
+Migration nova:
+- Adicionar `validation_errors JSONB` e `validation_fields TEXT[]`
+- Atualizar `CHECK` do `status` para incluir `'blocked_validation'` e `'waiting_propagation'` (este último para paridade futura)
+- Índices GIN em `validation_fields` e `validation_errors`
+- View/RPC opcional `get_order_validation_breakdown` (contagem por tipo de erro) — espelhando a função de clientes
 
-1. `usePipelineData.stages` = `pipelineStagesData.map(s => s.stage)` → vira `[null, null, null, ...]`
-2. `usePipelineData.stageConfig[s.stage]` → todas as chaves `null` se sobrescrevem
-3. `KanbanBoard` filtra deals por `d.stage === stage` e usa `stage` como `key` do React
+### 2. Validador compartilhado — refatorar `order-validator.ts`
 
-Resultado: várias colunas com mesmo nome, mesma `key`, e os deals "viajam" entre elas conforme o React reconcilia.
+Enriquecer cada erro com `fixHint` e `fixRoute` (igual ao `company-validator.ts`):
 
-Adicionalmente, o `deals.stage` (string legacy) também não corresponde mais às etapas novas — deals criados em etapas com `stage = NULL` ficam órfãos.
+| Campo | Hint | Rota |
+|---|---|---|
+| `company_erp_code` | "Envie o cliente ao ERP primeiro" | `/customers/:id` |
+| `erp_empresa` | "Configure código ERP da empresa emissora" | `/settings?tab=legal-entities` |
+| `erp_usuario` | "Vincule código ERP ao usuário criador" | `/settings?tab=permissions` |
+| `erp_fluxo_venda` | "Mapeie o tipo de pedido" | `/settings?tab=erp-mappings` |
+| `erp_vendedor` | "Configure código ERP do vendedor" | `/settings?tab=sales-reps` |
+| `erp_frete` / `payment_method` / `sale_type` | "Mapeie no ERP" | `/settings?tab=erp-mappings` |
+| `items[].product_erp_code` / `versao` | "Preencha código ERP do produto" | `/products` |
+| `items[].quantity` / `unit_price` | "Corrija no pedido" | (sem rota — abre o pedido) |
+| `payment_terms` | "Defina condições de pagamento" | (abre o pedido) |
 
-### Solução
+Adicionar `fields: string[]` no resultado para preencher `validation_fields`.
 
-Migrar o Kanban para usar **`pipeline_stage_id`** (UUID da `pipeline_stages.id`) como identidade da coluna, mantendo `stage` apenas como campo legado de auditoria.
+### 3. Nova edge function — `validate-order-sync`
 
-### Mudanças
+Read-only. Recebe `order_id`, carrega o pedido + itens + todos os mapeamentos (igual ao `process-order-sync` faz hoje nas linhas 137-289), monta o objeto e chama `validateOrderForSync`. Retorna `{ valid, errors, fields, order_number }`.
 
-**1. Banco — adicionar `pipeline_stage_id` em `deals`** (migration)
-- Coluna `pipeline_stage_id UUID REFERENCES pipeline_stages(id)`
-- Backfill: para cada deal, resolver via `pipeline_id` + `stage` legado
-- Index em `(pipeline_id, pipeline_stage_id)`
-- **Não** remover `stage` (continua para histórico/automações antigas)
+Diferença-chave vs cliente: validação de pedidos depende de **muitos lookups** (legal_entity, profile, order_type_erp_mapping, freight_type_erp_mapping, payment_method_erp_mapping, sale_type_erp_mapping, products). Vou centralizar essa montagem em um helper compartilhado `loadOrderForValidation(supabase, orderId)` em `_shared/projedata/` para ser reusada por `process-order-sync` e `validate-order-sync` — evita duplicação.
 
-**2. `usePipelineData.ts`**
-- Trocar `DealStage = string` por uso direto do `PipelineStageRow` (objeto completo)
-- `stages` passa a ser `PipelineStageRow[]` (não mais `string[]`)
-- `stageConfig` indexado por `stage.id` (UUID) — chave sempre única
-- `getStageDeals` filtra por `deal.pipeline_stage_id === stage.id`
-- `handleDrop(dealId, targetStageId)` recebe ID, não string legacy
-- Mutation grava `pipeline_stage_id` + também atualiza `stage` (compatibilidade) usando o `stage` legacy da etapa-alvo se existir, senão NULL
-- Validações de "ganho/perdido" passam a usar `stage_status` da etapa-alvo (já temos `usePipelineStageStatus`)
+### 4. Defesa em profundidade — `process-order-sync`
 
-**3. `KanbanBoard.tsx` / `KanbanColumn.tsx`**
-- Props recebem `PipelineStageRow[]` em vez de `string[]`
-- `key={stage.id}` (garantindo unicidade)
-- `onDrop` passa `stage.id`
-- `stagePermissions` indexado por `stage.id`
+Quando `validation.valid === false` (linhas 312-315):
+- Substituir `throw new Error(...)` por update do queue item para `status='blocked_validation'` com `validation_errors`, `validation_fields`, `attempt_count` resetado e `next_retry_at=null`
+- **Não consome retries** e **não fica em loop**
+- Continua para o próximo item da fila
 
-**4. `PipelineListView.tsx`** — mesma adaptação (filtros e agrupamento por `pipeline_stage_id`)
+### 5. Frontend — `OrderSyncStatus.tsx`
 
-**5. Compatibilidade**
-- Filtros (`filterStage`) continuam aceitando o `stage` legado quando preenchido, mas internamente resolvem para `stage.id` quando possível
-- Lógica de "fechado_ganho/perdido" hardcoded em `updateMutation` (linha 289) passa a usar `stage_status === 'won'/'lost'` da etapa-alvo
-- `handleDrop` para detecção de "perda" (linha 543) também passa a usar `stage_status === 'lost'`
+Espelhar o que foi feito em `CompanySyncStatus.tsx`:
 
-**6. Limpeza dos dados existentes** (já confirmado: 5 etapas QV com `stage = NULL`)
-- Backfill no banco preenche `pipeline_stage_id` em `deals` baseado em quem combina
+**`OrderSyncBadge`**:
+- Buscar também `validation_errors` da fila
+- Adicionar config para `blocked_validation` → "Dados incompletos" (laranja, ícone AlertTriangle)
+- Tooltip lista até 5 pendências (`err.message`)
+- Prioridade do `displayStatus`: `blocked_validation` > pending/processing > outdated > completed
 
-### Arquivos
+**`OrderSyncButton`**:
+- Antes de enfileirar, chamar `validate-order-sync`
+- Se `!valid` → abrir `SyncValidationModal` (já existe, é genérico) e **não enfileirar**
+- Se já está `blocked_validation` na fila → botão muda para ícone `Wrench` "Corrigir dados pendentes" e abre o modal direto
+- Se `valid` → fluxo atual (resetar fila + chamar `process-order-sync`)
 
-- **Migration nova**: adiciona `deals.pipeline_stage_id` + backfill
-- `src/hooks/usePipelineData.ts`
-- `src/components/pipeline/KanbanBoard.tsx`
-- `src/components/pipeline/KanbanColumn.tsx`
-- `src/components/pipeline/PipelineListView.tsx`
-- `src/components/pipeline/PipelineFilters.tsx` (ajuste pequeno no filtro de etapa para usar IDs)
-- `src/pages/Pipeline.tsx` (passar IDs nos handlers)
+### 6. Dashboard — opcional/futuro
 
-### O que NÃO muda
+A `IntegrationValidationPanel` hoje só cobre clientes. Não vou expandir agora (escopo é só destravar a fila), mas a estrutura (`validation_errors` JSONB + função de breakdown) fica pronta para um painel de pedidos no futuro.
 
-- Schema `pipeline_stages` (já está correto)
-- `stage_status` e lógica de ganho/perdido por status
-- `deal_stage_history` (continua gravando strings legacy)
-- Aba Etapas no Settings
-- Mutations CRUD de etapas
+### Arquivos tocados
+
+1. **Nova migration** — colunas `validation_errors`/`validation_fields` + check constraint + índices em `order_sync_queue`
+2. `supabase/functions/_shared/projedata/order-validator.ts` — adicionar `fixHint`, `fixRoute`, `fields`
+3. `supabase/functions/_shared/projedata/order-types.ts` — atualizar `OrderValidationError` e `OrderValidationResult`
+4. **Novo** `supabase/functions/_shared/projedata/order-loader.ts` — helper compartilhado `loadOrderForValidation`
+5. **Nova edge function** `supabase/functions/validate-order-sync/index.ts`
+6. `supabase/functions/process-order-sync/index.ts` — usar loader compartilhado + gravar `blocked_validation` em vez de throw
+7. `src/components/orders/OrderSyncStatus.tsx` — badge `blocked_validation` + pré-validação no botão + modo "Corrigir"
+8. (Reuso) `src/components/customers/SyncValidationModal.tsx` já é genérico — só precisa adicionar labels de pedidos no `FIELD_LABELS`. Vou movê-lo para `src/components/sync/SyncValidationModal.tsx` (path neutro) e atualizar imports nos dois lugares.
 
 ### Critérios de aceite
 
-- Pipeline QV mostra exatamente 7 colunas distintas com nomes corretos
-- Cada deal aparece em exatamente uma coluna
-- Reabrir/clicar no pipeline não duplica colunas
-- Drag & drop funciona entre quaisquer etapas (incluindo as com `stage = NULL`)
-- Pipelines antigos (Vendas Padrão) continuam funcionando idênticos
-- Aprovar proposta continua movendo para etapa `won`
-
+- Pedido sem produto com código ERP → modal lista "Item N: produto sem código ERP" com botão "Corrigir" indo para /products
+- Pedido com tipo de venda não mapeado → modal pede mapeamento em Settings → ERP
+- Pedido sem cliente sincronizado → modal pede sincronizar cliente primeiro
+- Após validação falhar, **nada entra na fila**
+- Pedido já travado em `blocked_validation` mostra badge laranja "Dados incompletos" e botão Wrench que abre o modal sem reenviar
+- Ao corrigir as pendências e clicar enviar de novo, o item volta para `pending` e processa normalmente
+- Pedido válido segue o fluxo atual sem mudança
+- Zero regressão nos pedidos já sincronizados (status `completed` continua igual)
