@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from '../_shared/projedata/order-mapper.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
+import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -368,7 +369,7 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // 8. Parse retorno
+        // 8. Parse retorno via parser unificado
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
@@ -376,20 +377,21 @@ Deno.serve(async (req) => {
           responseData = { raw: responseText };
         }
 
-        const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
-        const retorno = retornoObj?.['#out#p_retorno'] || retornoObj?.p_retorno || '';
+        const parsedResult = parseOrderRetorno(responseData, {
+          pedidoTerceiro: queueItem.pedido_terceiro,
+          orderNumber: order.number,
+          requestedAt: new Date().toISOString(),
+        });
 
-        if (typeof retorno === 'string' && retorno.includes('#ERRO#')) {
-          throw new Error(`ERP retornou erro: ${retorno}`);
+        if (parsedResult.errorType === 'erp') {
+          throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
         }
 
-        // Parse: PEDIDO#123#20260050
+        // Extrair erpOrderId numérico do código validado pelo parser
         let erpOrderId: number | null = null;
-        if (typeof retorno === 'string') {
-          const parts = retorno.split('#');
-          if (parts[0] === 'PEDIDO' && parts[1]) {
-            erpOrderId = Number(parts[1]);
-          }
+        if (parsedResult.erpCode) {
+          const n = Number(parsedResult.erpCode);
+          if (Number.isFinite(n)) erpOrderId = n;
         }
 
         // 9. Sucesso - atualizar tudo
@@ -432,7 +434,7 @@ Deno.serve(async (req) => {
           direction: 'crm_to_erp',
           status: 'success',
           request_payload: parsedPayload,
-          response_payload: responseData,
+          response_payload: toLogPayload(parsedResult),
         });
 
         // Observabilidade centralizada com TODOS os mapeamentos
@@ -472,7 +474,7 @@ Deno.serve(async (req) => {
             payment_terms: paymentTermsStr,
             items_sale_types: itemsSaleTypes,
           },
-          response_payload: responseData,
+          response_payload: toLogPayload(parsedResult),
         });
 
         successCount++;

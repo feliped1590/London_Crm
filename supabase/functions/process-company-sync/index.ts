@@ -9,6 +9,7 @@ import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj, getSegmentoB
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
+import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -438,7 +439,7 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // 11. Parse retorno
+        // 11. Parse retorno via parser unificado
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
@@ -446,26 +447,27 @@ Deno.serve(async (req) => {
           responseData = { raw: responseText };
         }
 
-        const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
-        const retorno = retornoObj?.['#out#p_retorno'] ?? retornoObj?.p_retorno ?? null;
+        const parsedResult = parseCustomerRetorno(responseData, {
+          cnpj: company.cnpj,
+          requestedAt: new Date().toISOString(),
+        });
 
-        // Verificar erro explícito
-        if (typeof retorno === 'string' && (retorno.includes('#ERRO#') || retorno.startsWith('ERRO#'))) {
-          throw new Error(`ERP retornou erro: ${retorno}`);
+        // Erro explícito do ERP → lança para retry
+        if (parsedResult.errorType === 'erp') {
+          throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
         }
 
-        // Tentar extrair código do retorno direto
-        let erpCode: string | null = null;
-        erpCode = retornoObj?.cd_correntista?.toString() || null;
-        if (!erpCode) erpCode = retornoObj?.codigo?.toString() || null;
-        if (!erpCode && typeof retorno === 'string' && retorno) {
-          const match = retorno.match(/\d+/);
-          if (match) erpCode = match[0];
+        // Padrão desconhecido → loga e lança (não-retryable)
+        if (parsedResult.action === 'unknown' && !parsedResult.isRetryable) {
+          console.error('[process-company-sync] Padrão de retorno desconhecido:', parsedResult.raw);
+          throw new Error(`Formato de retorno do ERP desconhecido: "${parsedResult.raw}". Investigar parser.`);
         }
 
-        // ═══ FASE C: Lookup pós-envio (máx 2 tentativas para não estourar timeout) ═══
-        if (!erpCode && company.cnpj) {
-          console.log('[process-company-sync] Fase C: p_retorno sem código, buscando via EXP_CLIENTES_V2');
+        let erpCode: string | null = parsedResult.erpCode;
+
+        // ═══ FASE C: Lookup pós-envio (necessário se needsFallback) ═══
+        if (parsedResult.needsFallback && company.cnpj) {
+          console.log('[process-company-sync] Fase C: needsFallback=true, buscando via EXP_CLIENTES_V2');
           const delays = [3000, 8000];
           for (const delay of delays) {
             await new Promise(r => setTimeout(r, delay));
@@ -481,7 +483,7 @@ Deno.serve(async (req) => {
 
         if (erpCode) {
           // Sucesso completo
-          const syncStatus = retorno === null ? 'created_then_found' : 'completed';
+          const syncStatus = parsedResult.needsFallback ? 'created_then_found' : 'completed';
 
           await supabase
             .from('company_sync_queue')
@@ -506,7 +508,7 @@ Deno.serve(async (req) => {
               status: syncStatus,
               external_id: erpCode,
               request_payload: JSON.parse(payload),
-              response_payload: responseData,
+              response_payload: toLogPayload(parsedResult),
             });
 
           successCount++;
@@ -533,7 +535,7 @@ Deno.serve(async (req) => {
               direction: 'crm_to_erp',
               status: 'waiting_propagation',
               request_payload: JSON.parse(payload),
-              response_payload: responseData,
+              response_payload: toLogPayload(parsedResult),
             });
 
           results.push({ company_id: queueItem.company_id, status: 'waiting_propagation' });
