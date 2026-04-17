@@ -947,12 +947,15 @@ export function UnifiedPipelineManager() {
                                     ⏱ {slaHours}h
                                   </span>
                                 ) : null}
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => handleEditStage(stage)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditStage(stage);
+                                    }}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
@@ -962,11 +965,12 @@ export function UnifiedPipelineManager() {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent>
+                                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                       <AlertDialogHeader>
                                         <AlertDialogTitle>Excluir etapa?</AlertDialogTitle>
                                         <AlertDialogDescription>
