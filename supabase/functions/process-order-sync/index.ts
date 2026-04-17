@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
           metadata: {
             pedido_terceiro: queueItem.pedido_terceiro,
             company_name: legalEntity.name,
-            erp_company_code: erpEmpresa,
+            erp_company_code: legalEntity.erp_company_code,
             customer_name: company.name,
             customer_erp_code: company.erp_code,
             user_id: order.created_by,
