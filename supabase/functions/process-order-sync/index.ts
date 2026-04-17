@@ -77,7 +77,16 @@ Deno.serve(async (req) => {
         if (existingEntry) {
           await supabase
             .from('order_sync_queue')
-            .update({ status: 'pending', attempt_count: 0, error_message: null, next_retry_at: null, processed_at: null, updated_at: new Date().toISOString() })
+            .update({
+              status: 'pending',
+              attempt_count: 0,
+              error_message: null,
+              next_retry_at: null,
+              processed_at: null,
+              validation_errors: null,
+              validation_fields: null,
+              updated_at: new Date().toISOString(),
+            })
             .eq('id', existingEntry.id);
         } else {
           await supabase
