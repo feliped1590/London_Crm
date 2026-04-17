@@ -146,13 +146,18 @@ export function PipelineListView({ deals, onEdit, onSendEmail }: PipelineListVie
                   {formatCurrency(deal.value || 0)}
                 </TableCell>
                 <TableCell>
-                  <Badge 
-                    variant="secondary" 
-                    className="gap-1.5"
-                  >
-                    <div className={`h-2 w-2 rounded-full ${stageConfig[deal.stage].color}`} />
-                    {stageConfig[deal.stage].label}
-                  </Badge>
+                  {(() => {
+                    const cfg = deal.stage ? stageConfig[deal.stage as DealStage] : null;
+                    if (!cfg) {
+                      return <span className="text-muted-foreground text-sm">-</span>;
+                    }
+                    return (
+                      <Badge variant="secondary" className="gap-1.5">
+                        <div className={`h-2 w-2 rounded-full ${cfg.color}`} />
+                        {cfg.label}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-center">
                   <Badge variant="outline">{deal.probability}%</Badge>

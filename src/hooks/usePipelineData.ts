@@ -31,11 +31,12 @@ const defaultStages: DealStage[] = ['prospeccao', 'qualificacao', 'proposta', 'n
 export interface PipelineStageRow {
   id: string;
   name: string;
-  stage: DealStage;
+  stage: DealStage | null;
   color: string | null;
   sort_order: number;
   pipeline_id: string;
   allowed_roles?: string[] | null;
+  stage_status?: string | null;
 }
 
 export interface StageConfigEntry {
@@ -45,6 +46,11 @@ export interface StageConfigEntry {
 }
 
 export type PipelineOwnershipViewMode = 'historical' | 'commercial';
+
+/**
+ * Synthetic id used for default (non-DB) stages, so we can index everything by id.
+ */
+const synthIdForDefaultStage = (stage: string) => `default:${stage}`;
 
 export function usePipelineData(selectedPipelineId: string | null) {
   const { user } = useAuth();
@@ -92,27 +98,59 @@ export function usePipelineData(selectedPipelineId: string | null) {
     enabled: !!currentPipelineId,
   });
 
-  const stages: DealStage[] = useMemo(() => {
+  /**
+   * Canonical stage rows for the current pipeline.
+   * Always indexed by `id` (UUID for DB rows, synthetic for defaults).
+   * `stage` (legacy text) may be null for new pipelines and MUST NOT be used as key.
+   */
+  const stageRows: PipelineStageRow[] = useMemo(() => {
     if (pipelineStagesData && pipelineStagesData.length > 0) {
-      return pipelineStagesData.map(s => s.stage);
+      return pipelineStagesData;
     }
-    return defaultStages;
-  }, [pipelineStagesData]);
+    return defaultStages.map((s, idx) => ({
+      id: synthIdForDefaultStage(s),
+      name: defaultStageConfig[s]?.label ?? s,
+      stage: s,
+      color: null,
+      sort_order: idx,
+      pipeline_id: currentPipelineId ?? '',
+      allowed_roles: null,
+      stage_status: s === 'fechado_ganho' ? 'won' : s === 'fechado_perdido' ? 'lost' : 'open',
+    }));
+  }, [pipelineStagesData, currentPipelineId]);
 
+  // Legacy `stages: string[]` kept for compatibility with DealFormDialog.
+  // For DB-backed stages with stage=null we fall back to the row id, so consumers still get unique strings.
+  const stages: DealStage[] = useMemo(
+    () => stageRows.map(s => s.stage ?? s.id),
+    [stageRows],
+  );
+
+  // stageConfig indexed by ROW ID (always unique)
   const stageConfig: Record<string, StageConfigEntry> = useMemo(() => {
-    if (pipelineStagesData && pipelineStagesData.length > 0) {
-      const config: Record<string, StageConfigEntry> = {};
-      pipelineStagesData.forEach(s => {
-        config[s.stage] = {
+    const config: Record<string, StageConfigEntry> = {};
+    stageRows.forEach(s => {
+      const legacyDefault = s.stage ? defaultStageConfig[s.stage] : null;
+      config[s.id] = {
+        label: s.name,
+        color: legacyDefault?.color || 'bg-slate-500',
+        hexColor: s.color || undefined,
+      };
+      // Also expose by legacy stage code for components that still index by it (DealFormDialog, history, list view)
+      if (s.stage) {
+        config[s.stage] = config[s.stage] || {
           label: s.name,
-          color: defaultStageConfig[s.stage]?.color || 'bg-slate-500',
+          color: legacyDefault?.color || 'bg-slate-500',
           hexColor: s.color || undefined,
         };
-      });
-      return config;
-    }
-    return defaultStageConfig;
-  }, [pipelineStagesData]);
+      }
+    });
+    // Always merge defaults so legacy lookups never return undefined
+    Object.entries(defaultStageConfig).forEach(([key, val]) => {
+      if (!config[key]) config[key] = val;
+    });
+    return config;
+  }, [stageRows]);
 
   // ── Sellers (admin filter) ────────────────────────────────────────
   const { data: sellers } = useQuery({
@@ -278,21 +316,34 @@ export function usePipelineData(selectedPipelineId: string | null) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<Deal> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: Partial<Deal> & { id: string; pipeline_stage_id?: string | null }) => {
       const currentDeal = deals?.find(d => d.id === id);
       const stageChanged = currentDeal && data.stage && currentDeal.stage !== data.stage;
+      const stageIdChanged = currentDeal && (data as any).pipeline_stage_id
+        && (currentDeal as any).pipeline_stage_id !== (data as any).pipeline_stage_id;
 
       const updateData: any = { ...data };
-      // Only set closed_at for sales pipelines
+
+      // Resolve target stage row (by id or by legacy stage)
+      const targetStageRow = (data as any).pipeline_stage_id
+        ? stageRows.find(s => s.id === (data as any).pipeline_stage_id)
+        : data.stage
+          ? stageRows.find(s => s.stage === data.stage)
+          : null;
+
+      // Mark closed_at when moving to a won/lost stage in sales pipelines
       const dealPipeline = pipelines?.find(p => p.id === (currentDeal?.pipeline_id || currentPipelineId));
       const isDealSales = dealPipeline?.type === 'sales' || !dealPipeline;
-      if (isDealSales && (data.stage === 'fechado_ganho' || data.stage === 'fechado_perdido')) {
+      const targetIsClosed = targetStageRow?.stage_status === 'won' || targetStageRow?.stage_status === 'lost'
+        || data.stage === 'fechado_ganho' || data.stage === 'fechado_perdido';
+      if (isDealSales && targetIsClosed) {
         updateData.closed_at = new Date().toISOString();
       }
+
       const { error } = await supabase.from('deals').update(updateData).eq('id', id);
       if (error) throw error;
 
-      if (stageChanged && currentDeal && data.stage) {
+      if ((stageChanged || stageIdChanged) && currentDeal) {
         const { data: lastHistory } = await supabase
           .from('deal_stage_history')
           .select('changed_at')
@@ -305,21 +356,24 @@ export function usePipelineData(selectedPipelineId: string | null) {
           ? Math.floor((Date.now() - new Date(lastHistory.changed_at).getTime()) / 1000)
           : null;
 
-        await supabase.from('deal_stage_history').insert({
-          deal_id: id,
-          from_stage: currentDeal.stage,
-          to_stage: data.stage,
-          changed_by: user?.id,
-          duration_seconds: duration,
-        });
+        const toStageCode = data.stage ?? targetStageRow?.stage ?? null;
+        if (toStageCode) {
+          await supabase.from('deal_stage_history').insert({
+            deal_id: id,
+            from_stage: currentDeal.stage,
+            to_stage: toStageCode,
+            changed_by: user?.id,
+            duration_seconds: duration,
+          });
 
-        supabase.functions.invoke('execute-automation', {
-          body: { deal_id: id, trigger_type: 'stage_exit', trigger_stage: currentDeal.stage }
-        }).catch(console.error);
+          supabase.functions.invoke('execute-automation', {
+            body: { deal_id: id, trigger_type: 'stage_exit', trigger_stage: currentDeal.stage }
+          }).catch(console.error);
 
-        supabase.functions.invoke('execute-automation', {
-          body: { deal_id: id, trigger_type: 'stage_enter', trigger_stage: data.stage }
-        }).catch(console.error);
+          supabase.functions.invoke('execute-automation', {
+            body: { deal_id: id, trigger_type: 'stage_enter', trigger_stage: toStageCode }
+          }).catch(console.error);
+        }
       }
     },
     onSuccess: (_, variables) => {
@@ -406,6 +460,23 @@ export function usePipelineData(selectedPipelineId: string | null) {
     return contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : '';
   }, [getContactInfo]);
 
+  /**
+   * Resolve which stageRow a deal belongs to for the *current* pipeline view.
+   * Priority: pipeline_stage_id (UUID) → legacy stage string match.
+   */
+  const resolveDealStageId = useCallback((deal: Deal): string | null => {
+    const pipelineStageId = (deal as any).pipeline_stage_id as string | null | undefined;
+    if (pipelineStageId) {
+      const found = stageRows.find(s => s.id === pipelineStageId);
+      if (found) return found.id;
+    }
+    if (deal.stage) {
+      const found = stageRows.find(s => s.stage === deal.stage);
+      if (found) return found.id;
+    }
+    return null;
+  }, [stageRows]);
+
   // ── Filtered deals builder ────────────────────────────────────────
   const buildFilteredDeals = useCallback((
     filterOwner: string,
@@ -454,7 +525,13 @@ export function usePipelineData(selectedPipelineId: string | null) {
           : deal.created_by === filterOwner || deal.owner_id === filterOwner || isSelectedUserParticipant;
         if (!matchesSelectedOwner) return false;
       }
-      if (filterStage !== 'all' && deal.stage !== filterStage) return false;
+      if (filterStage !== 'all') {
+        // filterStage may be either a stage row id (UUID/synth) or a legacy stage code
+        const dealStageId = resolveDealStageId(deal);
+        const matchesById = dealStageId === filterStage;
+        const matchesByLegacy = deal.stage === filterStage;
+        if (!matchesById && !matchesByLegacy) return false;
+      }
       if (filterCompany !== 'all' && deal.company_id !== filterCompany) return false;
 
       if (filterDateFrom) {
@@ -472,12 +549,16 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, isAdmin, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal]);
+  }, [deals, user?.id, isAdmin, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal, resolveDealStageId]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
+  /**
+   * targetStage is now the full PipelineStageRow (id-based identity).
+   * Backwards-compatible: if a string is passed, we resolve it as a legacy stage code.
+   */
   const handleDrop = useCallback(async (
     dealId: string,
-    targetStage: DealStage,
+    targetStageInput: PipelineStageRow | DealStage,
     callbacks: {
       setMissingDataAlert: (msg: string) => void;
       setPendingLossDeal: (d: { id: string; name: string } | null) => void;
@@ -490,12 +571,26 @@ export function usePipelineData(selectedPipelineId: string | null) {
   ) => {
     const deal = deals?.find(d => d.id === dealId);
     if (!deal) return;
-    if (deal.stage === targetStage) return;
+
+    // Resolve target stage row from input (object preferred, string fallback)
+    const targetStageRow: PipelineStageRow | undefined =
+      typeof targetStageInput === 'string'
+        ? stageRows.find(s => s.id === targetStageInput) || stageRows.find(s => s.stage === targetStageInput)
+        : targetStageInput;
+
+    if (!targetStageRow) {
+      console.warn('handleDrop: could not resolve target stage', targetStageInput);
+      return;
+    }
+
+    const currentStageId = resolveDealStageId(deal);
+    if (currentStageId === targetStageRow.id) return;
+
+    const targetStageLegacy: DealStage = targetStageRow.stage ?? targetStageRow.id;
 
     // ── Stage permission check (frontend + backend double-check) ──
     if (!isAdmin) {
-      const targetStageData = pipelineStagesData?.find(s => s.stage === targetStage);
-      const allowedRoles = targetStageData?.allowed_roles;
+      const allowedRoles = targetStageRow.allowed_roles;
       if (allowedRoles && allowedRoles.length > 0) {
         const hasPermission = userRoles?.some(role => allowedRoles.includes(role));
         if (!hasPermission) {
@@ -505,13 +600,13 @@ export function usePipelineData(selectedPipelineId: string | null) {
       }
     }
 
-    // Backend validation (defense-in-depth)
+    // Backend validation (defense-in-depth) — only when target has a legacy code
     const effectivePipelineIdForValidation = deal.pipeline_id || defaultPipeline?.id;
-    if (effectivePipelineIdForValidation) {
+    if (effectivePipelineIdForValidation && targetStageRow.stage) {
       try {
         const { data: permResult } = await supabase.rpc('validate_stage_permission', {
           p_deal_id: deal.id,
-          p_target_stage: targetStage,
+          p_target_stage: targetStageRow.stage,
           p_pipeline_id: effectivePipelineIdForValidation,
         });
         if (permResult && !(permResult as any).allowed) {
@@ -523,8 +618,8 @@ export function usePipelineData(selectedPipelineId: string | null) {
       }
     }
 
-    const firstStage = stages[0];
-    if (deal.stage === firstStage) {
+    const firstStageRow = stageRows[0];
+    if (firstStageRow && currentStageId === firstStageRow.id) {
       if (!deal.company_id && !deal.contact_id) {
         callbacks.setMissingDataAlert('Para avançar da primeira etapa, é necessário preencher a Empresa e o Contato do negócio.');
         return;
@@ -539,8 +634,9 @@ export function usePipelineData(selectedPipelineId: string | null) {
       }
     }
 
-    // Only require lost_reason for sales pipelines
-    if (isSalesPipeline && targetStage === 'fechado_perdido') {
+    // Lost-stage detection via stage_status (with legacy fallback)
+    const isTargetLost = targetStageRow.stage_status === 'lost' || targetStageRow.stage === 'fechado_perdido';
+    if (isSalesPipeline && isTargetLost) {
       callbacks.setPendingLossDeal({ id: dealId, name: deal.name });
       callbacks.setLossReasonModalOpen(true);
       return;
@@ -555,7 +651,8 @@ export function usePipelineData(selectedPipelineId: string | null) {
           id: deal.id, name: deal.name, updated_at: deal.updated_at,
           stagnation_reason: (deal as any).stagnation_reason,
         },
-        targetStage,
+        targetStage: targetStageLegacy,
+        targetStageId: targetStageRow.id,
         daysInStage,
       });
       callbacks.setSlaModalOpen(true);
@@ -564,42 +661,48 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
     const effectivePipelineId = deal.pipeline_id || defaultPipeline?.id || null;
 
+    const performMove = () => {
+      const payload: any = { id: dealId, pipeline_stage_id: targetStageRow.id };
+      if (targetStageRow.stage) payload.stage = targetStageRow.stage;
+      updateMutation.mutate(payload);
+    };
+
     try {
       const pendingItems = await getPendingChecklistItems(dealId, deal.stage, effectivePipelineId);
 
       if (pendingItems.length > 0) {
         callbacks.setChecklistModalData({
           deal: { id: deal.id, name: deal.name, stage: deal.stage, pipeline_id: effectivePipelineId },
-          targetStage,
+          targetStage: targetStageLegacy,
+          targetStageId: targetStageRow.id,
           pendingItems,
         });
         callbacks.setChecklistModalOpen(true);
         return;
       }
 
-      updateMutation.mutate({ id: dealId, stage: targetStage });
+      performMove();
     } catch (error) {
       console.error('Error checking checklist items:', error);
-      updateMutation.mutate({ id: dealId, stage: targetStage });
+      performMove();
     }
-  }, [deals, stages, isAdmin, isSalesPipeline, defaultPipeline?.id, updateMutation, pipelineStagesData, userRoles, pipelines, currentPipelineId]);
+  }, [deals, stageRows, isAdmin, isSalesPipeline, defaultPipeline?.id, updateMutation, userRoles, resolveDealStageId]);
 
-  // ── Stage permissions for visual feedback ──────────────────────────
+  // ── Stage permissions for visual feedback (indexed by stage row ID) ──
   const stagePermissions = useMemo(() => {
-    if (!pipelineStagesData) return [];
-    return pipelineStagesData.map(s => {
-      if (isAdmin) return { stage: s.stage, allowed: true };
+    return stageRows.map(s => {
+      if (isAdmin) return { stageId: s.id, stage: s.stage ?? s.id, allowed: true };
       const roles = s.allowed_roles;
-      if (!roles || roles.length === 0) return { stage: s.stage, allowed: true };
+      if (!roles || roles.length === 0) return { stageId: s.id, stage: s.stage ?? s.id, allowed: true };
       const hasPermission = userRoles?.some(role => roles.includes(role)) ?? false;
-      return { stage: s.stage, allowed: hasPermission };
+      return { stageId: s.id, stage: s.stage ?? s.id, allowed: hasPermission };
     });
-  }, [pipelineStagesData, userRoles, isAdmin]);
+  }, [stageRows, userRoles, isAdmin]);
 
   return {
     user, isAdmin, isSalesPipeline,
     pipelines, defaultPipeline, currentPipelineId,
-    stages, stageConfig, stagePermissions,
+    stages, stageRows, stageConfig, stagePermissions,
     deals, isLoading, isFetching, handleRefresh,
     sellers,
     mySalesRepIds,
@@ -612,6 +715,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
     canDeleteDeal,
     getContactInfo, getContactPhone, getContactName,
     buildFilteredDeals,
+    resolveDealStageId,
     handleDrop,
     requiresJustification, logIntervention,
     legalEntities, effectiveLegalEntityId,

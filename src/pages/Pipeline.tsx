@@ -28,7 +28,7 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
-import { usePipelineData, type Deal, type DealStage, type PipelineOwnershipViewMode } from '@/hooks/usePipelineData';
+import { usePipelineData, type Deal, type DealStage, type PipelineOwnershipViewMode, type PipelineStageRow } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
 import { format } from 'date-fns';
@@ -45,7 +45,7 @@ export default function Pipeline() {
   const pipeline = usePipelineData(selectedPipelineId);
   const {
     user, isAdmin, isSalesPipeline,
-    currentPipelineId, stages, stageConfig, defaultPipeline,
+    currentPipelineId, stages, stageRows, stageConfig, defaultPipeline,
     deals, isLoading, isFetching, handleRefresh,
     sellers,
     companiesSearchResult,
@@ -55,6 +55,7 @@ export default function Pipeline() {
     canDeleteDeal,
     getContactInfo, getContactPhone, getContactName,
     buildFilteredDeals,
+    resolveDealStageId,
     handleDrop: handleDropCore,
     requiresJustification, logIntervention,
     legalEntities, effectiveLegalEntityId,
@@ -398,7 +399,7 @@ export default function Pipeline() {
     e.dataTransfer.setData('dealId', dealId);
   };
 
-  const handleDrop = (e: React.DragEvent, stage: DealStage) => {
+  const handleDrop = (e: React.DragEvent, stage: PipelineStageRow) => {
     e.preventDefault();
     const dealId = e.dataTransfer.getData('dealId');
     if (!dealId) return;
@@ -560,12 +561,13 @@ export default function Pipeline() {
         </div>
       ) : (
         <KanbanBoard
-          stages={stages}
+          stageRows={stageRows}
           stageConfig={stageConfig}
           filteredDeals={filteredDeals}
           isMobile={isMobile}
           isSalesPipeline={isSalesPipeline}
           stagePermissions={pipeline.stagePermissions}
+          resolveDealStageId={resolveDealStageId}
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragOver={handleDragOver}

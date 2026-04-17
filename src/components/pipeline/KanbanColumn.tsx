@@ -8,10 +8,10 @@ import { DaysInStageBadge } from '@/components/pipeline/DaysInStageBadge';
 import { DelegationBadge } from '@/components/pipeline/DelegationBadge';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
-import type { Deal, DealStage, StageConfigEntry } from '@/hooks/usePipelineData';
+import type { Deal, PipelineStageRow, StageConfigEntry } from '@/hooks/usePipelineData';
 
 interface KanbanColumnProps {
-  stage: DealStage;
+  stageRow: PipelineStageRow;
   config: StageConfigEntry;
   allStageDeals: Deal[];
   pagedDeals: Deal[];
@@ -23,14 +23,14 @@ interface KanbanColumnProps {
   totalPages: number;
   onPageChange: (page: number) => void;
   onDragStart: (e: React.DragEvent, dealId: string) => void;
-  onDrop: (e: React.DragEvent, stage: DealStage) => void;
+  onDrop: (e: React.DragEvent, stage: PipelineStageRow) => void;
   onDragOver: (e: React.DragEvent) => void;
   onEdit: (deal: Deal) => void;
   onEmailDialog: (deal: Deal) => void;
 }
 
 export function KanbanColumn({
-  stage,
+  stageRow,
   config,
   allStageDeals,
   pagedDeals,
@@ -54,7 +54,7 @@ export function KanbanColumn({
         isMobile && "snap-center",
         isBlocked && "opacity-60 ring-1 ring-destructive/30",
       )}
-      onDrop={(e) => onDrop(e, stage)}
+      onDrop={(e) => onDrop(e, stageRow)}
       onDragOver={(e) => {
         if (isBlocked) {
           e.preventDefault();
@@ -71,7 +71,7 @@ export function KanbanColumn({
             className={`h-3 w-3 rounded-full ${config?.hexColor ? '' : config?.color || 'bg-slate-500'}`}
             style={config?.hexColor ? { backgroundColor: config.hexColor } : undefined}
           />
-          <h3 className="font-semibold text-sm">{config?.label || stage}</h3>
+          <h3 className="font-semibold text-sm">{config?.label || stageRow.name}</h3>
           {isBlocked && (
             <Tooltip>
               <TooltipTrigger asChild>
