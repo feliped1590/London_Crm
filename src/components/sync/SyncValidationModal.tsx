@@ -60,8 +60,13 @@ function getFieldLabel(field: string): string {
   return field;
 }
 
-export function SyncValidationModal({ open, onOpenChange, companyName, errors }: SyncValidationModalProps) {
+export function SyncValidationModal({ open, onOpenChange, companyName, entityLabel, title, errors }: SyncValidationModalProps) {
   const navigate = useNavigate();
+  const headerText = title ?? 'Não foi possível enviar ao ERP';
+  const subjectLabel = entityLabel ?? (companyName ? `Cliente: ${companyName}` : null);
+  const alertText = entityLabel
+    ? 'Corrija os itens abaixo para liberar a sincronização. Enquanto houver pendências, o registro não será enviado ao ERP.'
+    : 'Corrija os itens abaixo para liberar a sincronização. Enquanto houver pendências, o cliente não será adicionado à fila do ERP.';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -69,20 +74,20 @@ export function SyncValidationModal({ open, onOpenChange, companyName, errors }:
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
-            Não foi possível enviar ao ERP
+            {headerText}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          {companyName && (
+          {subjectLabel && (
             <p className="text-sm text-muted-foreground">
-              Cliente: <span className="font-medium text-foreground">{companyName}</span>
+              <span className="font-medium text-foreground">{subjectLabel}</span>
             </p>
           )}
 
           <Alert variant="default" className="border-warning/30 bg-warning/10">
             <AlertDescription className="text-sm">
-              Corrija os itens abaixo para liberar a sincronização. Enquanto houver pendências, o cliente não será adicionado à fila do ERP.
+              {alertText}
             </AlertDescription>
           </Alert>
 
