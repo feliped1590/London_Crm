@@ -2859,6 +2859,7 @@ export type Database = {
           notes: string | null
           owner_id: string | null
           pipeline_id: string | null
+          pipeline_stage_id: string | null
           probability: number | null
           stage: string
           stagnation_reason: string | null
@@ -2881,6 +2882,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           pipeline_id?: string | null
+          pipeline_stage_id?: string | null
           probability?: number | null
           stage?: string
           stagnation_reason?: string | null
@@ -2903,6 +2905,7 @@ export type Database = {
           notes?: string | null
           owner_id?: string | null
           pipeline_id?: string | null
+          pipeline_stage_id?: string | null
           probability?: number | null
           stage?: string
           stagnation_reason?: string | null
@@ -2944,6 +2947,13 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
           {
