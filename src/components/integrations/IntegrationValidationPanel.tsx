@@ -84,6 +84,12 @@ export function IntegrationValidationPanel() {
   const [page, setPage] = useState(0);
   const [searchTimer, setSearchTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [selectedIssue, setSelectedIssue] = useState<string | null>(null);
+  const [validationModal, setValidationModal] = useState<{ open: boolean; companyName: string; errors: SyncValidationError[] }>({
+    open: false, companyName: '', errors: [],
+  });
+
+  const { data: breakdown = [] } = useValidationBreakdown();
 
   const [errorDetail, setErrorDetail] = useState<ErrorDetailState>({
     open: false, companyId: null, companyName: '', loading: false,
