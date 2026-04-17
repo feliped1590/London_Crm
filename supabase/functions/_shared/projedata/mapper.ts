@@ -1,5 +1,5 @@
 /**
- * Mapeamento CRM → ERP Projedata para IMP_ITEM_VERSAO_V1
+ * Mapeamento CRM → ERP Projedata para IMP_ITEM_VERSAO_V3
  * 
  * Formato final do JSON interno:
  * {
@@ -67,8 +67,11 @@ export interface CRMProduct {
  * - erp_versao_situacao → versoes[].situacao
  */
 export function mapCRMProductToProjedata(product: CRMProduct): ProjedataProduto {
-  const codigoFonte = product.erp_product_code || product.sku || '';
-  const { codigo, versao: versaoParsed } = parseCodigoVersao(codigoFonte);
+  // Código ERP é OBRIGATÓRIO e informado manualmente — sem fallback para SKU
+  if (!product.erp_product_code || !product.erp_product_code.trim()) {
+    throw new Error('Código ERP obrigatório para envio');
+  }
+  const { codigo, versao: versaoParsed } = parseCodigoVersao(product.erp_product_code.trim());
   // erp_versao é obrigatório — banco já garante via CHECK, aqui bloqueamos envio sem versão
   const versaoFinal = product.erp_versao || versaoParsed;
   if (!versaoFinal) {
@@ -142,6 +145,6 @@ export function buildProductPayload(produto: ProjedataProduto): string {
     });
   }
 
-  const envelope = buildEnvelope('IMP_ITEM_VERSAO_V1', innerJson);
+  const envelope = buildEnvelope('IMP_ITEM_VERSAO_V3', innerJson);
   return serializeEnvelope(envelope);
 }

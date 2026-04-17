@@ -257,6 +257,14 @@ export default function Products() {
       return 'Já existe um produto ativo com essa mesma estrutura técnica (tipo, grupo, subgrupo, família, classe, dimensões e nome do impresso).';
     }
 
+    if (
+      errorText.includes('products_erp_product_code_unique') ||
+      errorText.includes('(erp_product_code)') ||
+      errorText.includes('erp_product_code')
+    ) {
+      return 'Já existe um produto com este Código ERP';
+    }
+
     if (error?.code === '23505') {
       return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
     }
@@ -455,6 +463,7 @@ export default function Products() {
         erp_versao_detalhes: data.erp_versao_detalhes || null,
         erp_versao_roteiro: data.erp_versao_roteiro || null,
         erp_versao_situacao: data.erp_versao_situacao || 'A',
+        erp_product_code: (data as any).erp_product_code?.trim() || null,
         nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
       });
       if (error) throw error;
@@ -694,6 +703,13 @@ export default function Products() {
     // SKU é gerado automaticamente — validar que foi gerado
     if (!formData.sku) {
       toast.error('SKU não foi gerado. Preencha os campos de classificação.');
+      return;
+    }
+
+    // Código ERP é obrigatório — informado manualmente pelo usuário
+    if (!formData.erp_product_code?.trim()) {
+      toast.error('Código ERP é obrigatório');
+      setFormTab('erp');
       return;
     }
 
@@ -1530,22 +1546,21 @@ export default function Products() {
                 <TabsContent value="erp" className="space-y-4 mt-4">
                   <div className="rounded-md border p-3 bg-muted/30">
                     <p className="text-sm text-muted-foreground">
-                      Campos mapeados para o comando <code className="font-mono text-xs bg-muted px-1 rounded">IMP_ITEM_VERSAO_V1</code> do ERP Projedata.
+                      Campos mapeados para o comando <code className="font-mono text-xs bg-muted px-1 rounded">IMP_ITEM_VERSAO_V3</code> do ERP Projedata.
                     </p>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="erp_product_code">Código ERP</Label>
+                      <Label htmlFor="erp_product_code">Código ERP *</Label>
                       <Input
                         id="erp_product_code"
                         value={formData.erp_product_code || ''}
-                        readOnly
-                        className="bg-muted/50"
-                        placeholder="Gerado automaticamente"
+                        onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
+                        placeholder="Informe o código conforme cadastro no ERP"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {formData.erp_product_code ? 'Código gerado pelo sistema' : 'Será gerado ao enviar para o ERP'}
+                        Obrigatório. Não é gerado automaticamente.
                       </p>
                     </div>
                   </div>

@@ -81,33 +81,41 @@ Deno.serve(async (req) => {
           throw new Error(`Produto não encontrado: ${item.product_id}`);
         }
 
-        // Gerar código ERP se não existir
-        if (!product.erp_product_code) {
-          const { data: nextCode, error: seqError } = await supabase
-            .rpc('next_erp_sequence', { p_sequence_name: 'product_code' });
-
-          if (seqError || nextCode === null || nextCode === undefined) {
-            throw new Error(`Falha ao gerar código ERP: ${seqError?.message || 'valor nulo'}`);
-          }
-
-          const newCode = String(nextCode);
-
-          // Salvar no produto (com origem SYNC para não disparar re-envio)
+        // Código ERP é OBRIGATÓRIO e deve ser informado manualmente.
+        // Se ausente, marca como falha permanente sem retry (sai da fila).
+        if (!product.erp_product_code || !String(product.erp_product_code).trim()) {
+          const errorMsg = 'Código ERP ausente — preencha manualmente no cadastro do produto';
           await supabase
-            .from('products')
-            .update({ erp_product_code: newCode, origem_alteracao: 'SYNC' })
-            .eq('id', item.product_id);
+            .from('product_sync_queue')
+            .update({
+              status: 'failed',
+              attempt_count: (item.attempt_count || 0) + 1,
+              error_message: errorMsg,
+              next_retry_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.id);
 
-          // Log de auditoria
-          await supabase.from('erp_sequence_logs').insert({
-            sequence_name: 'product_code',
-            generated_value: nextCode,
+          await supabase.from('product_sync_log').insert({
             product_id: item.product_id,
-            generated_by: 'process-product-sync',
+            queue_item_id: item.id,
+            direction: 'crm_to_erp',
+            status: 'failed',
+            error_message: errorMsg,
+            ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
           });
 
-          product.erp_product_code = newCode;
-          console.log(`[process-product-sync] Código ERP gerado: ${newCode} para produto ${item.product_id}`);
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'product',
+            entity_id: item.product_id,
+            direction: 'crm_to_erp',
+            status: 'failed',
+            error_message: errorMsg,
+          });
+
+          errorCount++;
+          results.push({ product_id: item.product_id, status: 'error', error: errorMsg });
+          continue;
         }
 
         // Mapear para formato Projedata
