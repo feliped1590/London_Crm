@@ -43,8 +43,10 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
 
   if (!draft || !item) return null;
 
-  const isLocked = draft.is_locked;
-  const isEditable = canEdit && !isLocked;
+  // Item-level lock is no longer a business rule. Editability is controlled by
+  // the parent order's lock (passed via `canEdit`).
+  const isLocked = false;
+  const isEditable = canEdit;
 
   const updateDraftField = (field: keyof OrderItemDraft, value: any) => {
     if (!isEditable) return;

@@ -1004,7 +1004,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       item={detailItemIndex >= 0 ? items[detailItemIndex] : null}
       index={detailItemIndex}
       onUpdate={handleItemDetailUpdate}
-      canEdit={canEdit && !(items[detailItemIndex]?.is_locked)}
+      canEdit={canEdit}
     />
 
     <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
