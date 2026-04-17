@@ -377,10 +377,11 @@ export function IntegrationValidationPanel() {
 
   const getEffectiveStatus = (item: any) => {
     const status = item.integration_status || 'not_synced';
+    const q = item._queue;
+    // Bloqueio por validação tem prioridade visual
+    if (q?.status === 'blocked_validation') return 'blocked_validation';
     if (status !== 'sync_error') return status;
 
-    // Check queue for more accurate status
-    const q = item._queue;
     if (!q) return status;
     if (q.status === 'processing') return 'processing';
     if (q.status === 'pending' && q.error_message?.includes('propagação')) return 'waiting_propagation';
@@ -390,10 +391,22 @@ export function IntegrationValidationPanel() {
   };
 
   const getStatusDisplay = (effectiveStatus: string) => {
+    if (effectiveStatus === 'blocked_validation') {
+      return {
+        label: 'Dados incompletos',
+        icon: AlertTriangle,
+        color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300',
+      };
+    }
     if (QUEUE_STATUS_MAP[effectiveStatus]) {
       return QUEUE_STATUS_MAP[effectiveStatus];
     }
     return STATUS_CONFIG[effectiveStatus] || STATUS_CONFIG.not_synced;
+  };
+
+  const openValidationModal = (item: any) => {
+    const errors = (item._queue?.validation_errors || []) as SyncValidationError[];
+    setValidationModal({ open: true, companyName: item.name, errors });
   };
 
   const getMissingFields = (item: any) => {
