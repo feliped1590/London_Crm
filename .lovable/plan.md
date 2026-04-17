@@ -1,84 +1,98 @@
+<final-text>Reavaliação feita. O problema principal não é o conceito de bloqueio em si, e sim a implementação atual ter ficado “meio migrada”: o pedido já tem lock em nível de entidade, mas a UI ainda depende de estado antigo e do lock por item.
 
-Diagnóstico encontrado
+O que identifiquei agora:
 
-- Pelo último envio capturado no preview, o backend não retornou falha para esse cliente: a chamada de reprocessamento respondeu `success: true` com status `waiting_propagation`.
-- Em outras palavras: neste momento o sistema provavelmente não está “errando de novo”; a UI está mantendo um estado vermelho antigo como se ainda fosse erro.
-- Hoje o painel usa `companies.integration_status` como verdade principal. Esse campo é marcado como `sync_error` quando há falha, mas não é limpo/atualizado corretamente quando a retentativa entra em `pending / waiting_propagation`.
-- O modal atual também só lê `company_sync_queue.error_message`. Se a linha mais recente não tiver mensagem útil, ele cai em “Erro desconhecido”.
-- Há outro ponto frágil na fila: o código assume 1 registro por empresa em `company_sync_queue`, mas a migration lida não mostra constraint única por `company_id`. Isso pode gerar leitura de linha errada ou stale.
+1. O botão X realmente está quebrado
+- Em `src/components/orders/OrderDialog.tsx`, o `Dialog` chama `onOpenChange(false)` quando tenta fechar.
+- Mas `handleDialogClose` trata o parâmetro como “devo fechar?” e faz `if (!shouldClose) return;`
+- Resultado: clicar no X ou fora do dialog não fecha nada e nem abre o alerta de saída.
 
-Plano de implementação
+2. O “Bloquear Pedido” pode até estar funcionando no backend, mas a tela não reflete
+- O dialog recebe `order={orderToEdit}` vindo de `src/pages/Orders.tsx`.
+- `orderToEdit` é um snapshot salvo em state quando o usuário abriu a edição.
+- Depois do `lock_order`, a query `orders` é invalidada, mas o objeto `orderToEdit` aberto no dialog continua antigo.
+- Resultado: o backend pode bloquear, mas o dialog continua achando que `is_locked = false`, então parece que “nada aconteceu”.
 
-1. Corrigir a origem do status no painel de validação
-- Ajustar `IntegrationValidationPanel` para combinar:
-  - `companies.integration_status`
-  - último item da `company_sync_queue` (`status`, `error_message`, `next_retry_at`, `processed_at`)
-- Exibir estados mais fiéis:
-  - Pronto
-  - Não sincronizado
-  - Dados incompletos
-  - Processando
-  - Aguardando ERP
-  - Erro técnico
-- Quando houver retentativa manual bem-sucedida, o badge deve sair do vermelho imediatamente.
+3. Isso explica o “não está deixando salvar”
+- Se o lock no banco já aconteceu, mas a UI continua “editável”, o usuário ainda tenta salvar.
+- Aí o banco barra parte das alterações pelo trigger de `orders` / `order_items`.
+- Então o fluxo fica inconsistente: a UI parece aberta para edição, mas o backend já não aceita.
 
-2. Melhorar o diagnóstico do erro
-- Trocar o modal simples por um diagnóstico mais completo:
-  - status real da fila
-  - tentativas
-  - próxima retentativa
-  - mensagem técnica
-  - payload enviado
-  - resposta devolvida pelo ERP
-- Se o caso for `waiting_propagation`, mostrar isso explicitamente em vez de “Erro desconhecido”.
+4. Hoje ainda existe lock por item atuando de verdade no frontend
+- `toggleItemLock`, `updateItem`, `handleRemoveItem` e `OrderItemDetailModal` ainda usam `item.is_locked`.
+- Então, na prática, o sistema está com 2 conceitos ao mesmo tempo:
+  - lock do pedido
+  - lock do item
+- Isso gera confusão e comportamento duplicado.
 
-3. Adicionar um simulador de payload de cliente
-- Criar um `CustomerPayloadSimulator` na aba ERP, visualmente no mesmo padrão do simulador de pedidos.
-- Permitir selecionar o cliente por nome/CNPJ.
-- Mostrar a resolução CRM → ERP campo a campo, incluindo:
-  - documento
-  - `tipo_pessoa` inferido automaticamente (11 dígitos = PF, senão PJ)
-  - cidade ERP
-  - usuário ERP
-  - vendedor ERP
-  - empresa emissora
-  - endereço / número / bairro / CEP
-- Exibir:
-  - erros bloqueantes
-  - envelope completo `IMP_CLIENTE_V3`
-  - JSON interno deserializado
-  - botões de copiar
+5. O trigger de `orders` ainda não está “total”
+- A regra atual compara campos manualmente.
+- Ela cobre alguns campos, mas não todos os campos editáveis do pedido/logística.
+- Ou seja: mesmo com pedido bloqueado, ainda existe risco de algum campo escapar se não estiver na lista comparada.
 
-4. Garantir que o simulador use a mesma lógica do envio real
-- Em vez de duplicar regras soltas no front, criar uma simulação baseada na mesma lógica do backend atual de clientes.
-- Reaproveitar o mapper/validator existente:
-  - `company-mapper.ts`
-  - `company-validator.ts`
-- Assim, o que aparecer no simulador será o mesmo que seria enviado de verdade.
+Resposta objetiva à sua pergunta:
+- Não, agora que o bloqueio é no pedido, não faz sentido manter lock por item como regra de negócio.
+- O campo `order_items.is_locked` pode ficar temporariamente como legado, mas deve parar de controlar edição.
+- A fonte de verdade precisa ser apenas `orders.is_locked`.
 
-5. Endurecer a fila de sincronização
-- Criar migration para:
-  - deduplicar registros antigos da `company_sync_queue`
-  - adicionar unicidade por `company_id`
-- Ajustar `process-company-sync` para:
-  - limpar estado antigo ao reprocessar
-  - não deixar `integration_status = sync_error` quando o cliente estiver só aguardando propagação
-  - registrar sempre payload/resposta/erro de forma consistente para debug
+Plano de correção:
 
-6. Validação final
-- Testar com o cliente do print para confirmar:
-  - badge muda de “Erro” para “Aguardando ERP” ou “Processando” quando aplicável
-  - o modal mostra causa real
-  - o novo simulador aponta exatamente qual campo/mapeamento bloqueia o envio quando houver falha real
+1. Corrigir o fechamento do dialog
+- Refatorar `handleDialogClose` para respeitar a semântica real do `onOpenChange`.
+- Fazer X, overlay e botão “Cancelar/Fechar” passarem pelo mesmo fluxo.
+- Se o pedido estiver editável e desbloqueado, abrir corretamente o alerta de saída.
+- Se estiver bloqueado ou readonly, fechar normalmente.
 
-Detalhes técnicos
+2. Corrigir o estado do pedido aberto
+- Em `src/pages/Orders.tsx`, parar de guardar o pedido inteiro em state.
+- Guardar apenas o `orderId` em edição e derivar o pedido atual a partir da query `orders`.
+- Assim, quando `lock_order` / `unlock_order` invalidar a query, o dialog reflete imediatamente o novo `is_locked`.
 
-- Arquivos mais prováveis:
-  - `src/components/integrations/IntegrationValidationPanel.tsx`
-  - `src/components/integrations/CustomerPayloadSimulator.tsx` (novo)
-  - `src/pages/Integrations.tsx`
-  - `supabase/functions/process-company-sync/index.ts`
-  - `supabase/functions/_shared/projedata/company-mapper.ts`
-  - `supabase/functions/_shared/projedata/company-validator.ts`
-  - nova migration em `supabase/migrations/`
-- Observação importante: hoje o problema mais visível parece ser de diagnóstico/estado stale da UI, não necessariamente de rejeição atual do ERP.
+3. Fazer o lock refletir imediatamente na UI
+- Após bloquear:
+  - mostrar badge de bloqueado
+  - desabilitar o formulário inteiro
+  - esconder botão salvar
+  - manter visualização, aba de histórico/liberações e unlock (se autorizado)
+- Sem precisar fechar e reabrir o dialog.
+
+4. Remover o lock por item da regra de negócio do frontend
+- Tirar o cadeado por item da lógica de edição.
+- Remover guards como:
+  - `if (items[index]?.is_locked) return`
+  - `disabled={locked}`
+  - `OrderItemDetailModal` baseado em `draft.is_locked`
+- Se quiser manter algum vestígio visual temporário, ele deve ser puramente legado, sem bloquear nada.
+
+5. Endurecer o trigger do banco
+- Substituir a comparação manual por comparação do registro inteiro, exceto campos explicitamente permitidos.
+- Exemplo de abordagem:
+  - permitir só `status`, `is_locked`, `locked_at`, `locked_by`, `updated_at`
+  - bloquear qualquer diferença além disso
+- Isso fecha a brecha dos campos de logística/outros campos não listados hoje.
+
+6. Manter o trigger de `order_items` como proteção do pedido pai
+- `INSERT/UPDATE/DELETE` em `order_items` continua proibido quando `orders.is_locked = true`
+- Essa parte conceitualmente está correta e deve continuar.
+
+7. Validar os fluxos finais
+- Bloquear pedido e ver a UI travar na hora
+- Salvar pedido desbloqueado normalmente
+- X / cancelar / overlay funcionando
+- Alteração de status funcionando mesmo com pedido bloqueado
+- Unlock funcionando para admin
+- Tentativa de alterar pedido/itens via API falhando no banco
+- Confirmar que nenhum campo de logística escapa do lock
+
+Arquivos que eu vou ajustar quando você aprovar:
+- `src/components/orders/OrderDialog.tsx`
+- `src/components/orders/OrderItemDetailModal.tsx`
+- `src/pages/Orders.tsx`
+- nova migration SQL para corrigir o trigger `enforce_order_lock`
+
+Resumo final:
+- O lock por item não é mais necessário como regra de negócio.
+- O X não funciona por bug no `onOpenChange`.
+- O botão bloquear aparenta não funcionar porque o dialog fica com um pedido “congelado” em state antigo.
+- O save fica inconsistente porque o backend já bloqueou, mas a UI ainda acha que pode editar.
+- O necessário agora é consolidar tudo no lock do pedido e remover o comportamento residual por item.</final-text>
