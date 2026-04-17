@@ -10,6 +10,7 @@ import { validateCompanyForSync } from '../_shared/projedata/company-validator.t
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
 import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
+import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -450,6 +451,13 @@ Deno.serve(async (req) => {
         const parsedResult = parseCustomerRetorno(responseData, {
           cnpj: company.cnpj,
           requestedAt: new Date().toISOString(),
+        });
+
+        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
+        await trackParserResult(supabase, parsedResult, {
+          source: 'process-company-sync',
+          entityId: queueItem.company_id,
+          tenantId: company.tenant_id ?? null,
         });
 
         // Erro explícito do ERP → lança para retry

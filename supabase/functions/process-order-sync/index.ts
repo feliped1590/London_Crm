@@ -9,6 +9,7 @@ import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, pars
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
+import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -381,6 +382,14 @@ Deno.serve(async (req) => {
           pedidoTerceiro: queueItem.pedido_terceiro,
           orderNumber: order.number,
           requestedAt: new Date().toISOString(),
+        });
+
+        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
+        await trackParserResult(supabase, parsedResult, {
+          source: 'process-order-sync',
+          entityId: queueItem.order_id,
+          tenantId: order.tenant_id ?? null,
+          userId: order.created_by ?? null,
         });
 
         if (parsedResult.errorType === 'erp') {

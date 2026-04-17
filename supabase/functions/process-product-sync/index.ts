@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { mapCRMProductToProjedata, buildProductPayload } from '../_shared/projedata/mapper.ts';
 import { parseProductRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
+import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -168,6 +169,13 @@ Deno.serve(async (req) => {
         const parsedResult = parseProductRetorno(responseData, {
           sku: product.sku,
           requestedAt: new Date().toISOString(),
+        });
+
+        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
+        await trackParserResult(supabase, parsedResult, {
+          source: 'process-product-sync',
+          entityId: item.product_id,
+          tenantId: product.tenant_id ?? null,
         });
 
         if (parsedResult.errorType === 'erp') {
