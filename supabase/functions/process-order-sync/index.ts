@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, parsePaymentTerms } from '../_shared/projedata/order-mapper.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
+import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

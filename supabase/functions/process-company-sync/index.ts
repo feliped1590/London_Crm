@@ -9,6 +9,7 @@ import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj, getSegmentoB
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
+import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

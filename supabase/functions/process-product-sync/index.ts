@@ -6,6 +6,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { mapCRMProductToProjedata, buildProductPayload } from '../_shared/projedata/mapper.ts';
+import { parseProductRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -163,12 +164,14 @@ Deno.serve(async (req) => {
           responseData = { raw: responseText };
         }
 
-        // Verificar retorno do ERP — suporta array e objeto
-        const retornoObj = Array.isArray(responseData) ? responseData[0] : responseData;
-        const retorno = retornoObj?.['#out#p_retorno'] || retornoObj?.p_retorno || retornoObj?.['P_RETORNO'];
+        // Parser unificado
+        const parsedResult = parseProductRetorno(responseData, {
+          sku: product.sku,
+          requestedAt: new Date().toISOString(),
+        });
 
-        if (retorno && typeof retorno === 'string' && retorno.startsWith('#ERRO#')) {
-          throw new Error(`ERP retornou erro: ${retorno}`);
+        if (parsedResult.errorType === 'erp') {
+          throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
         }
 
         // Sucesso - atualizar fila e produto
@@ -198,19 +201,19 @@ Deno.serve(async (req) => {
           direction: 'crm_to_erp',
           status: 'success',
           request_payload: parsedPayload,
-          response_payload: responseData,
+          response_payload: toLogPayload(parsedResult),
           erp_hash_at_sync: product.erp_hash,
           ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
         });
 
-        // Manter log legado em erp_sync_logs
+        // Manter log legado em erp_sync_logs com payload estruturado
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'product',
           entity_id: item.product_id,
           direction: 'crm_to_erp',
           status: 'success',
           request_payload: parsedPayload,
-          response_payload: responseData,
+          response_payload: toLogPayload(parsedResult),
         });
 
         successCount++;
