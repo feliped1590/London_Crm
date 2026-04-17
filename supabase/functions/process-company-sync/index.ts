@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
         .eq('integration_status', 'sync_error');
     }
 
-    // 1. Buscar itens pendentes da fila
+    // 1. Buscar itens pendentes da fila (excluindo bloqueados por validação e pausados)
     let queueQuery = supabase
       .from('company_sync_queue')
       .select('id, company_id, attempts, tenant_id')

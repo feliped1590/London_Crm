@@ -35,7 +35,7 @@ export function SyncValidationModal({ open, onOpenChange, companyName, errors }:
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
             Não foi possível enviar ao ERP
           </DialogTitle>
         </DialogHeader>
@@ -47,7 +47,7 @@ export function SyncValidationModal({ open, onOpenChange, companyName, errors }:
             </p>
           )}
 
-          <Alert variant="default" className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30">
+          <Alert variant="default" className="border-warning/30 bg-warning/10">
             <AlertDescription className="text-sm">
               Corrija os itens abaixo para liberar a sincronização. Enquanto houver pendências, o cliente não será adicionado à fila do ERP.
             </AlertDescription>
