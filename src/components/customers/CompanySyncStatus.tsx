@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send } from 'lucide-react';
+import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import { SyncValidationModal, type SyncValidationError } from './SyncValidationModal';
 
 interface CompanySyncStatusProps {
   companyId: string;
@@ -45,6 +46,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: AlertTriangle,
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
   },
+  blocked_validation: {
+    label: 'Dados incompletos',
+    icon: AlertTriangle,
+    className: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
+  },
 };
 
 export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyncStatusProps) {
@@ -71,7 +77,7 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('company_sync_queue')
-        .select('status, error_message, attempts, processed_at')
+        .select('status, error_message, attempts, processed_at, validation_errors')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -87,7 +93,9 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
   });
 
   let displayStatus: string;
-  if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
+  if (queueEntry?.status === 'blocked_validation') {
+    displayStatus = 'blocked_validation';
+  } else if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
   } else if (queueEntry?.status === 'waiting_propagation') {
     displayStatus = 'waiting_propagation';
@@ -102,6 +110,7 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
   const config = syncStatusConfig[displayStatus] || syncStatusConfig.not_synced;
   const Icon = config.icon;
   const isAnimated = displayStatus === 'pending' || displayStatus === 'processing';
+  const validationErrors = (queueEntry?.validation_errors || []) as SyncValidationError[];
 
   return (
     <TooltipProvider>
@@ -112,9 +121,20 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
             {config.label}
           </Badge>
         </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs space-y-1 max-w-[250px]">
+        <TooltipContent side="bottom" className="text-xs space-y-1 max-w-[280px]">
           {erpCode && <p><span className="text-muted-foreground">Código ERP:</span> {erpCode}</p>}
-          {queueEntry?.error_message && (
+          {displayStatus === 'blocked_validation' && validationErrors.length > 0 && (
+            <div className="space-y-0.5">
+              <p className="font-semibold">Pendências:</p>
+              <ul className="list-disc pl-4">
+                {validationErrors.slice(0, 5).map((e, i) => (
+                  <li key={i}>{e.message}</li>
+                ))}
+                {validationErrors.length > 5 && <li>+{validationErrors.length - 5} outros</li>}
+              </ul>
+            </div>
+          )}
+          {displayStatus !== 'blocked_validation' && queueEntry?.error_message && (
             <p className="text-destructive">{queueEntry.error_message}</p>
           )}
           {queueEntry?.attempts > 0 && (
@@ -128,10 +148,56 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
 
 export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: CompanySyncStatusProps) {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
+  const [companyName, setCompanyName] = useState<string>('');
+
+  // Saber se já está bloqueado para mostrar "Corrigir dados"
+  const { data: queueEntry } = useQuery({
+    queryKey: ['company_sync_status_btn', companyId],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('company_sync_queue')
+        .select('status, validation_errors')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    staleTime: 10_000,
+  });
+
+  const isBlocked = queueEntry?.status === 'blocked_validation';
+
+  const handleShowBlocked = () => {
+    setValidationErrors((queueEntry?.validation_errors || []) as SyncValidationError[]);
+    setCompanyName('');
+    setValidationOpen(true);
+  };
 
   const handleSync = async () => {
     setIsSyncing(true);
     try {
+      // 1. Pré-validação
+      const { data: validation, error: validationErr } = await supabase.functions.invoke('validate-company-sync', {
+        body: { company_id: companyId },
+      });
+
+      if (validationErr) {
+        toast.error('Erro ao validar cliente: ' + validationErr.message);
+        return;
+      }
+
+      if (validation && !validation.valid) {
+        setValidationErrors(validation.errors || []);
+        setCompanyName(validation.company_name || '');
+        setValidationOpen(true);
+        toast.warning('Cliente possui pendências. Corrija antes de enviar ao ERP.');
+        return;
+      }
+
+      // 2. Envio
       toast.success('Cliente adicionado à fila de envio ao ERP');
       onSyncTriggered?.();
 
@@ -146,11 +212,13 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
       }
 
       const result = data?.results?.[0];
-      if (result?.erp_code) {
+      if (result?.status === 'blocked_validation') {
+        // Defesa em profundidade detectou pendência no backend
+        toast.error('Pendências detectadas durante o envio. Verifique o status do cliente.');
+      } else if (result?.erp_code) {
         toast.success(`Cliente sincronizado! Código ERP: ${result.erp_code}`);
       } else if (result?.status === 'waiting_propagation') {
         toast.info('Cliente enviado ao ERP. Tentando recuperar código...');
-        // Auto-retry after 30s
         setTimeout(async () => {
           try {
             const { data: retryData } = await supabase.functions.invoke('process-company-sync', {
@@ -179,28 +247,45 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
     }
   };
 
-  const tooltipLabel = erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
+  const tooltipLabel = isBlocked
+    ? 'Corrigir dados pendentes'
+    : erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => { e.stopPropagation(); handleSync(); }}
-            disabled={isSyncing}
-            title={tooltipLabel}
-          >
-            {isSyncing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>{tooltipLabel}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isBlocked) handleShowBlocked();
+                else handleSync();
+              }}
+              disabled={isSyncing}
+              title={tooltipLabel}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isBlocked ? (
+                <Wrench className="h-4 w-4 text-orange-500" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{tooltipLabel}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <SyncValidationModal
+        open={validationOpen}
+        onOpenChange={setValidationOpen}
+        companyName={companyName}
+        errors={validationErrors}
+      />
+    </>
   );
 }
