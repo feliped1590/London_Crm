@@ -333,18 +333,18 @@ export function UnifiedPipelineManager() {
     const s = (status || 'open') as StageStatus;
     if (s === 'won')
       return (
-        <Badge className="bg-success/15 text-success border-success/30 hover:bg-success/20 gap-1">
+        <Badge className="bg-success text-success-foreground border-transparent hover:bg-success/90 gap-1 font-semibold shadow-sm">
           <Trophy className="h-3 w-3" /> Ganho
         </Badge>
       );
     if (s === 'lost')
       return (
-        <Badge className="bg-destructive/15 text-destructive border-destructive/30 hover:bg-destructive/20 gap-1">
+        <Badge className="bg-destructive text-destructive-foreground border-transparent hover:bg-destructive/90 gap-1 font-semibold shadow-sm">
           <XCircle className="h-3 w-3" /> Perdido
         </Badge>
       );
     return (
-      <Badge variant="secondary" className="gap-1">
+      <Badge variant="secondary" className="gap-1 text-muted-foreground">
         <Circle className="h-3 w-3" /> Em andamento
       </Badge>
     );
@@ -854,7 +854,7 @@ export function UnifiedPipelineManager() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {orderedPipelineGroups.map(({ id, pipeline, stages }) => {
                 const isUnassigned = pipeline === null;
                 const TypeIcon = isUnassigned
@@ -907,7 +907,16 @@ export function UnifiedPipelineManager() {
                           return (
                             <div
                               key={stage.id}
-                              className="flex flex-col gap-2 px-4 sm:px-6 py-3 hover:bg-muted/40 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => handleEditStage(stage)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleEditStage(stage);
+                                }
+                              }}
+                              className="flex flex-col gap-2 px-4 sm:px-6 py-3 hover:bg-muted/60 cursor-pointer transition-colors sm:flex-row sm:items-center sm:justify-between focus:outline-none focus-visible:bg-muted/60"
                             >
                               {/* Left: color + name + role badges */}
                               <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -917,7 +926,7 @@ export function UnifiedPipelineManager() {
                                 />
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
-                                    <span className="font-medium text-sm truncate">{stage.name}</span>
+                                    <span className="font-semibold text-sm text-foreground truncate">{stage.name}</span>
                                     {hasRoles && allowedRoles.map((role) => (
                                       <Badge key={role} variant="outline" className="text-[10px] py-0 h-4">
                                         {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
@@ -938,12 +947,15 @@ export function UnifiedPipelineManager() {
                                     ⏱ {slaHours}h
                                   </span>
                                 ) : null}
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                   <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={() => handleEditStage(stage)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditStage(stage);
+                                    }}
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </Button>
@@ -953,11 +965,12 @@ export function UnifiedPipelineManager() {
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 text-destructive hover:text-destructive"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
                                     </AlertDialogTrigger>
-                                    <AlertDialogContent>
+                                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                       <AlertDialogHeader>
                                         <AlertDialogTitle>Excluir etapa?</AlertDialogTitle>
                                         <AlertDialogDescription>
