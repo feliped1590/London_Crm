@@ -57,9 +57,9 @@ export function usePipelineData(selectedPipelineId: string | null) {
   const { isAdmin } = useModulePermissions();
   const { canAccessBySalesRep, hasDirectAccess, mySalesRepIds } = useSalesRepAccess();
   const queryClient = useQueryClient();
-  const { pipelines, defaultPipeline } = usePipelines();
-  const { requiresJustification, logIntervention } = usePortfolioGovernance();
   const { accessibleEntities: legalEntities, effectiveEntityId: effectiveLegalEntityId } = useLegalEntities();
+  const { pipelines, defaultPipeline } = usePipelines({ legalEntityId: effectiveLegalEntityId });
+  const { requiresJustification, logIntervention } = usePortfolioGovernance();
 
   // ── User roles (for stage permission check) ───────────────────────
   const { data: userRoles } = useQuery({
