@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { usePipelines, Pipeline, PipelineInsert } from '@/hooks/usePipelines';
+import { usePipelines, Pipeline, PipelineInsert, PipelineMode, PipelineScope } from '@/hooks/usePipelines';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,31 @@ const typeLabels: Record<string, { label: string; icon: typeof Target }> = {
   support: { label: 'Suporte', icon: Headphones },
 };
 
+const PIPELINE_MODE_OPTIONS: { value: PipelineMode; label: string; description: string }[] = [
+  { value: 'sales', label: 'Vendas', description: 'Funil comercial puro (prospecção → fechamento)' },
+  { value: 'operational', label: 'Operacional', description: 'Pós-venda, produção, faturamento, entrega' },
+  { value: 'hybrid', label: 'Híbrido', description: 'Combina etapas comerciais e operacionais' },
+  { value: 'support', label: 'Suporte', description: 'Atendimento, qualidade, RNC' },
+];
+
+const PIPELINE_SCOPE_OPTIONS: { value: PipelineScope; label: string; description: string }[] = [
+  { value: 'global', label: 'Global', description: 'Acessível a todas as empresas emissoras' },
+  { value: 'restricted', label: 'Restrito', description: 'Apenas a empresa emissora vinculada' },
+];
+
+const STAGE_CATEGORY_OPTIONS: { value: string; label: string; tone: string }[] = [
+  { value: 'commercial', label: 'Comercial', tone: 'bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300' },
+  { value: 'operational', label: 'Operacional', tone: 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300' },
+  { value: 'loss', label: 'Perda', tone: 'bg-destructive/10 text-destructive border-destructive/30' },
+  { value: 'quality', label: 'Qualidade', tone: 'bg-purple-500/10 text-purple-700 border-purple-500/30 dark:text-purple-300' },
+];
+
+const STAGE_PHASE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'pre_sale', label: 'Pré-venda' },
+  { value: 'sale', label: 'Venda' },
+  { value: 'post_sale', label: 'Pós-venda' },
+];
+
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrador' },
   { value: 'vendedor', label: 'Vendedor' },
@@ -54,6 +80,7 @@ export function UnifiedPipelineManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline } = usePipelines();
+  const { allEntities: legalEntities } = useLegalEntities();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
   
@@ -66,6 +93,9 @@ export function UnifiedPipelineManager() {
     type: 'sales',
     is_active: true,
     allowed_roles: [],
+    legal_entity_id: null,
+    pipeline_mode: 'sales',
+    pipeline_scope: 'global',
   });
 
   // Stage form state
@@ -83,6 +113,8 @@ export function UnifiedPipelineManager() {
     sla_hours: number | null;
     sla_warning_hours: number | null;
     allowed_roles: string[];
+    stage_category: string;
+    stage_phase: string;
   }>({
     name: '',
     color: '#6366f1',
@@ -94,6 +126,8 @@ export function UnifiedPipelineManager() {
     sla_hours: null,
     sla_warning_hours: null,
     allowed_roles: [],
+    stage_category: 'commercial',
+    stage_phase: 'sale',
   });
 
   // Fetch pipeline stages with pipeline info
@@ -140,6 +174,8 @@ export function UnifiedPipelineManager() {
         pipeline_id: data.pipeline_id || null,
         sla_hours: data.sla_hours,
         sla_warning_hours: data.sla_warning_hours,
+        stage_category: data.stage_category,
+        stage_phase: data.stage_phase,
       } as any);
       if (error) throw error;
     },
@@ -205,6 +241,9 @@ export function UnifiedPipelineManager() {
       type: 'sales',
       is_active: true,
       allowed_roles: [],
+      legal_entity_id: null,
+      pipeline_mode: 'sales',
+      pipeline_scope: 'global',
     });
     setEditingPipeline(null);
     setIsPipelineDialogOpen(false);
@@ -218,6 +257,9 @@ export function UnifiedPipelineManager() {
       type: pipeline.type,
       is_active: pipeline.is_active,
       allowed_roles: pipeline.allowed_roles || [],
+      legal_entity_id: pipeline.legal_entity_id ?? null,
+      pipeline_mode: (pipeline.pipeline_mode || 'sales') as PipelineMode,
+      pipeline_scope: (pipeline.pipeline_scope || 'global') as PipelineScope,
     });
     setIsPipelineDialogOpen(true);
   };
@@ -232,7 +274,10 @@ export function UnifiedPipelineManager() {
         type: pipelineFormData.type,
         is_active: pipelineFormData.is_active,
         allowed_roles: pipelineFormData.allowed_roles?.length ? pipelineFormData.allowed_roles : null,
-      });
+        legal_entity_id: pipelineFormData.legal_entity_id ?? null,
+        pipeline_mode: pipelineFormData.pipeline_mode,
+        pipeline_scope: pipelineFormData.pipeline_scope,
+      } as any);
     } else {
       createPipeline.mutate(pipelineFormData, {
         onSuccess: () => resetPipelineForm(),
@@ -262,6 +307,8 @@ export function UnifiedPipelineManager() {
       sla_hours: null,
       sla_warning_hours: null,
       allowed_roles: [],
+      stage_category: 'commercial',
+      stage_phase: 'sale',
     });
     setEditingStage(null);
     setShowLegacyType(false);
@@ -281,6 +328,8 @@ export function UnifiedPipelineManager() {
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
       allowed_roles: (stage as any).allowed_roles || [],
+      stage_category: ((stage as any).stage_category || 'commercial') as string,
+      stage_phase: ((stage as any).stage_phase || 'sale') as string,
     });
     setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
@@ -444,21 +493,88 @@ export function UnifiedPipelineManager() {
                       rows={2}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="pipeline-type">Tipo *</Label>
-                    <Select
-                      value={pipelineFormData.type}
-                      onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, type: v as 'sales' | 'post_sales' | 'support' })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(typeLabels).map(([key, { label }]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="pipeline-mode">Modo do Funil *</Label>
+                      <Select
+                        value={pipelineFormData.pipeline_mode || 'sales'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_mode: v as PipelineMode })}
+                      >
+                        <SelectTrigger id="pipeline-mode">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PIPELINE_MODE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div className="flex flex-col">
+                                <span>{opt.label}</span>
+                                <span className="text-xs text-muted-foreground">{opt.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="pipeline-type">Tipo (legado)</Label>
+                      <Select
+                        value={pipelineFormData.type}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, type: v as 'sales' | 'post_sales' | 'support' })}
+                      >
+                        <SelectTrigger id="pipeline-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(typeLabels).map(([key, { label }]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="pipeline-legal-entity">Empresa Emissora</Label>
+                      <Select
+                        value={pipelineFormData.legal_entity_id || '__GLOBAL__'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, legal_entity_id: v === '__GLOBAL__' ? null : v, pipeline_scope: v === '__GLOBAL__' ? 'global' : 'restricted' })}
+                      >
+                        <SelectTrigger id="pipeline-legal-entity">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__GLOBAL__">
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-3 w-3" /> Todas (global)
+                            </div>
+                          </SelectItem>
+                          {legalEntities.map((le) => (
+                            <SelectItem key={le.id} value={le.id}>{le.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Negócios só poderão usar este funil se forem da mesma empresa.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="pipeline-scope">Escopo</Label>
+                      <Select
+                        value={pipelineFormData.pipeline_scope || 'global'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_scope: v as PipelineScope })}
+                        disabled={!pipelineFormData.legal_entity_id}
+                      >
+                        <SelectTrigger id="pipeline-scope">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PIPELINE_SCOPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -538,8 +654,23 @@ export function UnifiedPipelineManager() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline">{typeLabels[pipeline.type]?.label || pipeline.type}</Badge>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className="capitalize">
+                              {PIPELINE_MODE_OPTIONS.find(m => m.value === (pipeline as any).pipeline_mode)?.label || typeLabels[pipeline.type]?.label || pipeline.type}
+                            </Badge>
+                            {(pipeline as any).legal_entity_id ? (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Link2 className="h-3 w-3" />
+                                {legalEntities.find(e => e.id === (pipeline as any).legal_entity_id)?.name || 'Empresa'}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                                <Globe className="h-3 w-3" />
+                                Global
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1">
                             {!pipeline.is_default && pipeline.is_active && (
                               <Button
@@ -708,6 +839,47 @@ export function UnifiedPipelineManager() {
                     {validateStageStatus() && (
                       <p className="text-xs text-destructive mt-1">{validateStageStatus()}</p>
                     )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="stage-category">Categoria *</Label>
+                      <Select
+                        value={stageFormData.stage_category}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage_category: v })}
+                      >
+                        <SelectTrigger id="stage-category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGE_CATEGORY_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Para BI e relatórios. Independe do nome.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="stage-phase">Fase *</Label>
+                      <Select
+                        value={stageFormData.stage_phase}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage_phase: v })}
+                      >
+                        <SelectTrigger id="stage-phase">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGE_PHASE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Pré-venda, venda ou pós-venda.
+                      </p>
+                    </div>
                   </div>
 
                   <Collapsible open={showLegacyType} onOpenChange={setShowLegacyType}>
@@ -927,6 +1099,21 @@ export function UnifiedPipelineManager() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     <span className="font-semibold text-sm text-foreground truncate">{stage.name}</span>
+                                    {(() => {
+                                      const cat = (stage as any).stage_category as string | undefined;
+                                      const opt = STAGE_CATEGORY_OPTIONS.find(o => o.value === cat);
+                                      if (!opt) return null;
+                                      return (
+                                        <Badge variant="outline" className={cn('text-[10px] py-0 h-4 border', opt.tone)}>
+                                          {opt.label}
+                                        </Badge>
+                                      );
+                                    })()}
+                                    {(stage as any).stage_phase && (stage as any).stage_phase !== 'sale' && (
+                                      <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground">
+                                        {STAGE_PHASE_OPTIONS.find(p => p.value === (stage as any).stage_phase)?.label}
+                                      </Badge>
+                                    )}
                                     {hasRoles && allowedRoles.map((role) => (
                                       <Badge key={role} variant="outline" className="text-[10px] py-0 h-4">
                                         {ROLE_OPTIONS.find(r => r.value === role)?.label || role}

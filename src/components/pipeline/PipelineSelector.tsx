@@ -8,6 +8,7 @@ interface PipelineSelectorProps {
   value: string | null;
   onChange: (pipelineId: string | null) => void;
   className?: string;
+  legalEntityId?: string | null;
 }
 
 const typeLabels: Record<string, string> = {
@@ -16,8 +17,8 @@ const typeLabels: Record<string, string> = {
   support: 'Suporte',
 };
 
-export function PipelineSelector({ value, onChange, className }: PipelineSelectorProps) {
-  const { pipelines, isLoading, defaultPipeline } = usePipelines();
+export function PipelineSelector({ value, onChange, className, legalEntityId }: PipelineSelectorProps) {
+  const { pipelines, isLoading, defaultPipeline } = usePipelines({ legalEntityId });
 
   // Use defaultPipeline if no value is set
   const selectedValue = value || defaultPipeline?.id || '';
