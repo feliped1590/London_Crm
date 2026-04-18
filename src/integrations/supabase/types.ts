@@ -2857,6 +2857,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           custom_fields: Json | null
+          execution_legal_entity_id: string | null
           expected_close_date: string | null
           id: string
           legal_entity_id: string
@@ -2880,6 +2881,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
+          execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
           legal_entity_id: string
@@ -2903,6 +2905,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           custom_fields?: Json | null
+          execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
           legal_entity_id?: string
@@ -2939,6 +2942,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_execution_legal_entity_id_fkey"
+            columns: ["execution_legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
           },
           {
@@ -4913,6 +4923,8 @@ export type Database = {
           sla_warning_hours: number | null
           sort_order: number
           stage: string | null
+          stage_category: string
+          stage_phase: string
           stage_status: string
         }
         Insert: {
@@ -4928,6 +4940,8 @@ export type Database = {
           sla_warning_hours?: number | null
           sort_order: number
           stage?: string | null
+          stage_category?: string
+          stage_phase?: string
           stage_status?: string
         }
         Update: {
@@ -4943,6 +4957,8 @@ export type Database = {
           sla_warning_hours?: number | null
           sort_order?: number
           stage?: string | null
+          stage_category?: string
+          stage_phase?: string
           stage_status?: string
         }
         Relationships: [
@@ -4964,7 +4980,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_default: boolean | null
+          legal_entity_id: string | null
           name: string
+          pipeline_mode: string
+          pipeline_scope: string
           type: string
           updated_at: string | null
         }
@@ -4976,7 +4995,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          legal_entity_id?: string | null
           name: string
+          pipeline_mode?: string
+          pipeline_scope?: string
           type?: string
           updated_at?: string | null
         }
@@ -4988,11 +5010,22 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          legal_entity_id?: string | null
           name?: string
+          pipeline_mode?: string
+          pipeline_scope?: string
           type?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pipelines_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       portfolio_transfers: {
         Row: {
