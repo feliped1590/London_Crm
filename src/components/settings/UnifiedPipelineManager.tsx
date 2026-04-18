@@ -80,7 +80,7 @@ const DEAL_STAGES: { value: string; label: string }[] = [
 export function UnifiedPipelineManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline } = usePipelines();
+  const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline, getPipelineEntities, setPipelineLegalEntities } = usePipelines();
   const { allEntities: legalEntities } = useLegalEntities();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
@@ -88,6 +88,7 @@ export function UnifiedPipelineManager() {
   // Pipeline form state
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [pipelineFormData, setPipelineFormData] = useState<PipelineInsert & { allowed_roles?: string[] }>({
     name: '',
     description: '',
