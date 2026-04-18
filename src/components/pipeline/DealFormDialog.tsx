@@ -18,7 +18,7 @@ import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
-import type { Deal, DealStage, StageConfigEntry } from '@/hooks/usePipelineData';
+import type { Deal, DealStage, StageConfigEntry, PipelineStageRow } from '@/hooks/usePipelineData';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
 
 interface DealFormDialogProps {
@@ -30,6 +30,7 @@ interface DealFormDialogProps {
   customFieldsData: Record<string, unknown>;
   setCustomFieldsData: (data: Record<string, unknown>) => void;
   stages: DealStage[];
+  stageRows: PipelineStageRow[];
   stageConfig: Record<string, StageConfigEntry>;
   companyOptions: SearchableSelectOption[];
   contactOptions: SearchableSelectOption[];
@@ -59,6 +60,7 @@ export function DealFormDialog({
   customFieldsData,
   setCustomFieldsData,
   stages,
+  stageRows,
   stageConfig,
   companyOptions,
   contactOptions,
@@ -100,13 +102,25 @@ export function DealFormDialog({
       </div>
       <div>
         <Label htmlFor="stage">Etapa</Label>
-        <Select value={formData.stage} onValueChange={(v) => setFormData({ ...formData, stage: v as DealStage })}>
+        <Select
+          value={(formData as any).pipeline_stage_id || ''}
+          onValueChange={(v) => {
+            const row = stageRows.find(s => s.id === v);
+            setFormData({
+              ...formData,
+              pipeline_stage_id: v,
+              // Keep legacy `stage` in sync: use legacy code when present, else fall back to row id
+              // (the resolver handles UUID-in-stage as a defensive fallback).
+              stage: (row?.stage ?? v) as DealStage,
+            } as any);
+          }}
+        >
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue placeholder="Selecione a etapa" />
           </SelectTrigger>
           <SelectContent>
-            {stages.map((s) => (
-              <SelectItem key={s} value={s}>{stageConfig[s]?.label || s}</SelectItem>
+            {stageRows.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
