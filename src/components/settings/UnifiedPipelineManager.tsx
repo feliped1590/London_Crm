@@ -705,17 +705,32 @@ export function UnifiedPipelineManager() {
                             <Badge variant="outline" className="capitalize">
                               {PIPELINE_MODE_OPTIONS.find(m => m.value === (pipeline as any).pipeline_mode)?.label || typeLabels[pipeline.type]?.label || pipeline.type}
                             </Badge>
-                            {(pipeline as any).legal_entity_id ? (
-                              <Badge variant="secondary" className="text-xs gap-1">
-                                <Link2 className="h-3 w-3" />
-                                {legalEntities.find(e => e.id === (pipeline as any).legal_entity_id)?.name || 'Empresa'}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
-                                <Globe className="h-3 w-3" />
-                                Global
-                              </Badge>
-                            )}
+                            {(() => {
+                              const linked = getPipelineEntities(pipeline.id);
+                              if (linked.length === 0) {
+                                return (
+                                  <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                                    <Globe className="h-3 w-3" />
+                                    Global
+                                  </Badge>
+                                );
+                              }
+                              if (linked.length === 1) {
+                                const e = legalEntities.find(x => x.id === linked[0]);
+                                return (
+                                  <Badge variant="secondary" className="text-xs gap-1">
+                                    <Link2 className="h-3 w-3" />
+                                    {e?.name || 'Empresa'}
+                                  </Badge>
+                                );
+                              }
+                              return (
+                                <Badge variant="secondary" className="text-xs gap-1" title={linked.map(id => legalEntities.find(e => e.id === id)?.name).filter(Boolean).join(', ')}>
+                                  <Link2 className="h-3 w-3" />
+                                  {linked.length} empresas
+                                </Badge>
+                              );
+                            })()}
                           </div>
                           <div className="flex items-center gap-1">
                             {!pipeline.is_default && pipeline.is_active && (
