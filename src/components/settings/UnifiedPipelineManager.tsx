@@ -1084,6 +1084,21 @@ export function UnifiedPipelineManager() {
                                 <div className="min-w-0 flex-1">
                                   <div className="flex flex-wrap items-center gap-1.5">
                                     <span className="font-semibold text-sm text-foreground truncate">{stage.name}</span>
+                                    {(() => {
+                                      const cat = (stage as any).stage_category as string | undefined;
+                                      const opt = STAGE_CATEGORY_OPTIONS.find(o => o.value === cat);
+                                      if (!opt) return null;
+                                      return (
+                                        <Badge variant="outline" className={cn('text-[10px] py-0 h-4 border', opt.tone)}>
+                                          {opt.label}
+                                        </Badge>
+                                      );
+                                    })()}
+                                    {(stage as any).stage_phase && (stage as any).stage_phase !== 'sale' && (
+                                      <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground">
+                                        {STAGE_PHASE_OPTIONS.find(p => p.value === (stage as any).stage_phase)?.label}
+                                      </Badge>
+                                    )}
                                     {hasRoles && allowedRoles.map((role) => (
                                       <Badge key={role} variant="outline" className="text-[10px] py-0 h-4">
                                         {ROLE_OPTIONS.find(r => r.value === role)?.label || role}
