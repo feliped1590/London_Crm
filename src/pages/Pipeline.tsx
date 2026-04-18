@@ -40,6 +40,7 @@ export default function Pipeline() {
 
   // Pipeline selection
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+  const [autoSelectedPipelineId, setAutoSelectedPipelineId] = useState<string | null>(null);
 
   // Data hook
   const pipeline = usePipelineData(selectedPipelineId);
@@ -59,7 +60,28 @@ export default function Pipeline() {
     handleDrop: handleDropCore,
     requiresJustification, logIntervention,
     legalEntities, effectiveLegalEntityId,
+    pipelines: availablePipelines,
   } = pipeline;
+
+  // ── Auto-seleção segura: só dispara uma vez por (entidade ativa + pipeline) ──
+  useEffect(() => {
+    if (selectedPipelineId) return;
+    if (!availablePipelines || availablePipelines.length !== 1) return;
+    const onlyId = availablePipelines[0].id;
+    if (autoSelectedPipelineId === onlyId) return;
+    setSelectedPipelineId(onlyId);
+    setAutoSelectedPipelineId(onlyId);
+  }, [availablePipelines, selectedPipelineId, autoSelectedPipelineId]);
+
+  // ── Reset: pipeline atual sumiu da lista (ex: trocou empresa ativa) ──
+  useEffect(() => {
+    if (!selectedPipelineId || !availablePipelines) return;
+    const stillVisible = availablePipelines.some(p => p.id === selectedPipelineId);
+    if (!stillVisible) {
+      setSelectedPipelineId(null);
+      setAutoSelectedPipelineId(null);
+    }
+  }, [availablePipelines, selectedPipelineId]);
 
   // ── UI State ──────────────────────────────────────────────────────
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -335,6 +357,16 @@ export default function Pipeline() {
   };
 
   const executeSubmit = (cleanedFormData: Record<string, unknown>) => {
+    // Validação preventiva: pipeline deve estar entre os permitidos para o usuário/empresa ativa
+    const targetPipelineId = (cleanedFormData.pipeline_id as string) || currentPipelineId;
+    if (targetPipelineId && availablePipelines && availablePipelines.length > 0) {
+      const allowed = availablePipelines.some(p => p.id === targetPipelineId);
+      if (!allowed) {
+        toast.error('Pipeline não permitido para esta empresa');
+        return;
+      }
+    }
+
     if (editingDeal) {
       updateMutation.mutate({ id: editingDeal.id, ...cleanedFormData, custom_fields: customFieldsData as Json });
     } else {

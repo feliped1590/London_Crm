@@ -29,8 +29,18 @@ export function PipelineSelector({ value, onChange, className, legalEntityId }: 
     );
   }
 
-  // If no pipelines or only one, don't show selector
-  if (!pipelines || pipelines.length <= 1) {
+  // Empty state explícito
+  if (!pipelines || pipelines.length === 0) {
+    return (
+      <Badge variant="outline" className={cn('h-9 px-3 gap-2 text-muted-foreground border-dashed', className)}>
+        <Layers className="h-3.5 w-3.5" />
+        Sem pipelines disponíveis
+      </Badge>
+    );
+  }
+
+  // Apenas 1 pipeline: ainda exibe (badge informativo) — auto-seleção é feita pelo container
+  if (pipelines.length === 1) {
     return null;
   }
 

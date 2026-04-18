@@ -109,6 +109,9 @@ export function useLegalEntities() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile_legal_entity'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages'] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
       toast.success('CNPJ ativo alterado');
     },
     onError: () => toast.error('Erro ao trocar CNPJ ativo'),
