@@ -174,6 +174,8 @@ export function UnifiedPipelineManager() {
         pipeline_id: data.pipeline_id || null,
         sla_hours: data.sla_hours,
         sla_warning_hours: data.sla_warning_hours,
+        stage_category: data.stage_category,
+        stage_phase: data.stage_phase,
       } as any);
       if (error) throw error;
     },
