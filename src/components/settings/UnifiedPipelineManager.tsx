@@ -239,6 +239,9 @@ export function UnifiedPipelineManager() {
       type: 'sales',
       is_active: true,
       allowed_roles: [],
+      legal_entity_id: null,
+      pipeline_mode: 'sales',
+      pipeline_scope: 'global',
     });
     setEditingPipeline(null);
     setIsPipelineDialogOpen(false);
@@ -252,6 +255,9 @@ export function UnifiedPipelineManager() {
       type: pipeline.type,
       is_active: pipeline.is_active,
       allowed_roles: pipeline.allowed_roles || [],
+      legal_entity_id: pipeline.legal_entity_id ?? null,
+      pipeline_mode: (pipeline.pipeline_mode || 'sales') as PipelineMode,
+      pipeline_scope: (pipeline.pipeline_scope || 'global') as PipelineScope,
     });
     setIsPipelineDialogOpen(true);
   };
@@ -266,7 +272,10 @@ export function UnifiedPipelineManager() {
         type: pipelineFormData.type,
         is_active: pipelineFormData.is_active,
         allowed_roles: pipelineFormData.allowed_roles?.length ? pipelineFormData.allowed_roles : null,
-      });
+        legal_entity_id: pipelineFormData.legal_entity_id ?? null,
+        pipeline_mode: pipelineFormData.pipeline_mode,
+        pipeline_scope: pipelineFormData.pipeline_scope,
+      } as any);
     } else {
       createPipeline.mutate(pipelineFormData, {
         onSuccess: () => resetPipelineForm(),
@@ -296,6 +305,8 @@ export function UnifiedPipelineManager() {
       sla_hours: null,
       sla_warning_hours: null,
       allowed_roles: [],
+      stage_category: 'commercial',
+      stage_phase: 'sale',
     });
     setEditingStage(null);
     setShowLegacyType(false);
@@ -315,6 +326,8 @@ export function UnifiedPipelineManager() {
       sla_hours: stage.sla_hours,
       sla_warning_hours: stage.sla_warning_hours,
       allowed_roles: (stage as any).allowed_roles || [],
+      stage_category: ((stage as any).stage_category || 'commercial') as string,
+      stage_phase: ((stage as any).stage_phase || 'sale') as string,
     });
     setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
