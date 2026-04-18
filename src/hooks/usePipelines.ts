@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+export type PipelineMode = 'sales' | 'operational' | 'hybrid' | 'support';
+export type PipelineScope = 'global' | 'restricted';
+
 export interface Pipeline {
   id: string;
   name: string;
@@ -13,6 +16,9 @@ export interface Pipeline {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  legal_entity_id: string | null;
+  pipeline_mode: PipelineMode;
+  pipeline_scope: PipelineScope;
 }
 
 export interface PipelineInsert {
@@ -21,6 +27,9 @@ export interface PipelineInsert {
   type?: 'sales' | 'post_sales' | 'support';
   is_default?: boolean;
   is_active?: boolean;
+  legal_entity_id?: string | null;
+  pipeline_mode?: PipelineMode;
+  pipeline_scope?: PipelineScope;
 }
 
 export interface PipelineUpdate extends Partial<PipelineInsert> {
