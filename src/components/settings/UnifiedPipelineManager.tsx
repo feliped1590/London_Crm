@@ -866,6 +866,8 @@ export function UnifiedPipelineManager() {
                       </p>
                     </div>
                   </div>
+
+                  <Collapsible open={showLegacyType} onOpenChange={setShowLegacyType}>
                     <CollapsibleTrigger asChild>
                       <button
                         type="button"
