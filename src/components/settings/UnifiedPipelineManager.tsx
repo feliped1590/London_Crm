@@ -654,8 +654,23 @@ export function UnifiedPipelineManager() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <Badge variant="outline">{typeLabels[pipeline.type]?.label || pipeline.type}</Badge>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Badge variant="outline" className="capitalize">
+                              {PIPELINE_MODE_OPTIONS.find(m => m.value === (pipeline as any).pipeline_mode)?.label || typeLabels[pipeline.type]?.label || pipeline.type}
+                            </Badge>
+                            {(pipeline as any).legal_entity_id ? (
+                              <Badge variant="secondary" className="text-xs gap-1">
+                                <Link2 className="h-3 w-3" />
+                                {legalEntities.find(e => e.id === (pipeline as any).legal_entity_id)?.name || 'Empresa'}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                                <Globe className="h-3 w-3" />
+                                Global
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1">
                             {!pipeline.is_default && pipeline.is_active && (
                               <Button
