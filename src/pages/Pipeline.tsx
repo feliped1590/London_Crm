@@ -357,6 +357,16 @@ export default function Pipeline() {
   };
 
   const executeSubmit = (cleanedFormData: Record<string, unknown>) => {
+    // Validação preventiva: pipeline deve estar entre os permitidos para o usuário/empresa ativa
+    const targetPipelineId = (cleanedFormData.pipeline_id as string) || currentPipelineId;
+    if (targetPipelineId && availablePipelines && availablePipelines.length > 0) {
+      const allowed = availablePipelines.some(p => p.id === targetPipelineId);
+      if (!allowed) {
+        toast.error('Pipeline não permitido para esta empresa');
+        return;
+      }
+    }
+
     if (editingDeal) {
       updateMutation.mutate({ id: editingDeal.id, ...cleanedFormData, custom_fields: customFieldsData as Json });
     } else {
