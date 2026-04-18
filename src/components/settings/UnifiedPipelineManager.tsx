@@ -157,8 +157,6 @@ export function UnifiedPipelineManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      toast.success('Funil atualizado!');
-      resetPipelineForm();
     },
     onError: () => toast.error('Erro ao atualizar funil'),
   });
