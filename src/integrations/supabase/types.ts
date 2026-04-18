@@ -8369,6 +8369,19 @@ export type Database = {
     }
     Functions: {
       admin_kill_session: { Args: { p_session_id: string }; Returns: boolean }
+      analyze_pipeline_consistency: {
+        Args: { p_pipeline_id: string }
+        Returns: {
+          severity: string
+          sort_order: number
+          stage_category: string
+          stage_id: string
+          stage_name: string
+          stage_phase: string
+          warning_code: string
+          warning_message: string
+        }[]
+      }
       approve_transfer_request: {
         Args: { p_request_id: string; p_review_note?: string }
         Returns: Json
