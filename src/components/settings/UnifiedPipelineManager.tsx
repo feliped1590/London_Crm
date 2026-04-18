@@ -493,21 +493,88 @@ export function UnifiedPipelineManager() {
                       rows={2}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="pipeline-type">Tipo *</Label>
-                    <Select
-                      value={pipelineFormData.type}
-                      onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, type: v as 'sales' | 'post_sales' | 'support' })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(typeLabels).map(([key, { label }]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="pipeline-mode">Modo do Funil *</Label>
+                      <Select
+                        value={pipelineFormData.pipeline_mode || 'sales'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_mode: v as PipelineMode })}
+                      >
+                        <SelectTrigger id="pipeline-mode">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PIPELINE_MODE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <div className="flex flex-col">
+                                <span>{opt.label}</span>
+                                <span className="text-xs text-muted-foreground">{opt.description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="pipeline-type">Tipo (legado)</Label>
+                      <Select
+                        value={pipelineFormData.type}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, type: v as 'sales' | 'post_sales' | 'support' })}
+                      >
+                        <SelectTrigger id="pipeline-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(typeLabels).map(([key, { label }]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="pipeline-legal-entity">Empresa Emissora</Label>
+                      <Select
+                        value={pipelineFormData.legal_entity_id || '__GLOBAL__'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, legal_entity_id: v === '__GLOBAL__' ? null : v, pipeline_scope: v === '__GLOBAL__' ? 'global' : 'restricted' })}
+                      >
+                        <SelectTrigger id="pipeline-legal-entity">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__GLOBAL__">
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-3 w-3" /> Todas (global)
+                            </div>
+                          </SelectItem>
+                          {legalEntities.map((le) => (
+                            <SelectItem key={le.id} value={le.id}>{le.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Negócios só poderão usar este funil se forem da mesma empresa.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="pipeline-scope">Escopo</Label>
+                      <Select
+                        value={pipelineFormData.pipeline_scope || 'global'}
+                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_scope: v as PipelineScope })}
+                        disabled={!pipelineFormData.legal_entity_id}
+                      >
+                        <SelectTrigger id="pipeline-scope">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PIPELINE_SCOPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-3">

@@ -112,7 +112,10 @@ export function usePipelines() {
         .insert({
           ...data,
           created_by: user?.id,
-        })
+          legal_entity_id: data.legal_entity_id ?? null,
+          pipeline_mode: data.pipeline_mode ?? 'sales',
+          pipeline_scope: data.pipeline_scope ?? 'global',
+        } as any)
         .select()
         .single();
       
