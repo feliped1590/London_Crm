@@ -71,6 +71,9 @@ export default function Pipeline() {
     if (autoSelectedPipelineId === onlyId) return;
     setSelectedPipelineId(onlyId);
     setAutoSelectedPipelineId(onlyId);
+    toast.info(`Pipeline "${availablePipelines[0].name}" selecionado automaticamente`, {
+      duration: 2500,
+    });
   }, [availablePipelines, selectedPipelineId, autoSelectedPipelineId]);
 
   // ── Reset: pipeline atual sumiu da lista (ex: trocou empresa ativa) ──
