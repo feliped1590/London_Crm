@@ -4909,6 +4909,42 @@ export type Database = {
         }
         Relationships: []
       }
+      pipeline_legal_entities: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          legal_entity_id: string
+          pipeline_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          legal_entity_id: string
+          pipeline_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          legal_entity_id?: string
+          pipeline_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_legal_entities_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_legal_entities_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stages: {
         Row: {
           allowed_roles: string[] | null
@@ -8823,6 +8859,7 @@ export type Database = {
         Args: { _module_key: string; _user_id: string }
         Returns: boolean
       }
+      has_pipeline_access: { Args: { _pipeline_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
