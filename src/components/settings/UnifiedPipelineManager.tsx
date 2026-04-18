@@ -1070,6 +1070,9 @@ export function UnifiedPipelineManager() {
                         </div>
                       </div>
                     </CardHeader>
+                    {!isUnassigned && pipeline?.id && (
+                      <PipelineConsistencyWarnings pipelineId={pipeline.id} />
+                    )}
                     <CardContent className="p-0">
                       <div className="divide-y">
                         {stages.map((stage) => {
