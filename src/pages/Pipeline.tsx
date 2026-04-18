@@ -491,7 +491,7 @@ export default function Pipeline() {
           <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
         </div>
         <div className="flex items-center gap-3">
-          <PipelineSelector value={selectedPipelineId} onChange={setSelectedPipelineId} />
+          <PipelineSelector value={selectedPipelineId} onChange={setSelectedPipelineId} legalEntityId={effectiveLegalEntityId} />
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Atualizar</span>
