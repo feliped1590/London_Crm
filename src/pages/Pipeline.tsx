@@ -239,17 +239,21 @@ export default function Pipeline() {
     const newDealCompanyId = searchParams.get('newDeal');
     if (newDealCompanyId && !isDialogOpen) {
       setEditingDeal(null);
+      const firstStageRow = stageRows[0];
       setFormData({
-        name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
+        name: '', value: 0,
+        stage: (firstStageRow?.stage ?? firstStageRow?.id ?? stages[0] ?? 'prospeccao') as DealStage,
+        pipeline_stage_id: firstStageRow?.id ?? null,
+        probability: 10,
         expected_close_date: '', company_id: newDealCompanyId, contact_id: null, notes: '',
         pipeline_id: currentPipelineId, legal_entity_id: effectiveLegalEntityId,
-      });
+      } as Partial<TablesInsert<'deals'>>);
       setCustomFieldsData({});
       setIsDialogOpen(true);
       searchParams.delete('newDeal');
       setSearchParams(searchParams, { replace: true });
     }
-  }, [searchParams, currentPipelineId, stages]);
+  }, [searchParams, currentPipelineId, stages, stageRows]);
 
   const [pendingDealId, setPendingDealId] = useState<string | null>(() => {
     const params = new URLSearchParams(window.location.search);
@@ -271,20 +275,29 @@ export default function Pipeline() {
 
   // ── Handlers ──────────────────────────────────────────────────────
   const resetForm = useCallback(() => {
+    const firstStageRow = stageRows[0];
     setFormData({
-      name: '', value: 0, stage: stages[0] || 'prospeccao', probability: 10,
+      name: '', value: 0,
+      stage: (firstStageRow?.stage ?? firstStageRow?.id ?? stages[0] ?? 'prospeccao') as DealStage,
+      pipeline_stage_id: firstStageRow?.id ?? null,
+      probability: 10,
       expected_close_date: '', company_id: null, contact_id: null, notes: '',
       legal_entity_id: effectiveLegalEntityId,
-    });
+    } as Partial<TablesInsert<'deals'>>);
     setCustomFieldsData({});
     setEditingDeal(null);
     setIsDialogOpen(false);
-  }, [stages, effectiveLegalEntityId]);
+  }, [stages, stageRows, effectiveLegalEntityId]);
 
   const handleEdit = useCallback((deal: Deal) => {
     setEditingDeal(deal);
+    // Resolve pipeline_stage_id from current data (may be null on legacy/orphaned deals)
+    const resolvedStageRow = (deal as any).pipeline_stage_id
+      ? stageRows.find(s => s.id === (deal as any).pipeline_stage_id)
+      : stageRows.find(s => s.stage === deal.stage) || stageRows.find(s => s.id === deal.stage);
     setFormData({
       name: deal.name, value: deal.value || 0, stage: deal.stage,
+      pipeline_stage_id: resolvedStageRow?.id ?? (deal as any).pipeline_stage_id ?? null,
       probability: deal.probability || 10, expected_close_date: deal.expected_close_date || '',
       company_id: deal.company_id, contact_id: deal.contact_id, notes: deal.notes || '',
       legal_entity_id: deal.legal_entity_id || effectiveLegalEntityId,
@@ -294,7 +307,7 @@ export default function Pipeline() {
         ? (deal.custom_fields as Record<string, unknown>) : {}
     );
     setIsDialogOpen(true);
-  }, [effectiveLegalEntityId]);
+  }, [effectiveLegalEntityId, stageRows]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -466,6 +479,7 @@ export default function Pipeline() {
             customFieldsData={customFieldsData}
             setCustomFieldsData={setCustomFieldsData}
             stages={stages}
+            stageRows={stageRows}
             stageConfig={stageConfig}
             companyOptions={companyOptions}
             contactOptions={contactOptions}
