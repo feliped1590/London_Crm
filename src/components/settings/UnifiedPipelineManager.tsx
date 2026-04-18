@@ -275,46 +275,25 @@ export function UnifiedPipelineManager() {
 
   const handlePipelineSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Escopo é derivado: 0 = global, 1+ = restricted
-    const computedScope: PipelineScope = selectedEntityIds.length === 0 ? 'global' : 'restricted';
-
     try {
-      if (editingPipeline) {
-        await new Promise<void>((resolve, reject) => {
-          updatePipelineAccessMutation.mutate({
-            id: editingPipeline.id,
-            name: pipelineFormData.name,
-            description: pipelineFormData.description,
-            type: pipelineFormData.type,
-            is_active: pipelineFormData.is_active,
-            allowed_roles: pipelineFormData.allowed_roles?.length ? pipelineFormData.allowed_roles : null,
-            pipeline_mode: pipelineFormData.pipeline_mode,
-            pipeline_scope: computedScope,
-          } as any, { onSuccess: () => resolve(), onError: (err) => reject(err) });
-        });
-        await setPipelineLegalEntities.mutateAsync({
-          pipelineId: editingPipeline.id,
-          legalEntityIds: selectedEntityIds,
-        });
-        toast.success('Funil atualizado!');
-        resetPipelineForm();
-      } else {
-        const created = await createPipeline.mutateAsync({
-          ...pipelineFormData,
-          pipeline_scope: computedScope,
-          legal_entity_id: null, // Fonte de verdade é a tabela N:N
-        });
-        if (created?.id) {
-          await setPipelineLegalEntities.mutateAsync({
-            pipelineId: created.id,
-            legalEntityIds: selectedEntityIds,
-          });
-        }
-        resetPipelineForm();
-      }
-    } catch (err) {
+      const { data, error } = await supabase.rpc('save_pipeline_with_entities' as any, {
+        _pipeline_id: editingPipeline?.id ?? null,
+        _name: pipelineFormData.name,
+        _description: pipelineFormData.description ?? '',
+        _type: pipelineFormData.type ?? 'sales',
+        _is_active: pipelineFormData.is_active ?? true,
+        _allowed_roles: pipelineFormData.allowed_roles ?? [],
+        _pipeline_mode: pipelineFormData.pipeline_mode ?? 'sales',
+        _legal_entity_ids: selectedEntityIds,
+      });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_legal_entities_map'] });
+      toast.success(editingPipeline ? 'Funil atualizado!' : 'Funil criado!');
+      resetPipelineForm();
+    } catch (err: any) {
       console.error('Pipeline submit error:', err);
-      toast.error('Erro ao salvar funil');
+      toast.error(err?.message || 'Erro ao salvar funil');
     }
   };
 
