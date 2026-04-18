@@ -36,9 +36,10 @@ export interface PipelineUpdate extends Partial<PipelineInsert> {
   id: string;
 }
 
-export function usePipelines() {
+export function usePipelines(opts?: { legalEntityId?: string | null }) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const legalEntityId = opts?.legalEntityId ?? null;
 
   // Buscar o role do usuário atual
   const { data: userRole } = useQuery({
@@ -57,7 +58,7 @@ export function usePipelines() {
   });
 
   const { data: pipelines, isLoading, error } = useQuery({
-    queryKey: ['pipelines', userRole],
+    queryKey: ['pipelines', userRole, legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pipelines')
@@ -68,20 +69,25 @@ export function usePipelines() {
       
       if (error) throw error;
       
-      // Filtrar baseado no role do usuário
+      // Filtrar baseado no role do usuário e legal_entity ativa
       const allPipelines = data as (Pipeline & { allowed_roles?: string[] | null })[];
       
-      if (!userRole) return allPipelines as Pipeline[];
+      let filtered = allPipelines;
       
-      // Desenvolvedores e admins têm acesso a todos os pipelines
-      if (userRole === 'admin' || userRole === 'desenvolvedor') {
-        return allPipelines as Pipeline[];
+      // Filtro por legal_entity: pipelines globais (NULL) + pipelines da entity ativa
+      if (legalEntityId) {
+        filtered = filtered.filter(p => p.legal_entity_id === null || p.legal_entity_id === legalEntityId);
       }
       
-      return allPipelines.filter(p => {
-        // Se allowed_roles é null ou vazio, todos podem acessar
+      if (!userRole) return filtered as Pipeline[];
+      
+      // Desenvolvedores e admins têm acesso a todos os pipelines (mas ainda respeitam legal_entity)
+      if (userRole === 'admin' || userRole === 'desenvolvedor') {
+        return filtered as Pipeline[];
+      }
+      
+      return filtered.filter(p => {
         if (!p.allowed_roles || p.allowed_roles.length === 0) return true;
-        // Senão, verifica se o role do usuário está na lista
         return p.allowed_roles.includes(userRole);
       }) as Pipeline[];
     },
