@@ -566,48 +566,61 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="pipeline-legal-entity">Empresa Emissora</Label>
-                      <Select
-                        value={pipelineFormData.legal_entity_id || '__GLOBAL__'}
-                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, legal_entity_id: v === '__GLOBAL__' ? null : v, pipeline_scope: v === '__GLOBAL__' ? 'global' : 'restricted' })}
-                      >
-                        <SelectTrigger id="pipeline-legal-entity">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__GLOBAL__">
-                            <div className="flex items-center gap-2">
-                              <Globe className="h-3 w-3" /> Todas (global)
-                            </div>
-                          </SelectItem>
-                          {legalEntities.map((le) => (
-                            <SelectItem key={le.id} value={le.id}>{le.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Negócios só poderão usar este funil se forem da mesma empresa.
-                      </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Empresas Emissoras</Label>
+                      {selectedEntityIds.length === 0 ? (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Globe className="h-3 w-3" /> Global (todas as empresas)
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1 text-xs">
+                          <Link2 className="h-3 w-3" /> Restrito a {selectedEntityIds.length} {selectedEntityIds.length === 1 ? 'empresa' : 'empresas'}
+                        </Badge>
+                      )}
                     </div>
-                    <div>
-                      <Label htmlFor="pipeline-scope">Escopo</Label>
-                      <Select
-                        value={pipelineFormData.pipeline_scope || 'global'}
-                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_scope: v as PipelineScope })}
-                        disabled={!pipelineFormData.legal_entity_id}
-                      >
-                        <SelectTrigger id="pipeline-scope">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PIPELINE_SCOPE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Marque as empresas que terão acesso a este funil. Sem seleção = funil global (visível para todas).
+                    </p>
+                    <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
+                      {legalEntities.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Nenhuma empresa cadastrada.</p>
+                      ) : (
+                        legalEntities.map((le) => (
+                          <div key={le.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`pipeline-le-${le.id}`}
+                              checked={selectedEntityIds.includes(le.id)}
+                              onCheckedChange={() => toggleEntitySelection(le.id)}
+                            />
+                            <Label htmlFor={`pipeline-le-${le.id}`} className="cursor-pointer font-normal text-sm">
+                              {le.name}
+                            </Label>
+                          </div>
+                        ))
+                      )}
                     </div>
+                    {selectedEntityIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {selectedEntityIds.map((eid) => {
+                          const e = legalEntities.find(x => x.id === eid);
+                          if (!e) return null;
+                          return (
+                            <Badge key={eid} variant="secondary" className="text-xs gap-1">
+                              {e.name}
+                              <button
+                                type="button"
+                                className="ml-1 hover:text-destructive"
+                                onClick={() => toggleEntitySelection(eid)}
+                                aria-label={`Remover ${e.name}`}
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
