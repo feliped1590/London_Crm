@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
+import { PipelineConsistencyWarnings } from './PipelineConsistencyWarnings';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
@@ -1069,6 +1070,9 @@ export function UnifiedPipelineManager() {
                         </div>
                       </div>
                     </CardHeader>
+                    {!isUnassigned && pipeline?.id && (
+                      <PipelineConsistencyWarnings pipelineId={pipeline.id} />
+                    )}
                     <CardContent className="p-0">
                       <div className="divide-y">
                         {stages.map((stage) => {
