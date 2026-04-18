@@ -79,12 +79,35 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Mapa N:N pipeline → [legal_entity_id]
+  const { data: pipelineEntitiesMap = {} } = useQuery({
+    queryKey: ['pipeline_legal_entities_map', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipeline_legal_entities' as any)
+        .select('pipeline_id, legal_entity_id');
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      for (const row of (data as any[]) || []) {
+        if (!map[row.pipeline_id]) map[row.pipeline_id] = [];
+        map[row.pipeline_id].push(row.legal_entity_id);
+      }
+      return map;
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // QueryKey robusta: inclui IDs concatenados (não apenas length) para invalidar
   // corretamente quando os vínculos mudam mas a quantidade permanece igual.
   const linksKey = [...userLinks].sort().join(',');
+  const mapKey = Object.keys(pipelineEntitiesMap)
+    .sort()
+    .map(k => `${k}:${[...pipelineEntitiesMap[k]].sort().join('|')}`)
+    .join(';');
 
   const { data: pipelines, isLoading, error } = useQuery({
-    queryKey: ['pipelines', userRole, legalEntityId, linksKey],
+    queryKey: ['pipelines', userRole, legalEntityId, linksKey, mapKey],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pipelines')
@@ -102,15 +125,21 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
       const allowAllEntities = isPrivileged || userLinks.length === 0;
 
       let filtered = allPipelines.filter(p => {
-        // Pipelines globais sempre visíveis
-        if (p.legal_entity_id === null) return true;
+        // N:N: lê vínculos do mapa (fallback seguro para array vazio)
+        const entities = pipelineEntitiesMap[p.id] ?? [];
+        const isGlobal = entities.length === 0;
+        // Pipeline global sempre visível
+        if (isGlobal) return true;
         if (allowAllEntities) return true;
-        return allowedEntityIds.has(p.legal_entity_id);
+        return entities.some(eid => allowedEntityIds.has(eid));
       });
 
-      // Empresa ativa selecionada: restringir a globais + entidade ativa
+      // Empresa ativa selecionada: restringir a globais + entidades vinculadas
       if (legalEntityId) {
-        filtered = filtered.filter(p => p.legal_entity_id === null || p.legal_entity_id === legalEntityId);
+        filtered = filtered.filter(p => {
+          const entities = pipelineEntitiesMap[p.id] ?? [];
+          return entities.length === 0 || entities.includes(legalEntityId);
+        });
       }
       
       if (!userRole) return filtered as Pipeline[];
@@ -123,6 +152,9 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
     },
     enabled: !!user?.id,
   });
+
+  const getPipelineEntities = (pipelineId: string): string[] =>
+    pipelineEntitiesMap[pipelineId] ?? [];
 
   const { data: allPipelines } = useQuery({
     queryKey: ['pipelines', 'all'],
