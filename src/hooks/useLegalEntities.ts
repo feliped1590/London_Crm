@@ -92,9 +92,14 @@ export function useLegalEntities() {
   })();
 
   const activeLegalEntityId = profile?.active_legal_entity_id ?? null;
-  const activeLegalEntity = allEntities.find(e => e.id === activeLegalEntityId) ?? null;
-  const defaultEntity = allEntities.find(e => (e as any).is_headquarters === true) ?? null;
-  const effectiveEntity = activeLegalEntity ?? defaultEntity ?? allEntities[0] ?? null;
+  // CRÍTICO: só considera ativa se o usuário tem acesso a ela
+  const activeLegalEntity =
+    accessibleEntities.find(e => e.id === activeLegalEntityId) ?? null;
+  // defaultEntity também precisa ser acessível
+  const defaultEntity =
+    accessibleEntities.find(e => (e as any).is_headquarters === true) ?? null;
+  const effectiveEntity =
+    activeLegalEntity ?? defaultEntity ?? accessibleEntities[0] ?? null;
   const effectiveEntityId = effectiveEntity?.id ?? null;
 
   // Mutation to switch active legal entity
