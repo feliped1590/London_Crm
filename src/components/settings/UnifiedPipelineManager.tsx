@@ -32,6 +32,31 @@ const typeLabels: Record<string, { label: string; icon: typeof Target }> = {
   support: { label: 'Suporte', icon: Headphones },
 };
 
+const PIPELINE_MODE_OPTIONS: { value: PipelineMode; label: string; description: string }[] = [
+  { value: 'sales', label: 'Vendas', description: 'Funil comercial puro (prospecção → fechamento)' },
+  { value: 'operational', label: 'Operacional', description: 'Pós-venda, produção, faturamento, entrega' },
+  { value: 'hybrid', label: 'Híbrido', description: 'Combina etapas comerciais e operacionais' },
+  { value: 'support', label: 'Suporte', description: 'Atendimento, qualidade, RNC' },
+];
+
+const PIPELINE_SCOPE_OPTIONS: { value: PipelineScope; label: string; description: string }[] = [
+  { value: 'global', label: 'Global', description: 'Acessível a todas as empresas emissoras' },
+  { value: 'restricted', label: 'Restrito', description: 'Apenas a empresa emissora vinculada' },
+];
+
+const STAGE_CATEGORY_OPTIONS: { value: string; label: string; tone: string }[] = [
+  { value: 'commercial', label: 'Comercial', tone: 'bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300' },
+  { value: 'operational', label: 'Operacional', tone: 'bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300' },
+  { value: 'loss', label: 'Perda', tone: 'bg-destructive/10 text-destructive border-destructive/30' },
+  { value: 'quality', label: 'Qualidade', tone: 'bg-purple-500/10 text-purple-700 border-purple-500/30 dark:text-purple-300' },
+];
+
+const STAGE_PHASE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'pre_sale', label: 'Pré-venda' },
+  { value: 'sale', label: 'Venda' },
+  { value: 'post_sale', label: 'Pós-venda' },
+];
+
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrador' },
   { value: 'vendedor', label: 'Vendedor' },
@@ -55,6 +80,7 @@ export function UnifiedPipelineManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline } = usePipelines();
+  const { allEntities: legalEntities } = useLegalEntities();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
   
@@ -67,6 +93,9 @@ export function UnifiedPipelineManager() {
     type: 'sales',
     is_active: true,
     allowed_roles: [],
+    legal_entity_id: null,
+    pipeline_mode: 'sales',
+    pipeline_scope: 'global',
   });
 
   // Stage form state
@@ -84,6 +113,8 @@ export function UnifiedPipelineManager() {
     sla_hours: number | null;
     sla_warning_hours: number | null;
     allowed_roles: string[];
+    stage_category: string;
+    stage_phase: string;
   }>({
     name: '',
     color: '#6366f1',
@@ -95,6 +126,8 @@ export function UnifiedPipelineManager() {
     sla_hours: null,
     sla_warning_hours: null,
     allowed_roles: [],
+    stage_category: 'commercial',
+    stage_phase: 'sale',
   });
 
   // Fetch pipeline stages with pipeline info
