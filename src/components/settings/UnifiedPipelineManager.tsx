@@ -80,7 +80,7 @@ const DEAL_STAGES: { value: string; label: string }[] = [
 export function UnifiedPipelineManager() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline } = usePipelines();
+  const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline, getPipelineEntities, setPipelineLegalEntities } = usePipelines();
   const { allEntities: legalEntities } = useLegalEntities();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
@@ -88,6 +88,7 @@ export function UnifiedPipelineManager() {
   // Pipeline form state
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [editingPipeline, setEditingPipeline] = useState<Pipeline | null>(null);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [pipelineFormData, setPipelineFormData] = useState<PipelineInsert & { allowed_roles?: string[] }>({
     name: '',
     description: '',
@@ -156,8 +157,6 @@ export function UnifiedPipelineManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pipelines'] });
-      toast.success('Funil atualizado!');
-      resetPipelineForm();
     },
     onError: () => toast.error('Erro ao atualizar funil'),
   });
@@ -246,12 +245,15 @@ export function UnifiedPipelineManager() {
       pipeline_mode: 'sales',
       pipeline_scope: 'global',
     });
+    setSelectedEntityIds([]);
     setEditingPipeline(null);
     setIsPipelineDialogOpen(false);
   };
 
   const handleEditPipeline = (pipeline: Pipeline & { allowed_roles?: string[] | null }) => {
     setEditingPipeline(pipeline);
+    const entities = getPipelineEntities(pipeline.id);
+    setSelectedEntityIds(entities);
     setPipelineFormData({
       name: pipeline.name,
       description: pipeline.description || '',
@@ -260,29 +262,59 @@ export function UnifiedPipelineManager() {
       allowed_roles: pipeline.allowed_roles || [],
       legal_entity_id: pipeline.legal_entity_id ?? null,
       pipeline_mode: (pipeline.pipeline_mode || 'sales') as PipelineMode,
-      pipeline_scope: (pipeline.pipeline_scope || 'global') as PipelineScope,
+      pipeline_scope: (entities.length === 0 ? 'global' : 'restricted') as PipelineScope,
     });
     setIsPipelineDialogOpen(true);
   };
 
-  const handlePipelineSubmit = (e: React.FormEvent) => {
+  const toggleEntitySelection = (entityId: string) => {
+    setSelectedEntityIds(prev =>
+      prev.includes(entityId) ? prev.filter(id => id !== entityId) : [...prev, entityId]
+    );
+  };
+
+  const handlePipelineSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingPipeline) {
-      updatePipelineAccessMutation.mutate({
-        id: editingPipeline.id,
-        name: pipelineFormData.name,
-        description: pipelineFormData.description,
-        type: pipelineFormData.type,
-        is_active: pipelineFormData.is_active,
-        allowed_roles: pipelineFormData.allowed_roles?.length ? pipelineFormData.allowed_roles : null,
-        legal_entity_id: pipelineFormData.legal_entity_id ?? null,
-        pipeline_mode: pipelineFormData.pipeline_mode,
-        pipeline_scope: pipelineFormData.pipeline_scope,
-      } as any);
-    } else {
-      createPipeline.mutate(pipelineFormData, {
-        onSuccess: () => resetPipelineForm(),
-      });
+    // Escopo é derivado: 0 = global, 1+ = restricted
+    const computedScope: PipelineScope = selectedEntityIds.length === 0 ? 'global' : 'restricted';
+
+    try {
+      if (editingPipeline) {
+        await new Promise<void>((resolve, reject) => {
+          updatePipelineAccessMutation.mutate({
+            id: editingPipeline.id,
+            name: pipelineFormData.name,
+            description: pipelineFormData.description,
+            type: pipelineFormData.type,
+            is_active: pipelineFormData.is_active,
+            allowed_roles: pipelineFormData.allowed_roles?.length ? pipelineFormData.allowed_roles : null,
+            pipeline_mode: pipelineFormData.pipeline_mode,
+            pipeline_scope: computedScope,
+          } as any, { onSuccess: () => resolve(), onError: (err) => reject(err) });
+        });
+        await setPipelineLegalEntities.mutateAsync({
+          pipelineId: editingPipeline.id,
+          legalEntityIds: selectedEntityIds,
+        });
+        toast.success('Funil atualizado!');
+        resetPipelineForm();
+      } else {
+        const created = await createPipeline.mutateAsync({
+          ...pipelineFormData,
+          pipeline_scope: computedScope,
+          legal_entity_id: null, // Fonte de verdade é a tabela N:N
+        });
+        if (created?.id) {
+          await setPipelineLegalEntities.mutateAsync({
+            pipelineId: created.id,
+            legalEntityIds: selectedEntityIds,
+          });
+        }
+        resetPipelineForm();
+      }
+    } catch (err) {
+      console.error('Pipeline submit error:', err);
+      toast.error('Erro ao salvar funil');
     }
   };
 
@@ -534,48 +566,61 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="pipeline-legal-entity">Empresa Emissora</Label>
-                      <Select
-                        value={pipelineFormData.legal_entity_id || '__GLOBAL__'}
-                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, legal_entity_id: v === '__GLOBAL__' ? null : v, pipeline_scope: v === '__GLOBAL__' ? 'global' : 'restricted' })}
-                      >
-                        <SelectTrigger id="pipeline-legal-entity">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__GLOBAL__">
-                            <div className="flex items-center gap-2">
-                              <Globe className="h-3 w-3" /> Todas (global)
-                            </div>
-                          </SelectItem>
-                          {legalEntities.map((le) => (
-                            <SelectItem key={le.id} value={le.id}>{le.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Negócios só poderão usar este funil se forem da mesma empresa.
-                      </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Empresas Emissoras</Label>
+                      {selectedEntityIds.length === 0 ? (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Globe className="h-3 w-3" /> Global (todas as empresas)
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="gap-1 text-xs">
+                          <Link2 className="h-3 w-3" /> Restrito a {selectedEntityIds.length} {selectedEntityIds.length === 1 ? 'empresa' : 'empresas'}
+                        </Badge>
+                      )}
                     </div>
-                    <div>
-                      <Label htmlFor="pipeline-scope">Escopo</Label>
-                      <Select
-                        value={pipelineFormData.pipeline_scope || 'global'}
-                        onValueChange={(v) => setPipelineFormData({ ...pipelineFormData, pipeline_scope: v as PipelineScope })}
-                        disabled={!pipelineFormData.legal_entity_id}
-                      >
-                        <SelectTrigger id="pipeline-scope">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PIPELINE_SCOPE_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Marque as empresas que terão acesso a este funil. Sem seleção = funil global (visível para todas).
+                    </p>
+                    <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
+                      {legalEntities.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">Nenhuma empresa cadastrada.</p>
+                      ) : (
+                        legalEntities.map((le) => (
+                          <div key={le.id} className="flex items-center gap-2">
+                            <Checkbox
+                              id={`pipeline-le-${le.id}`}
+                              checked={selectedEntityIds.includes(le.id)}
+                              onCheckedChange={() => toggleEntitySelection(le.id)}
+                            />
+                            <Label htmlFor={`pipeline-le-${le.id}`} className="cursor-pointer font-normal text-sm">
+                              {le.name}
+                            </Label>
+                          </div>
+                        ))
+                      )}
                     </div>
+                    {selectedEntityIds.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {selectedEntityIds.map((eid) => {
+                          const e = legalEntities.find(x => x.id === eid);
+                          if (!e) return null;
+                          return (
+                            <Badge key={eid} variant="secondary" className="text-xs gap-1">
+                              {e.name}
+                              <button
+                                type="button"
+                                className="ml-1 hover:text-destructive"
+                                onClick={() => toggleEntitySelection(eid)}
+                                aria-label={`Remover ${e.name}`}
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -660,17 +705,32 @@ export function UnifiedPipelineManager() {
                             <Badge variant="outline" className="capitalize">
                               {PIPELINE_MODE_OPTIONS.find(m => m.value === (pipeline as any).pipeline_mode)?.label || typeLabels[pipeline.type]?.label || pipeline.type}
                             </Badge>
-                            {(pipeline as any).legal_entity_id ? (
-                              <Badge variant="secondary" className="text-xs gap-1">
-                                <Link2 className="h-3 w-3" />
-                                {legalEntities.find(e => e.id === (pipeline as any).legal_entity_id)?.name || 'Empresa'}
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
-                                <Globe className="h-3 w-3" />
-                                Global
-                              </Badge>
-                            )}
+                            {(() => {
+                              const linked = getPipelineEntities(pipeline.id);
+                              if (linked.length === 0) {
+                                return (
+                                  <Badge variant="outline" className="text-xs gap-1 text-muted-foreground">
+                                    <Globe className="h-3 w-3" />
+                                    Global
+                                  </Badge>
+                                );
+                              }
+                              if (linked.length === 1) {
+                                const e = legalEntities.find(x => x.id === linked[0]);
+                                return (
+                                  <Badge variant="secondary" className="text-xs gap-1">
+                                    <Link2 className="h-3 w-3" />
+                                    {e?.name || 'Empresa'}
+                                  </Badge>
+                                );
+                              }
+                              return (
+                                <Badge variant="secondary" className="text-xs gap-1" title={linked.map(id => legalEntities.find(e => e.id === id)?.name).filter(Boolean).join(', ')}>
+                                  <Link2 className="h-3 w-3" />
+                                  {linked.length} empresas
+                                </Badge>
+                              );
+                            })()}
                           </div>
                           <div className="flex items-center gap-1">
                             {!pipeline.is_default && pipeline.is_active && (
