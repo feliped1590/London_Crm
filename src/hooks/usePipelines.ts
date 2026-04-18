@@ -269,6 +269,37 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
     },
   });
 
+  // Substitui o conjunto de legal_entities vinculadas ao pipeline (delete + insert)
+  const setPipelineLegalEntities = useMutation({
+    mutationFn: async ({ pipelineId, legalEntityIds }: { pipelineId: string; legalEntityIds: string[] }) => {
+      const { error: delErr } = await supabase
+        .from('pipeline_legal_entities' as any)
+        .delete()
+        .eq('pipeline_id', pipelineId);
+      if (delErr) throw delErr;
+
+      if (legalEntityIds.length > 0) {
+        const rows = legalEntityIds.map(eid => ({
+          pipeline_id: pipelineId,
+          legal_entity_id: eid,
+          created_by: user?.id ?? null,
+        }));
+        const { error: insErr } = await supabase
+          .from('pipeline_legal_entities' as any)
+          .insert(rows);
+        if (insErr) throw insErr;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pipelines'] });
+      queryClient.invalidateQueries({ queryKey: ['pipeline_legal_entities_map'] });
+    },
+    onError: (e) => {
+      console.error('Error setting pipeline legal entities:', e);
+      toast.error('Erro ao salvar empresas do funil');
+    },
+  });
+
   return {
     pipelines,
     allPipelines,
@@ -279,5 +310,8 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
     updatePipeline,
     deletePipeline,
     setDefaultPipeline,
+    pipelineEntitiesMap,
+    getPipelineEntities,
+    setPipelineLegalEntities,
   };
 }
