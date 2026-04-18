@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
+import { PipelineConsistencyWarnings } from './PipelineConsistencyWarnings';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
