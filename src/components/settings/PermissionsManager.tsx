@@ -5,37 +5,18 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield, Users, Headphones } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import {
+  type AppRole,
+  EDITABLE_PERMISSION_ROLES,
+  getRoleDefinition,
+} from '@/lib/roles';
 
 type SystemModule = Tables<'system_modules'>;
 type RoleModulePermission = Tables<'role_module_permissions'>;
 
-type AppRole = 'admin' | 'vendedor' | 'atendente';
 type AccessLevel = 'restrito' | 'total';
-
-const roleConfig: Record<AppRole, { label: string; icon: React.ComponentType<{ className?: string }>; description: string }> = {
-  admin: { 
-    label: 'Administrador', 
-    icon: Shield, 
-    description: 'Acesso total a todos os módulos (não configurável)' 
-  },
-  vendedor: { 
-    label: 'Vendedor', 
-    icon: Users, 
-    description: 'Foco em vendas, pipeline e relacionamento com clientes' 
-  },
-  atendente: { 
-    label: 'Atendente', 
-    icon: Headphones, 
-    description: 'Foco em atendimento e suporte via WhatsApp' 
-  },
-};
-
-const accessTypeLabels: Record<AccessLevel, string> = {
-  restrito: 'Restrito',
-  total: 'Total',
-};
 
 export function PermissionsManager() {
   const queryClient = useQueryClient();
@@ -65,20 +46,19 @@ export function PermissionsManager() {
   });
 
   const updatePermissionMutation = useMutation({
-    mutationFn: async ({ 
-      role, 
-      moduleId, 
-      canAccess, 
-      accessType 
-    }: { 
-      role: AppRole; 
-      moduleId: string; 
-      canAccess: boolean; 
+    mutationFn: async ({
+      role,
+      moduleId,
+      canAccess,
+      accessType,
+    }: {
+      role: AppRole;
+      moduleId: string;
+      canAccess: boolean;
       accessType: AccessLevel;
     }) => {
-      // Check if permission exists
       const existing = permissions?.find(p => p.role === role && p.module_id === moduleId);
-      
+
       if (existing) {
         const { error } = await supabase
           .from('role_module_permissions')
@@ -133,7 +113,7 @@ export function PermissionsManager() {
     );
   }
 
-  const editableRoles: AppRole[] = ['vendedor', 'atendente'];
+  const adminConfig = getRoleDefinition('admin');
 
   return (
     <div className="space-y-6">
@@ -145,26 +125,28 @@ export function PermissionsManager() {
       </div>
 
       {/* Admin info card */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-primary" />
+      {adminConfig && (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{adminConfig.label}</CardTitle>
+                <CardDescription>{adminConfig.description}</CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">{roleConfig.admin.label}</CardTitle>
-              <CardDescription>{roleConfig.admin.description}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+          </CardHeader>
+        </Card>
+      )}
 
       {/* Editable roles */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {editableRoles.map((role) => {
-          const config = roleConfig[role];
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        {EDITABLE_PERMISSION_ROLES.map((config) => {
           const RoleIcon = config.icon;
-          
+          const role = config.value;
+
           return (
             <Card key={role}>
               <CardHeader className="pb-3">
@@ -184,7 +166,7 @@ export function PermissionsManager() {
                     const perm = getPermission(role, module.id);
                     const canAccess = perm?.can_access ?? false;
                     const accessType = (perm?.access_type as AccessLevel) || 'restrito';
-                    
+
                     return (
                       <div
                         key={module.id}
@@ -201,7 +183,7 @@ export function PermissionsManager() {
                             <p className="text-xs text-muted-foreground">{module.path}</p>
                           </div>
                         </div>
-                        
+
                         {canAccess && (
                           <Select
                             value={accessType}
@@ -225,7 +207,7 @@ export function PermissionsManager() {
                             </SelectContent>
                           </Select>
                         )}
-                        
+
                         {!canAccess && (
                           <Badge variant="outline" className="text-muted-foreground">
                             Sem acesso

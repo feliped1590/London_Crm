@@ -113,6 +113,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate role against allowed app_role enum values
+    const ASSIGNABLE_ROLES = [
+      'admin',
+      'vendedor',
+      'atendente',
+      'financeiro',
+      'faturamento',
+      'logistica',
+      'qualidade',
+    ];
+    if (role && !ASSIGNABLE_ROLES.includes(role)) {
+      return new Response(
+        JSON.stringify({ error: `Perfil inválido: ${role}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('Creating user with email:', email);
 
     // Create the user using admin API

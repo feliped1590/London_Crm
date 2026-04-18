@@ -48,7 +48,7 @@ type CustomField = Tables<'custom_fields'>;
 type PipelineStage = Tables<'pipeline_stages'>;
 type CustomFieldEntity = 'company' | 'contact' | 'deal';
 type CustomFieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'email' | 'phone' | 'currency';
-type AppRole = 'admin' | 'vendedor' | 'atendente';
+import { type AppRole, ASSIGNABLE_ROLES, ROLE_LABELS } from '@/lib/roles';
 
 const fieldTypeLabels: Record<CustomFieldType, string> = {
   text: 'Texto',
@@ -69,11 +69,7 @@ const entityLabels: Record<CustomFieldEntity, string> = {
   deal: 'Negócios',
 };
 
-const roleLabels: Record<AppRole, string> = {
-  admin: 'Administrador',
-  vendedor: 'Vendedor',
-  atendente: 'Atendente',
-};
+const roleLabels: Record<AppRole, string> = ROLE_LABELS;
 
 // --- Edit User Form with CNPJ linking ---
 function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSubmit, onCancel, isPending }: {
@@ -215,24 +211,17 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="atendente">
-              <div className="flex items-center gap-2">
-                <Headphones className="h-4 w-4" />
-                Atendente
-              </div>
-            </SelectItem>
-            <SelectItem value="vendedor">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Vendedor
-              </div>
-            </SelectItem>
-            <SelectItem value="admin">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Administrador
-              </div>
-            </SelectItem>
+            {ASSIGNABLE_ROLES.map((r) => {
+              const Icon = r.icon;
+              return (
+                <SelectItem key={r.value} value={r.value}>
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-4 w-4" />
+                    {r.label}
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -956,24 +945,17 @@ export default function Settings() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="atendente">
-                                <div className="flex items-center gap-2">
-                                  <Headphones className="h-4 w-4" />
-                                  Atendente
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="vendedor">
-                                <div className="flex items-center gap-2">
-                                  <Users className="h-4 w-4" />
-                                  Vendedor
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="admin">
-                                <div className="flex items-center gap-2">
-                                  <Shield className="h-4 w-4" />
-                                  Administrador
-                                </div>
-                              </SelectItem>
+                              {ASSIGNABLE_ROLES.map((r) => {
+                                const Icon = r.icon;
+                                return (
+                                  <SelectItem key={r.value} value={r.value}>
+                                    <div className="flex items-center gap-2">
+                                      <Icon className="h-4 w-4" />
+                                      {r.label}
+                                    </div>
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                           <p className="text-xs text-muted-foreground mt-1">
