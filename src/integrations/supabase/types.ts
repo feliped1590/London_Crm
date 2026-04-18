@@ -8952,6 +8952,11 @@ export type Database = {
         Returns: Json
       }
       unlock_order: { Args: { p_order_id: string }; Returns: Json }
+      user_has_legal_entity_access: {
+        Args: { _legal_entity_id: string }
+        Returns: boolean
+      }
+      user_has_no_legal_entity_links: { Args: never; Returns: boolean }
       user_has_sales_rep_access: {
         Args: { p_sales_rep_id: string; p_user_id: string }
         Returns: boolean
