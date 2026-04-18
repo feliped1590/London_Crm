@@ -1,65 +1,83 @@
 
 
-## Diagnóstico: Deal sumiu após criação
+## Diagnóstico do desalinhamento
 
-### O que aconteceu com o "Teste pipeline"
+**No banco** o enum `app_role` tem 8 valores: `admin, vendedor, atendente, desenvolvedor, financeiro, faturamento, logistica, qualidade`.
 
-Encontrei o deal `ee461df6...` no banco. Ele foi salvo com:
-- `pipeline_id` = pipeline "Vendas" ✅
-- `stage` = `"36bbd947-0625-44e1-af96-9cb7b9d660ad"` ❌ (é um UUID, deveria ser `"prospeccao"`)
-- `pipeline_stage_id` = `NULL` ❌
+**Onde os 4 perfis novos JÁ aparecem:**
+- Modal "Editar Etapa" → checkboxes de `allowed_roles` (Vendedor, Atendente, Financeiro, Faturamento, Logística, Qualidade) ✅
+- `UnifiedPipelineManager.tsx` → constante `ROLE_OPTIONS` com 7 perfis ✅
 
-A etapa "Prospecção" do pipeline "Vendas" tem `stage = NULL` na tabela `pipeline_stages` (apenas `id` UUID). Já as outras etapas (Qualificação, Proposta etc.) têm `stage = "qualificacao"`, `"proposta"` etc.
+**Onde NÃO aparecem (desalinhamento):**
+1. **Modal "Criar Novo Usuário"** (`Settings.tsx`) → só tem Atendente, Vendedor, Administrador
+2. **Modal "Editar Usuário"** (`Settings.tsx` → `EditUserForm`) → mesmo problema
+3. **Tela "Permissões por Módulo"** (`PermissionsManager.tsx`) → só renderiza cards para `vendedor` e `atendente`
+4. **Type `AppRole`** está duplicado e desatualizado em `Settings.tsx` (linha 51) e `PermissionsManager.tsx` (linha 14) como `'admin' | 'vendedor' | 'atendente'`
+5. **`create-user` edge function** assume default `vendedor` mas não valida lista expandida
 
-### Causa raiz
+**Consequência prática:** É impossível criar um usuário "Financeiro", "Faturamento", "Logística" ou "Qualidade" pela UI, então os checkboxes de etapa para esses perfis ficam inúteis. E para os perfis que existem, não há configuração de acesso a módulos definida.
 
-Em `usePipelineData.ts:125`, a lista `stages` exposta para o form usa fallback:
-```ts
-stageRows.map(s => s.stage ?? s.id)
+---
+
+## Plano de implementação
+
+### 1. Centralizar definição de roles
+Criar **`src/lib/roles.ts`** como fonte única de verdade:
+```typescript
+export type AppRole = 'admin' | 'vendedor' | 'atendente' | 'desenvolvedor' 
+                    | 'financeiro' | 'faturamento' | 'logistica' | 'qualidade';
+
+export const ROLE_DEFINITIONS: { value: AppRole; label: string; icon: string; description: string; assignable: boolean }[] = [
+  { value: 'admin',        label: 'Administrador', ...,  assignable: true  },
+  { value: 'vendedor',     label: 'Vendedor', ...,       assignable: true  },
+  { value: 'atendente',    label: 'Atendente', ...,      assignable: true  },
+  { value: 'financeiro',   label: 'Financeiro', ...,     assignable: true  },
+  { value: 'faturamento',  label: 'Faturamento', ...,    assignable: true  },
+  { value: 'logistica',    label: 'Logística', ...,      assignable: true  },
+  { value: 'qualidade',    label: 'Qualidade', ...,      assignable: true  },
+  { value: 'desenvolvedor',label: 'Desenvolvedor', ...,  assignable: false }, // gerenciado só via DB
+];
 ```
 
-Quando a etapa não tem `stage` legacy preenchido, o **UUID** entra na lista. O `<Select>` do `DealFormDialog` usa esses valores e grava o UUID direto em `deals.stage`. Aí o `resolveDealStageId()` no Kanban procura por `s.stage === "36bbd947..."`, não encontra, retorna `null`, e o deal **não é renderizado em coluna nenhuma** — fica órfão no banco.
+### 2. Atualizar modais de Usuário (`src/pages/Settings.tsx`)
+- Remover o `type AppRole` local; importar de `@/lib/roles`
+- Substituir `<SelectItem>` hardcoded por `.map(ROLE_DEFINITIONS.filter(r => r.assignable))` nos modais **Criar Novo Usuário** e **Editar Usuário**
+- Aplicar a mesma lista no `roleLabels` para exibição na tabela de usuários
 
-Os deals antigos (Teste de Matriz, Teste de carteira etc.) funcionam porque foram criados quando essa etapa ainda tinha `stage = "prospeccao"`. A migration recente do multi-entity pipeline deixou a etapa "Prospecção" do pipeline Vendas com `stage = NULL`.
+### 3. Atualizar `PermissionsManager.tsx`
+- Importar `AppRole` e `ROLE_DEFINITIONS` do `@/lib/roles`
+- Substituir `editableRoles: AppRole[] = ['vendedor', 'atendente']` por lista derivada de `ROLE_DEFINITIONS` (excluindo `admin` e `desenvolvedor`)
+- Renderizar um card por perfil → grid responsivo `lg:grid-cols-2 xl:grid-cols-3`
+- Garantir que `roleConfig` cubra os 6 perfis editáveis (com ícones apropriados: `DollarSign` para Financeiro, `FileText` para Faturamento, `Truck` para Logística, `CheckCircle` para Qualidade)
 
-### Plano de correção
+### 4. Backfill de permissões padrão (migração SQL)
+Inserir registros default em `role_module_permissions` para os 4 perfis novos (Financeiro, Faturamento, Logística, Qualidade) com sugestão sensata:
+- **Financeiro**: Total em Pedidos/Propostas, Restrito em Pipeline/Empresas, Sem acesso em WhatsApp
+- **Faturamento**: Total em Pedidos, Restrito em Empresas/Pipeline
+- **Logística**: Total em Pedidos, Restrito em Pipeline
+- **Qualidade**: Restrito em Pedidos/Pipeline
 
-**1. Corrigir `DealFormDialog.tsx`** — usar `pipeline_stage_id` (UUID da row) como fonte de verdade no select, em vez do código legacy. O select passa a:
-- `value` = `formData.pipeline_stage_id`
-- `onChange` salva tanto `pipeline_stage_id` (UUID) quanto `stage` (legacy code se existir, senão `null`)
-- Itens iteram sobre `stageRows` em vez da lista achatada `stages[]`
+(Com `ON CONFLICT DO NOTHING` para não sobrescrever ajustes manuais)
 
-**2. Corrigir o `createMutation`** em `Pipeline.tsx` / `usePipelineData.ts` para mandar **sempre** `pipeline_stage_id` no insert (espelhando o que o drag&drop já faz na linha 665).
+### 5. Atualizar `ProtectedRoute` / `useModulePermissions`
+Verificar se o hook já lê dinamicamente da tabela `role_module_permissions` para qualquer role (provavelmente sim, mas confirmar para que perfis novos funcionem out-of-the-box).
 
-**3. Reparar o deal órfão** `ee461df6` via migration:
-```sql
-UPDATE deals 
-SET pipeline_stage_id = '36bbd947-0625-44e1-af96-9cb7b9d660ad', 
-    stage = NULL 
-WHERE id = 'ee461df6-82c5-4ebf-90b0-9232c254e686';
-```
-Idem para o `fd393468` (Teste pipeline da Novafix).
+### 6. Edge Function `create-user`
+- Adicionar validação `if (!ROLE_VALUES.includes(role)) return 400`
+- Manter default `vendedor`
 
-**4. Reforçar `resolveDealStageId`** — adicionar fallback: se `deal.stage` parece ser um UUID (regex), tentar `stageRows.find(s => s.id === deal.stage)` antes de desistir. Defesa em profundidade contra deals já gravados com UUID em `stage`.
+---
 
-**5. Backfill preventivo** — verificar se há outros deals com `stage` contendo UUID em vez de código legacy e migrar para `pipeline_stage_id`:
-```sql
-UPDATE deals d
-SET pipeline_stage_id = ps.id, stage = NULL
-FROM pipeline_stages ps
-WHERE d.stage = ps.id::text AND d.pipeline_stage_id IS NULL;
-```
+## Arquivos a editar
+- ➕ `src/lib/roles.ts` (novo)
+- ✏️ `src/pages/Settings.tsx` (modais criar/editar usuário + tipo AppRole)
+- ✏️ `src/components/settings/PermissionsManager.tsx` (cards por perfil)
+- ✏️ `supabase/functions/create-user/index.ts` (validação)
+- ➕ Migração SQL: backfill `role_module_permissions` para 4 perfis novos
 
-### Arquivos tocados
-1. `src/components/pipeline/DealFormDialog.tsx` — select usa `pipeline_stage_id`
-2. `src/pages/Pipeline.tsx` — `createMutation` envia `pipeline_stage_id`
-3. `src/hooks/usePipelineData.ts` — `resolveDealStageId` com fallback para UUID em `stage`
-4. **Nova migration** — repara deals órfãos + backfill defensivo
-
-### Critérios de aceite
-- ✅ Criar novo deal "Teste pipeline 2" → aparece na coluna Prospecção do pipeline Vendas
-- ✅ Os 2 deals órfãos `ee461df6` e `fd393468` aparecem após o backfill
-- ✅ Drag&drop continua funcionando (já usa pipeline_stage_id)
-- ✅ Deals legados (`stage = "prospeccao"`) continuam aparecendo normalmente
-- ✅ Pipelines com etapas sem `stage` legacy (caso do OPERAÇÃO QUALYVAC com 29 etapas customizadas) ficam usáveis
+## Resultado esperado
+- Admin pode criar usuário **Financeiro/Faturamento/Logística/Qualidade** via UI
+- Tela "Permissões por Módulo" mostra cards para os **6 perfis editáveis**
+- Os checkboxes de `allowed_roles` por etapa do pipeline passam a ter usuários reais correspondentes
+- Arquitetura RBAC totalmente alinhada entre criação de usuário, permissões de módulo e permissões de etapa
 
