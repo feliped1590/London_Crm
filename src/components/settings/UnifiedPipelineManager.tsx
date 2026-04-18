@@ -558,9 +558,18 @@ export function UnifiedPipelineManager() {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Marque as empresas que terão acesso a este funil. Sem seleção = funil global (visível para todas).
-                    </p>
+                    {selectedEntityIds.length === 0 ? (
+                      <div className="rounded-md border border-dashed bg-muted/40 p-2.5 text-xs text-muted-foreground flex items-start gap-2">
+                        <Globe className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>
+                          <strong>Nenhuma empresa selecionada</strong> → este funil ficará <strong>visível para todas as empresas</strong>. Marque uma ou mais para restringir.
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Apenas usuários com acesso a alguma das empresas marcadas verão este funil.
+                      </p>
+                    )}
                     <div className="rounded-md border p-3 space-y-2 max-h-48 overflow-y-auto">
                       {legalEntities.length === 0 ? (
                         <p className="text-xs text-muted-foreground">Nenhuma empresa cadastrada.</p>
