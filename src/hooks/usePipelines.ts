@@ -57,8 +57,34 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
     enabled: !!user?.id,
   });
 
+  // Vínculos User ↔ Legal Entity (user_legal_entities.user_id → profiles.id)
+  const { data: userLinks = [] } = useQuery({
+    queryKey: ['user_legal_entity_links', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!profileData) return [];
+      const { data, error } = await supabase
+        .from('user_legal_entities')
+        .select('legal_entity_id')
+        .eq('user_id', profileData.id);
+      if (error) throw error;
+      return (data || []).map(l => l.legal_entity_id).filter(Boolean) as string[];
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // QueryKey robusta: inclui IDs concatenados (não apenas length) para invalidar
+  // corretamente quando os vínculos mudam mas a quantidade permanece igual.
+  const linksKey = [...userLinks].sort().join(',');
+
   const { data: pipelines, isLoading, error } = useQuery({
-    queryKey: ['pipelines', userRole, legalEntityId],
+    queryKey: ['pipelines', userRole, legalEntityId, linksKey],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pipelines')
@@ -69,22 +95,26 @@ export function usePipelines(opts?: { legalEntityId?: string | null }) {
       
       if (error) throw error;
       
-      // Filtrar baseado no role do usuário e legal_entity ativa
       const allPipelines = data as (Pipeline & { allowed_roles?: string[] | null })[];
-      
-      let filtered = allPipelines;
-      
-      // Filtro por legal_entity: pipelines globais (NULL) + pipelines da entity ativa
+      const isPrivileged = userRole === 'admin' || userRole === 'desenvolvedor';
+      const allowedEntityIds = new Set(userLinks);
+      // Compat legado: usuário sem vínculos vê tudo (espelha useLegalEntities)
+      const allowAllEntities = isPrivileged || userLinks.length === 0;
+
+      let filtered = allPipelines.filter(p => {
+        // Pipelines globais sempre visíveis
+        if (p.legal_entity_id === null) return true;
+        if (allowAllEntities) return true;
+        return allowedEntityIds.has(p.legal_entity_id);
+      });
+
+      // Empresa ativa selecionada: restringir a globais + entidade ativa
       if (legalEntityId) {
         filtered = filtered.filter(p => p.legal_entity_id === null || p.legal_entity_id === legalEntityId);
       }
       
       if (!userRole) return filtered as Pipeline[];
-      
-      // Desenvolvedores e admins têm acesso a todos os pipelines (mas ainda respeitam legal_entity)
-      if (userRole === 'admin' || userRole === 'desenvolvedor') {
-        return filtered as Pipeline[];
-      }
+      if (isPrivileged) return filtered as Pipeline[];
       
       return filtered.filter(p => {
         if (!p.allowed_roles || p.allowed_roles.length === 0) return true;
