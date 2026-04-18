@@ -8896,6 +8896,19 @@ export type Database = {
         Args: { p_operation_context?: string; p_sales_rep_id: string }
         Returns: string
       }
+      save_pipeline_with_entities: {
+        Args: {
+          _allowed_roles: string[]
+          _description: string
+          _is_active: boolean
+          _legal_entity_ids: string[]
+          _name: string
+          _pipeline_id: string
+          _pipeline_mode: string
+          _type: string
+        }
+        Returns: string
+      }
       search_customers_paginated: {
         Args: {
           p_allowed_sales_rep_ids?: string[]
