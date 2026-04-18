@@ -1,7 +1,8 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Layers } from 'lucide-react';
-import { usePipelines, Pipeline } from '@/hooks/usePipelines';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Layers, Sparkles } from 'lucide-react';
+import { usePipelines } from '@/hooks/usePipelines';
 import { cn } from '@/lib/utils';
 
 interface PipelineSelectorProps {
@@ -11,16 +12,9 @@ interface PipelineSelectorProps {
   legalEntityId?: string | null;
 }
 
-const typeLabels: Record<string, string> = {
-  sales: 'Vendas',
-  post_sales: 'Pós-Venda',
-  support: 'Suporte',
-};
-
 export function PipelineSelector({ value, onChange, className, legalEntityId }: PipelineSelectorProps) {
   const { pipelines, isLoading, defaultPipeline } = usePipelines({ legalEntityId });
 
-  // Use defaultPipeline if no value is set
   const selectedValue = value || defaultPipeline?.id || '';
 
   if (isLoading) {
@@ -39,9 +33,31 @@ export function PipelineSelector({ value, onChange, className, legalEntityId }: 
     );
   }
 
-  // Apenas 1 pipeline: ainda exibe (badge informativo) — auto-seleção é feita pelo container
+  // Exatamente 1 pipeline: badge informativo "selecionado automaticamente"
   if (pipelines.length === 1) {
-    return null;
+    const only = pipelines[0];
+    return (
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge
+              variant="secondary"
+              className={cn(
+                'h-9 px-3 gap-2 cursor-default border border-border/60',
+                className,
+              )}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <span className="font-medium">{only.name}</span>
+              <span className="text-[10px] text-muted-foreground hidden md:inline">· auto</span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Pipeline selecionado automaticamente — único disponível para esta empresa
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
   }
 
   return (
