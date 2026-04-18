@@ -826,7 +826,46 @@ export function UnifiedPipelineManager() {
                     )}
                   </div>
 
-                  <Collapsible open={showLegacyType} onOpenChange={setShowLegacyType}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="stage-category">Categoria *</Label>
+                      <Select
+                        value={stageFormData.stage_category}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage_category: v })}
+                      >
+                        <SelectTrigger id="stage-category">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGE_CATEGORY_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Para BI e relatórios. Independe do nome.
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="stage-phase">Fase *</Label>
+                      <Select
+                        value={stageFormData.stage_phase}
+                        onValueChange={(v) => setStageFormData({ ...stageFormData, stage_phase: v })}
+                      >
+                        <SelectTrigger id="stage-phase">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGE_PHASE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Pré-venda, venda ou pós-venda.
+                      </p>
+                    </div>
+                  </div>
                     <CollapsibleTrigger asChild>
                       <button
                         type="button"
