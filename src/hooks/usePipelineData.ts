@@ -471,8 +471,15 @@ export function usePipelineData(selectedPipelineId: string | null) {
       if (found) return found.id;
     }
     if (deal.stage) {
-      const found = stageRows.find(s => s.stage === deal.stage);
-      if (found) return found.id;
+      // Primary: legacy stage code match
+      const foundByCode = stageRows.find(s => s.stage === deal.stage);
+      if (foundByCode) return foundByCode.id;
+      // Fallback: deal.stage may erroneously contain a UUID (legacy bad data)
+      const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(deal.stage);
+      if (looksLikeUuid) {
+        const foundById = stageRows.find(s => s.id === deal.stage);
+        if (foundById) return foundById.id;
+      }
     }
     return null;
   }, [stageRows]);
