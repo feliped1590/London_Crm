@@ -137,6 +137,13 @@ export function UnifiedPipelineManager() {
     stage_phase: 'sale',
   });
 
+  // Mapping pipeline_stage -> order_status (Fase 2)
+  const [stageMappingDraft, setStageMappingDraft] = useState<StageOrderMappingDraft>({
+    target_order_status: null,
+    auto_apply: true,
+    applies_to_order_type: null,
+  });
+
   // Fetch pipeline stages with pipeline info
   const { data: pipelineStages, isLoading: stagesLoading } = useQuery({
     queryKey: ['pipeline_stages_with_pipelines'],
