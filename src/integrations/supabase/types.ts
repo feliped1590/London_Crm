@@ -4457,6 +4457,48 @@ export type Database = {
           },
         ]
       }
+      order_status_transitions: {
+        Row: {
+          allowed_roles: Database["public"]["Enums"]["app_role"][]
+          created_at: string
+          description: string | null
+          from_status: Database["public"]["Enums"]["order_status"]
+          id: string
+          is_active: boolean
+          label: string
+          order_type: string
+          requires_ownership: boolean
+          to_status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          allowed_roles?: Database["public"]["Enums"]["app_role"][]
+          created_at?: string
+          description?: string | null
+          from_status: Database["public"]["Enums"]["order_status"]
+          id?: string
+          is_active?: boolean
+          label: string
+          order_type: string
+          requires_ownership?: boolean
+          to_status: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          allowed_roles?: Database["public"]["Enums"]["app_role"][]
+          created_at?: string
+          description?: string | null
+          from_status?: Database["public"]["Enums"]["order_status"]
+          id?: string
+          is_active?: boolean
+          label?: string
+          order_type?: string
+          requires_ownership?: boolean
+          to_status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_sync_log: {
         Row: {
           created_at: string
@@ -4626,6 +4668,7 @@ export type Database = {
           contact_id: string | null
           created_at: string
           created_by: string | null
+          deal_id: string | null
           delivery_address: string | null
           delivery_city: string | null
           delivery_contact: string | null
@@ -4679,6 +4722,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_contact?: string | null
@@ -4732,6 +4776,7 @@ export type Database = {
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
+          deal_id?: string | null
           delivery_address?: string | null
           delivery_city?: string | null
           delivery_contact?: string | null
@@ -4805,6 +4850,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {
@@ -4945,6 +4997,50 @@ export type Database = {
           },
         ]
       }
+      pipeline_stage_order_status_map: {
+        Row: {
+          applies_to_order_type: string | null
+          auto_apply: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          pipeline_stage_id: string
+          target_order_status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          applies_to_order_type?: string | null
+          auto_apply?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          pipeline_stage_id: string
+          target_order_status: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          applies_to_order_type?: string | null
+          auto_apply?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          pipeline_stage_id?: string
+          target_order_status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_stage_order_status_map_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stages: {
         Row: {
           allowed_roles: string[] | null
@@ -5007,9 +5103,129 @@ export type Database = {
           },
         ]
       }
+      pipeline_sync_log: {
+        Row: {
+          created_at: string
+          deal_id: string | null
+          id: string
+          new_status: Database["public"]["Enums"]["order_status"]
+          old_status: Database["public"]["Enums"]["order_status"] | null
+          order_id: string
+          pipeline_stage_id: string | null
+          reason: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          new_status: Database["public"]["Enums"]["order_status"]
+          old_status?: Database["public"]["Enums"]["order_status"] | null
+          order_id: string
+          pipeline_stage_id?: string | null
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          new_status?: Database["public"]["Enums"]["order_status"]
+          old_status?: Database["public"]["Enums"]["order_status"] | null
+          order_id?: string
+          pipeline_stage_id?: string | null
+          reason?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_sync_log_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_sync_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_sync_log_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipeline_sync_skip_log: {
+        Row: {
+          attempted_status: Database["public"]["Enums"]["order_status"] | null
+          created_at: string
+          current_status: Database["public"]["Enums"]["order_status"] | null
+          deal_id: string | null
+          details: Json | null
+          id: string
+          order_id: string | null
+          pipeline_stage_id: string | null
+          skip_reason: string
+          triggered_by: string | null
+        }
+        Insert: {
+          attempted_status?: Database["public"]["Enums"]["order_status"] | null
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["order_status"] | null
+          deal_id?: string | null
+          details?: Json | null
+          id?: string
+          order_id?: string | null
+          pipeline_stage_id?: string | null
+          skip_reason: string
+          triggered_by?: string | null
+        }
+        Update: {
+          attempted_status?: Database["public"]["Enums"]["order_status"] | null
+          created_at?: string
+          current_status?: Database["public"]["Enums"]["order_status"] | null
+          deal_id?: string | null
+          details?: Json | null
+          id?: string
+          order_id?: string | null
+          pipeline_stage_id?: string | null
+          skip_reason?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_sync_skip_log_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_sync_skip_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_sync_skip_log_pipeline_stage_id_fkey"
+            columns: ["pipeline_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipelines: {
         Row: {
           allowed_roles: string[] | null
+          controls_order_status: boolean
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -5025,6 +5241,7 @@ export type Database = {
         }
         Insert: {
           allowed_roles?: string[] | null
+          controls_order_status?: boolean
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -5040,6 +5257,7 @@ export type Database = {
         }
         Update: {
           allowed_roles?: string[] | null
+          controls_order_status?: boolean
           created_at?: string | null
           created_by?: string | null
           description?: string | null
