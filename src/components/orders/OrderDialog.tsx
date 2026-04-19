@@ -205,18 +205,24 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { products } = useProductSimpleSearch(productSearch);
 
   // Deals da empresa selecionada (vínculo opcional Fase 2)
+  // Filtra também por legal_entity_id ativo para evitar cruzamento entre CNPJs.
   const { data: companyDeals = [] } = useQuery({
-    queryKey: ['order-deals-by-company', companyId],
+    queryKey: ['order-deals-by-company', companyId, activeLegalEntityId],
     queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
       if (!companyId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('deals')
-        .select('id, name')
+        .select('id, name, legal_entity_id')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(50);
+      if (activeLegalEntityId) {
+        // Aceita deals da legal entity ativa OU sem vínculo (NULL = global).
+        query = query.or(`legal_entity_id.eq.${activeLegalEntityId},legal_entity_id.is.null`);
+      }
+      const { data, error } = await query;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((d) => ({ id: d.id, name: d.name }));
     },
     enabled: !!companyId,
   });

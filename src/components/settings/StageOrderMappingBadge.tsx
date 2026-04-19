@@ -37,18 +37,29 @@ export function StageOrderMappingBadge({
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-[10px] py-0 h-4 gap-1 border-primary/40 text-primary',
-              !autoApply && 'border-warning/40 text-warning',
-              className,
+          <span className={cn('inline-flex items-center gap-1', className)}>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] py-0 h-4 gap-1',
+                autoApply
+                  ? 'border-primary/40 text-primary'
+                  : 'border-warning/40 text-warning',
+              )}
+            >
+              <ArrowRight className="h-2.5 w-2.5" />
+              {statusLabel}
+              <Icon className="h-2.5 w-2.5" />
+            </Badge>
+            {!autoApply && (
+              <Badge
+                variant="outline"
+                className="text-[10px] py-0 h-4 gap-1 border-warning/60 text-warning bg-warning/5"
+              >
+                ⚠️ Manual
+              </Badge>
             )}
-          >
-            <ArrowRight className="h-2.5 w-2.5" />
-            {statusLabel}
-            <Icon className="h-2.5 w-2.5" />
-          </Badge>
+          </span>
         </TooltipTrigger>
         <TooltipContent side="top" className="max-w-xs">
           <div className="space-y-1 text-xs">
@@ -57,7 +68,9 @@ export function StageOrderMappingBadge({
             </p>
             <p>
               <strong>Modo:</strong>{' '}
-              {autoApply ? 'Automático (aplica ao mover)' : 'Manual (apenas sugere)'}
+              {autoApply
+                ? 'Automático (aplica ao mover o deal)'
+                : 'Manual — apenas sugere, não altera o pedido sem confirmação'}
             </p>
             <p>
               <strong>Aplica a:</strong> {typeLabel}

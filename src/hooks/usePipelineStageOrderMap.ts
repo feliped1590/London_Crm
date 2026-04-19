@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { OrderStatus } from '@/types/products';
 import { toast } from 'sonner';
@@ -30,8 +31,15 @@ export function usePipelineStageOrderMap() {
     },
   });
 
+  // O(1) lookup map (stage_id → mapping). Recomputado apenas quando mappings mudam.
+  const mappingsByStageId = useMemo(() => {
+    const map = new Map<string, StageOrderMapping>();
+    (mappings || []).forEach((m) => map.set(m.pipeline_stage_id, m));
+    return map;
+  }, [mappings]);
+
   const getMappingForStage = (stageId: string): StageOrderMapping | undefined => {
-    return mappings?.find((m) => m.pipeline_stage_id === stageId);
+    return mappingsByStageId.get(stageId);
   };
 
   const upsertMapping = useMutation({
