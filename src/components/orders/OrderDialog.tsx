@@ -89,6 +89,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
+  // Vínculo opcional ao negócio (Fase 2)
+  const [dealId, setDealId] = useState<string>('');
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -202,6 +204,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [productSearch, setProductSearch] = useState('');
   const { products } = useProductSimpleSearch(productSearch);
 
+  // Deals da empresa selecionada (vínculo opcional Fase 2)
+  const { data: companyDeals = [] } = useQuery({
+    queryKey: ['order-deals-by-company', companyId],
+    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, name')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!companyId,
+  });
+
   const { data: existingOrderItems } = useQuery({
     queryKey: ['order_items_for_edit', order?.id],
     queryFn: async (): Promise<OrderItemDraft[]> => {
@@ -236,6 +255,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
         number: '', company_id: companyId || null, contact_id: contactId || null,
+        deal_id: dealId || null, // Vínculo opcional Fase 2
         delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
@@ -317,6 +337,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       const { error: orderError } = await supabase.from('orders').update({
         company_id: companyId || null, contact_id: contactId || null,
+        deal_id: dealId || null, // Vínculo opcional Fase 2
         delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
@@ -448,8 +469,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setFreightType(logistics.freightType);
       setDeliverySameAsCompany(logistics.deliverySameAsCompany);
       setDeliveryFields(logistics.deliveryFields);
+      setDealId((order as any).deal_id || '');
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
+      setDealId('');
       if (preSelectedCompanyId) {
         setCompanyId(preSelectedCompanyId);
         autoFillFromCompany(preSelectedCompanyId).then(data => {
@@ -484,6 +507,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
+      setDealId('');
       setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
     }
   }, [open]);
@@ -655,6 +679,27 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           />
         </div>
       </div>
+
+      {/* Vínculo opcional ao negócio (Fase 2) */}
+      {companyId && (
+        <div className="space-y-2">
+          <Label>Vincular ao Negócio (opcional)</Label>
+          <SearchableSelect
+            options={[
+              { value: '__NONE__', label: 'Sem vínculo' },
+              ...companyDeals.map(d => ({ value: d.id, label: d.name })),
+            ]}
+            value={dealId || '__NONE__'}
+            onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione um negócio"
+            searchPlaceholder="Buscar negócio..."
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">
+            Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
+          </p>
+        </div>
+      )}
 
       {linkedPricingTable && (
         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">

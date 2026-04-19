@@ -77,6 +77,7 @@ export function DealQuickActions({ deal, onWhatsAppClick }: DealQuickActionsProp
       const { error } = await supabase.from('orders').insert({
         company_id: deal.company_id,
         contact_id: deal.contact_id,
+        deal_id: deal.id, // Vínculo Fase 2: pedido conhece o negócio de origem
         observations: orderForm.observations || `Pedido gerado a partir do negócio: ${deal.name}`,
         delivery_date: orderForm.delivery_date || null,
         total_value: deal.value || 0,

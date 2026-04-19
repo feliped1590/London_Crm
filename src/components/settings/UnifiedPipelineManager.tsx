@@ -24,6 +24,10 @@ import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { PipelineConsistencyWarnings } from './PipelineConsistencyWarnings';
+import { usePipelineStageOrderMap } from '@/hooks/usePipelineStageOrderMap';
+import { StageOrderStatusMapField, StageOrderMappingDraft } from './StageOrderStatusMapField';
+import { StageOrderMappingBadge } from './StageOrderMappingBadge';
+import { OrderStatus } from '@/types/products';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
@@ -82,6 +86,7 @@ export function UnifiedPipelineManager() {
   const queryClient = useQueryClient();
   const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline, getPipelineEntities, setPipelineLegalEntities } = usePipelines();
   const { allEntities: legalEntities } = useLegalEntities();
+  const { mappings: stageOrderMappings, getMappingForStage, upsertMapping, deleteMapping } = usePipelineStageOrderMap();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
   
@@ -132,6 +137,13 @@ export function UnifiedPipelineManager() {
     stage_phase: 'sale',
   });
 
+  // Mapping pipeline_stage -> order_status (Fase 2)
+  const [stageMappingDraft, setStageMappingDraft] = useState<StageOrderMappingDraft>({
+    target_order_status: null,
+    auto_apply: true,
+    applies_to_order_type: null,
+  });
+
   // Fetch pipeline stages with pipeline info
   const { data: pipelineStages, isLoading: stagesLoading } = useQuery({
     queryKey: ['pipeline_stages_with_pipelines'],
@@ -163,8 +175,8 @@ export function UnifiedPipelineManager() {
 
   // Stage mutations
   const createStageMutation = useMutation({
-    mutationFn: async (data: Omit<typeof stageFormData, ''>) => {
-      const { error } = await supabase.from('pipeline_stages').insert({
+    mutationFn: async (data: Omit<typeof stageFormData, ''>): Promise<{ id: string }> => {
+      const { data: created, error } = await supabase.from('pipeline_stages').insert({
         name: data.name,
         color: data.color,
         probability: data.probability,
@@ -176,13 +188,9 @@ export function UnifiedPipelineManager() {
         sla_warning_hours: data.sla_warning_hours,
         stage_category: data.stage_category,
         stage_phase: data.stage_phase,
-      } as any);
+      } as any).select('id').single();
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
-      toast.success('Etapa criada com sucesso!');
-      resetStageForm();
+      return created as { id: string };
     },
     onError: (error: Error) => {
       console.error('Create stage error:', error);
@@ -195,14 +203,10 @@ export function UnifiedPipelineManager() {
   });
 
   const updateStageMutation = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }): Promise<{ id: string }> => {
       const { error } = await supabase.from('pipeline_stages').update(data).eq('id', id);
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
-      toast.success('Etapa atualizada!');
-      resetStageForm();
+      return { id };
     },
     onError: (error: Error) => {
       console.error('Update stage error:', error);
@@ -322,6 +326,11 @@ export function UnifiedPipelineManager() {
       stage_category: 'commercial',
       stage_phase: 'sale',
     });
+    setStageMappingDraft({
+      target_order_status: null,
+      auto_apply: true,
+      applies_to_order_type: null,
+    });
     setEditingStage(null);
     setShowLegacyType(false);
     setIsStageDialogOpen(false);
@@ -342,6 +351,12 @@ export function UnifiedPipelineManager() {
       allowed_roles: (stage as any).allowed_roles || [],
       stage_category: ((stage as any).stage_category || 'commercial') as string,
       stage_phase: ((stage as any).stage_phase || 'sale') as string,
+    });
+    const existingMapping = getMappingForStage(stage.id);
+    setStageMappingDraft({
+      target_order_status: existingMapping?.target_order_status ?? null,
+      auto_apply: existingMapping?.auto_apply ?? true,
+      applies_to_order_type: existingMapping?.applies_to_order_type ?? null,
     });
     setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
@@ -366,26 +381,56 @@ export function UnifiedPipelineManager() {
     return null;
   };
 
-  const handleStageSubmit = (e: React.FormEvent) => {
+  // Persiste o mapping pipeline_stage -> order_status para a etapa indicada
+  const persistStageMapping = async (stageId: string) => {
+    const existing = getMappingForStage(stageId);
+    if (!stageMappingDraft.target_order_status) {
+      // Sem vínculo: remover mapping existente, se houver
+      if (existing) {
+        await deleteMapping.mutateAsync(existing.id);
+      }
+      return;
+    }
+    await upsertMapping.mutateAsync({
+      pipeline_stage_id: stageId,
+      target_order_status: stageMappingDraft.target_order_status,
+      auto_apply: stageMappingDraft.auto_apply,
+      applies_to_order_type: stageMappingDraft.applies_to_order_type,
+      existing_id: existing?.id ?? null,
+    });
+  };
+
+  const handleStageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const conflict = validateStageStatus();
     if (conflict) {
       toast.error(conflict);
       return;
     }
-    if (editingStage) {
-      updateStageMutation.mutate({
-        id: editingStage.id,
-        ...stageFormData,
-        stage: stageFormData.stage || null,
-        pipeline_id: stageFormData.pipeline_id || null,
-        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      } as any);
-    } else {
-      createStageMutation.mutate({
-        ...stageFormData,
-        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      });
+    try {
+      let stageId: string;
+      if (editingStage) {
+        const result = await updateStageMutation.mutateAsync({
+          id: editingStage.id,
+          ...stageFormData,
+          stage: stageFormData.stage || null,
+          pipeline_id: stageFormData.pipeline_id || null,
+          allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+        } as any);
+        stageId = result.id;
+      } else {
+        const result = await createStageMutation.mutateAsync({
+          ...stageFormData,
+          allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+        });
+        stageId = result.id;
+      }
+      await persistStageMapping(stageId);
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
+      toast.success(editingStage ? 'Etapa atualizada!' : 'Etapa criada com sucesso!');
+      resetStageForm();
+    } catch (err) {
+      // Toast já tratado nos onError das mutations
     }
   };
 
@@ -1043,6 +1088,12 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
+                  {/* Mapping pipeline_stage -> order_status (Fase 2) */}
+                  <StageOrderStatusMapField
+                    value={stageMappingDraft}
+                    onChange={setStageMappingDraft}
+                  />
+
                   <div className="space-y-2">
                     <Label>Perfis que podem mover para esta etapa</Label>
                     <p className="text-xs text-muted-foreground">
@@ -1202,6 +1253,17 @@ export function UnifiedPipelineManager() {
                               {/* Right: status + probability + sla + actions */}
                               <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
                                 {stageStatusBadge((stage as any).stage_status)}
+                                {(() => {
+                                  const m = getMappingForStage(stage.id);
+                                  if (!m) return null;
+                                  return (
+                                    <StageOrderMappingBadge
+                                      targetStatus={m.target_order_status}
+                                      autoApply={m.auto_apply}
+                                      appliesTo={m.applies_to_order_type}
+                                    />
+                                  );
+                                })()}
                                 <span className="text-xs font-medium text-muted-foreground tabular-nums min-w-[2.5rem] text-right">
                                   {stage.probability}%
                                 </span>

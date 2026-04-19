@@ -331,7 +331,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     if (!proposalData) return;
     const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
       number: '', proposal_id: proposalId, company_id: proposalData.company_id,
-      contact_id: proposalData.contact_id, status: 'pendente', total_value: proposalData.total_value,
+      contact_id: proposalData.contact_id,
+      deal_id: proposalData.deal_id || null, // Vínculo Fase 2
+      status: 'pendente', total_value: proposalData.total_value,
       observations: proposalData.observations, ipi_mode: proposalData.ipi_mode || 'destacar',
       subtotal_products: proposalData.subtotal_products || 0, total_ipi: proposalData.total_ipi || 0,
       ...buildLogisticsPayload(proposalData.carrier_id || '', proposalData.freight_type || '', proposalData.delivery_same_as_company ?? true, {
