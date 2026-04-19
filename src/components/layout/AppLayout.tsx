@@ -20,6 +20,7 @@ export function AppLayout() {
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
+  const { isDeveloper } = useModulePermissions();
 
   return (
     <div 
