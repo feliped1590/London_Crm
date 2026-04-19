@@ -488,6 +488,56 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao desbloquear pedido'),
   });
+
+  // --- Snapshot helpers (detecção de alterações pendentes) ---
+  const buildCurrentSnapshot = useCallback((): OrderSnapshot => ({
+    companyId, contactId,
+    deliveryDate: deliveryDate?.toISOString().split('T')[0] || '',
+    observations: observations || '',
+    legalEntityId: legalEntityId || '',
+    ipiMode, orderType,
+    paymentMethod: paymentMethod || '',
+    paymentTerms: paymentTerms || '',
+    dealId: dealId || '',
+    carrierId: carrierId || '',
+    freightType: freightType || '',
+    deliverySameAsCompany,
+    deliveryFields,
+  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields]);
+
+  const itemsChanged = useCallback((): boolean => {
+    if (items.length !== originalItems.length) return true;
+    const norm = (it: OrderItemDraft) => ({
+      id: it.id || '', product_id: it.product_id, quantity: it.quantity,
+      unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
+      ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
+      description: it.description,
+    });
+    const origMap = new Map(originalItems.map(o => [o.id || '', norm(o)]));
+    for (const it of items) {
+      const orig = origMap.get(it.id || '');
+      if (!orig) return true;
+      const cur = norm(it);
+      if (JSON.stringify(orig) !== JSON.stringify(cur)) return true;
+    }
+    return false;
+  }, [items, originalItems]);
+
+  const hasUnsavedChanges = useCallback((): boolean => {
+    if (!originalSnapshot) return items.length > 0;
+    const cur = buildCurrentSnapshot();
+    if (JSON.stringify(cur) !== JSON.stringify(originalSnapshot)) return true;
+    return itemsChanged();
+  }, [originalSnapshot, buildCurrentSnapshot, itemsChanged, items.length]);
+
+  const handleLockClick = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setShowLockUnsavedAlert(true);
+      return;
+    }
+    lockOrderMutation.mutate({ skipSave: true });
+  }, [hasUnsavedChanges, lockOrderMutation]);
+
   const priceValidation = usePriceValidation({
     items, setItems, products,
     companyId: companyId || null, contactId: contactId || null,
