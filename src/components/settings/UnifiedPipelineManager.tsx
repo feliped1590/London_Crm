@@ -1088,6 +1088,12 @@ export function UnifiedPipelineManager() {
                     </div>
                   </div>
 
+                  {/* Mapping pipeline_stage -> order_status (Fase 2) */}
+                  <StageOrderStatusMapField
+                    value={stageMappingDraft}
+                    onChange={setStageMappingDraft}
+                  />
+
                   <div className="space-y-2">
                     <Label>Perfis que podem mover para esta etapa</Label>
                     <p className="text-xs text-muted-foreground">
