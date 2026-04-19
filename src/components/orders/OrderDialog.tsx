@@ -89,6 +89,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
+  // Vínculo opcional ao negócio (Fase 2)
+  const [dealId, setDealId] = useState<string>('');
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
