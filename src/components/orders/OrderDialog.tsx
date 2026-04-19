@@ -1127,8 +1127,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           {isEditMode && !isOrderLocked && canEdit && items.length > 0 && (
             <Button
               variant="outline"
-              onClick={() => lockOrderMutation.mutate()}
-              disabled={lockOrderMutation.isPending}
+              onClick={handleLockClick}
+              disabled={lockOrderMutation.isPending || updateOrderMutation.isPending}
               className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
             >
               <Lock className="h-4 w-4 mr-2" />
