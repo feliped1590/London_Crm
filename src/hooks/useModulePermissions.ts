@@ -58,6 +58,20 @@ export function useModulePermissions() {
     enabled: !!user?.id,
   });
 
+  const { data: hasRoleVendedor } = useQuery({
+    queryKey: ['is_vendedor', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return false;
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'vendedor'
+      });
+      if (error) throw error;
+      return data as boolean;
+    },
+    enabled: !!user?.id,
+  });
+
   const isAdmin = hasRoleAdmin || hasRoleDeveloper || false;
 
   const canAccess = (moduleKey: string): boolean => {
@@ -84,7 +98,8 @@ export function useModulePermissions() {
   // isFullyLoaded: true only when all 3 queries (modules + admin + developer) have completed
   const isFullyLoaded = !isLoading 
     && hasRoleAdmin !== undefined 
-    && hasRoleDeveloper !== undefined;
+    && hasRoleDeveloper !== undefined
+    && hasRoleVendedor !== undefined;
 
   return {
     permissions: permissions || [],
@@ -93,6 +108,7 @@ export function useModulePermissions() {
     error,
     isAdmin,
     isDeveloper: hasRoleDeveloper || false,
+    isVendedor: hasRoleVendedor || false,
     canAccess,
     getAccessType,
     hasFullAccess,
