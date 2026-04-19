@@ -11,6 +11,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
 import { useLoginTaskAlert } from '@/hooks/useLoginTaskAlert';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { TaskAlertModal } from '@/components/tasks/TaskAlertModal';
 
 export function AppLayout() {
@@ -19,6 +20,7 @@ export function AppLayout() {
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
+  const { isDeveloper } = useModulePermissions();
 
   return (
     <div 
@@ -95,8 +97,8 @@ export function AppLayout() {
         <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />
       )}
 
-      {/* AI Assistant Widget */}
-      <AIChatWidget />
+      {/* AI Assistant Widget — temporariamente visível apenas para Desenvolvedor */}
+      {isDeveloper && <AIChatWidget />}
     </div>
   );
 }
