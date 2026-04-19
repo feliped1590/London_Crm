@@ -1253,6 +1253,17 @@ export function UnifiedPipelineManager() {
                               {/* Right: status + probability + sla + actions */}
                               <div className="flex items-center gap-3 sm:gap-4 flex-wrap justify-end">
                                 {stageStatusBadge((stage as any).stage_status)}
+                                {(() => {
+                                  const m = getMappingForStage(stage.id);
+                                  if (!m) return null;
+                                  return (
+                                    <StageOrderMappingBadge
+                                      targetStatus={m.target_order_status}
+                                      autoApply={m.auto_apply}
+                                      appliesTo={m.applies_to_order_type}
+                                    />
+                                  );
+                                })()}
                                 <span className="text-xs font-medium text-muted-foreground tabular-nums min-w-[2.5rem] text-right">
                                   {stage.probability}%
                                 </span>
