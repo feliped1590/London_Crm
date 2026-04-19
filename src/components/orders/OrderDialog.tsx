@@ -89,8 +89,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
+  const [showLockUnsavedAlert, setShowLockUnsavedAlert] = useState(false);
   // Vínculo opcional ao negócio (Fase 2)
   const [dealId, setDealId] = useState<string>('');
+
+  // Snapshot do estado original (para detectar alterações pendentes)
+  interface OrderSnapshot {
+    companyId: string; contactId: string; deliveryDate: string; observations: string;
+    legalEntityId: string; ipiMode: string; orderType: string;
+    paymentMethod: string; paymentTerms: string; dealId: string;
+    carrierId: string; freightType: string; deliverySameAsCompany: boolean;
+    deliveryFields: typeof EMPTY_DELIVERY_FIELDS;
+  }
+  const [originalSnapshot, setOriginalSnapshot] = useState<OrderSnapshot | null>(null);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
@@ -335,7 +346,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (auditLogs.length > 0) await supabase.from('order_audit_log').insert(auditLogs);
   };
 
-  const updateOrderMutation = useMutation({
+  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean } | void>({
     mutationFn: async () => {
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
@@ -379,7 +390,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (itemsError) throw itemsError;
       return order;
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
+      const opts = variables || {};
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_items'] });
       queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
@@ -409,9 +421,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         } catch {}
       }
 
-      toast.success('Pedido atualizado com sucesso!');
-      onOpenChange(false);
-      onSuccess?.();
+      // Atualiza o snapshot para refletir o estado salvo (evita falso "alterações pendentes")
+      setOriginalSnapshot(buildCurrentSnapshot());
+      setOriginalItems([...items]);
+
+      if (!opts.silent) toast.success('Pedido atualizado com sucesso!');
+      if (!opts.keepOpen) {
+        onOpenChange(false);
+        onSuccess?.();
+      }
     },
     onError: (error: Error) => {
       const message = error?.message || '';
@@ -421,17 +439,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   // --- Lock / Unlock mutations (entity-level) ---
-  // IMPORTANT: salvar antes de bloquear para garantir que os itens em estado local
-  // sejam persistidos no banco. Caso contrário, lock_order() valida itens persistidos
-  // e pode falhar com "Pedido deve possuir ao menos um item".
-  const lockOrderMutation = useMutation({
-    mutationFn: async () => {
+  // Quando chamado com { skipSave: true } pula o save (já foi salvo) e aplica o lock direto.
+  const lockOrderMutation = useMutation<unknown, Error, { skipSave?: boolean } | void>({
+    mutationFn: async (variables) => {
+      const opts = variables || {};
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido antes de bloquear');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
 
-      // 1) Persiste alterações pendentes do formulário (itens, totais, etc.)
-      await updateOrderMutation.mutateAsync();
+      // 1) Persiste alterações pendentes (a menos que já tenham sido salvas)
+      if (!opts.skipSave) {
+        const toastId = toast.loading('Salvando alterações...');
+        try {
+          await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true });
+          toast.success('Alterações salvas. Aplicando bloqueio...', { id: toastId });
+        } catch (err) {
+          toast.dismiss(toastId);
+          throw err;
+        }
+      }
 
       // 2) Aplica o lock no banco
       const { data, error } = await supabase.rpc('lock_order', { p_order_id: order.id });
@@ -441,7 +467,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
-      toast.success('Pedido salvo e bloqueado com sucesso');
+      toast.success('Pedido bloqueado com sucesso');
       onOpenChange(false);
       onSuccess?.();
     },
@@ -462,6 +488,56 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao desbloquear pedido'),
   });
+
+  // --- Snapshot helpers (detecção de alterações pendentes) ---
+  const buildCurrentSnapshot = useCallback((): OrderSnapshot => ({
+    companyId, contactId,
+    deliveryDate: deliveryDate?.toISOString().split('T')[0] || '',
+    observations: observations || '',
+    legalEntityId: legalEntityId || '',
+    ipiMode, orderType,
+    paymentMethod: paymentMethod || '',
+    paymentTerms: paymentTerms || '',
+    dealId: dealId || '',
+    carrierId: carrierId || '',
+    freightType: freightType || '',
+    deliverySameAsCompany,
+    deliveryFields,
+  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields]);
+
+  const itemsChanged = useCallback((): boolean => {
+    if (items.length !== originalItems.length) return true;
+    const norm = (it: OrderItemDraft) => ({
+      id: it.id || '', product_id: it.product_id, quantity: it.quantity,
+      unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
+      ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
+      description: it.description,
+    });
+    const origMap = new Map(originalItems.map(o => [o.id || '', norm(o)]));
+    for (const it of items) {
+      const orig = origMap.get(it.id || '');
+      if (!orig) return true;
+      const cur = norm(it);
+      if (JSON.stringify(orig) !== JSON.stringify(cur)) return true;
+    }
+    return false;
+  }, [items, originalItems]);
+
+  const hasUnsavedChanges = useCallback((): boolean => {
+    if (!originalSnapshot) return items.length > 0;
+    const cur = buildCurrentSnapshot();
+    if (JSON.stringify(cur) !== JSON.stringify(originalSnapshot)) return true;
+    return itemsChanged();
+  }, [originalSnapshot, buildCurrentSnapshot, itemsChanged, items.length]);
+
+  const handleLockClick = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setShowLockUnsavedAlert(true);
+      return;
+    }
+    lockOrderMutation.mutate({ skipSave: true });
+  }, [hasUnsavedChanges, lockOrderMutation]);
+
   const priceValidation = usePriceValidation({
     items, setItems, products,
     companyId: companyId || null, contactId: contactId || null,
@@ -517,6 +593,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setOriginalItems(existingOrderItems ?? []);
   }, [open, order?.id, existingOrderItems]);
 
+  // Captura snapshot do estado original assim que o pedido carrega (após hidratação dos campos).
+  useEffect(() => {
+    if (!open || !order?.id) return;
+    if (existingOrderItems === undefined) return; // aguarda items carregarem
+    setOriginalSnapshot({
+      companyId: order.company_id || '',
+      contactId: order.contact_id || '',
+      deliveryDate: order.delivery_date ? new Date(order.delivery_date).toISOString().split('T')[0] : '',
+      observations: order.observations || '',
+      legalEntityId: (order as any).legal_entity_id || activeLegalEntityId || '',
+      ipiMode: (order as any).ipi_mode || 'destacar',
+      orderType: (order as any).order_type || 'producao',
+      paymentMethod: (order as any).payment_method || '',
+      paymentTerms: (order as any).payment_terms || '',
+      dealId: (order as any).deal_id || '',
+      ...extractLogisticsFromRecord(order),
+    });
+  }, [open, order, existingOrderItems, activeLegalEntityId]);
+
   useEffect(() => {
     if (!open) {
       setCompanyId(''); setContactId(''); setDeliveryDate(undefined); setObservations('');
@@ -526,7 +621,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
       setDealId('');
-      setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
+      setOriginalSnapshot(null);
+      setDetailModalOpen(false); setDetailItemIndex(-1);
+      setShowExitAlert(false); setShowLockUnsavedAlert(false);
     }
   }, [open]);
 
@@ -1030,8 +1127,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           {isEditMode && !isOrderLocked && canEdit && items.length > 0 && (
             <Button
               variant="outline"
-              onClick={() => lockOrderMutation.mutate()}
-              disabled={lockOrderMutation.isPending}
+              onClick={handleLockClick}
+              disabled={lockOrderMutation.isPending || updateOrderMutation.isPending}
               className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20"
             >
               <Lock className="h-4 w-4 mr-2" />
@@ -1099,6 +1196,31 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           >
             <Lock className="h-4 w-4 mr-2" />
             Bloquear e sair
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showLockUnsavedAlert} onOpenChange={setShowLockUnsavedAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Alterações não salvas</AlertDialogTitle>
+          <AlertDialogDescription>
+            Existem alterações pendentes neste pedido. É necessário salvá-las antes de bloquear.
+            Deseja salvar e bloquear agora?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              setShowLockUnsavedAlert(false);
+              lockOrderMutation.mutate();
+            }}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            Salvar e Bloquear
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
