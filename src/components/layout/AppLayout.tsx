@@ -11,6 +11,7 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
 import { useLoginTaskAlert } from '@/hooks/useLoginTaskAlert';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { TaskAlertModal } from '@/components/tasks/TaskAlertModal';
 
 export function AppLayout() {
