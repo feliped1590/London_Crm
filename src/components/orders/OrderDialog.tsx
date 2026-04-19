@@ -421,9 +421,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   // --- Lock / Unlock mutations (entity-level) ---
+  // IMPORTANT: salvar antes de bloquear para garantir que os itens em estado local
+  // sejam persistidos no banco. Caso contrário, lock_order() valida itens persistidos
+  // e pode falhar com "Pedido deve possuir ao menos um item".
   const lockOrderMutation = useMutation({
     mutationFn: async () => {
       if (!order) throw new Error('Pedido não encontrado');
+      if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido antes de bloquear');
+      if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
+
+      // 1) Persiste alterações pendentes do formulário (itens, totais, etc.)
+      await updateOrderMutation.mutateAsync();
+
+      // 2) Aplica o lock no banco
       const { data, error } = await supabase.rpc('lock_order', { p_order_id: order.id });
       if (error) throw error;
       return data;
@@ -431,7 +441,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
-      toast.success('Pedido bloqueado com sucesso');
+      toast.success('Pedido salvo e bloqueado com sucesso');
+      onOpenChange(false);
+      onSuccess?.();
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao bloquear pedido'),
   });
