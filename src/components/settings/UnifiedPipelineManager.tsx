@@ -175,8 +175,8 @@ export function UnifiedPipelineManager() {
 
   // Stage mutations
   const createStageMutation = useMutation({
-    mutationFn: async (data: Omit<typeof stageFormData, ''>) => {
-      const { error } = await supabase.from('pipeline_stages').insert({
+    mutationFn: async (data: Omit<typeof stageFormData, ''>): Promise<{ id: string }> => {
+      const { data: created, error } = await supabase.from('pipeline_stages').insert({
         name: data.name,
         color: data.color,
         probability: data.probability,
@@ -188,13 +188,9 @@ export function UnifiedPipelineManager() {
         sla_warning_hours: data.sla_warning_hours,
         stage_category: data.stage_category,
         stage_phase: data.stage_phase,
-      } as any);
+      } as any).select('id').single();
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
-      toast.success('Etapa criada com sucesso!');
-      resetStageForm();
+      return created as { id: string };
     },
     onError: (error: Error) => {
       console.error('Create stage error:', error);
@@ -207,14 +203,10 @@ export function UnifiedPipelineManager() {
   });
 
   const updateStageMutation = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: Partial<PipelineStage> & { id: string }): Promise<{ id: string }> => {
       const { error } = await supabase.from('pipeline_stages').update(data).eq('id', id);
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
-      toast.success('Etapa atualizada!');
-      resetStageForm();
+      return { id };
     },
     onError: (error: Error) => {
       console.error('Update stage error:', error);
