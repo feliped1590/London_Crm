@@ -593,6 +593,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setOriginalItems(existingOrderItems ?? []);
   }, [open, order?.id, existingOrderItems]);
 
+  // Captura snapshot do estado original assim que o pedido carrega (após hidratação dos campos).
+  useEffect(() => {
+    if (!open || !order?.id) return;
+    if (existingOrderItems === undefined) return; // aguarda items carregarem
+    setOriginalSnapshot({
+      companyId: order.company_id || '',
+      contactId: order.contact_id || '',
+      deliveryDate: order.delivery_date ? new Date(order.delivery_date).toISOString().split('T')[0] : '',
+      observations: order.observations || '',
+      legalEntityId: (order as any).legal_entity_id || activeLegalEntityId || '',
+      ipiMode: (order as any).ipi_mode || 'destacar',
+      orderType: (order as any).order_type || 'producao',
+      paymentMethod: (order as any).payment_method || '',
+      paymentTerms: (order as any).payment_terms || '',
+      dealId: (order as any).deal_id || '',
+      ...extractLogisticsFromRecord(order),
+    });
+  }, [open, order, existingOrderItems, activeLegalEntityId]);
+
   useEffect(() => {
     if (!open) {
       setCompanyId(''); setContactId(''); setDeliveryDate(undefined); setObservations('');
@@ -602,7 +621,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
       setDealId('');
-      setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
+      setOriginalSnapshot(null);
+      setDetailModalOpen(false); setDetailItemIndex(-1);
+      setShowExitAlert(false); setShowLockUnsavedAlert(false);
     }
   }, [open]);
 
