@@ -680,6 +680,27 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </div>
       </div>
 
+      {/* Vínculo opcional ao negócio (Fase 2) */}
+      {companyId && (
+        <div className="space-y-2">
+          <Label>Vincular ao Negócio (opcional)</Label>
+          <SearchableSelect
+            options={[
+              { value: '__NONE__', label: 'Sem vínculo' },
+              ...companyDeals.map(d => ({ value: d.id, label: d.name })),
+            ]}
+            value={dealId || '__NONE__'}
+            onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione um negócio"
+            searchPlaceholder="Buscar negócio..."
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">
+            Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
+          </p>
+        </div>
+      )}
+
       {linkedPricingTable && (
         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <DollarSign className="h-4 w-4 text-amber-600 dark:text-amber-400" />
