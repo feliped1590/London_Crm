@@ -469,8 +469,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setFreightType(logistics.freightType);
       setDeliverySameAsCompany(logistics.deliverySameAsCompany);
       setDeliveryFields(logistics.deliveryFields);
+      setDealId((order as any).deal_id || '');
     } else if (open && !order) {
       setLegalEntityId(activeLegalEntityId || '');
+      setDealId('');
       if (preSelectedCompanyId) {
         setCompanyId(preSelectedCompanyId);
         autoFillFromCompany(preSelectedCompanyId).then(data => {
@@ -505,6 +507,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
+      setDealId('');
       setDetailModalOpen(false); setDetailItemIndex(-1); setShowExitAlert(false);
     }
   }, [open]);
