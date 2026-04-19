@@ -1,63 +1,59 @@
 
+## Refinamento UX do fluxo Salvar/Bloquear no OrderDialog
 
-## Diagnóstico
+### Comportamento atual (problemas)
+1. Ao clicar **"Bloquear Pedido"**, o sistema salva silenciosamente e bloqueia em sequência. O usuário não tem ciência clara de que precisa salvar antes.
+2. Ao clicar **"Salvar Alterações"**, o `updateOrderMutation.onSuccess` chama `onOpenChange(false)` imediatamente — o modal fecha mesmo quando o usuário ainda pretendia bloquear.
 
-**Problema atual** (`src/pages/Customers.tsx`, linha 702):
-```tsx
-{(isAdmin || isDeveloper) && (
-  <CompanySyncButton companyId={customer.id} erpCode={(customer as any).erp_code} />
-)}
-```
+### Solução proposta
 
-O botão de envio ao ERP (ícone de avião + ícone de chave inglesa quando há pendências) só aparece para **Admin** e **Desenvolvedor**. Vendedores não conseguem:
-1. Enviar clientes ao ERP
-2. Ver o que está bloqueando o envio (quando o status é `Dados incompletos`)
+**Parte 1 — Detectar alterações pendentes e alertar antes do bloqueio**
 
-Isso quebra o fluxo comercial — quem cadastra/edita o cliente é o vendedor, então faz sentido que ele consiga acionar o envio e corrigir as pendências.
+Adicionar detecção de "alterações não salvas" (`hasUnsavedChanges`) comparando o estado atual do formulário com o snapshot original do pedido (já existe `originalItems`; vamos estender para os outros campos via um `originalSnapshot`).
 
-**Observação importante**: o `useModulePermissions` hoje só expõe `isAdmin` e `isDeveloper`. Não há flag `isVendedor` exposto, mas dá para usar o RPC `has_role` que já existe no banco.
+Quando o usuário clicar em **"Bloquear Pedido"**:
+- Se houver alterações pendentes → abrir um `AlertDialog` informando:
+  > "Existem alterações não salvas. Salve o pedido antes de bloqueá-lo."
+  
+  Botões:
+  - **Cancelar** (fecha o alerta)
+  - **Salvar e Bloquear** (executa o fluxo de salvar + bloquear, mantendo o comportamento atual encadeado)
+- Se não houver alterações → executar `lock_order` direto (sem precisar passar pelo `updateOrderMutation`).
 
----
+**Parte 2 — Não fechar o modal automaticamente após salvar**
 
-## Plano de implementação
+Introduzir uma flag interna `keepOpenAfterSave` no `updateOrderMutation`:
+- Quando o usuário clicar em **"Salvar Alterações"** (botão padrão) → manter comportamento de **fechar** o modal (esse é o comportamento esperado pelo fluxo normal).
+- Quando o salvamento for parte de um fluxo encadeado (ex.: "Salvar e Bloquear", ou clique direto no Bloquear) → **não fechar** após o save; mostrar toast de sucesso intermediário ("Alterações salvas. Aplicando bloqueio...") e aguardar o `lock_order` finalizar antes de fechar.
 
-### 1. Expor `isVendedor` no hook `useModulePermissions.ts`
-- Adicionar nova `useQuery` chamando `supabase.rpc('has_role', { _role: 'vendedor' })`
-- Retornar `isVendedor: hasRoleVendedor || false` no objeto de retorno
-- Incluir no `isFullyLoaded` para evitar flash de UI
+Implementação técnica:
+- Refatorar `updateOrderMutation` para aceitar um parâmetro `{ silent?: boolean; keepOpen?: boolean }` via `mutateAsync(variables)`. Quando `keepOpen = true`, o `onSuccess` **não** chamará `onOpenChange(false)` nem mostrará o toast genérico.
+- Reescrever `lockOrderMutation.mutationFn` para chamar `updateOrderMutation.mutateAsync({ keepOpen: true, silent: true })` antes do RPC.
+- Sequência de toasts no fluxo "Salvar e Bloquear":
+  1. `toast.loading('Salvando alterações...')`
+  2. Após save: `toast.success('Alterações salvas. Aplicando bloqueio...')`
+  3. Após lock: `toast.success('Pedido bloqueado com sucesso')` → fecha modal.
 
-### 2. Liberar o botão de envio em `src/pages/Customers.tsx`
-Trocar a condição na linha 702:
-```tsx
-// Antes
-{(isAdmin || isDeveloper) && (<CompanySyncButton ... />)}
+**Parte 3 — Reaproveitamento no AlertDialog de saída**
 
-// Depois
-{(isAdmin || isDeveloper || isVendedor) && (<CompanySyncButton ... />)}
-```
+O `AlertDialog "Sair sem bloquear"` já existente continua funcional. A ação "Bloquear e sair" passará pelo mesmo fluxo unificado (com a verificação de alterações pendentes e a sequência de toasts).
 
-O componente `CompanySyncButton` já cuida de tudo:
-- Se status = `blocked_validation` → mostra ícone "Corrigir dados" (chave inglesa) e abre o `SyncValidationModal` com a lista detalhada de erros e botões "Corrigir" que navegam para a tela apropriada
-- Caso contrário → executa `validate-company-sync` e, se houver pendências, mostra o mesmo modal antes de tentar enviar
+### Arquivos afetados
+- `src/components/orders/OrderDialog.tsx` (única alteração)
 
-### 3. Verificação na tela de detalhe do cliente (se aplicável)
-Conferir se há outros pontos de entrada do `CompanySyncButton` (ex: `CustomerDetail.tsx`) com a mesma restrição e aplicar a mesma liberação para vendedores.
+### Detalhes técnicos
+- Adicionar `originalSnapshot` (state) preenchido junto com `originalItems` no `useEffect` que carrega o pedido.
+- Helper `hasUnsavedChanges()` comparando: items (qtd, preço, desconto, IPI, comissão), companyId, contactId, deliveryDate, observations, paymentMethod, paymentTerms, dealId, ipiMode, orderType, logística.
+- Novo state `showLockUnsavedAlert: boolean` para o AlertDialog específico do bloqueio.
+- Mutation `updateOrderMutation` refatorada para aceitar variáveis: `useMutation<Order, Error, { keepOpen?: boolean; silent?: boolean } | void>`.
 
-### 4. Segurança no backend (já protegido)
-As edge functions `validate-company-sync` e `process-company-sync` rodam com service role, mas o trigger é via UI autenticada. Como o vendedor já tem acesso ao registro da empresa via RLS, liberar o botão no front é seguro — não cria novo vetor de privilégio (ele só dispara sync de empresas que ele já consegue ver/editar).
+### Critérios de aceite
+- Clicar em **Bloquear** com alterações pendentes → mostra alerta exigindo confirmação ("Salvar e Bloquear" ou "Cancelar").
+- Clicar em **Bloquear** sem alterações pendentes → bloqueia direto (sem re-save desnecessário).
+- Clicar em **Salvar Alterações** isolado → comportamento atual (fecha modal após sucesso).
+- Fluxo "Salvar e Bloquear" → modal permanece aberto entre o save e o lock; só fecha após o lock concluir.
+- Toast de sucesso intermediário visível durante o encadeamento.
 
----
-
-## Arquivos a editar
-
-- ✏️ `src/hooks/useModulePermissions.ts` — expor `isVendedor`
-- ✏️ `src/pages/Customers.tsx` — incluir `isVendedor` na condição de exibição do botão
-- ✏️ `src/pages/CustomerDetail.tsx` — verificar e ajustar se houver botão de sync lá também
-
-## Resultado esperado
-
-- Vendedor vê o botão de avião (Enviar ao ERP) e o botão de chave inglesa (Corrigir dados) na coluna ERP da lista de clientes
-- Ao clicar com pendências, abre o `SyncValidationModal` listando exatamente quais campos estão faltando (CNPJ, endereço, vendedor mapeado, usuário ERP, etc.) com botões "Corrigir" para navegar até a correção
-- Admin e Desenvolvedor continuam funcionando normalmente
-- Demais perfis (Atendente, Financeiro, Faturamento, Logística, Qualidade) seguem **sem** o botão, mantendo a separação de responsabilidades
-
+### Riscos
+- Baixo. Mudança contida em um único componente; lógicas de RPC (`lock_order`, `update`) inalteradas.
+- A flag `keepOpen` é opcional → comportamento padrão preservado em todos os outros call sites do `updateOrderMutation`.
