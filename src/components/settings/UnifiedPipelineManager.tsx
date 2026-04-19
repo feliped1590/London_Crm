@@ -347,11 +347,12 @@ export function UnifiedPipelineManager() {
     setIsStageDialogOpen(true);
   };
 
-  // Validação client-side: avisar duplicidade de won/lost no mesmo pipeline
+  // Validação client-side: avisar duplicidade de status únicos no mesmo pipeline
   const validateStageStatus = (): string | null => {
     const targetPipeline = stageFormData.pipeline_id;
     if (!targetPipeline) return null;
-    if (stageFormData.stage_status === 'open') return null;
+    const opt = getStageStatusOption(stageFormData.stage_status);
+    if (!opt.unique) return null;
 
     const conflict = pipelineStages?.find(
       (s) =>
@@ -360,9 +361,7 @@ export function UnifiedPipelineManager() {
         s.id !== editingStage?.id,
     );
     if (conflict) {
-      return stageFormData.stage_status === 'won'
-        ? `Já existe uma etapa de Ganho neste funil ("${conflict.name}").`
-        : `Já existe uma etapa de Perdido neste funil ("${conflict.name}").`;
+      return `Já existe uma etapa de ${opt.label} neste funil ("${conflict.name}").`;
     }
     return null;
   };
