@@ -346,7 +346,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (auditLogs.length > 0) await supabase.from('order_audit_log').insert(auditLogs);
   };
 
-  const updateOrderMutation = useMutation({
+  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean } | void>({
     mutationFn: async () => {
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
@@ -390,7 +390,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (itemsError) throw itemsError;
       return order;
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
+      const opts = variables || {};
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_items'] });
       queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
@@ -420,9 +421,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         } catch {}
       }
 
-      toast.success('Pedido atualizado com sucesso!');
-      onOpenChange(false);
-      onSuccess?.();
+      // Atualiza o snapshot para refletir o estado salvo (evita falso "alterações pendentes")
+      setOriginalSnapshot(buildCurrentSnapshot());
+      setOriginalItems([...items]);
+
+      if (!opts.silent) toast.success('Pedido atualizado com sucesso!');
+      if (!opts.keepOpen) {
+        onOpenChange(false);
+        onSuccess?.();
+      }
     },
     onError: (error: Error) => {
       const message = error?.message || '';
@@ -432,17 +439,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   // --- Lock / Unlock mutations (entity-level) ---
-  // IMPORTANT: salvar antes de bloquear para garantir que os itens em estado local
-  // sejam persistidos no banco. Caso contrário, lock_order() valida itens persistidos
-  // e pode falhar com "Pedido deve possuir ao menos um item".
-  const lockOrderMutation = useMutation({
-    mutationFn: async () => {
+  // Quando chamado com { skipSave: true } pula o save (já foi salvo) e aplica o lock direto.
+  const lockOrderMutation = useMutation<unknown, Error, { skipSave?: boolean } | void>({
+    mutationFn: async (variables) => {
+      const opts = variables || {};
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido antes de bloquear');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
 
-      // 1) Persiste alterações pendentes do formulário (itens, totais, etc.)
-      await updateOrderMutation.mutateAsync();
+      // 1) Persiste alterações pendentes (a menos que já tenham sido salvas)
+      if (!opts.skipSave) {
+        const toastId = toast.loading('Salvando alterações...');
+        try {
+          await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true });
+          toast.success('Alterações salvas. Aplicando bloqueio...', { id: toastId });
+        } catch (err) {
+          toast.dismiss(toastId);
+          throw err;
+        }
+      }
 
       // 2) Aplica o lock no banco
       const { data, error } = await supabase.rpc('lock_order', { p_order_id: order.id });
@@ -452,7 +467,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
-      toast.success('Pedido salvo e bloqueado com sucesso');
+      toast.success('Pedido bloqueado com sucesso');
       onOpenChange(false);
       onSuccess?.();
     },
