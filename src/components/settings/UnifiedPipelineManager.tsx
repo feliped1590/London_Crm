@@ -882,25 +882,32 @@ export function UnifiedPipelineManager() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="open">
-                          <span className="flex items-center gap-2">
-                            <Circle className="h-3 w-3 text-muted-foreground" /> Em andamento
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="won">
-                          <span className="flex items-center gap-2">
-                            <Trophy className="h-3 w-3 text-success" /> Ganho
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="lost">
-                          <span className="flex items-center gap-2">
-                            <XCircle className="h-3 w-3 text-destructive" /> Perdido
-                          </span>
-                        </SelectItem>
+                        {STAGE_STATUS_OPTIONS.map((opt) => {
+                          const Icon =
+                            opt.value === 'won' ? Trophy
+                            : opt.value === 'lost' ? XCircle
+                            : opt.value === 'rejected' ? Ban
+                            : opt.value === 'cancelled' ? Slash
+                            : opt.value === 'no_profile' ? UserX
+                            : Circle;
+                          const iconClass =
+                            opt.value === 'won' ? 'text-success'
+                            : opt.value === 'lost' ? 'text-destructive'
+                            : opt.value === 'rejected' ? 'text-warning'
+                            : opt.value === 'no_profile' ? 'text-info'
+                            : 'text-muted-foreground';
+                          return (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <span className="flex items-center gap-2">
+                                <Icon className={`h-3 w-3 ${iconClass}`} /> {opt.label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Apenas uma etapa de Ganho e uma de Perdido por funil.
+                      {getStageStatusOption(stageFormData.stage_status).description}
                     </p>
                     {validateStageStatus() && (
                       <p className="text-xs text-destructive mt-1">{validateStageStatus()}</p>
