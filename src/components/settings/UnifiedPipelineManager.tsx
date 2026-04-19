@@ -86,6 +86,7 @@ export function UnifiedPipelineManager() {
   const queryClient = useQueryClient();
   const { allPipelines, isLoading: pipelinesLoading, createPipeline, updatePipeline, deletePipeline, setDefaultPipeline, getPipelineEntities, setPipelineLegalEntities } = usePipelines();
   const { allEntities: legalEntities } = useLegalEntities();
+  const { mappings: stageOrderMappings, getMappingForStage, upsertMapping, deleteMapping } = usePipelineStageOrderMap();
   
   const [activeSubTab, setActiveSubTab] = useState('pipelines');
   
