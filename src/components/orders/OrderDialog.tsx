@@ -204,6 +204,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [productSearch, setProductSearch] = useState('');
   const { products } = useProductSimpleSearch(productSearch);
 
+  // Deals da empresa selecionada (vínculo opcional Fase 2)
+  const { data: companyDeals = [] } = useQuery({
+    queryKey: ['order-deals-by-company', companyId],
+    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, name')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!companyId,
+  });
+
   const { data: existingOrderItems } = useQuery({
     queryKey: ['order_items_for_edit', order?.id],
     queryFn: async (): Promise<OrderItemDraft[]> => {
@@ -238,6 +255,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
         number: '', company_id: companyId || null, contact_id: contactId || null,
+        deal_id: dealId || null, // Vínculo opcional Fase 2
         delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
@@ -319,6 +337,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       const { error: orderError } = await supabase.from('orders').update({
         company_id: companyId || null, contact_id: contactId || null,
+        deal_id: dealId || null, // Vínculo opcional Fase 2
         delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
