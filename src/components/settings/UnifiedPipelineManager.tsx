@@ -16,9 +16,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2, Trophy, XCircle, Circle, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, Target, Headphones, RotateCcw, Users, Globe, Palette, GripVertical, Link2, Trophy, XCircle, Circle, ChevronDown, Ban, Slash, UserX } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { StageStatus } from '@/lib/stageStatus';
+import { type StageStatus, STAGE_STATUS_OPTIONS, getStageStatusOption } from '@/lib/stageStatus';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
@@ -347,11 +347,12 @@ export function UnifiedPipelineManager() {
     setIsStageDialogOpen(true);
   };
 
-  // Validação client-side: avisar duplicidade de won/lost no mesmo pipeline
+  // Validação client-side: avisar duplicidade de status únicos no mesmo pipeline
   const validateStageStatus = (): string | null => {
     const targetPipeline = stageFormData.pipeline_id;
     if (!targetPipeline) return null;
-    if (stageFormData.stage_status === 'open') return null;
+    const opt = getStageStatusOption(stageFormData.stage_status);
+    if (!opt.unique) return null;
 
     const conflict = pipelineStages?.find(
       (s) =>
@@ -360,9 +361,7 @@ export function UnifiedPipelineManager() {
         s.id !== editingStage?.id,
     );
     if (conflict) {
-      return stageFormData.stage_status === 'won'
-        ? `Já existe uma etapa de Ganho neste funil ("${conflict.name}").`
-        : `Já existe uma etapa de Perdido neste funil ("${conflict.name}").`;
+      return `Já existe uma etapa de ${opt.label} neste funil ("${conflict.name}").`;
     }
     return null;
   };
@@ -402,6 +401,24 @@ export function UnifiedPipelineManager() {
       return (
         <Badge className="bg-destructive text-destructive-foreground border-transparent hover:bg-destructive/90 gap-1 font-semibold shadow-sm">
           <XCircle className="h-3 w-3" /> Perdido
+        </Badge>
+      );
+    if (s === 'rejected')
+      return (
+        <Badge className="bg-warning text-warning-foreground border-transparent hover:bg-warning/90 gap-1 font-semibold shadow-sm">
+          <Ban className="h-3 w-3" /> Reprovado
+        </Badge>
+      );
+    if (s === 'cancelled')
+      return (
+        <Badge className="bg-muted-foreground text-background border-transparent hover:bg-muted-foreground/90 gap-1 font-semibold shadow-sm">
+          <Slash className="h-3 w-3" /> Cancelado
+        </Badge>
+      );
+    if (s === 'no_profile')
+      return (
+        <Badge className="bg-info text-info-foreground border-transparent hover:bg-info/90 gap-1 font-semibold shadow-sm">
+          <UserX className="h-3 w-3" /> Sem Perfil
         </Badge>
       );
     return (
@@ -865,25 +882,32 @@ export function UnifiedPipelineManager() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="open">
-                          <span className="flex items-center gap-2">
-                            <Circle className="h-3 w-3 text-muted-foreground" /> Em andamento
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="won">
-                          <span className="flex items-center gap-2">
-                            <Trophy className="h-3 w-3 text-success" /> Ganho
-                          </span>
-                        </SelectItem>
-                        <SelectItem value="lost">
-                          <span className="flex items-center gap-2">
-                            <XCircle className="h-3 w-3 text-destructive" /> Perdido
-                          </span>
-                        </SelectItem>
+                        {STAGE_STATUS_OPTIONS.map((opt) => {
+                          const Icon =
+                            opt.value === 'won' ? Trophy
+                            : opt.value === 'lost' ? XCircle
+                            : opt.value === 'rejected' ? Ban
+                            : opt.value === 'cancelled' ? Slash
+                            : opt.value === 'no_profile' ? UserX
+                            : Circle;
+                          const iconClass =
+                            opt.value === 'won' ? 'text-success'
+                            : opt.value === 'lost' ? 'text-destructive'
+                            : opt.value === 'rejected' ? 'text-warning'
+                            : opt.value === 'no_profile' ? 'text-info'
+                            : 'text-muted-foreground';
+                          return (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              <span className="flex items-center gap-2">
+                                <Icon className={`h-3 w-3 ${iconClass}`} /> {opt.label}
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Apenas uma etapa de Ganho e uma de Perdido por funil.
+                      {getStageStatusOption(stageFormData.stage_status).description}
                     </p>
                     {validateStageStatus() && (
                       <p className="text-xs text-destructive mt-1">{validateStageStatus()}</p>
