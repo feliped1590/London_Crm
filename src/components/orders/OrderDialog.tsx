@@ -89,8 +89,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
+  const [showLockUnsavedAlert, setShowLockUnsavedAlert] = useState(false);
   // Vínculo opcional ao negócio (Fase 2)
   const [dealId, setDealId] = useState<string>('');
+
+  // Snapshot do estado original (para detectar alterações pendentes)
+  interface OrderSnapshot {
+    companyId: string; contactId: string; deliveryDate: string; observations: string;
+    legalEntityId: string; ipiMode: string; orderType: string;
+    paymentMethod: string; paymentTerms: string; dealId: string;
+    carrierId: string; freightType: string; deliverySameAsCompany: boolean;
+    deliveryFields: typeof EMPTY_DELIVERY_FIELDS;
+  }
+  const [originalSnapshot, setOriginalSnapshot] = useState<OrderSnapshot | null>(null);
 
   // Logistics state
   const [carrierId, setCarrierId] = useState('');
