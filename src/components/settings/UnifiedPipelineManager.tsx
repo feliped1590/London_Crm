@@ -24,6 +24,10 @@ import { toast } from 'sonner';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 import { PipelineConsistencyWarnings } from './PipelineConsistencyWarnings';
+import { usePipelineStageOrderMap } from '@/hooks/usePipelineStageOrderMap';
+import { StageOrderStatusMapField, StageOrderMappingDraft } from './StageOrderStatusMapField';
+import { StageOrderMappingBadge } from './StageOrderMappingBadge';
+import { OrderStatus } from '@/types/products';
 
 type PipelineStage = Tables<'pipeline_stages'>;
 
