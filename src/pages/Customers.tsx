@@ -87,7 +87,7 @@ export default function Customers() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { isAdmin, isDeveloper } = useModulePermissions();
+  const { isAdmin, isDeveloper, isVendedor } = useModulePermissions();
   const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -699,7 +699,7 @@ export default function Customers() {
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
                             <CompanySyncBadge companyId={customer.id} erpCode={(customer as any).erp_code} />
-                            {(isAdmin || isDeveloper) && (
+                            {(isAdmin || isDeveloper || isVendedor) && (
                               <CompanySyncButton companyId={customer.id} erpCode={(customer as any).erp_code} />
                             )}
                           </div>
