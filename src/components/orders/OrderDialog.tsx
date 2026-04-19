@@ -1200,6 +1200,31 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <AlertDialog open={showLockUnsavedAlert} onOpenChange={setShowLockUnsavedAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Alterações não salvas</AlertDialogTitle>
+          <AlertDialogDescription>
+            Existem alterações pendentes neste pedido. É necessário salvá-las antes de bloquear.
+            Deseja salvar e bloquear agora?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              setShowLockUnsavedAlert(false);
+              lockOrderMutation.mutate();
+            }}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            Salvar e Bloquear
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
