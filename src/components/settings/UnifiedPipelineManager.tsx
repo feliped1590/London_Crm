@@ -326,6 +326,11 @@ export function UnifiedPipelineManager() {
       stage_category: 'commercial',
       stage_phase: 'sale',
     });
+    setStageMappingDraft({
+      target_order_status: null,
+      auto_apply: true,
+      applies_to_order_type: null,
+    });
     setEditingStage(null);
     setShowLegacyType(false);
     setIsStageDialogOpen(false);
@@ -346,6 +351,12 @@ export function UnifiedPipelineManager() {
       allowed_roles: (stage as any).allowed_roles || [],
       stage_category: ((stage as any).stage_category || 'commercial') as string,
       stage_phase: ((stage as any).stage_phase || 'sale') as string,
+    });
+    const existingMapping = getMappingForStage(stage.id);
+    setStageMappingDraft({
+      target_order_status: existingMapping?.target_order_status ?? null,
+      auto_apply: existingMapping?.auto_apply ?? true,
+      applies_to_order_type: existingMapping?.applies_to_order_type ?? null,
     });
     setShowLegacyType(!!stage.stage);
     setIsStageDialogOpen(true);
@@ -370,26 +381,56 @@ export function UnifiedPipelineManager() {
     return null;
   };
 
-  const handleStageSubmit = (e: React.FormEvent) => {
+  // Persiste o mapping pipeline_stage -> order_status para a etapa indicada
+  const persistStageMapping = async (stageId: string) => {
+    const existing = getMappingForStage(stageId);
+    if (!stageMappingDraft.target_order_status) {
+      // Sem vínculo: remover mapping existente, se houver
+      if (existing) {
+        await deleteMapping.mutateAsync(existing.id);
+      }
+      return;
+    }
+    await upsertMapping.mutateAsync({
+      pipeline_stage_id: stageId,
+      target_order_status: stageMappingDraft.target_order_status,
+      auto_apply: stageMappingDraft.auto_apply,
+      applies_to_order_type: stageMappingDraft.applies_to_order_type,
+      existing_id: existing?.id ?? null,
+    });
+  };
+
+  const handleStageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const conflict = validateStageStatus();
     if (conflict) {
       toast.error(conflict);
       return;
     }
-    if (editingStage) {
-      updateStageMutation.mutate({
-        id: editingStage.id,
-        ...stageFormData,
-        stage: stageFormData.stage || null,
-        pipeline_id: stageFormData.pipeline_id || null,
-        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      } as any);
-    } else {
-      createStageMutation.mutate({
-        ...stageFormData,
-        allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
-      });
+    try {
+      let stageId: string;
+      if (editingStage) {
+        const result = await updateStageMutation.mutateAsync({
+          id: editingStage.id,
+          ...stageFormData,
+          stage: stageFormData.stage || null,
+          pipeline_id: stageFormData.pipeline_id || null,
+          allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+        } as any);
+        stageId = result.id;
+      } else {
+        const result = await createStageMutation.mutateAsync({
+          ...stageFormData,
+          allowed_roles: stageFormData.allowed_roles.length > 0 ? stageFormData.allowed_roles : null,
+        });
+        stageId = result.id;
+      }
+      await persistStageMapping(stageId);
+      queryClient.invalidateQueries({ queryKey: ['pipeline_stages_with_pipelines'] });
+      toast.success(editingStage ? 'Etapa atualizada!' : 'Etapa criada com sucesso!');
+      resetStageForm();
+    } catch (err) {
+      // Toast já tratado nos onError das mutations
     }
   };
 
