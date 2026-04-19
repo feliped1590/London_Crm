@@ -1,83 +1,63 @@
 
 
-## Diagnóstico do desalinhamento
+## Diagnóstico
 
-**No banco** o enum `app_role` tem 8 valores: `admin, vendedor, atendente, desenvolvedor, financeiro, faturamento, logistica, qualidade`.
+**Problema atual** (`src/pages/Customers.tsx`, linha 702):
+```tsx
+{(isAdmin || isDeveloper) && (
+  <CompanySyncButton companyId={customer.id} erpCode={(customer as any).erp_code} />
+)}
+```
 
-**Onde os 4 perfis novos JÁ aparecem:**
-- Modal "Editar Etapa" → checkboxes de `allowed_roles` (Vendedor, Atendente, Financeiro, Faturamento, Logística, Qualidade) ✅
-- `UnifiedPipelineManager.tsx` → constante `ROLE_OPTIONS` com 7 perfis ✅
+O botão de envio ao ERP (ícone de avião + ícone de chave inglesa quando há pendências) só aparece para **Admin** e **Desenvolvedor**. Vendedores não conseguem:
+1. Enviar clientes ao ERP
+2. Ver o que está bloqueando o envio (quando o status é `Dados incompletos`)
 
-**Onde NÃO aparecem (desalinhamento):**
-1. **Modal "Criar Novo Usuário"** (`Settings.tsx`) → só tem Atendente, Vendedor, Administrador
-2. **Modal "Editar Usuário"** (`Settings.tsx` → `EditUserForm`) → mesmo problema
-3. **Tela "Permissões por Módulo"** (`PermissionsManager.tsx`) → só renderiza cards para `vendedor` e `atendente`
-4. **Type `AppRole`** está duplicado e desatualizado em `Settings.tsx` (linha 51) e `PermissionsManager.tsx` (linha 14) como `'admin' | 'vendedor' | 'atendente'`
-5. **`create-user` edge function** assume default `vendedor` mas não valida lista expandida
+Isso quebra o fluxo comercial — quem cadastra/edita o cliente é o vendedor, então faz sentido que ele consiga acionar o envio e corrigir as pendências.
 
-**Consequência prática:** É impossível criar um usuário "Financeiro", "Faturamento", "Logística" ou "Qualidade" pela UI, então os checkboxes de etapa para esses perfis ficam inúteis. E para os perfis que existem, não há configuração de acesso a módulos definida.
+**Observação importante**: o `useModulePermissions` hoje só expõe `isAdmin` e `isDeveloper`. Não há flag `isVendedor` exposto, mas dá para usar o RPC `has_role` que já existe no banco.
 
 ---
 
 ## Plano de implementação
 
-### 1. Centralizar definição de roles
-Criar **`src/lib/roles.ts`** como fonte única de verdade:
-```typescript
-export type AppRole = 'admin' | 'vendedor' | 'atendente' | 'desenvolvedor' 
-                    | 'financeiro' | 'faturamento' | 'logistica' | 'qualidade';
+### 1. Expor `isVendedor` no hook `useModulePermissions.ts`
+- Adicionar nova `useQuery` chamando `supabase.rpc('has_role', { _role: 'vendedor' })`
+- Retornar `isVendedor: hasRoleVendedor || false` no objeto de retorno
+- Incluir no `isFullyLoaded` para evitar flash de UI
 
-export const ROLE_DEFINITIONS: { value: AppRole; label: string; icon: string; description: string; assignable: boolean }[] = [
-  { value: 'admin',        label: 'Administrador', ...,  assignable: true  },
-  { value: 'vendedor',     label: 'Vendedor', ...,       assignable: true  },
-  { value: 'atendente',    label: 'Atendente', ...,      assignable: true  },
-  { value: 'financeiro',   label: 'Financeiro', ...,     assignable: true  },
-  { value: 'faturamento',  label: 'Faturamento', ...,    assignable: true  },
-  { value: 'logistica',    label: 'Logística', ...,      assignable: true  },
-  { value: 'qualidade',    label: 'Qualidade', ...,      assignable: true  },
-  { value: 'desenvolvedor',label: 'Desenvolvedor', ...,  assignable: false }, // gerenciado só via DB
-];
+### 2. Liberar o botão de envio em `src/pages/Customers.tsx`
+Trocar a condição na linha 702:
+```tsx
+// Antes
+{(isAdmin || isDeveloper) && (<CompanySyncButton ... />)}
+
+// Depois
+{(isAdmin || isDeveloper || isVendedor) && (<CompanySyncButton ... />)}
 ```
 
-### 2. Atualizar modais de Usuário (`src/pages/Settings.tsx`)
-- Remover o `type AppRole` local; importar de `@/lib/roles`
-- Substituir `<SelectItem>` hardcoded por `.map(ROLE_DEFINITIONS.filter(r => r.assignable))` nos modais **Criar Novo Usuário** e **Editar Usuário**
-- Aplicar a mesma lista no `roleLabels` para exibição na tabela de usuários
+O componente `CompanySyncButton` já cuida de tudo:
+- Se status = `blocked_validation` → mostra ícone "Corrigir dados" (chave inglesa) e abre o `SyncValidationModal` com a lista detalhada de erros e botões "Corrigir" que navegam para a tela apropriada
+- Caso contrário → executa `validate-company-sync` e, se houver pendências, mostra o mesmo modal antes de tentar enviar
 
-### 3. Atualizar `PermissionsManager.tsx`
-- Importar `AppRole` e `ROLE_DEFINITIONS` do `@/lib/roles`
-- Substituir `editableRoles: AppRole[] = ['vendedor', 'atendente']` por lista derivada de `ROLE_DEFINITIONS` (excluindo `admin` e `desenvolvedor`)
-- Renderizar um card por perfil → grid responsivo `lg:grid-cols-2 xl:grid-cols-3`
-- Garantir que `roleConfig` cubra os 6 perfis editáveis (com ícones apropriados: `DollarSign` para Financeiro, `FileText` para Faturamento, `Truck` para Logística, `CheckCircle` para Qualidade)
+### 3. Verificação na tela de detalhe do cliente (se aplicável)
+Conferir se há outros pontos de entrada do `CompanySyncButton` (ex: `CustomerDetail.tsx`) com a mesma restrição e aplicar a mesma liberação para vendedores.
 
-### 4. Backfill de permissões padrão (migração SQL)
-Inserir registros default em `role_module_permissions` para os 4 perfis novos (Financeiro, Faturamento, Logística, Qualidade) com sugestão sensata:
-- **Financeiro**: Total em Pedidos/Propostas, Restrito em Pipeline/Empresas, Sem acesso em WhatsApp
-- **Faturamento**: Total em Pedidos, Restrito em Empresas/Pipeline
-- **Logística**: Total em Pedidos, Restrito em Pipeline
-- **Qualidade**: Restrito em Pedidos/Pipeline
-
-(Com `ON CONFLICT DO NOTHING` para não sobrescrever ajustes manuais)
-
-### 5. Atualizar `ProtectedRoute` / `useModulePermissions`
-Verificar se o hook já lê dinamicamente da tabela `role_module_permissions` para qualquer role (provavelmente sim, mas confirmar para que perfis novos funcionem out-of-the-box).
-
-### 6. Edge Function `create-user`
-- Adicionar validação `if (!ROLE_VALUES.includes(role)) return 400`
-- Manter default `vendedor`
+### 4. Segurança no backend (já protegido)
+As edge functions `validate-company-sync` e `process-company-sync` rodam com service role, mas o trigger é via UI autenticada. Como o vendedor já tem acesso ao registro da empresa via RLS, liberar o botão no front é seguro — não cria novo vetor de privilégio (ele só dispara sync de empresas que ele já consegue ver/editar).
 
 ---
 
 ## Arquivos a editar
-- ➕ `src/lib/roles.ts` (novo)
-- ✏️ `src/pages/Settings.tsx` (modais criar/editar usuário + tipo AppRole)
-- ✏️ `src/components/settings/PermissionsManager.tsx` (cards por perfil)
-- ✏️ `supabase/functions/create-user/index.ts` (validação)
-- ➕ Migração SQL: backfill `role_module_permissions` para 4 perfis novos
+
+- ✏️ `src/hooks/useModulePermissions.ts` — expor `isVendedor`
+- ✏️ `src/pages/Customers.tsx` — incluir `isVendedor` na condição de exibição do botão
+- ✏️ `src/pages/CustomerDetail.tsx` — verificar e ajustar se houver botão de sync lá também
 
 ## Resultado esperado
-- Admin pode criar usuário **Financeiro/Faturamento/Logística/Qualidade** via UI
-- Tela "Permissões por Módulo" mostra cards para os **6 perfis editáveis**
-- Os checkboxes de `allowed_roles` por etapa do pipeline passam a ter usuários reais correspondentes
-- Arquitetura RBAC totalmente alinhada entre criação de usuário, permissões de módulo e permissões de etapa
+
+- Vendedor vê o botão de avião (Enviar ao ERP) e o botão de chave inglesa (Corrigir dados) na coluna ERP da lista de clientes
+- Ao clicar com pendências, abre o `SyncValidationModal` listando exatamente quais campos estão faltando (CNPJ, endereço, vendedor mapeado, usuário ERP, etc.) com botões "Corrigir" para navegar até a correção
+- Admin e Desenvolvedor continuam funcionando normalmente
+- Demais perfis (Atendente, Financeiro, Faturamento, Logística, Qualidade) seguem **sem** o botão, mantendo a separação de responsabilidades
 
