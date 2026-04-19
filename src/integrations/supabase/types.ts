@@ -5107,6 +5107,7 @@ export type Database = {
         Row: {
           created_at: string
           deal_id: string | null
+          execution_time_ms: number | null
           id: string
           new_status: Database["public"]["Enums"]["order_status"]
           old_status: Database["public"]["Enums"]["order_status"] | null
@@ -5118,6 +5119,7 @@ export type Database = {
         Insert: {
           created_at?: string
           deal_id?: string | null
+          execution_time_ms?: number | null
           id?: string
           new_status: Database["public"]["Enums"]["order_status"]
           old_status?: Database["public"]["Enums"]["order_status"] | null
@@ -5129,6 +5131,7 @@ export type Database = {
         Update: {
           created_at?: string
           deal_id?: string | null
+          execution_time_ms?: number | null
           id?: string
           new_status?: Database["public"]["Enums"]["order_status"]
           old_status?: Database["public"]["Enums"]["order_status"] | null
@@ -5168,6 +5171,7 @@ export type Database = {
           current_status: Database["public"]["Enums"]["order_status"] | null
           deal_id: string | null
           details: Json | null
+          execution_time_ms: number | null
           id: string
           order_id: string | null
           pipeline_stage_id: string | null
@@ -5180,6 +5184,7 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["order_status"] | null
           deal_id?: string | null
           details?: Json | null
+          execution_time_ms?: number | null
           id?: string
           order_id?: string | null
           pipeline_stage_id?: string | null
@@ -5192,6 +5197,7 @@ export type Database = {
           current_status?: Database["public"]["Enums"]["order_status"] | null
           deal_id?: string | null
           details?: Json | null
+          execution_time_ms?: number | null
           id?: string
           order_id?: string | null
           pipeline_stage_id?: string | null
