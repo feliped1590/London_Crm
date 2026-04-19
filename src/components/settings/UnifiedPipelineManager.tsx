@@ -405,19 +405,19 @@ export function UnifiedPipelineManager() {
       );
     if (s === 'rejected')
       return (
-        <Badge className="bg-orange-500 text-white border-transparent hover:bg-orange-500/90 gap-1 font-semibold shadow-sm">
+        <Badge className="bg-warning text-warning-foreground border-transparent hover:bg-warning/90 gap-1 font-semibold shadow-sm">
           <Ban className="h-3 w-3" /> Reprovado
         </Badge>
       );
     if (s === 'cancelled')
       return (
-        <Badge className="bg-zinc-500 text-white border-transparent hover:bg-zinc-500/90 gap-1 font-semibold shadow-sm">
+        <Badge className="bg-muted-foreground text-background border-transparent hover:bg-muted-foreground/90 gap-1 font-semibold shadow-sm">
           <Slash className="h-3 w-3" /> Cancelado
         </Badge>
       );
     if (s === 'no_profile')
       return (
-        <Badge className="bg-purple-500 text-white border-transparent hover:bg-purple-500/90 gap-1 font-semibold shadow-sm">
+        <Badge className="bg-info text-info-foreground border-transparent hover:bg-info/90 gap-1 font-semibold shadow-sm">
           <UserX className="h-3 w-3" /> Sem Perfil
         </Badge>
       );
