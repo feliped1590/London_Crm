@@ -403,6 +403,24 @@ export function UnifiedPipelineManager() {
           <XCircle className="h-3 w-3" /> Perdido
         </Badge>
       );
+    if (s === 'rejected')
+      return (
+        <Badge className="bg-orange-500 text-white border-transparent hover:bg-orange-500/90 gap-1 font-semibold shadow-sm">
+          <Ban className="h-3 w-3" /> Reprovado
+        </Badge>
+      );
+    if (s === 'cancelled')
+      return (
+        <Badge className="bg-zinc-500 text-white border-transparent hover:bg-zinc-500/90 gap-1 font-semibold shadow-sm">
+          <Slash className="h-3 w-3" /> Cancelado
+        </Badge>
+      );
+    if (s === 'no_profile')
+      return (
+        <Badge className="bg-purple-500 text-white border-transparent hover:bg-purple-500/90 gap-1 font-semibold shadow-sm">
+          <UserX className="h-3 w-3" /> Sem Perfil
+        </Badge>
+      );
     return (
       <Badge variant="secondary" className="gap-1 text-muted-foreground">
         <Circle className="h-3 w-3" /> Em andamento
