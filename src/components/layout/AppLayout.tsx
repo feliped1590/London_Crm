@@ -97,8 +97,8 @@ export function AppLayout() {
         <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />
       )}
 
-      {/* AI Assistant Widget */}
-      <AIChatWidget />
+      {/* AI Assistant Widget — temporariamente visível apenas para Desenvolvedor */}
+      {isDeveloper && <AIChatWidget />}
     </div>
   );
 }
