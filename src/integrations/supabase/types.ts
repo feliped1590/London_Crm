@@ -8636,6 +8636,10 @@ export type Database = {
           warning_message: string
         }[]
       }
+      apply_pipeline_stage_to_order: {
+        Args: { p_actor_id?: string; p_deal_id: string; p_new_stage_id: string }
+        Returns: Json
+      }
       approve_transfer_request: {
         Args: { p_request_id: string; p_review_note?: string }
         Returns: Json
