@@ -14,13 +14,36 @@ semanal. Usuários comuns só conseguem usar o sistema dentro dessa janela.
 Esta regra é aplicada em **3 camadas no banco** e **1 camada em Edge Functions**.
 NÃO pode ser burlada pelo frontend.
 
-- **Login** — `create_app_session` bloqueia.
+- **Login** — `create_app_session` bloqueia (fail-closed).
 - **Sessão ativa** — `validate_app_session` invalida em até 60s.
-- **Banco (defesa real)** — RLS RESTRICTIVE em `deals` e `orders`.
-- **Edge Functions sensíveis** — helper `_shared/accessControl.ts`.
+- **Banco (defesa real)** — RLS RESTRICTIVE em `deals` e `orders`,
+  **apenas em escrita** (INSERT/UPDATE/DELETE). Leitura permanece livre
+  para não quebrar dashboards e telas de histórico fora do expediente.
+- **Edge Functions sensíveis** — helper `_shared/accessControl.ts` com
+  modos `strict` (ERP/financeiro = fail-closed) e `lenient`
+  (telemetria/IA leitura = fail-open).
 
 Qualquer alteração em `is_within_access_window` exige revisão completa
 do fluxo de sessão e da RLS de `deals`/`orders`.
+
+### Imunidade auditada
+Admin e desenvolvedor passam sempre, MAS quando estão fora da janela
+um registro `action='admin_bypass'` é gravado em `access_violation_log`
+para auditoria. Consulta:
+
+```sql
+SELECT user_id, attempted_at, details
+FROM access_violation_log
+WHERE action = 'admin_bypass'
+ORDER BY attempted_at DESC LIMIT 50;
+```
+
+### Limitação conhecida (multi-tenant)
+A função usa `profiles.active_tenant_id` e cai em
+`user_tenants … LIMIT 1` se for nulo. Para usuários multi-tenant, isso
+pode validar contra o tenant errado. Mitigação atual: `active_tenant_id`
+é setado no login. Mitigação definitiva: tornar `active_tenant_id`
+NOT NULL — ver KI-0003.
 
 ## Modelo de dados
 
