@@ -46,6 +46,7 @@ PRs sem o checklist preenchido serão devolvidos.
 - [ ] RPCs testadas com payload **não-vazio** (lição do [KI-0001](../docs/00-overview/known-issues.md))
 - [ ] Logs/audit cobrem caminho feliz E de erro
 - [ ] Acessibilidade básica preservada (labels, contraste, foco)
+- [ ] **Se houve bug relevante → registrado em `docs/00-overview/known-issues.md`**
 
 ---
 

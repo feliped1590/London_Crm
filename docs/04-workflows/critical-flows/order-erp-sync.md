@@ -1,7 +1,9 @@
 # Fluxo Crítico — Sincronização de Pedidos com ERP Projedata
 
-**Status:** Ativo · **Última revisão:** 2026-04-21 · **Owner:** Tech Lead
-**Severidade do fluxo:** 🔴 alta (impacta faturamento)
+**Owner:** @felipe  
+**Última revisão:** 2026-04-21
+
+**Status:** Ativo · **Severidade do fluxo:** 🔴 alta (impacta faturamento)
 
 ---
 
