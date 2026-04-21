@@ -7815,6 +7815,79 @@ export type Database = {
           },
         ]
       }
+      tenant_access_exceptions: {
+        Row: {
+          created_at: string
+          description: string | null
+          exception_date: string
+          id: string
+          is_allowed: boolean
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          exception_date: string
+          id?: string
+          is_allowed: boolean
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          exception_date?: string
+          id?: string
+          is_allowed?: boolean
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_access_exceptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_access_schedules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          start_time: string
+          tenant_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          start_time: string
+          tenant_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          start_time?: string
+          tenant_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_access_schedules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
           category: string
@@ -9065,6 +9138,7 @@ export type Database = {
           value: number
         }[]
       }
+      get_tenant_timezone: { Args: { p_tenant_id: string }; Returns: string }
       get_user_modules: {
         Args: { _user_id: string }
         Returns: {
@@ -9100,6 +9174,8 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      is_within_access_window: { Args: { p_user_id: string }; Returns: boolean }
+      is_within_access_window_for_rls: { Args: never; Returns: boolean }
       lock_order: { Args: { p_order_id: string }; Returns: Json }
       next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
       process_stock_movement: {

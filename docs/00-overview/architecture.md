@@ -119,6 +119,7 @@ Detalhes de cada integração em arquivos próprios (a criar conforme necessidad
 | **RLS (Row Level Security)** | Vazamento de dados entre CNPJs, usuários vendo o que não devem | Políticas compostas, testar com múltiplos perfis, `has_pipeline_access()` |
 | **Multi-CNPJ** | Confusão entre `tenant_id` e `legal_entity_id`, pipelines restritos vs globais | Documentar escopo, usar RPC `save_pipeline_with_entities`, validar triggers |
 | **Fiscal / IPI** | Cálculo incorreto de tributos, propostas com valores errados | Testar com `contribuinte_ipi` true/false, validar NCM, usar engine fiscal |
+| **Janela de acesso por tenant** | Regra temporal aplicada em sessão + RLS RESTRICTIVE em `deals`/`orders`. Erro de configuração pode travar o tenant inteiro. | Admin/desenvolvedor são imunes; fail-safe quando não há regra; ver [ADR 0001](../02-decisions/0001-access-control-calendar.md) e [regra de negócio](../03-business-rules/access-calendar.md) |
 
 > **Para novos desenvolvedores:** leia este documento e [`docs/00-overview/known-issues.md`](./known-issues.md) antes de tocar em qualquer uma dessas áreas.
 
