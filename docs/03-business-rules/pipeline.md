@@ -18,7 +18,9 @@ Funil que organiza deals (negócios), orders (pedidos) e proposals (propostas) e
 | `support` | Atendimento / RNC / qualidade. |
 | `hybrid` | Misto (raro). |
 
-> **Regra crítica:** apenas pipelines `sales` aplicam regras comerciais (preço, motivo de perda, classificação). Pipelines operacionais ignoram essas validações.
+> **⚠️ REGRA CRÍTICA:** apenas pipelines `sales` aplicam regras comerciais (preço, motivo de perda, classificação). Pipelines operacionais ignoram essas validações.
+> 
+> *Esta regra é aplicada via trigger no banco. Não pode ser burlada pelo frontend. Qualquer alteração exige revisão completa do fluxo.*
 
 ---
 
@@ -44,7 +46,10 @@ pipeline_legal_entities (pipeline_id, legal_entity_id) -- N:N, fonte de verdade
 
 ## 3. Como salvar um pipeline (caminho único)
 
-❌ **Nunca** fazer `INSERT/UPDATE` direto em `pipelines` + `pipeline_legal_entities`.
+❌ **⚠️ REGRA CRÍTICA: Nunca** fazer `INSERT/UPDATE` direto em `pipelines` + `pipeline_legal_entities`.
+
+*Esta regra é aplicada via RLS e trigger no banco. Não pode ser burlada pelo frontend. Qualquer alteração exige revisão completa do fluxo.*
+
 ✅ **Sempre** chamar a RPC:
 
 ```ts

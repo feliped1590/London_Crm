@@ -20,7 +20,9 @@ Disparado **manualmente** pelo usuário em `OrderSyncButton`:
 - Status `blocked_validation` → botão `Wrench` abre modal de correção sem reenviar
 - Status sincronizado mas editado → botão "Reenviar" (pedido marcado "Desatualizado")
 
-> Não há sync automática por trigger. Sempre manual e auditada.
+> **⚠️ REGRA CRÍTICA:** Não há sync automática por trigger. Sempre manual e auditada.
+> 
+> *Esta regra é aplicada via arquitetura de edge functions. Não pode ser burlada pelo frontend. Qualquer alteração exige revisão completa do fluxo.*
 
 ---
 
@@ -152,6 +154,8 @@ Calculado no frontend: se `updated_at - erp_synced_at > 5 segundos`, badge fica 
 ---
 
 ## 9. NÃO fazer
+
+> **⚠️ REGRAS CRÍTICAS — aplicadas via trigger/RLS no banco. Não podem ser burladas pelo frontend. Qualquer alteração exige revisão completa do fluxo.**
 
 - ❌ Disparar sync automática por trigger (decisão arquitetural — sempre manual).
 - ❌ Atualizar `orders.erp_synced_at` fora da edge function.
