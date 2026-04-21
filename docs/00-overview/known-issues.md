@@ -52,6 +52,40 @@ Migration `20260420154853_*.sql` recriou a função trocando `le.is_active` por 
 
 ---
 
+## KI-0002 — Janela de acesso por tenant: rollout incremental de RLS
+
+- **Data:** 2026-04-21
+- **Severidade:** média (decisão arquitetural)
+- **Status:** ⚠️ mitigado (em rollout controlado)
+
+### Contexto
+A feature de janela de acesso (ver [ADR 0001](../02-decisions/0001-access-control-calendar.md))
+aplica RLS RESTRICTIVE em tabelas operacionais. Aplicar em **todas** de uma vez
+tem alto risco de quebrar telas de leitura histórica (relatórios, customer detail,
+dashboards) sem que percebamos no preview.
+
+### Decisão
+Começamos a v1 com RLS RESTRICTIVE apenas em **`deals`** e **`orders`** (núcleo
+comercial). `companies`, `contacts`, `proposals` e demais tabelas ficam **fora**
+da regra de horário enquanto não houver rollout testado.
+
+### Risco residual
+- Vendedor fora do horário consegue **ler** companies/contacts/proposals (não
+  consegue ler/escrever deals/orders).
+- Aceitável para a v1 — o objetivo crítico é impedir **registro de venda** fora
+  do expediente.
+
+### Próximo passo
+Onda 2: estender para `proposals`, `quotes` e `deal_*` auxiliares após
+1 sprint de observação (sem regressões de leitura reportadas).
+
+### Arquivos relacionados
+- `supabase/functions/_shared/accessControl.ts`
+- `docs/02-decisions/0001-access-control-calendar.md`
+- `docs/03-business-rules/access-calendar.md`
+
+---
+
 ## Template para próximas entradas
 
 Copie e cole o bloco abaixo:
