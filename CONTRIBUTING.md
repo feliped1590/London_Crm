@@ -116,7 +116,7 @@ Para manter a documentação viva e atualizada:
 
 ---
 
-## 9. Quando algo quebra
+## 11. Quando algo quebra
 
 1. Reproduza localmente se possível.
 2. Investigue logs (edge function, `audit_logs`, `order_sync_queue`...).
