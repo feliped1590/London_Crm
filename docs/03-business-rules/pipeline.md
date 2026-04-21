@@ -1,6 +1,8 @@
 # Regra de Negócio — Pipelines
 
-**Última revisão:** 2026-04-21 · **Owner:** Tech Lead
+**Owner:** @felipe  
+**Última revisão:** 2026-04-21
+
 **Implementação principal:** `src/hooks/usePipelines.ts`, `src/components/settings/UnifiedPipelineManager.tsx`, RPC `public.save_pipeline_with_entities`, trigger `validate_pipeline_legal_entity_match`.
 
 ---

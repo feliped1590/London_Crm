@@ -98,14 +98,25 @@ UI isolada: não testar (custo > benefício hoje).
 
 ---
 
-## 8. Deploy
+## 9. Revisão de documentação
+
+Para manter a documentação viva e atualizada:
+
+- **Toda feature relevante** → revisar e atualizar os documentos em `/docs` afetados pelo trabalho
+- **A cada 3 meses** → revisão geral de toda a pasta `/docs` para identificar obsolescência
+
+> **Regra:** documentação desatualizada é tratada como bug — cria-se issue e prioriza-se a correção.
+
+---
+
+## 10. Deploy
 
 - Merge em `main` → deploy automático (Lovable).
 - Hotfix: branch `fix/`, PR rápido, merge, deploy. Pós-mortem se foi incidente real → entrada em `known-issues.md`.
 
 ---
 
-## 9. Quando algo quebra
+## 11. Quando algo quebra
 
 1. Reproduza localmente se possível.
 2. Investigue logs (edge function, `audit_logs`, `order_sync_queue`...).

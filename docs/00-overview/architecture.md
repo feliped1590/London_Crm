@@ -1,6 +1,7 @@
 # Arquitetura do Sistema — CRM Qualyvac
 
-**Última revisão:** 2026-04-21 · **Owner:** Tech Lead
+**Owner:** @felipe  
+**Última revisão:** 2026-04-21
 
 CRM B2B multi-tenant com regras fiscais brasileiras, integração com ERP Projedata, automações via N8N e fluxos assistidos por IA.
 
@@ -104,6 +105,22 @@ Dois conceitos distintos, frequentemente confundidos:
 | **Lovable AI Gateway** | REST | Sugestões de NCM, análise de conversas, copywriting. |
 
 Detalhes de cada integração em arquivos próprios (a criar conforme necessidade).
+
+---
+
+## Pontos de alto risco
+
+Áreas do sistema onde erros têm impacto crítico e exigem atenção redobrada:
+
+| Área | Risco | Mitigação |
+|---|---|---|
+| **Integração ERP** | Sincronização falha, duplicidade de pedidos, loops infinitos | `origem_alteracao`, idempotência via `pedido_terceiro`, validação prévia |
+| **Triggers de banco** | Efeitos colaterais invisíveis, validações quebrando em produção | Testar com dados reais, revisar RLS, usar `supabase--linter` |
+| **RLS (Row Level Security)** | Vazamento de dados entre CNPJs, usuários vendo o que não devem | Políticas compostas, testar com múltiplos perfis, `has_pipeline_access()` |
+| **Multi-CNPJ** | Confusão entre `tenant_id` e `legal_entity_id`, pipelines restritos vs globais | Documentar escopo, usar RPC `save_pipeline_with_entities`, validar triggers |
+| **Fiscal / IPI** | Cálculo incorreto de tributos, propostas com valores errados | Testar com `contribuinte_ipi` true/false, validar NCM, usar engine fiscal |
+
+> **Para novos desenvolvedores:** leia este documento e [`docs/00-overview/known-issues.md`](./known-issues.md) antes de tocar em qualquer uma dessas áreas.
 
 ---
 

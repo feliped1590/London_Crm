@@ -1,5 +1,8 @@
 # Erros Conhecidos — Aprendizado Contínuo
 
+**Owner:** @felipe  
+**Última revisão:** 2026-04-21
+
 **Propósito:** todo erro relevante que chegar a produção (ou que custou tempo de debug) vira entrada aqui. Causa, solução e — o mais importante — **prevenção**.
 
 > **Regra:** se um bug consumiu mais de 1h de investigação, ele merece estar aqui.
