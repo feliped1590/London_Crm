@@ -109,7 +109,22 @@ Para manter a documentação viva e atualizada:
 
 ---
 
-## 10. Deploy
+## 10. Tempo de atualização de documentação (SLA mental)
+
+> **Regra de ouro:** documentação não é "depois", é parte da entrega.
+
+| Situação | Prazo | Onde |
+|---|---|---|
+| Regra/fluxo alterado | **MESMO PR** | `docs/03-business-rules/` ou `docs/04-workflows/` |
+| Bug crítico descoberto | **Mesmo dia** | `docs/00-overview/known-issues.md` |
+| Decisão arquitetural | **No PR da decisão** | `docs/02-architecture/decisions/ADR-XXXX-*.md` |
+| API/integração nova | **Antes do merge** | Atualizar diagrama em `architecture.md` |
+
+> **Evite o clássico:** *"depois eu documento"* (e nunca acontece).
+
+---
+
+## 11. Deploy
 
 - Merge em `main` → deploy automático (Lovable).
 - Hotfix: branch `fix/`, PR rápido, merge, deploy. Pós-mortem se foi incidente real → entrada em `known-issues.md`.
