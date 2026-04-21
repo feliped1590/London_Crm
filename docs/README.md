@@ -36,6 +36,21 @@ Se você vai mexer no sistema, leia nesta ordem:
 
 ---
 
+## ⚡ Start rápido (obrigatório)
+
+Se você vai mexer no sistema, leia nesta ordem:
+
+1. [`00-overview/architecture.md`](./00-overview/architecture.md) — stack, integrações, multi-CNPJ
+2. [`00-overview/known-issues.md`](./00-overview/known-issues.md) — erros que já aconteceram e como evitar
+3. [`03-business-rules/pipeline.md`](./03-business-rules/pipeline.md) — se envolver pipeline
+4. [`04-workflows/critical-flows/order-erp-sync.md`](./04-workflows/critical-flows/order-erp-sync.md) — se envolver ERP
+
+**Tempo total: ~30 minutos**
+
+> Isso elimina o clássico: *"não sabia que isso existia"*
+
+---
+
 ## Por onde começar
 
 ### 👶 Primeira vez no projeto
