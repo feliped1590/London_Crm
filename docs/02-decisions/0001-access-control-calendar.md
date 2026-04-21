@@ -20,25 +20,29 @@ Implementar a regra em **4 camadas combinadas** (defesa em profundidade):
 
 1. **Banco — função central** `is_within_access_window(user_id)` resolve
    tenant ativo, fuso horário, exceções e regra semanal.
-2. **Sessão** — `create_app_session` bloqueia login fora do horário;
-   `validate_app_session` invalida sessão em uso (efeito até ~60s).
-3. **RLS RESTRICTIVE** em `deals` e `orders` (núcleo comercial). Combina
-   com as policies existentes via AND. Outras tabelas serão adicionadas em
-   ondas conforme rollout (ver `known-issues`).
-4. **Edge Functions** — helper `_shared/accessControl.ts` para integrações
-   sensíveis (ERP, IA com escrita, e-mail).
+2. **Sessão** — `create_app_session` bloqueia login fora do horário
+   (fail-closed); `validate_app_session` invalida sessão em uso (até ~60s).
+3. **RLS RESTRICTIVE em `deals` e `orders`, apenas escrita**
+   (INSERT/UPDATE/DELETE). SELECT permanece livre para não quebrar
+   dashboards/relatórios fora do expediente. Outras tabelas em ondas.
+4. **Edge Functions** — helper `_shared/accessControl.ts` com 2 modos:
+   - `strict` (fail-closed) → ERP, financeiro, mutações de pedido.
+   - `lenient` (fail-open) → telemetria, IA leitura, sync de cache.
 
-### Imunidade
-- `admin` e `desenvolvedor` ignoram a janela (intervenção 24/7).
+### Imunidade auditada
+- `admin` e `desenvolvedor` ignoram a janela (intervenção 24/7), MAS
+  acesso fora do horário é registrado em `access_violation_log` com
+  `action='admin_bypass'`.
 
 ### Fail-safe
 - Tenant sem regras cadastradas = liberado 24/7 (rollout não quebra nada).
-- Falha de RPC em Edge Function = fail-open com `console.warn`
-  (não derrubar integração ERP por erro transitório).
+- Falha de RPC em Edge Function lenient = libera com warn;
+  em strict = bloqueia com 503 `ACCESS_CHECK_UNAVAILABLE`.
 
 ### Logging
-- Reuso de `access_violation_log` com `action='outside_allowed_hours'` e
-  `details.context` ∈ {`login`, `session_validation`}.
+- Reuso de `access_violation_log`:
+  - `action='outside_allowed_hours'`, `details.context` ∈ {`login`, `session_validation`}
+  - `action='admin_bypass'`, `details.role` ∈ {`admin`, `desenvolvedor`}
 
 ## Consequências
 

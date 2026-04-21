@@ -86,6 +86,37 @@ Onda 2: estender para `proposals`, `quotes` e `deal_*` auxiliares após
 
 ---
 
+## KI-0003 — `profiles.active_tenant_id` é nullable (risco multi-tenant)
+
+- **Data:** 2026-04-21
+- **Severidade:** baixa hoje (1 tenant em produção), média se virar multi-tenant
+- **Status:** 🔴 em aberto
+
+### Sintoma
+A função `is_within_access_window` resolve o tenant do usuário assim:
+1. `profiles.active_tenant_id`
+2. fallback: `user_tenants … LIMIT 1`
+
+Se um usuário pertencer a vários tenants e `active_tenant_id` estiver NULL,
+o `LIMIT 1` é não-determinístico — a janela de acesso pode ser validada
+contra o tenant errado.
+
+### Mitigação atual
+- Apenas 1 tenant ativo em produção (Qualyvac), risco efetivo zero.
+- `active_tenant_id` é setado no fluxo de login.
+
+### Solução definitiva (futuro)
+1. Backfill: `UPDATE profiles SET active_tenant_id = (SELECT tenant_id FROM user_tenants WHERE user_id = profiles.user_id LIMIT 1) WHERE active_tenant_id IS NULL;`
+2. `ALTER TABLE profiles ALTER COLUMN active_tenant_id SET NOT NULL;`
+3. Remover o fallback da função.
+4. Validar no signup que todo profile já nasce com `active_tenant_id`.
+
+### Arquivos relacionados
+- Função `is_within_access_window` (migration de 2026-04-21)
+- `src/hooks/useLegalEntities.ts` (gerencia troca de entity, não de tenant)
+
+---
+
 ## Template para próximas entradas
 
 Copie e cole o bloco abaixo:
