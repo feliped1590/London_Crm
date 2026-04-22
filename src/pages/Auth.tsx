@@ -11,6 +11,7 @@ import { Building2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { ActiveSessionModal } from '@/components/auth/ActiveSessionModal';
 import { setSessionId, clearSessionId } from '@/hooks/useSessionGuard';
+import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
