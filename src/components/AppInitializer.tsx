@@ -146,7 +146,7 @@ export function AppInitializer({ children }: { children: ReactNode }) {
     };
 
     runBackground();
-  }, [authLoading, user, queryClient, signOut]);
+  }, [authLoading, user, queryClient, signOut, navigate]);
 
   // Reset when user changes (logout + new login)
   useEffect(() => {
