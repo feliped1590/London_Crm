@@ -188,34 +188,47 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2 overflow-y-auto scrollbar-thin">
-        {navItems.map((item) => {
+      <nav className="flex-1 space-y-1.5 p-2 overflow-y-auto scrollbar-thin">
+        {navItems.map((item, index) => {
           const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/');
+
+          // Separadores visuais entre grupos lógicos (puramente visual, não muda a lista)
+          // Grupos: [today, pipeline, customers, products, orders, stock, carriers] | [tasks, whatsapp, emails, prospecting] | [reports] | [integrations, settings]
+          const isGroupBreak =
+            item.to === '/tasks' ||
+            item.to === '/reports' ||
+            item.to === '/integrations' ||
+            (item.to === '/settings' && !navItems.some((n) => n.to === '/integrations'));
+
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={handleNavClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
-                isMobile ? "py-3 min-h-[48px]" : "py-2.5",
-                isActive 
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground" 
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                !showLabels && "justify-center px-0"
+            <div key={item.to}>
+              {isGroupBreak && index > 0 && (
+                <div className="my-3 border-t border-sidebar-border/50" aria-hidden="true" />
               )}
-              title={!showLabels ? item.label : undefined}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {showLabels && (
-                <span className="flex-1 truncate">{item.label}</span>
-              )}
-              {showLabels && item.to === '/whatsapp' && unreadCount && unreadCount > 0 && (
-                <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center px-1.5 text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </NavLink>
+              <NavLink
+                to={item.to}
+                onClick={handleNavClick}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all duration-200 ease-in-out",
+                  isMobile ? "py-3 min-h-[48px]" : "py-2.5",
+                  isActive
+                    ? "bg-gradient-primary-whisper text-sidebar-primary-foreground border-l-2 border-primary glow-active shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground hover:translate-x-0.5 hover:glow-hover",
+                  !showLabels && "justify-center px-0"
+                )}
+                title={!showLabels ? item.label : undefined}
+              >
+                <item.icon className="h-5 w-5 shrink-0" />
+                {showLabels && (
+                  <span className="flex-1 truncate">{item.label}</span>
+                )}
+                {showLabels && item.to === '/whatsapp' && unreadCount && unreadCount > 0 && (
+                  <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center px-1.5 text-xs">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </NavLink>
+            </div>
           );
         })}
       </nav>
@@ -229,7 +242,7 @@ export function AppSidebar() {
               !showLabels && "justify-center px-0"
             )}
           >
-            <div className="h-8 w-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-medium shrink-0">
+            <div className="h-8 w-8 rounded-full bg-gradient-primary-strong flex items-center justify-center text-white font-medium shrink-0 shadow-sm">
               {user?.email?.[0].toUpperCase() || 'U'}
             </div>
             {showLabels && (
