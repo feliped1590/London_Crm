@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -158,6 +159,30 @@ export function AccessWindowManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Aviso de fail-safe quando CNPJ não tem regra própria */}
+      {selectedEntity && !isLoading && !hasOwnRules && (
+        <Alert className="border-amber-500/50 bg-amber-500/10 [&>svg]:text-amber-600">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="text-amber-900 dark:text-amber-200">
+            Este CNPJ não tem janela configurada
+          </AlertTitle>
+          <AlertDescription className="text-amber-900/90 dark:text-amber-200/90 space-y-2">
+            <p>
+              Usuários cujo <strong>CNPJ ativo</strong> seja{' '}
+              <strong>{selectedEntity.name}</strong> terão{' '}
+              <strong>acesso liberado 24h/dia, 7 dias por semana</strong> (fail-safe).
+              Configure ao menos um intervalo abaixo ou clique em{' '}
+              <em>"Aplicar Seg–Sex 08:00–18:00"</em> para ativar a janela neste CNPJ.
+            </p>
+            <p className="text-xs opacity-80">
+              💡 A janela é resolvida pelo CNPJ <strong>ativo</strong> de cada usuário.
+              Se um vendedor estiver com outro CNPJ ativo, é a regra <em>daquele</em> CNPJ
+              que será aplicada — não a deste aqui.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Grade semanal */}
       <Card>
