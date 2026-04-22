@@ -105,22 +105,53 @@ ORDER BY attempted_at DESC
 LIMIT 50;
 ```
 
-## Como cadastrar (provisório, via SQL — UI pendente)
+## Como cadastrar
+
+### Via UI (recomendado)
+**Configurações → Usuários e Permissões → Janela de Acesso** (visível para
+`admin` e `desenvolvedor`):
+
+- Selecione o **CNPJ** no topo.
+- Monte a **grade semanal** (vários intervalos por dia, ativar/desativar
+  individualmente) ou clique em **"Aplicar Seg–Sex 08:00–18:00"**.
+- Adicione **exceções** pontuais (feriado bloqueia, liberação extraordinária
+  permite).
+- O badge **"Acesso PERMITIDO/FORA agora"** confirma que a regra está
+  surtindo efeito.
+
+### Resolução da regra (ordem de precedência)
+1. **CNPJ ativo do usuário** (`profiles.active_legal_entity_id`):
+   - Se houver exceção para hoje → vale a exceção.
+   - Senão, se houver `legal_entity_access_schedules` cadastrado para esse
+     CNPJ → avalia contra a grade do CNPJ.
+2. **Fallback para o tenant** (regra antiga `tenant_access_schedules` /
+   `tenant_access_exceptions`) — só usado se o CNPJ não tiver regra própria.
+3. Sem nada cadastrado → fail-safe libera 24/7.
+
+### Via SQL (provisório/manual)
 
 ```sql
--- Seg-Sex, 08:00 às 18:00 para um tenant
+-- Por CNPJ (preferido):
+INSERT INTO legal_entity_access_schedules (tenant_id, legal_entity_id, weekday, start_time, end_time)
+SELECT tenant_id, id, d, '08:00', '18:00'
+FROM legal_entities, generate_series(1,5) AS d
+WHERE id = '<legal_entity_id>';
+
+-- Bloquear feriado por CNPJ:
+INSERT INTO legal_entity_access_exceptions (tenant_id, legal_entity_id, exception_date, is_allowed, description)
+SELECT tenant_id, id, '2026-04-21', false, 'Tiradentes'
+FROM legal_entities WHERE id = '<legal_entity_id>';
+
+-- Por TENANT (fallback global, se nenhum CNPJ tiver regra):
 INSERT INTO tenant_access_schedules (tenant_id, weekday, start_time, end_time)
 SELECT '<tenant_id>', d, '08:00', '18:00'
 FROM generate_series(1,5) AS d;
-
--- Bloquear feriado
-INSERT INTO tenant_access_exceptions (tenant_id, exception_date, is_allowed, description)
-VALUES ('<tenant_id>', '2026-04-21', false, 'Tiradentes');
 ```
 
 ## Próximos passos
 
-1. UI de gestão (CRUD de regras + exceções) em Settings → Acesso.
+1. ~~UI de gestão (CRUD de regras + exceções) em Settings → Acesso.~~ ✅ Feito
+   em **Configurações → Usuários e Permissões → Janela de Acesso**.
 2. Expandir RLS RESTRICTIVE para `companies`, `contacts`, `proposals` em
    ondas controladas.
 3. Aplicar `checkAccessWindow` nas edge functions `erp-*` e `process-*-sync`.
