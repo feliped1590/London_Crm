@@ -11,6 +11,7 @@ import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
 import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -164,6 +165,31 @@ Deno.serve(async (req) => {
 
     for (const queueItem of queue) {
       try {
+        // ⏰ Janela de acesso por tenant (strict)
+        try {
+          await checkAccessWindowForTenant(supabase, queueItem.tenant_id, {
+            mode: 'strict',
+            context: 'process-company-sync',
+          });
+        } catch (winErr) {
+          if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+            console.warn(`[process-company-sync] Item ${queueItem.id} adiado: ${winErr.message}`);
+            await supabase
+              .from('company_sync_queue')
+              .update({
+                status: 'pending',
+                next_retry_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+                error_message: winErr.message,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', queueItem.id);
+            errorCount++;
+            results.push({ company_id: queueItem.company_id, status: 'deferred', error: winErr.message });
+            continue;
+          }
+          throw winErr;
+        }
+
         // 2. Marcar como processing (lock de concorrência)
         const { data: locked } = await supabase
           .from('company_sync_queue')
