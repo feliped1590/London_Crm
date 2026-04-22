@@ -59,6 +59,12 @@ export default function Auth() {
     });
 
     if (error) {
+      // Postgres pode devolver o erro de janela como erro estruturado
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('outside_allowed_hours') || errMsg.includes('horário')) {
+        await redirectToAccessBlocked(userId);
+        return;
+      }
       console.error('Error creating session:', error);
       toast.error('Erro ao criar sessão');
       return;
@@ -71,8 +77,7 @@ export default function Auth() {
       navigate('/today', { replace: true });
     } else if (result?.error === 'OUTSIDE_ALLOWED_HOURS') {
       // Janela de acesso bloqueia login — single source of truth no banco
-      await signOut();
-      navigate('/access-blocked', { replace: true });
+      await redirectToAccessBlocked(userId);
     } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
       // Race condition fallback — check again
       const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
@@ -87,6 +92,13 @@ export default function Auth() {
       console.error('Resposta inesperada de create_app_session:', result);
       toast.error('Erro inesperado ao validar acesso');
     }
+  };
+
+  const redirectToAccessBlocked = async (userId: string) => {
+    // Coleta info ANTES do signOut (precisa do token)
+    const info = await fetchAccessBlockedInfo(userId);
+    await signOut();
+    navigate('/access-blocked', { replace: true, state: { info } });
   };
 
   const handleLogin = async (e: React.FormEvent) => {
