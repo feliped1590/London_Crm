@@ -22,12 +22,12 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Primary roxo IA */
-    --primary: 262 83% 58%;
+    /* Primary azul corporativo */
+    --primary: 217 91% 48%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary accent — azul IA (usado em gradientes) */
-    --secondary-accent: 217 91% 56%;
+    /* Secondary accent — azul claro (usado em gradientes) */
+    --secondary-accent: 199 89% 55%;
 
     --secondary: 215 25% 94%;
     --secondary-foreground: 222 47% 11%;
@@ -35,15 +35,15 @@
     --muted: 215 22% 96%;
     --muted-foreground: 215 14% 42%;
 
-    --accent: 262 70% 95%;
-    --accent-foreground: 262 83% 38%;
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 38%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 215 20% 90%;
     --input: 215 20% 90%;
-    --ring: 262 83% 58%;
+    --ring: 217 91% 50%;
 
     --radius: 0.625rem;
 
@@ -63,21 +63,21 @@
     --stage-ganho: 142 76% 36%;
     --stage-perdido: 0 84% 60%;
 
-    /* Sidebar (light mantém escuro elegante) */
+    /* Sidebar (mantém escuro elegante) */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 262 83% 60%;
+    --sidebar-primary: 217 91% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 30% 18%;
     --sidebar-accent-foreground: 210 20% 95%;
     --sidebar-border: 222 30% 16%;
-    --sidebar-ring: 262 83% 60%;
+    --sidebar-ring: 217 91% 55%;
 
-    /* === Sprint 2: Gradientes (3 níveis) === */
-    --gradient-primary-strong: linear-gradient(135deg, hsl(217 91% 56%), hsl(262 83% 58%));
-    --gradient-primary-soft: linear-gradient(135deg, hsl(217 91% 56% / 0.80), hsl(262 83% 58% / 0.80));
-    --gradient-primary-whisper: linear-gradient(135deg, hsl(217 91% 56% / 0.14), hsl(262 83% 58% / 0.14));
-    --gradient-subtle: linear-gradient(135deg, hsl(217 91% 56% / 0.10), hsl(262 83% 58% / 0.10));
+    /* === Sprint 2: Gradientes (3 níveis) — azul tech === */
+    --gradient-primary-strong: linear-gradient(135deg, hsl(217 91% 48%), hsl(199 89% 55%));
+    --gradient-primary-soft: linear-gradient(135deg, hsl(217 91% 48% / 0.80), hsl(199 89% 55% / 0.80));
+    --gradient-primary-whisper: linear-gradient(135deg, hsl(217 91% 48% / 0.14), hsl(199 89% 55% / 0.14));
+    --gradient-subtle: linear-gradient(135deg, hsl(217 91% 48% / 0.10), hsl(199 89% 55% / 0.10));
 
     /* === Sprint 2: Glow com intenção (3 níveis) === */
     --glow-hover: 0 0 12px hsl(var(--primary) / 0.12);
