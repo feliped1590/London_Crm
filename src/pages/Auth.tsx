@@ -98,10 +98,15 @@ export default function Auth() {
 
     if (error) {
       setIsSubmitting(false);
-      if (error.message.includes('Invalid login credentials')) {
+      const msg = error.message || '';
+      if (msg.includes('OUTSIDE_ALLOWED_HOURS') || msg.includes('outside_allowed_hours')) {
+        navigate('/access-blocked', { replace: true });
+        return;
+      }
+      if (msg.includes('Invalid login credentials')) {
         toast.error('Email ou senha incorretos');
       } else {
-        toast.error('Erro ao fazer login: ' + error.message);
+        toast.error('Erro ao fazer login: ' + msg);
       }
       return;
     }
@@ -111,6 +116,17 @@ export default function Auth() {
     if (!currentUser) {
       setIsSubmitting(false);
       toast.error('Erro ao obter dados do usuário');
+      return;
+    }
+
+    // Validate access window before creating session
+    const { data: windowCheck } = await supabase.rpc('is_within_access_window', {
+      p_user_id: currentUser.id,
+    });
+    if (windowCheck === false) {
+      await signOut();
+      setIsSubmitting(false);
+      navigate('/access-blocked', { replace: true });
       return;
     }
 
