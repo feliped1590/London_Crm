@@ -23,7 +23,7 @@ export type Database = {
           entity_type: string
           id: string
           ip_address: string | null
-          target_owner_id: string
+          target_owner_id: string | null
           target_owner_name: string | null
           user_agent: string | null
           user_id: string
@@ -36,7 +36,7 @@ export type Database = {
           entity_type: string
           id?: string
           ip_address?: string | null
-          target_owner_id: string
+          target_owner_id?: string | null
           target_owner_name?: string | null
           user_agent?: string | null
           user_id: string
@@ -49,7 +49,7 @@ export type Database = {
           entity_type?: string
           id?: string
           ip_address?: string | null
-          target_owner_id?: string
+          target_owner_id?: string | null
           target_owner_name?: string | null
           user_agent?: string | null
           user_id?: string

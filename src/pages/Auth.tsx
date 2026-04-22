@@ -26,6 +26,23 @@ function getDeviceInfo(): string {
   return 'Navegador';
 }
 
+function isAccessWindowBlockError(error: { message?: string; details?: string } | null) {
+  if (!error) return false;
+
+  const message = (error.message || '').toLowerCase();
+  const details = (error.details || '').toLowerCase();
+
+  return (
+    message.includes('outside_allowed_hours') ||
+    message.includes('horário') ||
+    (
+      message.includes('target_owner_id') &&
+      details.includes('access_violation_log') &&
+      details.includes('outside_allowed_hours')
+    )
+  );
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading, signIn, signOut } = useAuth();
@@ -59,9 +76,7 @@ export default function Auth() {
     });
 
     if (error) {
-      // Postgres pode devolver o erro de janela como erro estruturado
-      const errMsg = (error.message || '').toLowerCase();
-      if (errMsg.includes('outside_allowed_hours') || errMsg.includes('horário')) {
+      if (isAccessWindowBlockError(error)) {
         await redirectToAccessBlocked(userId);
         return;
       }
@@ -186,8 +201,7 @@ export default function Auth() {
     });
 
     if (error) {
-      const errMsg = (error.message || '').toLowerCase();
-      if (errMsg.includes('outside_allowed_hours') || errMsg.includes('horário')) {
+      if (isAccessWindowBlockError(error)) {
         setShowSessionModal(false);
         setActiveSessionInfo(null);
         await redirectToAccessBlocked(pendingUserId);
