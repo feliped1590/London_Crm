@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkAccessWindow, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -84,6 +85,22 @@ Deno.serve(async (req) => {
 
     // Create admin client for operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // ⏰ Janela de acesso (strict — análise de crédito é decisão financeira)
+    try {
+      await checkAccessWindow(supabaseAdmin, user.id, {
+        mode: 'strict',
+        context: 'credit-analysis',
+      });
+    } catch (winErr) {
+      if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+        return new Response(
+          JSON.stringify({ error: winErr.message, code: (winErr as any).code }),
+          { status: (winErr as any).status ?? 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      throw winErr;
+    }
 
     // Check permission using the function
     const { data: canUpdate, error: permError } = await supabaseAdmin.rpc('can_update_credit_score', {
