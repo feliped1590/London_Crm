@@ -1,157 +1,113 @@
 
 
-# Plano — Aba "Janela de Acesso" em Configurações → Usuários e Permissões
+# Sprint 2 — Tech/IA Futurista (com ajustes finos aprovados)
 
-## Objetivo
+## Escopo final consolidado
 
-Criar uma interface visual para que **Administradores** e **Desenvolvedores** configurem os horários permitidos de acesso ao CRM, com suporte a configuração **por entidade jurídica (CNPJ)**, mantendo compatibilidade com as regras de tenant já existentes.
+Mantém todo o plano original aprovado e incorpora os 5 ajustes finos:
 
-## Decisões aprovadas
+### Base já aprovada
+- Tokens dark "tech premium" (#0B0F19 / #111827 / bordas #1F2937)
+- Identidade roxo (#7C3AED) + azul (#2563EB) com gradiente 135°
+- Glow controlado via tokens
+- Sidebar com pill ativa + separadores entre grupos
+- Header glassmorphism (`surface-glass`)
+- Variants `premium` em Button, `elevated` e `glow` em Card
+- Input com focus tech, Skeleton com shimmer
+- Microinteração base em botões/links
 
-- **Granularidade:** janela aplicada conforme **CNPJ ativo** do usuário (`profiles.active_legal_entity_id`).
-- **Compatibilidade:** regra de **CNPJ tem prioridade**; se não houver, cai na regra do **tenant** (fallback). Nada existente quebra.
-- **Permissões:** Admin e Desenvolvedor podem editar.
-- **UX:** grade semanal visual + lista de exceções (feriados/liberações).
+### Ajustes finos incorporados
 
-## Mudanças no banco (migração)
-
-### Novas tabelas (espelhando as de tenant, mas por CNPJ)
-
+**1. Gradiente com intensidade variável (3 níveis)**
 ```text
-legal_entity_access_schedules
-├── id uuid PK
-├── tenant_id uuid NOT NULL          -- isolamento multi-tenant
-├── legal_entity_id uuid NOT NULL    -- FK legal_entities
-├── weekday smallint (0=Dom … 6=Sáb)
-├── start_time time
-├── end_time time
-├── is_active boolean default true
-└── UNIQUE (legal_entity_id, weekday, start_time, end_time)
-
-legal_entity_access_exceptions
-├── id uuid PK
-├── tenant_id uuid NOT NULL
-├── legal_entity_id uuid NOT NULL
-├── exception_date date
-├── is_allowed boolean
-├── description text
-└── UNIQUE (legal_entity_id, exception_date)
+--gradient-primary-strong:  linear-gradient(135deg, #2563EB, #7C3AED)            (botões CTA)
+--gradient-primary-soft:    linear-gradient(135deg, #2563EB cc, #7C3AED cc)      (KPIs em destaque)
+--gradient-primary-whisper: linear-gradient(135deg, #2563EB 14%, #7C3AED 14%)    (sidebar item ativo, quase imperceptível)
 ```
+Uso:
+- Button `premium` → `strong`
+- Card `glow`/KPI principal → `soft`
+- Sidebar pill ativa → `whisper`
 
-### RLS
-
-- SELECT liberado para usuários autenticados do tenant (para a UI listar).
-- INSERT/UPDATE/DELETE apenas para `admin` ou `desenvolvedor`.
-
-### Atualizar `is_within_access_window(p_user_id)`
-
-Nova ordem de resolução:
-
-1. Resolver `v_legal_entity_id` via `profiles.active_legal_entity_id`.
-2. Se houver CNPJ ativo **E existir regra cadastrada para esse CNPJ** → avalia exceções e horários **desse CNPJ**.
-3. Caso contrário → mantém o caminho atual por `tenant_id` (fallback).
-4. Admin/Desenvolvedor continuam imunes com log `admin_bypass`, agora incluindo `legal_entity_id` no `details`.
-
-Isso garante que **nada do que já está configurado por tenant para de funcionar**.
-
-## Mudanças no frontend
-
-### 1. Nova sub-aba dentro de "Usuários e Permissões"
-
-Em `src/pages/Settings.tsx`, adicionar um `TabsTrigger` chamado **"Janela de Acesso"** (ícone `Clock`), visível apenas se `isAdmin || isDeveloper`, posicionado ao lado de "Sessões".
-
-### 2. Novo componente `AccessWindowManager`
-
-Caminho: `src/components/settings/AccessWindowManager.tsx`
-
-Estrutura:
-
+**2. Glow com intenção (3 intensidades semânticas)**
 ```text
-┌─ Seletor de CNPJ ─────────────────────────────────┐
-│  [Dropdown: EMBAZEC ▾]   [● Usando regra do CNPJ] │
-│                          ou [⚠ Usando regra do    │
-│                              tenant (sem regra    │
-│                              específica)]         │
-└───────────────────────────────────────────────────┘
-
-┌─ Horário Semanal ─────────────────────────────────┐
-│  Dia       │ Intervalos                  │ Ações  │
-│  Domingo   │ — (bloqueado)               │ [+]    │
-│  Segunda   │ 08:00–12:00  13:00–18:00 [x]│ [+]    │
-│  Terça     │ 08:00–18:00 [x]             │ [+]    │
-│  ...                                              │
-│  Sábado    │ 08:00–12:00 [x]             │ [+]    │
-└───────────────────────────────────────────────────┘
-[Aplicar "Seg–Sex 08:00–18:00" para todos]  (atalho)
-
-┌─ Exceções (feriados / liberações) ────────────────┐
-│ [+ Adicionar exceção]                             │
-│  ─────────────────────────────────────────────    │
-│  📅 21/04/2026  ❌ Bloqueado  "Tiradentes"   [x]  │
-│  📅 26/04/2026  ✅ Liberado   "Inventário"   [x]  │
-└───────────────────────────────────────────────────┘
-
-┌─ Status atual ─────────────────────────────────────┐
-│ 🟢 Acesso PERMITIDO agora (12:34 GMT-3)            │
-│  Aplica-se a 8 usuários vinculados a este CNPJ     │
-└────────────────────────────────────────────────────┘
+--glow-hover:    0 0 12px hsl(var(--primary) / 0.12)   (hover passivo)
+--glow-active:   0 0 20px hsl(var(--primary) / 0.22)   (estado ativo, sidebar)
+--glow-cta:      0 0 28px hsl(var(--primary) / 0.32)   (CTA premium em hover/focus)
 ```
+Utility classes: `.glow-hover`, `.glow-active`, `.glow-cta` (em vez de `.glow-soft`/`.glow-primary` genéricos).
 
-Funcionalidades:
+**3. Timings de animação refinados**
+```text
+--motion-fast:    150ms    (hovers em botões, links, ícones — sensação responsiva)
+--motion-base:    200ms    (cards, sidebar, inputs — padrão)
+--motion-slow:    280ms    (modais, drawers, transições maiores)
+```
+- Microinteração base global: `transition-all duration-150` (botões/links/[role=button])
+- Cards e itens de sidebar: `duration-200`
+- Dialog/Sheet mantêm seus presets Radix
 
-- **Seletor de CNPJ** no topo, alimentado por `useLegalEntities().accessibleEntities`.
-- **Indicador** mostrando se aquele CNPJ já tem regras próprias ou está usando o fallback do tenant.
-- **Grade semanal** (7 linhas, uma por dia) com múltiplos intervalos por dia. Botão `+` por linha abre popover com dois `Input type="time"`.
-- **Atalho “Aplicar Seg–Sex 08–18”** para configuração rápida de novo CNPJ.
-- **Exceções**: dialog com `Calendar` (shadcn datepicker, `pointer-events-auto`), switch Liberar/Bloquear, e campo de descrição.
-- **Status atual**: chama `is_within_access_window` com o `user.id` corrente (para feedback imediato). Não é a verdade absoluta, mas dá noção de "está funcionando".
+**4. Espaçamento vertical "luxury"**
+- Sidebar: `space-y-1` → `space-y-1.5` entre itens; grupos separados por `my-3` (em vez de `my-2`)
+- Card padding: padrão `p-6` mantido; novo helper opcional `p-7` em KPIs principais via `card-spacious` quando necessário
+- Page header (quando existir): margem inferior `mb-6` → `mb-8`
+- Apenas tokens/utilities — não vamos varrer páginas
 
-### 3. Hook `useAccessWindowConfig(legalEntityId)`
+**5. Peso tipográfico em KPIs**
+Adicionar em `@layer utilities`:
+```text
+.kpi-value  → text-3xl font-bold tracking-tight tabular-nums
+.kpi-label  → text-xs font-medium text-muted-foreground uppercase tracking-wide
+.kpi-trend  → text-xs font-normal text-muted-foreground
+```
+Disponíveis para uso em Sprint 3 (PageHeader/KPIs) sem editar páginas agora.
 
-Caminho: `src/hooks/useAccessWindowConfig.ts`
+---
 
-Encapsula:
+## Arquivos a alterar (sem mudar nenhuma página/hook/lógica)
 
-- Listar `legal_entity_access_schedules` por CNPJ.
-- Listar `legal_entity_access_exceptions` por CNPJ.
-- Mutations: criar/editar/excluir intervalos e exceções (com invalidações de cache).
-- Helper `hasOwnRules` para o badge "usando regra do CNPJ" vs "fallback tenant".
+| Arquivo | Mudança |
+|---|---|
+| `src/index.css` | Tokens dark refinados, 3 gradientes, 3 níveis de glow, 3 timings, utilities `.bg-gradient-*`, `.glow-hover/active/cta`, `.surface-glass`, `.shimmer`, `.kpi-*`, microinteração global 150ms |
+| `tailwind.config.ts` | Keyframe + animação `shimmer`; mapeia `transitionDuration` extra (`fast: 150ms`) se necessário |
+| `src/components/ui/button.tsx` | Variant `premium` (gradient-strong + glow-cta no hover) + `duration-150` |
+| `src/components/ui/card.tsx` | Variants `elevated` (hover-lift + glow-hover) e `glow` (gradient-soft border + glow-active) |
+| `src/components/ui/input.tsx` | Focus glow tech (ring + shadow primary/10) + `duration-150` |
+| `src/components/ui/skeleton.tsx` | `shimmer` no lugar de `pulse` |
+| `src/components/ui/dialog.tsx` | Shadow-xl mais elegante; mantém timings Radix |
+| `src/components/layout/AppSidebar.tsx` | Item ativo: `bg-gradient-primary-whisper` + `border-l-2 border-primary` + `glow-active`; hover: `glow-hover` + `translate-x-0.5`; espaçamento `space-y-1.5`; separadores `my-3` entre grupos lógicos; avatar do usuário com `bg-gradient-primary-strong` |
+| `src/components/layout/AppLayout.tsx` | Header desktop com classe `surface-glass` |
 
-### 4. Validações no formulário
+**Não alterado:** páginas, rotas, hooks, queries, edge functions, RLS, tipos, lógica de negócio, estrutura de componentes.
 
-- `end_time > start_time` (mesmo dia).
-- Não permitir intervalos sobrepostos no mesmo dia (validar antes do insert).
-- `exception_date` único por CNPJ (constraint cobre, mas UI avisa antes).
+---
 
-## Arquivos a criar/editar
+## Riscos
 
-**Criar:**
+- Variants novas (`premium`/`elevated`/`glow`) são **opt-in** — componentes existentes não mudam visualmente além do refinamento de tokens.
+- Mudança de primary para roxo aplica-se globalmente via token semântico (objetivo declarado).
+- Timings 150ms são percebidos como mais responsivos sem causar instabilidade visual.
 
-- `supabase/migrations/<timestamp>_legal_entity_access_window.sql` — tabelas, RLS e nova versão de `is_within_access_window`.
-- `src/components/settings/AccessWindowManager.tsx` — UI principal.
-- `src/components/settings/AccessWindowDayRow.tsx` — linha da grade semanal (uma por dia).
-- `src/components/settings/AccessExceptionDialog.tsx` — dialog de criar/editar exceção.
-- `src/hooks/useAccessWindowConfig.ts` — hook com queries e mutations.
+---
 
-**Editar:**
+## Resultado esperado
 
-- `src/pages/Settings.tsx` — adicionar sub-aba "Janela de Acesso" dentro de `permissions`, gated por `isAdmin || isDeveloper`.
-- `docs/03-business-rules/access-calendar.md` — atualizar para refletir granularidade por CNPJ + fallback tenant.
-- `docs/02-decisions/0001-access-control-calendar.md` — addendum sobre evolução para CNPJ.
+- Dark mode com profundidade real e cards visivelmente destacados
+- Identidade roxo+azul presente em CTAs, sidebar ativa e KPIs com **3 intensidades distintas** (estratégico, não uniforme)
+- Glow comunicando **estado** (hover < ativo < CTA)
+- Microinterações com **150ms** em elementos diretos (botões/links) e **200ms** em containers
+- Espaçamento mais arejado na sidebar e em containers principais
+- Utilities `.kpi-*` prontas para uso em Sprint 3
 
-## Compatibilidade e segurança
+---
 
-- Tenant sem regra de CNPJ + sem regra de tenant → continua **fail-safe** (libera 24/7).
-- Função `is_within_access_window` permanece `SECURITY DEFINER`, `STABLE`, sem mudança de assinatura — não precisa mexer em RLS de `deals`/`orders`, em `create_app_session`, `validate_app_session` ou `force_replace_session`.
-- Logs de `admin_bypass` e `outside_allowed_hours` ganham `legal_entity_id` no `details` para auditoria mais fina.
-- Edge functions (`accessControl.ts`) não precisam mudar — chamam a mesma RPC.
+## Sugestões para Sprint 3 (após esta)
 
-## Como ficará a experiência
-
-1. Admin abre **Configurações → Usuários e Permissões → Janela de Acesso**.
-2. Seleciona o CNPJ no topo (ex: QUALYVAC EMBALAGENS).
-3. Clica em **Aplicar Seg–Sex 08–18** ou monta a grade manualmente.
-4. Adiciona feriado de Tiradentes como exceção bloqueada.
-5. Vê o badge **"🟢 Acesso permitido agora"** confirmando.
-6. Usuários cujo CNPJ ativo for esse passam a respeitar a janela; os demais seguem com a regra do tenant (ou 24/7 se nenhuma existir).
+1. Componente `<PageHeader />` aplicando `.kpi-*` e espaçamento luxury
+2. `chartTheme.ts` removendo ~75 hex hardcoded (DashboardWidget/TaskCalendar)
+3. `<EmptyState />` ilustrado reutilizável
+4. Stagger animations em listas (Kanban, tabelas)
+5. Toggle de densidade compact/comfortable em localStorage
+6. `⌘K` no GlobalSearch + atalho funcional
+7. Toast premium com ícone colorido + barra de progresso
 
