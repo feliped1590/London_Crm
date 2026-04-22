@@ -40,6 +40,7 @@ import Prospecting from "./pages/Prospecting";
 import Stock from "./pages/Stock";
 import Carriers from "./pages/Carriers";
 import ImportCompanies from "./pages/ImportCompanies";
+import AccessBlocked from "./pages/AccessBlocked";
 
 
 import NotFound from "./pages/NotFound";
@@ -138,6 +139,7 @@ const App = () => (
               <Sonner />
               <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/access-blocked" element={<AccessBlocked />} />
             <Route path="/proposta/:token" element={<ProposalPublic />} />
             <Route path="/" element={<Navigate to="/today" replace />} />
             <Route element={<ProtectedRoute />}>

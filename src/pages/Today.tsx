@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { TodayTaskList } from '@/components/today/TodayTaskList';
 import { StagnantDealsCard } from '@/components/today/StagnantDealsCard';
 import { DailySummary } from '@/components/today/DailySummary';
+import { AccessViolationsCard } from '@/components/dashboard/AccessViolationsCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,6 +107,9 @@ export default function Today() {
             upcomingTasks={upcomingTasks} 
             isLoading={isLoading} 
           />
+
+          {/* Admin-only: violações de janela de acesso */}
+          <AccessViolationsCard />
 
           {/* Main Content Grid */}
           <div className="grid gap-6 lg:grid-cols-2">
