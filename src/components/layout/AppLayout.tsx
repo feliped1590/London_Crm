@@ -72,7 +72,7 @@ export function AppLayout() {
       )}>
         {/* Desktop Header with Global Search */}
         {!isMobile && (
-          <header className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-6 py-3">
+          <header className="bg-background border-b px-6 py-3">
             <div className="flex items-center gap-4">
               <div className="max-w-md flex-1">
                 <GlobalSearch />
