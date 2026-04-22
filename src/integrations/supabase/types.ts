@@ -3827,6 +3827,85 @@ export type Database = {
           },
         ]
       }
+      legal_entity_access_exceptions: {
+        Row: {
+          created_at: string
+          description: string | null
+          exception_date: string
+          id: string
+          is_allowed: boolean
+          legal_entity_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          exception_date: string
+          id?: string
+          is_allowed: boolean
+          legal_entity_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          exception_date?: string
+          id?: string
+          is_allowed?: boolean
+          legal_entity_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_entity_access_exceptions_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_entity_access_schedules: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          is_active: boolean
+          legal_entity_id: string
+          start_time: string
+          tenant_id: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id: string
+          start_time: string
+          tenant_id: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id?: string
+          start_time?: string
+          tenant_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_entity_access_schedules_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_settings: {
         Row: {
           created_at: string
