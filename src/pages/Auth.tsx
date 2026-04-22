@@ -81,6 +81,10 @@ export default function Auth() {
         setActiveSessionInfo(check.session);
         setShowSessionModal(true);
       }
+    } else {
+      // Fallback: resposta inesperada (não-success sem erro conhecido)
+      console.error('Resposta inesperada de create_app_session:', result);
+      toast.error('Erro inesperado ao validar acesso');
     }
   };
 
@@ -188,8 +192,12 @@ export default function Auth() {
       setActiveSessionInfo(null);
       await signOut();
       navigate('/access-blocked', { replace: true });
+    } else if (result?.error) {
+      toast.error('Erro ao criar nova sessão: ' + result.error);
     } else {
-      toast.error('Erro ao criar nova sessão');
+      // Fallback: resposta inesperada (não-success sem erro conhecido)
+      console.error('Resposta inesperada de force_replace_session:', result);
+      toast.error('Erro inesperado ao validar acesso');
     }
     setIsReplacingSession(false);
   };
