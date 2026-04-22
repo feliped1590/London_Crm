@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { isInitialValidationDone } from '@/components/AppInitializer';
+import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
 
 const SESSION_KEY = 'app_session_id';
 const VALIDATE_INTERVAL = 60_000; // 60s
@@ -31,6 +32,23 @@ export function useSessionGuard() {
   const forceLogout = useCallback(async (reason: string) => {
     clearSessionId();
 
+    // Caso especial: fora do horário permitido → tela /access-blocked
+    if (reason === 'outside_allowed_hours') {
+      const userId = user?.id;
+      let info = null;
+      if (userId) {
+        try {
+          info = await fetchAccessBlockedInfo(userId);
+        } catch (err) {
+          console.warn('Falha ao buscar info de janela de acesso:', err);
+        }
+      }
+      toast.error('Sua sessão foi encerrada: fora do horário permitido.');
+      await signOut();
+      navigate('/access-blocked', { replace: true, state: { info } });
+      return;
+    }
+
     const messages: Record<string, string> = {
       'replaced_by_new_login': 'Sua sessão foi encerrada porque um novo login foi realizado.',
       'admin_kick': 'Sua sessão foi encerrada pelo administrador.',
@@ -41,7 +59,7 @@ export function useSessionGuard() {
     toast.error(messages[reason] || 'Sessão encerrada. Faça login novamente.');
     await signOut();
     navigate('/auth', { replace: true });
-  }, [signOut, navigate]);
+  }, [signOut, navigate, user?.id]);
 
   // Validate session periodically
   useEffect(() => {
