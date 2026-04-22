@@ -1,8 +1,11 @@
 import { useEffect, useRef, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { getSessionId } from '@/hooks/useSessionGuard';
+import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
+import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 // Flag global para indicar ao useSessionGuard que o AppInitializer já fez a validação inicial
@@ -19,6 +22,7 @@ export function isInitialValidationDone() {
  */
 export function AppInitializer({ children }: { children: ReactNode }) {
   const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const hasStartedBackground = useRef(false);
 
@@ -68,6 +72,20 @@ export function AppInitializer({ children }: { children: ReactNode }) {
 
               // Session definitively invalid — only sign out for confirmed reasons
               if (!result?.valid) {
+                // Caso especial: fora do horário → /access-blocked com info
+                if (result?.reason === 'outside_allowed_hours') {
+                  let info = null;
+                  try {
+                    info = await fetchAccessBlockedInfo(user.id);
+                  } catch (err) {
+                    console.warn('Falha ao buscar info de janela de acesso:', err);
+                  }
+                  toast.error('Sua sessão foi encerrada: fora do horário permitido.');
+                  await signOut();
+                  navigate('/access-blocked', { replace: true, state: { info } });
+                  return;
+                }
+
                 const definitiveReasons = ['replaced_by_new_login', 'admin_kick', 'manual_logout'];
                 if (definitiveReasons.includes(result?.reason)) {
                   console.warn('App session definitively invalid:', result?.reason);
