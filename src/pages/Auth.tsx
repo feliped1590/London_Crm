@@ -186,6 +186,15 @@ export default function Auth() {
     });
 
     if (error) {
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('outside_allowed_hours') || errMsg.includes('horário')) {
+        setShowSessionModal(false);
+        setActiveSessionInfo(null);
+        await redirectToAccessBlocked(pendingUserId);
+        setPendingUserId(null);
+        setIsReplacingSession(false);
+        return;
+      }
       toast.error('Erro ao substituir sessão');
       setIsReplacingSession(false);
       return;
@@ -201,10 +210,9 @@ export default function Auth() {
       navigate('/today', { replace: true });
     } else if (result?.error === 'OUTSIDE_ALLOWED_HOURS') {
       setShowSessionModal(false);
-      setPendingUserId(null);
       setActiveSessionInfo(null);
-      await signOut();
-      navigate('/access-blocked', { replace: true });
+      await redirectToAccessBlocked(pendingUserId);
+      setPendingUserId(null);
     } else if (result?.error) {
       toast.error('Erro ao criar nova sessão: ' + result.error);
     } else {
