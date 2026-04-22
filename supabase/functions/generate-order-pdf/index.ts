@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAccessWindow, AccessWindowError, AccessCheckUnavailableError } from "../_shared/accessControl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,22 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // ⏰ Janela de acesso (strict — geração de PDF de pedido é documento oficial)
+    try {
+      await checkAccessWindow(supabase, userId, {
+        mode: "strict",
+        context: "generate-order-pdf",
+      });
+    } catch (winErr) {
+      if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+        return new Response(
+          JSON.stringify({ error: winErr.message, code: (winErr as any).code }),
+          { status: (winErr as any).status ?? 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw winErr;
+    }
 
     // =========================================================================
     // 4. RATE LIMIT — max 50 requests/min (log APÓS validação de input)

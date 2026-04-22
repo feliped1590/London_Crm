@@ -8763,6 +8763,10 @@ export type Database = {
         Args: { order_number: string }
         Returns: number
       }
+      get_access_violations_summary: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       get_active_sessions_admin: {
         Args: never
         Returns: {
@@ -9174,6 +9178,10 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      is_tenant_within_access_window: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       is_within_access_window: { Args: { p_user_id: string }; Returns: boolean }
       is_within_access_window_for_rls: { Args: never; Returns: boolean }
       lock_order: { Args: { p_order_id: string }; Returns: Json }

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from "../_shared/accessControl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,6 +150,22 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    // ⏰ Janela de acesso por tenant (strict — importações pesadas só dentro do horário)
+    try {
+      await checkAccessWindowForTenant(supabase, tenant_id, {
+        mode: "strict",
+        context: "erp-import-orders",
+      });
+    } catch (winErr) {
+      if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+        return new Response(
+          JSON.stringify({ success: false, error: winErr.message, code: (winErr as any).code }),
+          { status: (winErr as any).status ?? 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw winErr;
+    }
 
     const summary: Summary = {
       total_received: records.length,

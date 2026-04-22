@@ -14,6 +14,7 @@ import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -135,6 +136,32 @@ Deno.serve(async (req) => {
 
     for (const queueItem of queue) {
       try {
+        // ⏰ Janela de acesso por tenant (strict — evita escrita no ERP fora do horário)
+        try {
+          await checkAccessWindowForTenant(supabase, queueItem.tenant_id, {
+            mode: 'strict',
+            context: 'process-order-sync',
+          });
+        } catch (winErr) {
+          if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+            console.warn(`[process-order-sync] Item ${queueItem.id} adiado: ${winErr.message}`);
+            // Devolve para fila com retry curto (10 min) — não consome attempt
+            await supabase
+              .from('order_sync_queue')
+              .update({
+                status: 'pending',
+                next_retry_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+                error_message: winErr.message,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', queueItem.id);
+            errorCount++;
+            results.push({ order_id: queueItem.order_id, status: 'deferred', error: winErr.message });
+            continue;
+          }
+          throw winErr;
+        }
+
         // 2. Marcar como processing
         await supabase
           .from('order_sync_queue')

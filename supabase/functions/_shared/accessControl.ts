@@ -1,7 +1,7 @@
 // supabase/functions/_shared/accessControl.ts
 //
 // Helper para Edge Functions sensíveis (ERP, integrações, IA com escrita, etc.)
-// Verifica se o usuário está dentro da janela de acesso configurada para o tenant.
+// Verifica se o usuário OU o tenant está dentro da janela de acesso configurada.
 //
 // MODOS DE FALHA (quando a RPC retorna erro de rede/banco):
 //
@@ -13,8 +13,11 @@
 //                              Use em ERP, financeiro, escrita em pedidos,
 //                              qualquer função que mute estado de negócio.
 //
-// Admin/desenvolvedor sempre passam (regra está dentro da RPC).
+// Admin/desenvolvedor sempre passam (regra está dentro da RPC `is_within_access_window`).
 // Tenant sem regras → libera (fail-safe).
+//
+// Para jobs SEM userId (cron, importações em massa), use `checkAccessWindowForTenant`
+// com o tenant_id da execução.
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -47,9 +50,6 @@ interface CheckOptions {
 
 /**
  * Verifica se o user_id está dentro da janela de acesso. Lança em caso negativo.
- * - Janela violada → AccessWindowError (403)
- * - RPC falha + mode="strict" → AccessCheckUnavailableError (503)
- * - RPC falha + mode="lenient" → libera com warn
  */
 export async function checkAccessWindow(
   supabase: SupabaseClient,
@@ -85,8 +85,50 @@ export async function checkAccessWindow(
 }
 
 /**
- * Versão non-throwing: devolve boolean. Em modo strict, falha de RPC = false.
- * Útil quando a função quer registrar a decisão antes de responder.
+ * Verifica a janela do TENANT (não depende de usuário).
+ * Use em cron jobs, importações em massa do ERP e processamento de filas
+ * em background, onde não há userId disponível.
+ *
+ * Diferença vs `checkAccessWindow`: ignora bypass de admin/dev (não faz sentido
+ * em jobs de sistema) e não loga `admin_bypass`.
+ */
+export async function checkAccessWindowForTenant(
+  supabase: SupabaseClient,
+  tenantId: string | null | undefined,
+  opts: CheckOptions = {},
+): Promise<void> {
+  if (!tenantId) return;
+  const mode: AccessCheckMode = opts.mode ?? "lenient";
+  const ctx = opts.context ?? "edge_function_tenant";
+
+  const { data, error } = await supabase.rpc("is_tenant_within_access_window", {
+    p_tenant_id: tenantId,
+  });
+
+  if (error) {
+    if (mode === "strict") {
+      console.error(
+        `[accessControl:${ctx}] RPC tenant falhou em STRICT — bloqueando:`,
+        error.message,
+      );
+      throw new AccessCheckUnavailableError();
+    }
+    console.warn(
+      `[accessControl:${ctx}] RPC tenant falhou em LENIENT — liberando:`,
+      error.message,
+    );
+    return;
+  }
+
+  if (data === false) {
+    throw new AccessWindowError(
+      "Janela de acesso da empresa fechada — job postergado",
+    );
+  }
+}
+
+/**
+ * Versão non-throwing por usuário.
  */
 export async function isWithinAccessWindow(
   supabase: SupabaseClient,
