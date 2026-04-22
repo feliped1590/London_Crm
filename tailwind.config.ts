@@ -94,6 +94,11 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      transitionDuration: {
+        fast: "150ms",
+        base: "200ms",
+        slow: "280ms",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -115,6 +120,9 @@ export default {
           from: { transform: "scale(0.95)", opacity: "0" },
           to: { transform: "scale(1)", opacity: "1" },
         },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -122,6 +130,7 @@ export default {
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "fade-in": "fade-in 0.2s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
+        shimmer: "shimmer 2s infinite",
       },
     },
   },
