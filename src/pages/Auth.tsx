@@ -68,6 +68,10 @@ export default function Auth() {
       setSessionId(result.session_id);
       toast.success('Login realizado com sucesso!');
       navigate('/today', { replace: true });
+    } else if (result?.error === 'OUTSIDE_ALLOWED_HOURS') {
+      // Janela de acesso bloqueia login — single source of truth no banco
+      await signOut();
+      navigate('/access-blocked', { replace: true });
     } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
       // Race condition fallback — check again
       const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
@@ -98,15 +102,10 @@ export default function Auth() {
 
     if (error) {
       setIsSubmitting(false);
-      const msg = error.message || '';
-      if (msg.includes('OUTSIDE_ALLOWED_HOURS') || msg.includes('outside_allowed_hours')) {
-        navigate('/access-blocked', { replace: true });
-        return;
-      }
-      if (msg.includes('Invalid login credentials')) {
+      if (error.message.includes('Invalid login credentials')) {
         toast.error('Email ou senha incorretos');
       } else {
-        toast.error('Erro ao fazer login: ' + msg);
+        toast.error('Erro ao fazer login: ' + error.message);
       }
       return;
     }
@@ -118,17 +117,8 @@ export default function Auth() {
       toast.error('Erro ao obter dados do usuário');
       return;
     }
-
-    // Validate access window before creating session
-    const { data: windowCheck } = await supabase.rpc('is_within_access_window', {
-      p_user_id: currentUser.id,
-    });
-    if (windowCheck === false) {
-      await signOut();
-      setIsSubmitting(false);
-      navigate('/access-blocked', { replace: true });
-      return;
-    }
+    // Janela de acesso é validada dentro de create_app_session/force_replace_session
+    // (single source of truth no banco — sem dupla checagem aqui)
 
     // Check for existing session
     const { data: checkData, error: checkError } = await supabase.rpc('check_existing_session', {
@@ -192,6 +182,12 @@ export default function Auth() {
       setActiveSessionInfo(null);
       toast.success('Login realizado com sucesso!');
       navigate('/today', { replace: true });
+    } else if (result?.error === 'OUTSIDE_ALLOWED_HOURS') {
+      setShowSessionModal(false);
+      setPendingUserId(null);
+      setActiveSessionInfo(null);
+      await signOut();
+      navigate('/access-blocked', { replace: true });
     } else {
       toast.error('Erro ao criar nova sessão');
     }
