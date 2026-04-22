@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor, Clock } from 'lucide-react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
@@ -40,6 +40,7 @@ import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
+import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -874,6 +875,12 @@ export default function Settings() {
                   Sessões
                 </TabsTrigger>
               )}
+              {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="access-window-sub" className="gap-2">
+                  <Clock className="h-4 w-4" />
+                  Janela de Acesso
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="users-sub" className="mt-4 space-y-6">
@@ -1095,6 +1102,11 @@ export default function Settings() {
             {(isAdmin || isDeveloper) && (
               <TabsContent value="sessions-sub" className="mt-4">
                 <ActiveSessionsManager />
+              </TabsContent>
+            )}
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="access-window-sub" className="mt-4">
+                <AccessWindowManager />
               </TabsContent>
             )}
           </Tabs>
