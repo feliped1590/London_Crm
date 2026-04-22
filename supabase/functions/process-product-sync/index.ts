@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { mapCRMProductToProjedata, buildProductPayload } from '../_shared/projedata/mapper.ts';
 import { parseProductRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
     // Buscar itens pendentes da fila (máx 20 por execução)
     const { data: queue, error: queueError } = await supabase
       .from('product_sync_queue')
-      .select('id, product_id, attempt_count')
+      .select('id, product_id, attempt_count, tenant_id')
       .eq('status', 'pending')
       .lt('attempt_count', 5)
       .order('created_at', { ascending: true })
@@ -64,6 +65,31 @@ Deno.serve(async (req) => {
 
     for (const item of queue) {
       try {
+        // ⏰ Janela de acesso por tenant (strict)
+        try {
+          await checkAccessWindowForTenant(supabase, (item as any).tenant_id, {
+            mode: 'strict',
+            context: 'process-product-sync',
+          });
+        } catch (winErr) {
+          if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+            console.warn(`[process-product-sync] Item ${item.id} adiado: ${winErr.message}`);
+            await supabase
+              .from('product_sync_queue')
+              .update({
+                status: 'pending',
+                next_retry_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+                error_message: winErr.message,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', item.id);
+            errorCount++;
+            results.push({ product_id: item.product_id, status: 'deferred', error: winErr.message });
+            continue;
+          }
+          throw winErr;
+        }
+
         // Marcar como processing
         await supabase
           .from('product_sync_queue')

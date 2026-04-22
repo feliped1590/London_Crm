@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from "../_shared/accessControl.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +25,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "tenant_id é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // ⏰ Janela de acesso por tenant (strict)
+    try {
+      await checkAccessWindowForTenant(supabaseAdmin, tenant_id, {
+        mode: "strict",
+        context: "erp-promote-products",
+      });
+    } catch (winErr) {
+      if (winErr instanceof AccessWindowError || winErr instanceof AccessCheckUnavailableError) {
+        return new Response(
+          JSON.stringify({ error: winErr.message, code: (winErr as any).code }),
+          { status: (winErr as any).status ?? 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      throw winErr;
     }
 
     // Single batch call
