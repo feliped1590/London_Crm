@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
         const { data: company, error: companyError } = await supabase
           .from('companies')
           .select(`
-            id, name, fantasia, cnpj, tipo_pessoa, email, phone, 
+            id, tenant_id, name, fantasia, cnpj, tipo_pessoa, email, phone, 
             address, address_number, address_complement, neighborhood, city, state, zip_code,
             inscricao_estadual, sales_rep_id, created_by, legal_entity_id, setor_id, segmento_id,
             legal_entities(id, erp_company_code),
