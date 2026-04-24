@@ -485,7 +485,7 @@ Deno.serve(async (req) => {
 // ── Conflict logger ─────────────────────────────────────────────────────────
 
 async function logConflict(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   tenantId: string,
   entityType: string,
   entityId: string | null,
@@ -511,7 +511,7 @@ async function logConflict(
 // ── Order ERP Data upsert ───────────────────────────────────────────────────
 
 async function upsertOrderErpData(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   orderId: string,
   tenantId: string,
   raw: ERPOrderRecord
@@ -550,7 +550,7 @@ async function upsertOrderErpData(
 // ── Order Item ERP Data upsert ──────────────────────────────────────────────
 
 async function upsertOrderItemErpData(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   orderItemId: string,
   tenantId: string,
   raw: ERPOrderItem

@@ -19,8 +19,6 @@
 // Para jobs SEM userId (cron, importações em massa), use `checkAccessWindowForTenant`
 // com o tenant_id da execução.
 
-import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 export type AccessCheckMode = "strict" | "lenient";
 
 export class AccessWindowError extends Error {
@@ -52,7 +50,7 @@ interface CheckOptions {
  * Verifica se o user_id está dentro da janela de acesso. Lança em caso negativo.
  */
 export async function checkAccessWindow(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   opts: CheckOptions = {},
 ): Promise<void> {
@@ -93,7 +91,7 @@ export async function checkAccessWindow(
  * em jobs de sistema) e não loga `admin_bypass`.
  */
 export async function checkAccessWindowForTenant(
-  supabase: SupabaseClient,
+  supabase: any,
   tenantId: string | null | undefined,
   opts: CheckOptions = {},
 ): Promise<void> {
@@ -131,7 +129,7 @@ export async function checkAccessWindowForTenant(
  * Versão non-throwing por usuário.
  */
 export async function isWithinAccessWindow(
-  supabase: SupabaseClient,
+  supabase: any,
   userId: string,
   opts: CheckOptions = {},
 ): Promise<boolean> {

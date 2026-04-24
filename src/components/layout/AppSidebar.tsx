@@ -55,7 +55,7 @@ const allNavItems: NavItem[] = [
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
   { to: '/stock', icon: Warehouse, label: 'Estoque', moduleKey: 'stock' },
-  { to: '/carriers', icon: Truck, label: 'Transportadoras', moduleKey: 'companies' },
+  { to: '/carriers', icon: Truck, label: 'Transportadoras', moduleKey: 'carriers' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
   { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
