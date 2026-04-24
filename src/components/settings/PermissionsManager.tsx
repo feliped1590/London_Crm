@@ -230,27 +230,42 @@ export function PermissionsManager() {
                         </div>
 
                         {canAccess && (
-                          <Select
-                            value={accessType}
-                            onValueChange={(v) => handleChangeAccessType(role, module.id, v as AccessLevel)}
-                            disabled={updatePermissionMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[120px] h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="total">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="default" className="h-5">Total</Badge>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="restrito">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="h-5">Restrito</Badge>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Select
+                              value={accessType}
+                              onValueChange={(v) => handleChangeAccessType(role, module.id, v as AccessLevel)}
+                              disabled={updatePermissionMutation.isPending}
+                            >
+                              <SelectTrigger className="h-8 w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="total"><Badge variant="default" className="h-5">Total</Badge></SelectItem>
+                                <SelectItem value="restrito"><Badge variant="secondary" className="h-5">Restrito</Badge></SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+                              {actionConfig.map(({ field, label, icon: Icon, sensitive }) => {
+                                const checked = field === 'can_view'
+                                  ? (perm?.can_view ?? perm?.can_access ?? false)
+                                  : (perm?.[field] ?? false);
+
+                                return (
+                                  <button
+                                    key={field}
+                                    type="button"
+                                    title={label}
+                                    aria-label={label}
+                                    onClick={() => handleToggleAction(role, module.id, field, !checked)}
+                                    disabled={updatePermissionMutation.isPending}
+                                    className={`inline-flex h-7 w-7 items-center justify-center rounded border transition-colors ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent bg-background text-muted-foreground hover:text-foreground'} ${sensitive && checked ? 'ring-1 ring-destructive/40' : ''}`}
+                                  >
+                                    <Icon className="h-3.5 w-3.5" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         )}
 
                         {!canAccess && (
