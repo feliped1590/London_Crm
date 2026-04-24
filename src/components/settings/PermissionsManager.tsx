@@ -5,8 +5,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield } from 'lucide-react';
+import { Eye, Pencil, Plus, Shield, Trash2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import {
   type AppRole,
   EDITABLE_PERMISSION_ROLES,
@@ -17,6 +18,14 @@ type SystemModule = Tables<'system_modules'>;
 type RoleModulePermission = Tables<'role_module_permissions'>;
 
 type AccessLevel = 'restrito' | 'total';
+type PermissionField = 'can_view' | 'can_create' | 'can_edit' | 'can_delete';
+
+const actionConfig = [
+  { action: PermissionAction.View, field: 'can_view' as PermissionField, label: 'Visualizar', icon: Eye },
+  { action: PermissionAction.Create, field: 'can_create' as PermissionField, label: 'Criar', icon: Plus },
+  { action: PermissionAction.Edit, field: 'can_edit' as PermissionField, label: 'Editar', icon: Pencil },
+  { action: PermissionAction.Delete, field: 'can_delete' as PermissionField, label: 'Excluir', icon: Trash2, sensitive: true },
+];
 
 export function PermissionsManager() {
   const queryClient = useQueryClient();
@@ -51,24 +60,34 @@ export function PermissionsManager() {
       moduleId,
       canAccess,
       accessType,
+      granular,
     }: {
       role: AppRole;
       moduleId: string;
       canAccess: boolean;
       accessType: AccessLevel;
+      granular?: Partial<Record<PermissionField, boolean>>;
     }) => {
       const existing = permissions?.find(p => p.role === role && p.module_id === moduleId);
+      const payload = {
+        can_access: canAccess,
+        access_type: accessType,
+        can_view: granular?.can_view ?? canAccess,
+        can_create: granular?.can_create ?? (canAccess && accessType === 'total'),
+        can_edit: granular?.can_edit ?? (canAccess && accessType === 'total'),
+        can_delete: granular?.can_delete ?? false,
+      };
 
       if (existing) {
         const { error } = await supabase
           .from('role_module_permissions')
-          .update({ can_access: canAccess, access_type: accessType })
+          .update(payload)
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('role_module_permissions')
-          .insert({ role, module_id: moduleId, can_access: canAccess, access_type: accessType });
+          .insert({ role, module_id: moduleId, ...payload });
         if (error) throw error;
       }
     },
