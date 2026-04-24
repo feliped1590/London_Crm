@@ -207,7 +207,7 @@ function detectConflicts(
   const fieldsToUpdate: Record<string, unknown> = {};
 
   for (const { key, crmKey } of MERGE_FIELDS) {
-    const erpVal = (normalized as Record<string, unknown>)[key];
+    const erpVal = (normalized as unknown as Record<string, unknown>)[key];
     const crmVal = existing[crmKey];
 
     if (erpVal === null || erpVal === undefined) continue; // ERP has no value, skip
@@ -474,7 +474,7 @@ Deno.serve(async (req) => {
 // ── Fiscal upsert ───────────────────────────────────────────────────────────
 
 async function upsertFiscal(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   tenantId: string,
   norm: NormalizedRecord
@@ -520,7 +520,7 @@ async function upsertFiscal(
 // ── Financial upsert ────────────────────────────────────────────────────────
 
 async function upsertFinancial(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   companyId: string,
   tenantId: string,
   norm: NormalizedRecord
