@@ -6,18 +6,27 @@ import { createContext, useContext } from 'react';
 
 // Map routes to module keys
 const routeToModuleKey: Record<string, string> = {
+  '/today': 'dashboard',
   '/dashboard': 'dashboard',
+  '/customers': 'companies',
   '/companies': 'companies',
   '/contacts': 'contacts',
   '/pipeline': 'pipeline',
   '/products': 'products',
   '/orders': 'orders',
   '/stock': 'stock',
+  '/carriers': 'carriers',
   '/tasks': 'tasks',
   '/whatsapp': 'whatsapp',
+  '/bots': 'bots',
   '/emails': 'emails',
   '/reports': 'reports',
-  '/integracao-iniflex': 'iniflex',
+  '/insights': 'insights',
+  '/pricing': 'pricing',
+  '/prospecting': 'prospecting',
+  '/reallocation': 'portfolio',
+  '/integrations': 'integrations',
+  '/import-companies': 'import_companies',
   '/settings': 'settings',
 };
 
