@@ -21,7 +21,29 @@ interface AuditLogEntry {
   changed_at: string;
 }
 
+interface CompanyCreationInfo {
+  id: string;
+  name: string;
+  created_at: string;
+  created_by: string | null;
+}
+
 export function CompanyAuditHistory({ companyId, isErpCustomer = false }: CompanyAuditHistoryProps) {
+  const { data: companyInfo } = useQuery({
+    queryKey: ['company-creation-info', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, created_at, created_by')
+        .eq('id', companyId)
+        .single();
+
+      if (error) throw error;
+      return data as CompanyCreationInfo;
+    },
+    enabled: !isErpCustomer && !!companyId,
+  });
+
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ['company-audit-log', companyId],
     queryFn: async () => {
@@ -57,8 +79,9 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
 
   // Collect all UUIDs that need profile resolution
   const allUserIds = React.useMemo(() => {
-    if (!auditLogs?.length && !transferHistory.length) return [];
+    if (!auditLogs?.length && !transferHistory.length && !companyInfo?.created_by) return [];
     const ids = new Set<string>();
+    if (companyInfo?.created_by) ids.add(companyInfo.created_by);
     auditLogs?.forEach(log => {
       if (log.changed_by) ids.add(log.changed_by);
       if (log.field_name === 'owner_id') {
@@ -74,7 +97,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
       if (t.to_user_id) ids.add(t.to_user_id);
     });
     return Array.from(ids);
-  }, [auditLogs, transferHistory]);
+  }, [auditLogs, transferHistory, companyInfo]);
 
   // Collect sales rep IDs from transfers
   const salesRepIds = React.useMemo(() => {
@@ -131,6 +154,27 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
     if (value.length > 50) return value.substring(0, 50) + '...';
     return value;
   };
+
+  const displayedAuditLogs = React.useMemo<AuditLogEntry[]>(() => {
+    const logs = auditLogs || [];
+    if (!companyInfo) return logs;
+
+    const hasCreationEntry = logs.some((log) => log.field_name === 'created' || log.field_label.toLowerCase().includes('criado'));
+    if (hasCreationEntry) return logs;
+
+    return [
+      {
+        id: `company-created-${companyInfo.id}`,
+        field_name: 'created',
+        field_label: 'Cliente criado',
+        old_value: null,
+        new_value: companyInfo.name,
+        changed_by: companyInfo.created_by,
+        changed_at: companyInfo.created_at,
+      },
+      ...logs,
+    ].sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+  }, [auditLogs, companyInfo]);
 
   if (isErpCustomer) {
     return (
@@ -231,7 +275,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!auditLogs?.length ? (
+          {!displayedAuditLogs.length ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Clock className="h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">Nenhuma alteração registrada</h3>
@@ -248,7 +292,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {auditLogs.map((log) => (
+                {displayedAuditLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       {formatDate(log.changed_at)}
@@ -258,10 +302,14 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground line-through">
-                          {formatValue(log.old_value, log.field_name, profiles)}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        {log.old_value && (
+                          <>
+                            <span className="text-muted-foreground line-through">
+                              {formatValue(log.old_value, log.field_name, profiles)}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          </>
+                        )}
                         <span className="font-medium">
                           {formatValue(log.new_value, log.field_name, profiles)}
                         </span>
