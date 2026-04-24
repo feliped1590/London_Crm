@@ -21,7 +21,29 @@ interface AuditLogEntry {
   changed_at: string;
 }
 
+interface CompanyCreationInfo {
+  id: string;
+  name: string;
+  created_at: string;
+  created_by: string | null;
+}
+
 export function CompanyAuditHistory({ companyId, isErpCustomer = false }: CompanyAuditHistoryProps) {
+  const { data: companyInfo } = useQuery({
+    queryKey: ['company-creation-info', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, created_at, created_by')
+        .eq('id', companyId)
+        .single();
+
+      if (error) throw error;
+      return data as CompanyCreationInfo;
+    },
+    enabled: !isErpCustomer && !!companyId,
+  });
+
   const { data: auditLogs, isLoading } = useQuery({
     queryKey: ['company-audit-log', companyId],
     queryFn: async () => {
@@ -57,8 +79,9 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
 
   // Collect all UUIDs that need profile resolution
   const allUserIds = React.useMemo(() => {
-    if (!auditLogs?.length && !transferHistory.length) return [];
+    if (!auditLogs?.length && !transferHistory.length && !companyInfo?.created_by) return [];
     const ids = new Set<string>();
+    if (companyInfo?.created_by) ids.add(companyInfo.created_by);
     auditLogs?.forEach(log => {
       if (log.changed_by) ids.add(log.changed_by);
       if (log.field_name === 'owner_id') {
@@ -74,7 +97,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
       if (t.to_user_id) ids.add(t.to_user_id);
     });
     return Array.from(ids);
-  }, [auditLogs, transferHistory]);
+  }, [auditLogs, transferHistory, companyInfo]);
 
   // Collect sales rep IDs from transfers
   const salesRepIds = React.useMemo(() => {
@@ -131,6 +154,27 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
     if (value.length > 50) return value.substring(0, 50) + '...';
     return value;
   };
+
+  const displayedAuditLogs = React.useMemo<AuditLogEntry[]>(() => {
+    const logs = auditLogs || [];
+    if (!companyInfo) return logs;
+
+    const hasCreationEntry = logs.some((log) => log.field_name === 'created' || log.field_label.toLowerCase().includes('criado'));
+    if (hasCreationEntry) return logs;
+
+    return [
+      {
+        id: `company-created-${companyInfo.id}`,
+        field_name: 'created',
+        field_label: 'Cliente criado',
+        old_value: null,
+        new_value: companyInfo.name,
+        changed_by: companyInfo.created_by,
+        changed_at: companyInfo.created_at,
+      },
+      ...logs,
+    ].sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+  }, [auditLogs, companyInfo]);
 
   if (isErpCustomer) {
     return (
