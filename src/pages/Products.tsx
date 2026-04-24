@@ -23,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -52,6 +52,14 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
+
+type ProductHistoryEntry = {
+  id: string;
+  label: string;
+  description: string;
+  changed_at: string;
+  user_name: string | null;
+};
 
 export default function Products() {
   const { user } = useAuth();
@@ -408,6 +416,54 @@ export default function Products() {
     },
     staleTime: 0,
     refetchOnMount: 'always',
+  });
+
+  const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({
+    queryKey: ['product-history', editingProduct?.id],
+    queryFn: async () => {
+      if (!editingProduct) return [];
+
+      const { data: auditData, error: auditError } = await supabase
+        .from('product_ncm_audit')
+        .select('id, old_ncm, new_ncm, reason, changed_at, changed_by')
+        .eq('product_id', editingProduct.id)
+        .order('changed_at', { ascending: false });
+      if (auditError) throw auditError;
+
+      const userIds = Array.from(new Set([
+        editingProduct.created_by,
+        ...(auditData || []).map((entry) => entry.changed_by),
+      ].filter(Boolean) as string[]));
+
+      const { data: profilesData } = userIds.length
+        ? await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds)
+        : { data: [] };
+
+      const profilesMap = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.user_id] = profile.full_name;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      const entries: ProductHistoryEntry[] = [
+        {
+          id: `product-created-${editingProduct.id}`,
+          label: 'Produto criado',
+          description: editingProduct.sku ? `${editingProduct.sku} - ${editingProduct.name}` : editingProduct.name,
+          changed_at: editingProduct.created_at,
+          user_name: profilesMap[editingProduct.created_by || ''] || null,
+        },
+        ...(auditData || []).map((entry) => ({
+          id: entry.id,
+          label: 'NCM / Fiscal alterado',
+          description: [entry.old_ncm || 'vazio', entry.new_ncm || 'vazio'].join(' → '),
+          changed_at: entry.changed_at || editingProduct.created_at,
+          user_name: profilesMap[entry.changed_by || ''] || null,
+        })),
+      ];
+
+      return entries.sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+    },
+    enabled: !!editingProduct?.id,
   });
 
   const handleRefresh = async () => {
@@ -1018,7 +1074,7 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
@@ -1036,6 +1092,12 @@ export default function Products() {
                       </Badge>
                     )}
                   </TabsTrigger>
+                  {editingProduct && (
+                    <TabsTrigger value="historico" className="gap-2">
+                      <Clock className="h-4 w-4" />
+                      Histórico
+                    </TabsTrigger>
+                  )}
                 </TabsList>
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
@@ -1690,6 +1752,46 @@ export default function Products() {
                     />
                   </div>
                 </TabsContent>
+
+                {editingProduct && (
+                  <TabsContent value="historico" className="space-y-4 mt-4">
+                    {isProductHistoryLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      </div>
+                    ) : (
+                      <div className="relative pl-6">
+                        <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-border" />
+                        <div className="space-y-4">
+                          {productHistory.map((entry) => (
+                            <div key={entry.id} className="relative">
+                              <div className="absolute -left-4 top-1 h-3 w-3 rounded-full border-2 border-background bg-primary" />
+                              <div className="rounded-lg border bg-muted/20 p-3">
+                                <div className="flex items-start gap-2">
+                                  <Package className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-medium text-sm">{entry.label}</div>
+                                    <div className="mt-1 text-sm text-muted-foreground">{entry.description}</div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{new Date(entry.changed_at).toLocaleString('pt-BR')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    <span>{entry.user_name || 'Sistema'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4 border-t">

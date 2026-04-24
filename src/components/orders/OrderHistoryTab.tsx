@@ -39,6 +39,13 @@ export function OrderHistoryTab({ orderId }: OrderHistoryTabProps) {
   const { data: auditLog, isLoading } = useQuery({
     queryKey: ['order_audit_log', orderId],
     queryFn: async () => {
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('id, number, created_at, created_by')
+        .eq('id', orderId)
+        .single();
+      if (orderError) throw orderError;
+
       // Get audit logs
       const { data: auditData, error: auditError } = await supabase
         .from('order_audit_log')
@@ -52,14 +59,30 @@ export function OrderHistoryTab({ orderId }: OrderHistoryTabProps) {
         .from('profiles')
         .select('user_id, full_name');
       if (profilesError) throw profilesError;
+
+      const logs = auditData || [];
+      const hasCreationEntry = logs.some((entry) => entry.field_name === 'created');
+      const logsWithCreation = hasCreationEntry ? logs : [
+        {
+          id: `order-created-${orderData.id}`,
+          order_id: orderData.id,
+          field_name: 'created',
+          field_label: 'Pedido criado',
+          old_value: null,
+          new_value: orderData.number,
+          changed_by: orderData.created_by,
+          changed_at: orderData.created_at,
+        },
+        ...logs,
+      ];
       
       // Manually join profiles
-      const auditWithProfiles = auditData.map(entry => ({
+      const auditWithProfiles = logsWithCreation.map(entry => ({
         ...entry,
         profiles: {
           full_name: profilesData.find(p => p.user_id === entry.changed_by)?.full_name || null
         }
-      }));
+      })).sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
       
       return auditWithProfiles;
     },
