@@ -134,7 +134,7 @@ async function batchCheckExisting(
  * Background processing: ingest records into staging with progress tracking via erp_sync_control
  */
 async function processInBackground(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   tenantId: string,
   records: unknown[],
   syncJobId: string
