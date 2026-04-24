@@ -1,7 +1,6 @@
 import { useModuleAccess } from '@/components/ProtectedRoute';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 
 interface AccessControlledButtonProps {
   children: React.ReactNode;
@@ -11,7 +10,7 @@ interface AccessControlledButtonProps {
   className?: string;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
-  action?: 'create' | 'edit' | 'delete';
+  action?: PermissionAction.Create | PermissionAction.Edit | PermissionAction.Delete;
 }
 
 /**
@@ -28,10 +27,14 @@ export function AccessControlledButton({
   type = 'button',
   action,
 }: AccessControlledButtonProps) {
-  const { hasRestrictedAccess } = useModuleAccess();
+  const { canCreate, canEdit, canDelete, hasRestrictedAccess } = useModuleAccess();
+  const allowedByAction = !action
+    || (action === PermissionAction.Create && canCreate)
+    || (action === PermissionAction.Edit && canEdit)
+    || (action === PermissionAction.Delete && canDelete);
 
-  // If user has restricted access, hide the button
-  if (hasRestrictedAccess) {
+  // Compatibilidade: sem action explícita, mantém o comportamento antigo.
+  if ((!action && hasRestrictedAccess) || !allowedByAction) {
     return null;
   }
 
