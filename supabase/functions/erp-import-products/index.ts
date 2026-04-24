@@ -469,7 +469,7 @@ Deno.serve(async (req) => {
 // ── Product ERP Data upsert ─────────────────────────────────────────────────
 
 async function upsertProductErpData(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   productId: string,
   tenantId: string,
   raw: ERPProductRecord
