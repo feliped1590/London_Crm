@@ -418,6 +418,54 @@ export default function Products() {
     refetchOnMount: 'always',
   });
 
+  const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({
+    queryKey: ['product-history', editingProduct?.id],
+    queryFn: async () => {
+      if (!editingProduct) return [];
+
+      const { data: auditData, error: auditError } = await supabase
+        .from('product_ncm_audit')
+        .select('id, old_ncm, new_ncm, reason, changed_at, changed_by')
+        .eq('product_id', editingProduct.id)
+        .order('changed_at', { ascending: false });
+      if (auditError) throw auditError;
+
+      const userIds = Array.from(new Set([
+        editingProduct.created_by,
+        ...(auditData || []).map((entry) => entry.changed_by),
+      ].filter(Boolean) as string[]));
+
+      const { data: profilesData } = userIds.length
+        ? await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds)
+        : { data: [] };
+
+      const profilesMap = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.user_id] = profile.full_name;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      const entries: ProductHistoryEntry[] = [
+        {
+          id: `product-created-${editingProduct.id}`,
+          label: 'Produto criado',
+          description: editingProduct.sku ? `${editingProduct.sku} - ${editingProduct.name}` : editingProduct.name,
+          changed_at: editingProduct.created_at,
+          user_name: profilesMap[editingProduct.created_by || ''] || null,
+        },
+        ...(auditData || []).map((entry) => ({
+          id: entry.id,
+          label: 'NCM / Fiscal alterado',
+          description: [entry.old_ncm || 'vazio', entry.new_ncm || 'vazio'].join(' → '),
+          changed_at: entry.changed_at || editingProduct.created_at,
+          user_name: profilesMap[entry.changed_by || ''] || null,
+        })),
+      ];
+
+      return entries.sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+    },
+    enabled: !!editingProduct?.id,
+  });
+
   const handleRefresh = async () => {
     await refetch();
     toast.success('Dados atualizados!');
