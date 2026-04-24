@@ -23,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -52,6 +52,14 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
+
+type ProductHistoryEntry = {
+  id: string;
+  label: string;
+  description: string;
+  changed_at: string;
+  user_name: string | null;
+};
 
 export default function Products() {
   const { user } = useAuth();
