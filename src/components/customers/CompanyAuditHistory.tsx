@@ -275,7 +275,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!auditLogs?.length ? (
+          {!displayedAuditLogs.length ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <Clock className="h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">Nenhuma alteração registrada</h3>
@@ -292,7 +292,7 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {auditLogs.map((log) => (
+                {displayedAuditLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-muted-foreground whitespace-nowrap">
                       {formatDate(log.changed_at)}
@@ -302,10 +302,14 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground line-through">
-                          {formatValue(log.old_value, log.field_name, profiles)}
-                        </span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                        {log.old_value && (
+                          <>
+                            <span className="text-muted-foreground line-through">
+                              {formatValue(log.old_value, log.field_name, profiles)}
+                            </span>
+                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          </>
+                        )}
                         <span className="font-medium">
                           {formatValue(log.new_value, log.field_name, profiles)}
                         </span>
