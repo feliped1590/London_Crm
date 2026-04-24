@@ -37,7 +37,7 @@ function formatDuration(seconds: number): string {
 
 export function StageHistoryTab({ dealId }: StageHistoryTabProps) {
   const { data: history, isLoading } = useQuery({
-    queryKey: ['deal_stage_history', dealId],
+    queryKey: ['deal_stage_history', dealId, 'with_creation'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deal_stage_history')
@@ -46,17 +46,43 @@ export function StageHistoryTab({ dealId }: StageHistoryTabProps) {
         .order('changed_at', { ascending: false });
       if (error) throw error;
 
+      const { data: dealData, error: dealError } = await supabase
+        .from('deals')
+        .select('id, stage, created_at, created_by')
+        .eq('id', dealId)
+        .maybeSingle();
+      if (dealError) throw dealError;
+
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name');
       if (profilesError) throw profilesError;
 
-      return data.map((entry) => ({
+      const historyWithProfiles = data.map((entry) => ({
         ...entry,
         profiles: {
           full_name: profilesData.find((p) => p.user_id === entry.changed_by)?.full_name || null,
         },
       }));
+
+      const hasCreationEntry = historyWithProfiles.some((entry) => !entry.from_stage);
+      if (!dealData || hasCreationEntry) return historyWithProfiles;
+
+      return [
+        ...historyWithProfiles,
+        {
+          id: `deal-created-${dealData.id}`,
+          deal_id: dealData.id,
+          from_stage: null,
+          to_stage: dealData.stage,
+          changed_at: dealData.created_at,
+          changed_by: dealData.created_by,
+          duration_seconds: null,
+          profiles: {
+            full_name: profilesData.find((p) => p.user_id === dealData.created_by)?.full_name || null,
+          },
+        },
+      ].sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
     },
     enabled: !!dealId,
   });
