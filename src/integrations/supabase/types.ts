@@ -7231,6 +7231,10 @@ export type Database = {
         Row: {
           access_type: Database["public"]["Enums"]["access_level"] | null
           can_access: boolean | null
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
           created_at: string | null
           id: string
           module_id: string | null
@@ -7240,6 +7244,10 @@ export type Database = {
         Insert: {
           access_type?: Database["public"]["Enums"]["access_level"] | null
           can_access?: boolean | null
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           created_at?: string | null
           id?: string
           module_id?: string | null
@@ -7249,6 +7257,10 @@ export type Database = {
         Update: {
           access_type?: Database["public"]["Enums"]["access_level"] | null
           can_access?: boolean | null
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           created_at?: string | null
           id?: string
           module_id?: string | null
@@ -8238,6 +8250,48 @@ export type Database = {
           },
         ]
       }
+      user_permission_changes: {
+        Row: {
+          action: Database["public"]["Enums"]["permission_action"] | null
+          change_type: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          module_id: string | null
+          module_key: string | null
+          new_value: boolean | null
+          old_value: boolean | null
+          target_role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Insert: {
+          action?: Database["public"]["Enums"]["permission_action"] | null
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          module_id?: string | null
+          module_key?: string | null
+          new_value?: boolean | null
+          old_value?: boolean | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["permission_action"] | null
+          change_type?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          module_id?: string | null
+          module_key?: string | null
+          new_value?: boolean | null
+          old_value?: boolean | null
+          target_role?: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
       user_portfolio_delegations: {
         Row: {
           active: boolean
@@ -9222,6 +9276,20 @@ export type Database = {
         }[]
       }
       get_tenant_timezone: { Args: { p_tenant_id: string }; Returns: string }
+      get_user_module_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          access_type: Database["public"]["Enums"]["access_level"]
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          module_icon: string
+          module_key: string
+          module_name: string
+          module_path: string
+        }[]
+      }
       get_user_modules: {
         Args: { _user_id: string }
         Returns: {
@@ -9242,6 +9310,14 @@ export type Database = {
       }
       has_module_access: {
         Args: { _module_key: string; _user_id: string }
+        Returns: boolean
+      }
+      has_module_permission: {
+        Args: {
+          _action: Database["public"]["Enums"]["permission_action"]
+          _module_key: string
+          _user_id: string
+        }
         Returns: boolean
       }
       has_pipeline_access: { Args: { _pipeline_id: string }; Returns: boolean }
@@ -9484,6 +9560,7 @@ export type Database = {
         | "entregue"
         | "cancelado"
       origem_mercadoria: "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"
+      permission_action: "view" | "create" | "edit" | "delete"
       proposal_status:
         | "rascunho"
         | "enviada"
@@ -9763,6 +9840,7 @@ export const Constants = {
         "cancelado",
       ],
       origem_mercadoria: ["0", "1", "2", "3", "4", "5", "6", "7", "8"],
+      permission_action: ["view", "create", "edit", "delete"],
       proposal_status: [
         "rascunho",
         "enviada",
