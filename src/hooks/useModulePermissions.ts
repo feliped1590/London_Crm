@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { PermissionAction, permissionEngine, type AccessType } from '@/lib/permissions/permissionEngine';
 
+export type { AccessType } from '@/lib/permissions/permissionEngine';
+
 export interface ModulePermission {
   module_key: string;
   module_name: string;
