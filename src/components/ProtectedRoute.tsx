@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions, AccessType } from '@/hooks/useModulePermissions';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { Loader2 } from 'lucide-react';
 import { createContext, useContext } from 'react';
 
@@ -32,13 +33,20 @@ const routeToModuleKey: Record<string, string> = {
 
 // Context to share access type with child components
 interface ModuleAccessContextType {
+  moduleKey?: string;
   accessType: AccessType;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   hasFullAccess: boolean;
   hasRestrictedAccess: boolean;
 }
 
 const ModuleAccessContext = createContext<ModuleAccessContextType>({
   accessType: 'none',
+  canCreate: false,
+  canEdit: false,
+  canDelete: false,
   hasFullAccess: false,
   hasRestrictedAccess: false,
 });
@@ -47,7 +55,7 @@ export const useModuleAccess = () => useContext(ModuleAccessContext);
 
 export function ProtectedRoute() {
   const { user, loading } = useAuth();
-  const { isFullyLoaded, canAccess, getAccessType, isAdmin } = useModulePermissions();
+  const { isFullyLoaded, canAccess, getAccessType, can, isAdmin } = useModulePermissions();
   const location = useLocation();
 
   // Auth still loading — show spinner
@@ -74,7 +82,7 @@ export function ProtectedRoute() {
     // Admin or unknown routes: full access
     const accessType: AccessType = 'total';
     return (
-      <ModuleAccessContext.Provider value={{ accessType, hasFullAccess: true, hasRestrictedAccess: false }}>
+      <ModuleAccessContext.Provider value={{ moduleKey, accessType, canCreate: true, canEdit: true, canDelete: true, hasFullAccess: true, hasRestrictedAccess: false }}>
         <Outlet />
       </ModuleAccessContext.Provider>
     );
@@ -84,7 +92,7 @@ export function ProtectedRoute() {
     // Permissions still loading: render layout with restricted access (safe default)
     const accessType: AccessType = 'restrito';
     return (
-      <ModuleAccessContext.Provider value={{ accessType, hasFullAccess: false, hasRestrictedAccess: true }}>
+      <ModuleAccessContext.Provider value={{ moduleKey, accessType, canCreate: false, canEdit: false, canDelete: false, hasFullAccess: false, hasRestrictedAccess: true }}>
         <Outlet />
       </ModuleAccessContext.Provider>
     );
@@ -96,11 +104,14 @@ export function ProtectedRoute() {
   }
 
   const accessType = getAccessType(moduleKey);
+  const canCreate = can(moduleKey, PermissionAction.Create);
+  const canEdit = can(moduleKey, PermissionAction.Edit);
+  const canDelete = can(moduleKey, PermissionAction.Delete);
   const hasFullAccess = accessType === 'total';
   const hasRestrictedAccess = accessType === 'restrito';
 
   return (
-    <ModuleAccessContext.Provider value={{ accessType, hasFullAccess, hasRestrictedAccess }}>
+    <ModuleAccessContext.Provider value={{ moduleKey, accessType, canCreate, canEdit, canDelete, hasFullAccess, hasRestrictedAccess }}>
       <Outlet />
     </ModuleAccessContext.Provider>
   );
