@@ -5,8 +5,9 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield } from 'lucide-react';
+import { Eye, Pencil, Plus, Shield, Trash2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import {
   type AppRole,
   EDITABLE_PERMISSION_ROLES,
@@ -17,6 +18,14 @@ type SystemModule = Tables<'system_modules'>;
 type RoleModulePermission = Tables<'role_module_permissions'>;
 
 type AccessLevel = 'restrito' | 'total';
+type PermissionField = 'can_view' | 'can_create' | 'can_edit' | 'can_delete';
+
+const actionConfig = [
+  { action: PermissionAction.View, field: 'can_view' as PermissionField, label: 'Visualizar', icon: Eye },
+  { action: PermissionAction.Create, field: 'can_create' as PermissionField, label: 'Criar', icon: Plus },
+  { action: PermissionAction.Edit, field: 'can_edit' as PermissionField, label: 'Editar', icon: Pencil },
+  { action: PermissionAction.Delete, field: 'can_delete' as PermissionField, label: 'Excluir', icon: Trash2, sensitive: true },
+];
 
 export function PermissionsManager() {
   const queryClient = useQueryClient();
@@ -51,24 +60,34 @@ export function PermissionsManager() {
       moduleId,
       canAccess,
       accessType,
+      granular,
     }: {
       role: AppRole;
       moduleId: string;
       canAccess: boolean;
       accessType: AccessLevel;
+      granular?: Partial<Record<PermissionField, boolean>>;
     }) => {
       const existing = permissions?.find(p => p.role === role && p.module_id === moduleId);
+      const payload = {
+        can_access: canAccess,
+        access_type: accessType,
+        can_view: granular?.can_view ?? canAccess,
+        can_create: granular?.can_create ?? (canAccess && accessType === 'total'),
+        can_edit: granular?.can_edit ?? (canAccess && accessType === 'total'),
+        can_delete: granular?.can_delete ?? false,
+      };
 
       if (existing) {
         const { error } = await supabase
           .from('role_module_permissions')
-          .update({ can_access: canAccess, access_type: accessType })
+          .update(payload)
           .eq('id', existing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('role_module_permissions')
-          .insert({ role, module_id: moduleId, can_access: canAccess, access_type: accessType });
+          .insert({ role, module_id: moduleId, ...payload });
         if (error) throw error;
       }
     },
@@ -100,6 +119,32 @@ export function PermissionsManager() {
       moduleId,
       canAccess: currentPerm?.can_access ?? true,
       accessType,
+    });
+  };
+
+  const handleToggleAction = (role: AppRole, moduleId: string, field: PermissionField, checked: boolean) => {
+    const currentPerm = getPermission(role, moduleId);
+    const next = {
+      can_view: currentPerm?.can_view ?? currentPerm?.can_access ?? false,
+      can_create: currentPerm?.can_create ?? false,
+      can_edit: currentPerm?.can_edit ?? false,
+      can_delete: currentPerm?.can_delete ?? false,
+      [field]: checked,
+    };
+
+    if (field !== 'can_view' && checked) next.can_view = true;
+    if (field === 'can_view' && !checked) {
+      next.can_create = false;
+      next.can_edit = false;
+      next.can_delete = false;
+    }
+
+    updatePermissionMutation.mutate({
+      role,
+      moduleId,
+      canAccess: next.can_view,
+      accessType: next.can_create || next.can_edit || next.can_delete ? 'total' : 'restrito',
+      granular: next,
     });
   };
 
@@ -185,27 +230,42 @@ export function PermissionsManager() {
                         </div>
 
                         {canAccess && (
-                          <Select
-                            value={accessType}
-                            onValueChange={(v) => handleChangeAccessType(role, module.id, v as AccessLevel)}
-                            disabled={updatePermissionMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[120px] h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="total">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="default" className="h-5">Total</Badge>
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="restrito">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="secondary" className="h-5">Restrito</Badge>
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Select
+                              value={accessType}
+                              onValueChange={(v) => handleChangeAccessType(role, module.id, v as AccessLevel)}
+                              disabled={updatePermissionMutation.isPending}
+                            >
+                              <SelectTrigger className="h-8 w-[120px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="total"><Badge variant="default" className="h-5">Total</Badge></SelectItem>
+                                <SelectItem value="restrito"><Badge variant="secondary" className="h-5">Restrito</Badge></SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-1">
+                              {actionConfig.map(({ field, label, icon: Icon, sensitive }) => {
+                                const checked = field === 'can_view'
+                                  ? (perm?.can_view ?? perm?.can_access ?? false)
+                                  : (perm?.[field] ?? false);
+
+                                return (
+                                  <button
+                                    key={field}
+                                    type="button"
+                                    title={label}
+                                    aria-label={label}
+                                    onClick={() => handleToggleAction(role, module.id, field, !checked)}
+                                    disabled={updatePermissionMutation.isPending}
+                                    className={`inline-flex h-7 w-7 items-center justify-center rounded border transition-colors ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-transparent bg-background text-muted-foreground hover:text-foreground'} ${sensitive && checked ? 'ring-1 ring-destructive/40' : ''}`}
+                                  >
+                                    <Icon className="h-3.5 w-3.5" />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         )}
 
                         {!canAccess && (

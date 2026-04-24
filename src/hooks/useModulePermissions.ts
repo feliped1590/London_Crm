@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { PermissionAction, permissionEngine, type AccessType } from '@/lib/permissions/permissionEngine';
 
-export type AccessType = 'total' | 'restrito' | 'none';
+export type { AccessType } from '@/lib/permissions/permissionEngine';
 
 export interface ModulePermission {
   module_key: string;
@@ -10,6 +11,10 @@ export interface ModulePermission {
   module_path: string;
   module_icon: string;
   access_type: AccessType;
+  can_view?: boolean;
+  can_create?: boolean;
+  can_edit?: boolean;
+  can_delete?: boolean;
 }
 
 export function useModulePermissions() {
@@ -20,7 +25,7 @@ export function useModulePermissions() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase.rpc('get_user_modules', {
+      const { data, error } = await supabase.rpc('get_user_module_permissions', {
         _user_id: user.id
       });
       
@@ -28,6 +33,8 @@ export function useModulePermissions() {
       return (data as ModulePermission[]) || [];
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: hasRoleAdmin } = useQuery({
@@ -73,17 +80,18 @@ export function useModulePermissions() {
   });
 
   const isAdmin = hasRoleAdmin || hasRoleDeveloper || false;
+  const permissionMap = permissionEngine.toMap(permissions || []);
+
+  const can = (moduleKey: string, action: PermissionAction): boolean => {
+    return permissionEngine.can(permissionMap, moduleKey, action, { isPrivileged: isAdmin });
+  };
 
   const canAccess = (moduleKey: string): boolean => {
-    if (isAdmin) return true;
-    const permission = permissions?.find(p => p.module_key === moduleKey);
-    return permission?.access_type !== 'none' && !!permission;
+    return can(moduleKey, PermissionAction.View);
   };
 
   const getAccessType = (moduleKey: string): AccessType => {
-    if (isAdmin) return 'total';
-    const permission = permissions?.find(p => p.module_key === moduleKey);
-    return (permission?.access_type as AccessType) || 'none';
+    return permissionEngine.getAccessType(permissionMap, moduleKey, { isPrivileged: isAdmin });
   };
 
   const hasFullAccess = (moduleKey: string): boolean => {
@@ -109,6 +117,7 @@ export function useModulePermissions() {
     isAdmin,
     isDeveloper: hasRoleDeveloper || false,
     isVendedor: hasRoleVendedor || false,
+    can,
     canAccess,
     getAccessType,
     hasFullAccess,
