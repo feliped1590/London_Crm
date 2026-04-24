@@ -45,7 +45,18 @@ export function StageHistoryTab({ dealId }: StageHistoryTabProps) {
         .eq('deal_id', dealId)
         .order('changed_at', { ascending: false });
       if (error) throw error;
-      return data;
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name');
+      if (profilesError) throw profilesError;
+
+      return data.map((entry) => ({
+        ...entry,
+        profiles: {
+          full_name: profilesData.find((p) => p.user_id === entry.changed_by)?.full_name || null,
+        },
+      }));
     },
     enabled: !!dealId,
   });
@@ -113,6 +124,13 @@ export function StageHistoryTab({ dealId }: StageHistoryTabProps) {
                         {format(new Date(entry.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                       </span>
                     </div>
+
+                    {entry.profiles?.full_name && (
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        <span>{entry.profiles.full_name}</span>
+                      </div>
+                    )}
                     
                     {entry.duration_seconds && entry.duration_seconds > 0 && (
                       <div className="text-xs bg-muted px-2 py-0.5 rounded">
