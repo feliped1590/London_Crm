@@ -122,6 +122,32 @@ export function PermissionsManager() {
     });
   };
 
+  const handleToggleAction = (role: AppRole, moduleId: string, field: PermissionField, checked: boolean) => {
+    const currentPerm = getPermission(role, moduleId);
+    const next = {
+      can_view: currentPerm?.can_view ?? currentPerm?.can_access ?? false,
+      can_create: currentPerm?.can_create ?? false,
+      can_edit: currentPerm?.can_edit ?? false,
+      can_delete: currentPerm?.can_delete ?? false,
+      [field]: checked,
+    };
+
+    if (field !== 'can_view' && checked) next.can_view = true;
+    if (field === 'can_view' && !checked) {
+      next.can_create = false;
+      next.can_edit = false;
+      next.can_delete = false;
+    }
+
+    updatePermissionMutation.mutate({
+      role,
+      moduleId,
+      canAccess: next.can_view,
+      accessType: next.can_create || next.can_edit || next.can_delete ? 'total' : 'restrito',
+      granular: next,
+    });
+  };
+
   const isLoading = modulesLoading || permissionsLoading;
 
   if (isLoading) {
