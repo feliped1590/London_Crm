@@ -28,6 +28,7 @@ import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/Comp
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import {
   Pagination,
   PaginationContent,
@@ -87,7 +88,10 @@ export default function Customers() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { isAdmin, isDeveloper, isVendedor } = useModulePermissions();
+  const { isAdmin, isDeveloper, isVendedor, can } = useModulePermissions();
+  const canCreateCustomers = can('companies', PermissionAction.Create);
+  const canEditCustomers = can('companies', PermissionAction.Edit);
+  const canDeleteCustomers = can('companies', PermissionAction.Delete);
   const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -477,11 +481,13 @@ export default function Customers() {
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Personalizar painel</span>
           </Button>
-          <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo Cliente</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
+          {canCreateCustomers && (
+            <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          )}
         </div>
       </div>
 
