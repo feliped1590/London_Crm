@@ -8865,6 +8865,10 @@ export type Database = {
         Returns: boolean
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
+      can_view_company_audit_log: {
+        Args: { _company_id: string }
+        Returns: boolean
+      }
       check_existing_session: { Args: { p_user_id: string }; Returns: Json }
       check_pending_tasks: { Args: { p_user_id: string }; Returns: Json }
       cleanup_expired_sessions: { Args: never; Returns: number }
