@@ -49,6 +49,7 @@ import {
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -66,7 +67,10 @@ export default function Products() {
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, can } = useModulePermissions();
+  const canCreateProducts = can('products', PermissionAction.Create);
+  const canEditProducts = can('products', PermissionAction.Edit);
+  const canDeleteProducts = can('products', PermissionAction.Delete);
   const { data: activeTenantId } = useQuery({
     queryKey: ['products-active-tenant-id', user?.id],
     queryFn: async () => {
@@ -1060,13 +1064,15 @@ export default function Products() {
               <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Atualizar</span>
             </Button>
-            <DialogTrigger asChild>
-              <Button className="gap-2" size="sm">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Novo Produto</span>
-                <span className="sm:hidden">Novo</span>
-              </Button>
-            </DialogTrigger>
+            {canCreateProducts && (
+              <DialogTrigger asChild>
+                <Button className="gap-2" size="sm">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Produto</span>
+                  <span className="sm:hidden">Novo</span>
+                </Button>
+              </DialogTrigger>
+            )}
           </div>
           <DialogContent className="w-[calc(100vw-1rem)] max-w-[95vw] sm:max-w-[90vw] lg:max-w-[70vw] max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
@@ -1916,6 +1922,7 @@ export default function Products() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {canCreateProducts && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
@@ -1924,20 +1931,25 @@ export default function Products() {
                             </TooltipTrigger>
                             <TooltipContent>Duplicar produto (cria novo com base neste)</TooltipContent>
                           </Tooltip>
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja excluir este produto?')) {
-                                deleteMutation.mutate(product.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          )}
+                          {canEditProducts && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteProducts && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                  deleteMutation.mutate(product.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1950,9 +1962,9 @@ export default function Products() {
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Package className="h-12 w-12 mb-4" />
               <p>Nenhum produto encontrado</p>
-              <Button variant="link" onClick={() => setIsDialogOpen(true)}>
+              {canCreateProducts && <Button variant="link" onClick={() => setIsDialogOpen(true)}>
                 Criar primeiro produto
-              </Button>
+              </Button>}
             </div>
           )}
         </CardContent>

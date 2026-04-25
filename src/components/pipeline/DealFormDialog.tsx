@@ -44,6 +44,8 @@ interface DealFormDialogProps {
   onOpenEmailDialog: (deal: Deal) => void;
   onQuickCreateCompany: () => void;
   onQuickCreateContact: () => void;
+  canCreateDeal: boolean;
+  canEditDeal: boolean;
   canDeleteDeal: (deal: Deal) => boolean;
   isMutating: boolean;
   getContactPhone: (contactId: string | null) => string | null;
@@ -74,6 +76,8 @@ export function DealFormDialog({
   onOpenEmailDialog,
   onQuickCreateCompany,
   onQuickCreateContact,
+  canCreateDeal,
+  canEditDeal,
   canDeleteDeal,
   isMutating,
   getContactPhone,
@@ -256,12 +260,14 @@ export function DealFormDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) onReset(); }}>
-      <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Negócio
-        </Button>
-      </DialogTrigger>
+      {canCreateDeal && (
+        <DialogTrigger asChild>
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Negócio
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{editingDeal ? `Detalhes: ${editingDeal.name}` : 'Novo Negócio'}</DialogTitle>
@@ -342,9 +348,9 @@ export function DealFormDialog({
                     <Button type="button" variant="outline" onClick={onReset}>
                       Cancelar
                     </Button>
-                    <Button type="submit" disabled={isMutating}>
+                    {canEditDeal && <Button type="submit" disabled={isMutating}>
                       Atualizar
-                    </Button>
+                    </Button>}
                   </div>
                 </div>
               </form>
@@ -390,7 +396,7 @@ export function DealFormDialog({
               <Button type="button" variant="outline" onClick={onReset}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isMutating}>
+              <Button type="submit" disabled={isMutating || !canCreateDeal}>
                 Criar
               </Button>
             </div>

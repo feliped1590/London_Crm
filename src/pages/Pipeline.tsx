@@ -28,6 +28,8 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { usePipelineData, type Deal, type DealStage, type PipelineOwnershipViewMode, type PipelineStageRow } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
@@ -37,6 +39,10 @@ import type { SearchableSelectOption } from '@/components/ui/searchable-select';
 export default function Pipeline() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { can } = useModulePermissions();
+  const canCreatePipeline = can('pipeline', PermissionAction.Create);
+  const canEditPipeline = can('pipeline', PermissionAction.Edit);
+  const canDeletePipeline = can('pipeline', PermissionAction.Delete);
 
   // Pipeline selection
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
@@ -528,7 +534,9 @@ export default function Pipeline() {
             onOpenEmailDialog={handleOpenEmailDialog}
             onQuickCreateCompany={() => setQuickCreateCompanyOpen(true)}
             onQuickCreateContact={() => setQuickCreateContactOpen(true)}
-            canDeleteDeal={canDeleteDeal}
+            canCreateDeal={canCreatePipeline}
+            canEditDeal={canEditPipeline}
+            canDeleteDeal={(deal) => canDeletePipeline && canDeleteDeal(deal)}
             isMutating={createMutation.isPending || updateMutation.isPending}
             getContactPhone={wrappedGetContactPhone}
             getContactName={wrappedGetContactName}
@@ -606,7 +614,7 @@ export default function Pipeline() {
         </div>
       ) : viewMode === 'list' ? (
         <div className="h-[calc(100vh-280px)] overflow-auto">
-          <PipelineListView deals={filteredDeals} onEdit={handleEdit} onSendEmail={handleOpenEmailDialog} />
+          <PipelineListView deals={filteredDeals} onEdit={canEditPipeline ? handleEdit : undefined} onSendEmail={handleOpenEmailDialog} />
         </div>
       ) : (
         <KanbanBoard
@@ -620,7 +628,7 @@ export default function Pipeline() {
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          onEdit={handleEdit}
+          onEdit={canEditPipeline ? handleEdit : undefined}
           onEmailDialog={handleOpenEmailDialog}
           paginationResetKey={paginationResetKey}
         />
@@ -722,7 +730,8 @@ export default function Pipeline() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { dealToDelete && deleteMutation.mutate(dealToDelete.id); setDeleteConfirmOpen(false); setDealToDelete(null); resetForm(); }}
+              onClick={() => { dealToDelete && canDeletePipeline && deleteMutation.mutate(dealToDelete.id); setDeleteConfirmOpen(false); setDealToDelete(null); resetForm(); }}
+              disabled={!canDeletePipeline || deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}

@@ -28,6 +28,7 @@ import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/Comp
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import {
   Pagination,
   PaginationContent,
@@ -87,7 +88,10 @@ export default function Customers() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { isAdmin, isDeveloper, isVendedor } = useModulePermissions();
+  const { isAdmin, isDeveloper, isVendedor, can } = useModulePermissions();
+  const canCreateCustomers = can('companies', PermissionAction.Create);
+  const canEditCustomers = can('companies', PermissionAction.Edit);
+  const canDeleteCustomers = can('companies', PermissionAction.Delete);
   const { mySalesRepIds, hasDirectAccess, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -477,11 +481,13 @@ export default function Customers() {
             <Settings2 className="h-4 w-4" />
             <span className="hidden sm:inline">Personalizar painel</span>
           </Button>
-          <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Novo Cliente</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
+          {canCreateCustomers && (
+            <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -601,7 +607,7 @@ export default function Customers() {
               <p className="text-muted-foreground">
                 {debouncedSearch || activeFiltersCount > 0 ? 'Tente ajustar sua busca ou filtros.' : 'Comece adicionando seu primeiro cliente.'}
               </p>
-              {!debouncedSearch && activeFiltersCount === 0 && (
+              {!debouncedSearch && activeFiltersCount === 0 && canCreateCustomers && (
                 <Button className="mt-4 gap-2" onClick={() => navigate('/customers/new')}>
                   <Plus className="h-4 w-4" />
                   Novo Cliente
@@ -709,7 +715,7 @@ export default function Customers() {
                             <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)}>
+                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)} disabled={!canEditCustomers}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
@@ -733,7 +739,7 @@ export default function Customers() {
                                   <TooltipContent>{customer.active ? 'Desativar cliente' : 'Ativar cliente'}</TooltipContent>
                                 </Tooltip>
                               )}
-                              {isAdmin && (
+                              {canDeleteCustomers && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" onClick={(e) => handleDeleteClick(customer, e)} className="text-destructive hover:text-destructive">
