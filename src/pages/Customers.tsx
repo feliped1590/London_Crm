@@ -607,7 +607,7 @@ export default function Customers() {
               <p className="text-muted-foreground">
                 {debouncedSearch || activeFiltersCount > 0 ? 'Tente ajustar sua busca ou filtros.' : 'Comece adicionando seu primeiro cliente.'}
               </p>
-              {!debouncedSearch && activeFiltersCount === 0 && (
+              {!debouncedSearch && activeFiltersCount === 0 && canCreateCustomers && (
                 <Button className="mt-4 gap-2" onClick={() => navigate('/customers/new')}>
                   <Plus className="h-4 w-4" />
                   Novo Cliente
@@ -715,7 +715,7 @@ export default function Customers() {
                             <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)}>
+                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)} disabled={!canEditCustomers}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
@@ -739,7 +739,7 @@ export default function Customers() {
                                   <TooltipContent>{customer.active ? 'Desativar cliente' : 'Ativar cliente'}</TooltipContent>
                                 </Tooltip>
                               )}
-                              {isAdmin && (
+                              {canDeleteCustomers && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button variant="ghost" size="icon" onClick={(e) => handleDeleteClick(customer, e)} className="text-destructive hover:text-destructive">
