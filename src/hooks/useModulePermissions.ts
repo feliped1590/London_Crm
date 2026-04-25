@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -80,10 +81,16 @@ export function useModulePermissions() {
   });
 
   const isAdmin = hasRoleAdmin || hasRoleDeveloper || false;
-  const permissionMap = permissionEngine.toMap(permissions || []);
+  const permissionMap = useMemo(() => permissionEngine.toMap(permissions || []), [permissions]);
+
+  const handleMissingModule = (moduleKey: string, action?: PermissionAction) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[permissionEngine] Módulo inexistente ou não permitido: ${moduleKey}`, { action });
+    }
+  };
 
   const can = (moduleKey: string, action: PermissionAction): boolean => {
-    return permissionEngine.can(permissionMap, moduleKey, action, { isPrivileged: isAdmin });
+    return permissionEngine.can(permissionMap, moduleKey, action, { isPrivileged: isAdmin, onMissingModule: handleMissingModule });
   };
 
   const canAccess = (moduleKey: string): boolean => {
@@ -91,11 +98,10 @@ export function useModulePermissions() {
   };
 
   const getAccessType = (moduleKey: string): AccessType => {
-    return permissionEngine.getAccessType(permissionMap, moduleKey, { isPrivileged: isAdmin });
+    return permissionEngine.getAccessType(permissionMap, moduleKey, { onMissingModule: handleMissingModule });
   };
 
   const hasFullAccess = (moduleKey: string): boolean => {
-    if (isAdmin) return true;
     return getAccessType(moduleKey) === 'total';
   };
 
@@ -111,6 +117,7 @@ export function useModulePermissions() {
 
   return {
     permissions: permissions || [],
+    permissionMap,
     isLoading,
     isFullyLoaded,
     error,
