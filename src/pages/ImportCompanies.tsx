@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import readXlsxFile from 'read-excel-file';
 import type { ImportCompanyRow } from '@/types/imports';
 
 // Normaliza cabeçalho: remove acentos, lowercase, remove não-alfanuméricos
@@ -80,10 +80,19 @@ export default function ImportCompanies() {
     setValidationErrors([]);
 
     try {
-      const data = await selectedFile.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { defval: '' });
+      const rows = await readXlsxFile(selectedFile);
+      const [headers, ...bodyRows] = rows;
+
+      if (!headers || bodyRows.length === 0) {
+        toast.error('Arquivo vazio ou sem dados válidos.');
+        return;
+      }
+
+      const originalHeaders = headers.map((header) => String(header ?? '').trim());
+      const jsonData = bodyRows.map((row) => originalHeaders.reduce<Record<string, string>>((acc, header, index) => {
+        acc[header] = String(row[index] ?? '');
+        return acc;
+      }, {}));
 
       if (jsonData.length === 0) {
         toast.error('Arquivo vazio ou sem dados válidos.');
@@ -91,7 +100,6 @@ export default function ImportCompanies() {
       }
 
       // Detectar cabeçalhos não mapeados
-      const originalHeaders = Object.keys(jsonData[0]);
       const unmapped: string[] = [];
       const headerToDbField: Record<string, string> = {};
 
