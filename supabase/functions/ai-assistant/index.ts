@@ -7,6 +7,24 @@ const corsHeaders = {
 
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+const SEARCHABLE_ENTITIES = new Set(["companies", "contacts", "deals", "products", "tasks", "orders", "proposals", "activities"]);
+
+function sanitizeSearchQuery(value: unknown): string {
+  if (typeof value !== "string") return "";
+
+  return value
+    .replace(/[%,_\\]/g, "")
+    .replace(/[;'"`]/g, "")
+    .replace(/--|\/\*/g, "")
+    .trim()
+    .slice(0, 100);
+}
+
+function normalizeSearchLimit(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 10;
+  return Math.min(Math.max(Math.floor(value), 1), 50);
+}
+
 // Tool definitions for the AI
 const tools = [
   {
@@ -209,32 +227,38 @@ async function executeTool(
     switch (toolName) {
       case "search_database": {
         const { entity, query, limit = 10 } = args as { entity: string; query?: string; limit?: number };
+        if (!SEARCHABLE_ENTITIES.has(entity)) {
+          return { success: false, result: null, error: "Tipo de entidade inválido" };
+        }
+
+        const sanitizedQuery = sanitizeSearchQuery(query);
+        const safeLimit = normalizeSearchLimit(limit);
         
         let data: unknown[] = [];
         let error: unknown = null;
         
         if (entity === "companies") {
-          const result = query 
-            ? await supabase.from("companies").select("*").or(`name.ilike.%${query}%,cnpj.ilike.%${query}%,email.ilike.%${query}%`).limit(limit)
-            : await supabase.from("companies").select("*").limit(limit);
+          const result = sanitizedQuery 
+            ? await supabase.from("companies").select("*").or(`name.ilike.%${sanitizedQuery}%,cnpj.ilike.%${sanitizedQuery}%,email.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("companies").select("*").limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "contacts") {
-          const result = query
-            ? await supabase.from("contacts").select("*").or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%`).limit(limit)
-            : await supabase.from("contacts").select("*").limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("contacts").select("*").or(`first_name.ilike.%${sanitizedQuery}%,last_name.ilike.%${sanitizedQuery}%,email.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("contacts").select("*").limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "deals") {
-          const result = query
-            ? await supabase.from("deals").select("*").ilike("name", `%${query}%`).limit(limit)
-            : await supabase.from("deals").select("*").limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("deals").select("*").ilike("name", `%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("deals").select("*").limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "products") {
-          const result = query
-            ? await supabase.from("products").select("*").or(`name.ilike.%${query}%,sku.ilike.%${query}%`).limit(limit)
-            : await supabase.from("products").select("*").limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("products").select("*").or(`name.ilike.%${sanitizedQuery}%,sku.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("products").select("*").limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "tasks") {
