@@ -470,6 +470,9 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    const permissionResponse = permissionErrorResponse(error, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error('[process-order-sync] Erro geral:', error);
     return errorResponse(500, error instanceof Error ? error.message : 'Erro desconhecido');
   }
