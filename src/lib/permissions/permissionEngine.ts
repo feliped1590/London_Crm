@@ -21,6 +21,11 @@ export interface GranularModulePermission {
 
 export type PermissionMap = Record<string, GranularModulePermission>;
 
+interface PermissionEngineOptions {
+  isPrivileged?: boolean;
+  onMissingModule?: (moduleKey: string, action?: PermissionAction) => void;
+}
+
 const actionField: Record<PermissionAction, keyof GranularModulePermission> = {
   [PermissionAction.View]: 'can_view',
   [PermissionAction.Create]: 'can_create',
@@ -37,36 +42,43 @@ export const permissionEngine = {
   },
 
   can(
-    permissions: GranularModulePermission[] | PermissionMap,
+    permissions: PermissionMap,
     moduleKey: string,
     action: PermissionAction,
-    options: { isPrivileged?: boolean } = {},
+    options: PermissionEngineOptions = {},
   ): boolean {
-    if (options.isPrivileged) return true;
+    const permission = permissions[moduleKey];
 
-    const permission = Array.isArray(permissions)
-      ? permissions.find((item) => item.module_key === moduleKey)
-      : permissions[moduleKey];
+    if (!permission) {
+      options.onMissingModule?.(moduleKey, action);
+      return false;
+    }
+
+    if (options.isPrivileged && action !== PermissionAction.Delete) return true;
 
     if (!permission?.can_view) return false;
     if (action === PermissionAction.View) return true;
+    if (action === PermissionAction.Delete) {
+      return permission.can_edit === true && permission.can_delete === true;
+    }
 
     return permission[actionField[action]] === true;
   },
 
   getAccessType(
-    permissions: GranularModulePermission[] | PermissionMap,
+    permissions: PermissionMap,
     moduleKey: string,
-    options: { isPrivileged?: boolean } = {},
+    options: PermissionEngineOptions = {},
   ): AccessType {
-    if (options.isPrivileged) return 'total';
+    const permission = permissions[moduleKey];
 
-    const permission = Array.isArray(permissions)
-      ? permissions.find((item) => item.module_key === moduleKey)
-      : permissions[moduleKey];
+    if (!permission) {
+      options.onMissingModule?.(moduleKey);
+      return 'none';
+    }
 
     if (!permission?.can_view) return 'none';
-    if (permission.can_create || permission.can_edit || permission.can_delete) return 'total';
+    if (permission.can_view && permission.can_create && permission.can_edit && permission.can_delete) return 'total';
     return 'restrito';
   },
 };
