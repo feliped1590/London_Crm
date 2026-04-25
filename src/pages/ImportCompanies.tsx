@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import readXlsxFile from 'read-excel-file';
+import readXlsxFile from 'read-excel-file/browser';
 import type { ImportCompanyRow } from '@/types/imports';
 
 // Normaliza cabeçalho: remove acentos, lowercase, remove não-alfanuméricos
