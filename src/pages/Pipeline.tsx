@@ -28,6 +28,8 @@ import { QuickCreateContactModal } from '@/components/pipeline/QuickCreateContac
 import { AdminInterventionModal } from '@/components/governance/AdminInterventionModal';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { usePipelineData, type Deal, type DealStage, type PipelineOwnershipViewMode, type PipelineStageRow } from '@/hooks/usePipelineData';
 import type { ChecklistItem } from '@/hooks/useStageChecklists';
 import type { TablesInsert, Json } from '@/integrations/supabase/types';
@@ -37,6 +39,10 @@ import type { SearchableSelectOption } from '@/components/ui/searchable-select';
 export default function Pipeline() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { can } = useModulePermissions();
+  const canCreatePipeline = can('pipeline', PermissionAction.Create);
+  const canEditPipeline = can('pipeline', PermissionAction.Edit);
+  const canDeletePipeline = can('pipeline', PermissionAction.Delete);
 
   // Pipeline selection
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
@@ -528,7 +534,9 @@ export default function Pipeline() {
             onOpenEmailDialog={handleOpenEmailDialog}
             onQuickCreateCompany={() => setQuickCreateCompanyOpen(true)}
             onQuickCreateContact={() => setQuickCreateContactOpen(true)}
-            canDeleteDeal={canDeleteDeal}
+            canCreateDeal={canCreatePipeline}
+            canEditDeal={canEditPipeline}
+            canDeleteDeal={(deal) => canDeletePipeline && canDeleteDeal(deal)}
             isMutating={createMutation.isPending || updateMutation.isPending}
             getContactPhone={wrappedGetContactPhone}
             getContactName={wrappedGetContactName}
