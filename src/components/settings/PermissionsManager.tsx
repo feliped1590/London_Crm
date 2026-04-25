@@ -120,6 +120,7 @@ export function PermissionsManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role_module_permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['user_permission_changes'] });
       toast.success('Permissão atualizada!');
     },
     onError: () => toast.error('Erro ao atualizar permissão'),
