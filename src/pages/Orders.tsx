@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { cn } from '@/lib/utils';
 
 const freightBadgeStyles: Record<string, string> = {
@@ -25,7 +26,9 @@ const freightBadgeStyles: Record<string, string> = {
 
 export default function Orders() {
   const queryClient = useQueryClient();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, can } = useModulePermissions();
+  const canCreateOrders = can('orders', PermissionAction.Create);
+  const canEditOrders = can('orders', PermissionAction.Edit);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCarrier, setFilterCarrier] = useState<string>('all');
@@ -122,6 +125,7 @@ export default function Orders() {
   };
 
   const canEditOrder = (order: Order) => {
+    if (!canEditOrders) return false;
     if (order.status === 'pendente') return true;
     return isAdmin;
   };
@@ -171,11 +175,13 @@ export default function Orders() {
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Novo Pedido</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
+          {canCreateOrders && (
+            <Button onClick={() => setIsCreateDialogOpen(true)} size="sm">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Pedido</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          )}
         </div>
       </div>
 
