@@ -7,8 +7,34 @@ export enum PermissionAction {
 
 export type AccessType = 'total' | 'restrito' | 'none';
 
+export const MODULE_KEYS = [
+  'dashboard',
+  'companies',
+  'contacts',
+  'pipeline',
+  'products',
+  'orders',
+  'stock',
+  'tasks',
+  'whatsapp',
+  'emails',
+  'reports',
+  'insights',
+  'settings',
+  'carriers',
+  'import_companies',
+  'bots',
+  'portfolio',
+  'prospecting',
+  'integrations',
+  'pricing',
+] as const;
+
+export type ModuleKey = (typeof MODULE_KEYS)[number];
+export type KnownOrDynamicModuleKey = ModuleKey | (string & {});
+
 export interface GranularModulePermission {
-  module_key: string;
+  module_key: KnownOrDynamicModuleKey;
   module_name: string;
   module_path: string;
   module_icon: string;
@@ -19,11 +45,20 @@ export interface GranularModulePermission {
   can_delete?: boolean;
 }
 
-export type PermissionMap = Record<string, GranularModulePermission>;
+export type PermissionMap = Readonly<Record<string, Readonly<GranularModulePermission>>>;
 
 interface PermissionEngineOptions {
   isPrivileged?: boolean;
+  failFast?: boolean;
   onMissingModule?: (moduleKey: string, action?: PermissionAction) => void;
+}
+
+function handleMissingModule(moduleKey: string, action: PermissionAction | undefined, options: PermissionEngineOptions) {
+  options.onMissingModule?.(moduleKey, action);
+
+  if (options.failFast) {
+    throw new Error(`[permissionEngine] Módulo inexistente ou não carregado: ${moduleKey}${action ? `:${action}` : ''}`);
+  }
 }
 
 const actionField: Record<PermissionAction, keyof GranularModulePermission> = {
@@ -35,22 +70,24 @@ const actionField: Record<PermissionAction, keyof GranularModulePermission> = {
 
 export const permissionEngine = {
   toMap(permissions: GranularModulePermission[] = []): PermissionMap {
-    return permissions.reduce<PermissionMap>((acc, permission) => {
-      acc[permission.module_key] = permission;
+    const map = permissions.reduce<Record<string, Readonly<GranularModulePermission>>>((acc, permission) => {
+      acc[permission.module_key] = Object.freeze({ ...permission });
       return acc;
     }, {});
+
+    return Object.freeze(map);
   },
 
   can(
     permissions: PermissionMap,
-    moduleKey: string,
+    moduleKey: KnownOrDynamicModuleKey,
     action: PermissionAction,
     options: PermissionEngineOptions = {},
   ): boolean {
     const permission = permissions[moduleKey];
 
     if (!permission) {
-      options.onMissingModule?.(moduleKey, action);
+      handleMissingModule(moduleKey, action, options);
       return false;
     }
 
@@ -67,13 +104,13 @@ export const permissionEngine = {
 
   getAccessType(
     permissions: PermissionMap,
-    moduleKey: string,
+    moduleKey: KnownOrDynamicModuleKey,
     options: PermissionEngineOptions = {},
   ): AccessType {
     const permission = permissions[moduleKey];
 
     if (!permission) {
-      options.onMissingModule?.(moduleKey);
+      handleMissingModule(moduleKey, undefined, options);
       return 'none';
     }
 
