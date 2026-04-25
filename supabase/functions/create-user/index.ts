@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,6 +65,8 @@ Deno.serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    await requireModulePermission(supabaseUser, currentUser.id, 'settings', 'create');
 
     // Create a service role client to check license and create users
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -188,6 +191,9 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const permissionResponse = permissionErrorResponse(error, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error('Unexpected error:', error);
     return new Response(
       JSON.stringify({ error: 'Erro interno do servidor' }),
