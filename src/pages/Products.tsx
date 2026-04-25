@@ -49,6 +49,7 @@ import {
   VersionGenerationError,
 } from '@/utils/products/generateVersion';
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -66,7 +67,10 @@ export default function Products() {
   const queryClient = useQueryClient();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, can } = useModulePermissions();
+  const canCreateProducts = can('products', PermissionAction.Create);
+  const canEditProducts = can('products', PermissionAction.Edit);
+  const canDeleteProducts = can('products', PermissionAction.Delete);
   const { data: activeTenantId } = useQuery({
     queryKey: ['products-active-tenant-id', user?.id],
     queryFn: async () => {
@@ -1060,13 +1064,15 @@ export default function Products() {
               <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Atualizar</span>
             </Button>
-            <DialogTrigger asChild>
-              <Button className="gap-2" size="sm">
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Novo Produto</span>
-                <span className="sm:hidden">Novo</span>
-              </Button>
-            </DialogTrigger>
+            {canCreateProducts && (
+              <DialogTrigger asChild>
+                <Button className="gap-2" size="sm">
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Produto</span>
+                  <span className="sm:hidden">Novo</span>
+                </Button>
+              </DialogTrigger>
+            )}
           </div>
           <DialogContent className="w-[calc(100vw-1rem)] max-w-[95vw] sm:max-w-[90vw] lg:max-w-[70vw] max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
