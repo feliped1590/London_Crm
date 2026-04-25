@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { PermissionAction, permissionEngine, type AccessType } from '@/lib/permissions/permissionEngine';
+import { PermissionAction, permissionEngine, type AccessType, type KnownOrDynamicModuleKey } from '@/lib/permissions/permissionEngine';
 
 export type { AccessType } from '@/lib/permissions/permissionEngine';
 
 export interface ModulePermission {
-  module_key: string;
+  module_key: KnownOrDynamicModuleKey;
   module_name: string;
   module_path: string;
   module_icon: string;
@@ -89,23 +89,23 @@ export function useModulePermissions() {
     }
   };
 
-  const can = (moduleKey: string, action: PermissionAction): boolean => {
+  const can = (moduleKey: KnownOrDynamicModuleKey, action: PermissionAction): boolean => {
     return permissionEngine.can(permissionMap, moduleKey, action, { isPrivileged: isAdmin, onMissingModule: handleMissingModule });
   };
 
-  const canAccess = (moduleKey: string): boolean => {
+  const canAccess = (moduleKey: KnownOrDynamicModuleKey): boolean => {
     return can(moduleKey, PermissionAction.View);
   };
 
-  const getAccessType = (moduleKey: string): AccessType => {
+  const getAccessType = (moduleKey: KnownOrDynamicModuleKey): AccessType => {
     return permissionEngine.getAccessType(permissionMap, moduleKey, { onMissingModule: handleMissingModule });
   };
 
-  const hasFullAccess = (moduleKey: string): boolean => {
+  const hasFullAccess = (moduleKey: KnownOrDynamicModuleKey): boolean => {
     return getAccessType(moduleKey) === 'total';
   };
 
-  const hasRestrictedAccess = (moduleKey: string): boolean => {
+  const hasRestrictedAccess = (moduleKey: KnownOrDynamicModuleKey): boolean => {
     return getAccessType(moduleKey) === 'restrito';
   };
 
