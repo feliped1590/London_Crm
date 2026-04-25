@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { permissionErrorResponse, requireModulePermission } from "../_shared/permissionEngine.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,6 +39,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    await requireModulePermission(supabase, user.id, "products", "create");
 
     // Get tenant
     const { data: profile } = await supabase
@@ -173,6 +176,9 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err: any) {
+    const permissionResponse = permissionErrorResponse(err, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error("Import error:", err);
     return new Response(
       JSON.stringify({ error: err.message || "Internal error" }),

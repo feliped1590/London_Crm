@@ -26,7 +26,7 @@ export interface LoadedOrderContext {
   crmPaymentMethod: string | null;
   paymentMapping: { erp_payment_code: number; erp_payment_description: string } | null;
   paymentTermsStr: string | null;
-  paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo: string }>;
+  paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo?: string }>;
   saleTypeMap: Map<string, number>;
   pedidoTerceiro: number;
   toValidate: OrderToValidate;

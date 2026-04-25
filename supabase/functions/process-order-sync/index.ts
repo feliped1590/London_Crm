@@ -15,6 +15,7 @@ import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
+import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,23 @@ Deno.serve(async (req) => {
       const body = await req.json();
       targetOrderId = body?.order_id || null;
     } catch { /* no body = batch mode */ }
+
+    if (targetOrderId) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return errorResponse(401, 'Unauthorized');
+      }
+
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      if (authError || !user) return errorResponse(401, 'Unauthorized');
+
+      await requireModulePermission(supabase, user.id, 'orders', 'edit');
+    }
 
     // If specific order_id provided, ensure it's in the queue
     if (targetOrderId) {
@@ -374,16 +392,16 @@ Deno.serve(async (req) => {
             user_name: userName,
             erp_user_code: erpUsuario,
             crm_order_type: crmOrderType,
-            erp_flow_code: typeMapping.erp_flow_code,
-            erp_flow_description: typeMapping.erp_flow_description,
+            erp_flow_code: typeMapping!.erp_flow_code,
+            erp_flow_description: typeMapping!.erp_flow_description,
             seller_name: sellerName,
             erp_vendor_code: erpVendedor,
             freight_type: crmFreightType,
-            erp_freight_code: freightMapping.erp_freight_code,
-            erp_freight_description: freightMapping.erp_freight_description,
+            erp_freight_code: freightMapping!.erp_freight_code,
+            erp_freight_description: freightMapping!.erp_freight_description,
             payment_method: crmPaymentMethod,
-            erp_payment_code: paymentMapping.erp_payment_code,
-            erp_payment_description: paymentMapping.erp_payment_description,
+            erp_payment_code: paymentMapping!.erp_payment_code,
+            erp_payment_description: paymentMapping!.erp_payment_description,
             payment_terms: paymentTermsStr,
             items_sale_types: itemsSaleTypes,
           },
@@ -452,6 +470,9 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    const permissionResponse = permissionErrorResponse(error, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error('[process-order-sync] Erro geral:', error);
     return errorResponse(500, error instanceof Error ? error.message : 'Erro desconhecido');
   }

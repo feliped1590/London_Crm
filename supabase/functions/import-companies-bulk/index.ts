@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { permissionErrorResponse, requireModulePermission } from "../_shared/permissionEngine.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,15 +78,9 @@ Deno.serve(async (req) => {
     );
 
     // =========================================================================
-    // 3. AUTORIZAÇÃO — apenas admin
+    // 3. AUTORIZAÇÃO — permissão granular de criação em clientes
     // =========================================================================
-    const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: userId, _role: 'admin' });
-    if (!isAdmin) {
-      return new Response(
-        JSON.stringify({ error: 'Forbidden: admin role required' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    await requireModulePermission(supabase, userId, 'companies', 'create');
 
     // =========================================================================
     // 4. RATE LIMIT — max 10 imports/min (importação é operação pesada)
@@ -241,6 +236,9 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
+    const permissionResponse = permissionErrorResponse(err, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error('import-companies-bulk failed', { code: (err as any)?.code });
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
