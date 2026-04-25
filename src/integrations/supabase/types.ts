@@ -9443,8 +9443,6 @@ export type Database = {
           status: string
         }[]
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       staging_status_counts: {
         Args: { p_tenant_id?: string }
         Returns: {
