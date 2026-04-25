@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Eye, Pencil, Plus, Shield, Trash2 } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
+import { useAuth } from '@/hooks/useAuth';
 import {
   type AppRole,
   EDITABLE_PERMISSION_ROLES,
@@ -29,6 +30,7 @@ const actionConfig = [
 
 export function PermissionsManager() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: modules, isLoading: modulesLoading } = useQuery({
     queryKey: ['system_modules'],
@@ -69,6 +71,7 @@ export function PermissionsManager() {
       granular?: Partial<Record<PermissionField, boolean>>;
     }) => {
       const existing = permissions?.find(p => p.role === role && p.module_id === moduleId);
+      const module = modules?.find(m => m.id === moduleId);
       const payload = {
         can_access: canAccess,
         access_type: accessType,
@@ -90,9 +93,34 @@ export function PermissionsManager() {
           .insert({ role, module_id: moduleId, ...payload });
         if (error) throw error;
       }
+
+      const trackedFields: PermissionField[] = ['can_view', 'can_create', 'can_edit', 'can_delete'];
+      const changes = trackedFields
+        .filter((field) => Boolean(existing) ? existing?.[field] !== payload[field] : payload[field] === true)
+        .map((field) => ({
+          changed_by: user?.id ?? null,
+          target_role: role,
+          module_id: moduleId,
+          module_key: module?.key ?? null,
+          action: field.replace('can_', '') as PermissionAction,
+          change_type: existing ? 'permission_updated' : 'permission_created',
+          old_value: existing ? existing[field] : null,
+          new_value: payload[field],
+          metadata: {
+            access_type: accessType,
+            module_name: module?.name ?? null,
+            previous_access_type: existing?.access_type ?? null,
+          },
+        }));
+
+      if (changes.length > 0) {
+        const { error } = await supabase.from('user_permission_changes').insert(changes);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['role_module_permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['user_permission_changes'] });
       toast.success('Permissão atualizada!');
     },
     onError: () => toast.error('Erro ao atualizar permissão'),
