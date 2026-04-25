@@ -262,27 +262,27 @@ async function executeTool(
           data = result.data || [];
           error = result.error;
         } else if (entity === "tasks") {
-          const result = query
-            ? await supabase.from("tasks").select("*").ilike("title", `%${query}%`).limit(limit)
-            : await supabase.from("tasks").select("*").limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("tasks").select("*").ilike("title", `%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("tasks").select("*").limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "orders") {
-          const result = query
-            ? await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").or(`number.ilike.%${query}%,observations.ilike.%${query}%`).limit(limit)
-            : await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").order("created_at", { ascending: false }).limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").or(`number.ilike.%${sanitizedQuery}%,observations.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("orders").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name)").order("created_at", { ascending: false }).limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "proposals") {
-          const result = query
-            ? await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`number.ilike.%${query}%,observations.ilike.%${query}%`).limit(limit)
-            : await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`number.ilike.%${sanitizedQuery}%,observations.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("proposals").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(safeLimit);
           data = result.data || [];
           error = result.error;
         } else if (entity === "activities") {
-          const result = query
-            ? await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`subject.ilike.%${query}%,content.ilike.%${query}%`).limit(limit)
-            : await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(limit);
+          const result = sanitizedQuery
+            ? await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").or(`subject.ilike.%${sanitizedQuery}%,content.ilike.%${sanitizedQuery}%`).limit(safeLimit)
+            : await supabase.from("activities").select("*, company:companies(id, name), contact:contacts(id, first_name, last_name), deal:deals(id, name)").order("created_at", { ascending: false }).limit(safeLimit);
           data = result.data || [];
           error = result.error;
         }
