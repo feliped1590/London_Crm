@@ -614,7 +614,7 @@ export default function Pipeline() {
         </div>
       ) : viewMode === 'list' ? (
         <div className="h-[calc(100vh-280px)] overflow-auto">
-          <PipelineListView deals={filteredDeals} onEdit={handleEdit} onSendEmail={handleOpenEmailDialog} />
+          <PipelineListView deals={filteredDeals} onEdit={canEditPipeline ? handleEdit : undefined} onSendEmail={handleOpenEmailDialog} />
         </div>
       ) : (
         <KanbanBoard
@@ -628,7 +628,7 @@ export default function Pipeline() {
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          onEdit={handleEdit}
+          onEdit={canEditPipeline ? handleEdit : undefined}
           onEmailDialog={handleOpenEmailDialog}
           paginationResetKey={paginationResetKey}
         />
@@ -730,7 +730,8 @@ export default function Pipeline() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { dealToDelete && deleteMutation.mutate(dealToDelete.id); setDeleteConfirmOpen(false); setDealToDelete(null); resetForm(); }}
+              onClick={() => { dealToDelete && canDeletePipeline && deleteMutation.mutate(dealToDelete.id); setDeleteConfirmOpen(false); setDealToDelete(null); resetForm(); }}
+              disabled={!canDeletePipeline || deleteMutation.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
