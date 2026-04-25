@@ -7,7 +7,6 @@ export interface WhatsAppInstance {
   id: string;
   user_id: string;
   instance_id: string;
-  instance_token: string;
   phone_number: string | null;
   name: string;
   status: string;
@@ -59,7 +58,7 @@ export function useWhatsAppInstances() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('whatsapp_instances')
-        .select('*')
+        .select('id, user_id, instance_id, phone_number, name, status, connected_at, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -208,7 +207,7 @@ export function useAddInstance() {
           instance_token: data.instance_token,
           status: 'disconnected'
         })
-        .select()
+        .select('id, user_id, instance_id, phone_number, name, status, connected_at, created_at, updated_at')
         .single();
 
       if (error) throw error;
