@@ -15,6 +15,7 @@ import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
+import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,23 @@ Deno.serve(async (req) => {
       const body = await req.json();
       targetOrderId = body?.order_id || null;
     } catch { /* no body = batch mode */ }
+
+    if (targetOrderId) {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return errorResponse(401, 'Unauthorized');
+      }
+
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+      if (authError || !user) return errorResponse(401, 'Unauthorized');
+
+      await requireModulePermission(supabase, user.id, 'orders', 'edit');
+    }
 
     // If specific order_id provided, ensure it's in the queue
     if (targetOrderId) {
