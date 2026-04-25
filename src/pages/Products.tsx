@@ -1922,6 +1922,7 @@ export default function Products() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {canCreateProducts && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
@@ -1930,20 +1931,25 @@ export default function Products() {
                             </TooltipTrigger>
                             <TooltipContent>Duplicar produto (cria novo com base neste)</TooltipContent>
                           </Tooltip>
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm('Tem certeza que deseja excluir este produto?')) {
-                                deleteMutation.mutate(product.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          )}
+                          {canEditProducts && (
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {canDeleteProducts && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                  deleteMutation.mutate(product.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1956,9 +1962,9 @@ export default function Products() {
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Package className="h-12 w-12 mb-4" />
               <p>Nenhum produto encontrado</p>
-              <Button variant="link" onClick={() => setIsDialogOpen(true)}>
+              {canCreateProducts && <Button variant="link" onClick={() => setIsDialogOpen(true)}>
                 Criar primeiro produto
-              </Button>
+              </Button>}
             </div>
           )}
         </CardContent>
