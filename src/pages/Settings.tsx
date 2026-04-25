@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { AutomationsManager } from '@/components/settings/AutomationsManager';
 import { PermissionsManager } from '@/components/settings/PermissionsManager';
+import { PermissionAuditViewer } from '@/components/settings/PermissionAuditViewer';
 import { LicenseCard } from '@/components/settings/LicenseCard';
 
 import { PortfolioManager } from '@/components/settings/PortfolioManager';
@@ -864,6 +865,12 @@ export default function Settings() {
                 Permissões por Módulo
               </TabsTrigger>
               {(isAdmin || isDeveloper) && (
+                <TabsTrigger value="permission-audit-sub" className="gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Auditoria de Permissões
+                </TabsTrigger>
+              )}
+              {(isAdmin || isDeveloper) && (
                 <TabsTrigger value="interventions-sub" className="gap-2">
                   <Shield className="h-4 w-4" />
                   Intervenções
@@ -1093,6 +1100,12 @@ export default function Settings() {
             <TabsContent value="permissions-sub" className="mt-4">
               <PermissionsManager />
             </TabsContent>
+
+            {(isAdmin || isDeveloper) && (
+              <TabsContent value="permission-audit-sub" className="mt-4">
+                <PermissionAuditViewer />
+              </TabsContent>
+            )}
 
             {(isAdmin || isDeveloper) && (
               <TabsContent value="interventions-sub" className="mt-4">
