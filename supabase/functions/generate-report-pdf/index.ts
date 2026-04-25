@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { permissionErrorResponse, requireModulePermission } from "../_shared/permissionEngine.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +37,8 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    await requireModulePermission(supabaseAuth, user.id, 'reports', 'view');
 
     // =========================================================================
     // 2. INPUT VALIDATION — validar widgets
@@ -315,6 +318,9 @@ serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
+    const permissionResponse = permissionErrorResponse(error, corsHeaders);
+    if (permissionResponse) return permissionResponse;
+
     console.error("generate-report-pdf failed", { code: (error as any)?.code });
     return new Response(
       JSON.stringify({ error: "Internal server error" }),
