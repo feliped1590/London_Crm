@@ -9283,62 +9283,34 @@ export type Database = {
           total_value_won: number
         }[]
       }
-      get_seller_productivity:
-        | {
-            Args: {
-              p_end_date: string
-              p_seller_id?: string
-              p_start_date: string
-            }
-            Returns: {
-              activities: number
-              deal_updates: number
-              efficiency_rate: number
-              emails: number
-              interaction_score: number
-              notes: number
-              orders: number
-              participation_percent: number
-              pipeline_conversion_rate: number
-              proposal_conversion_rate: number
-              proposals: number
-              rank_position: number
-              seller_id: string
-              seller_name: string
-              stage_changes: number
-              tasks_completed: number
-              tasks_created: number
-              total_interactions: number
-            }[]
-          }
-        | {
-            Args: {
-              p_end_date: string
-              p_manager_user_id?: string
-              p_seller_id?: string
-              p_start_date: string
-            }
-            Returns: {
-              activities: number
-              deal_updates: number
-              efficiency_rate: number
-              emails: number
-              interaction_score: number
-              notes: number
-              orders: number
-              participation_percent: number
-              pipeline_conversion_rate: number
-              proposal_conversion_rate: number
-              proposals: number
-              rank_position: number
-              seller_id: string
-              seller_name: string
-              stage_changes: number
-              tasks_completed: number
-              tasks_created: number
-              total_interactions: number
-            }[]
-          }
+      get_seller_productivity: {
+        Args: {
+          p_end_date: string
+          p_manager_user_id?: string
+          p_seller_id?: string
+          p_start_date: string
+        }
+        Returns: {
+          activities: number
+          deal_updates: number
+          efficiency_rate: number
+          emails: number
+          interaction_score: number
+          notes: number
+          orders: number
+          participation_percent: number
+          pipeline_conversion_rate: number
+          proposal_conversion_rate: number
+          proposals: number
+          rank_position: number
+          seller_id: string
+          seller_name: string
+          stage_changes: number
+          tasks_completed: number
+          tasks_created: number
+          total_interactions: number
+        }[]
+      }
       get_session_idle_timeout_minutes: { Args: never; Returns: number }
       get_stalled_deals_by_seller: {
         Args: { p_min_days?: number; p_seller_id?: string }
