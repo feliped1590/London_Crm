@@ -111,7 +111,7 @@ export function useSellerProductivity() {
       if (error) throw error;
 
       const managerIds = Array.from(
-        new Set((managerLinks ?? []).map((link: any) => link.manager_user_id).filter(Boolean))
+        new Set<string>((managerLinks ?? []).map((link: any) => link.manager_user_id).filter(Boolean))
       );
 
       if (managerIds.length === 0) return [] as ProductivityManagerOption[];
