@@ -42,6 +42,12 @@ export interface ProductivityTarget {
   target_score: number;
 }
 
+export interface ProductivityManagerOption {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
 function getDateRange(period: PeriodFilter, customStart?: Date, customEnd?: Date) {
   const now = new Date();
   switch (period) {
@@ -68,6 +74,7 @@ export function useSellerProductivity() {
   const [customStart, setCustomStart] = useState<Date | undefined>();
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [selectedSellerId, setSelectedSellerId] = useState<string | undefined>();
+  const [selectedManagerId, setSelectedManagerId] = useState<string | undefined>();
 
   const dateRange = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -75,7 +82,7 @@ export function useSellerProductivity() {
   );
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['seller-productivity', dateRange.start.toISOString(), dateRange.end.toISOString(), selectedSellerId],
+    queryKey: ['seller-productivity', dateRange.start.toISOString(), dateRange.end.toISOString(), selectedSellerId, selectedManagerId],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         p_start_date: dateRange.start.toISOString(),
@@ -84,9 +91,42 @@ export function useSellerProductivity() {
       if (selectedSellerId) {
         params.p_seller_id = selectedSellerId;
       }
+      if (selectedManagerId) {
+        params.p_manager_user_id = selectedManagerId;
+      }
       const { data, error } = await supabase.rpc('get_seller_productivity', params as any);
       if (error) throw error;
       return (data ?? []) as unknown as SellerProductivityRow[];
+    },
+  });
+
+  const { data: managers, isLoading: isLoadingManagers } = useQuery({
+    queryKey: ['productivity-managers'],
+    queryFn: async () => {
+      const { data: links, error: linksError } = await (supabase as any)
+        .from('manager_users')
+        .select('manager_user_id');
+      if (linksError) throw linksError;
+
+      const managerIds: string[] = Array.from(
+        new Set((links ?? []).map((link: { manager_user_id: string }) => link.manager_user_id).filter(Boolean))
+      );
+
+      if (managerIds.length === 0) return [] as ProductivityManagerOption[];
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', managerIds);
+      if (profilesError) throw profilesError;
+
+      return (profiles ?? [])
+        .map((profile) => ({
+          id: profile.user_id,
+          name: profile.full_name || profile.email || 'Sem nome',
+          email: profile.email,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)) as ProductivityManagerOption[];
     },
   });
 
@@ -124,10 +164,12 @@ export function useSellerProductivity() {
 
   return {
     data: data ?? [],
+    managers: managers ?? [],
     weights: weights ?? [],
     targets: targets ?? [],
     targetMap,
     isLoading,
+    isLoadingManagers,
     isLoadingWeights,
     isLoadingTargets,
     error,
@@ -139,6 +181,8 @@ export function useSellerProductivity() {
     setCustomEnd,
     selectedSellerId,
     setSelectedSellerId,
+    selectedManagerId,
+    setSelectedManagerId,
     dateRange,
     periodType,
   };

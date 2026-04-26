@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.get_seller_productivity(timestamp with time zone, timestamp with time zone, uuid);

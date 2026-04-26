@@ -3936,6 +3936,47 @@ export type Database = {
         }
         Relationships: []
       }
+      manager_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          manager_user_id: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          manager_user_id: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          manager_user_id?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_users_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ncm_codes: {
         Row: {
           aliquota_ipi_oficial: number | null
@@ -9243,7 +9284,12 @@ export type Database = {
         }[]
       }
       get_seller_productivity: {
-        Args: { p_end_date: string; p_seller_id?: string; p_start_date: string }
+        Args: {
+          p_end_date: string
+          p_manager_user_id?: string
+          p_seller_id?: string
+          p_start_date: string
+        }
         Returns: {
           activities: number
           deal_updates: number
