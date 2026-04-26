@@ -164,7 +164,7 @@ export function SellerProductivityReport() {
               <SelectItem value="all">Todos os vendedores</SelectItem>
               {managers.map((manager) => (
                 <SelectItem key={manager.id} value={manager.id}>
-                  {manager.name}
+                  {manager.label ? `${manager.name} (${manager.label})` : manager.name}
                 </SelectItem>
               ))}
             </SelectContent>
