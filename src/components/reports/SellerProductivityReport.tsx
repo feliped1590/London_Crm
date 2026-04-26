@@ -77,6 +77,10 @@ export function SellerProductivityReport() {
     setCustomEnd,
     dateRange,
     targetMap,
+    managers,
+    isLoadingManagers,
+    selectedManagerId,
+    setSelectedManagerId,
   } = useSellerProductivity();
 
   const [sortBy, setSortBy] = useState<SortField>('interaction_score');
@@ -146,6 +150,27 @@ export function SellerProductivityReport() {
           </>
         )}
 
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Gerente</label>
+          <Select
+            value={selectedManagerId ?? 'all'}
+            onValueChange={(value) => setSelectedManagerId(value === 'all' ? undefined : value)}
+            disabled={isLoadingManagers}
+          >
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Todos os vendedores" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os vendedores</SelectItem>
+              {managers.map((manager) => (
+                <SelectItem key={manager.id} value={manager.id}>
+                  {manager.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="ml-auto text-sm text-muted-foreground">
           {format(dateRange.start, "dd/MM/yyyy", { locale: ptBR })} — {format(dateRange.end, "dd/MM/yyyy", { locale: ptBR })}
         </div>
@@ -212,7 +237,7 @@ export function SellerProductivityReport() {
             <Skeleton className="h-[350px] w-full" />
           ) : data.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-              Nenhuma interação encontrada no período selecionado
+              {selectedManagerId ? 'Nenhuma interação encontrada para a equipe selecionada' : 'Nenhuma interação encontrada no período selecionado'}
             </div>
           ) : chartType === 'vertical' ? (
             <ResponsiveContainer width="100%" height={350}>
