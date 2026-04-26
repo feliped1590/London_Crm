@@ -166,6 +166,49 @@ export function ProductivityScoreSettings() {
     onError: () => toast.error('Erro ao salvar metas'),
   });
 
+  const saveManagerLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantId || !managerUserId || !sellerUserId) throw new Error('Selecione gerente e vendedor');
+      if (managerUserId === sellerUserId) throw new Error('Gerente e vendedor devem ser usuários diferentes');
+
+      const { error } = await (supabase as any)
+        .from('manager_users')
+        .upsert({
+          tenant_id: tenantId,
+          manager_user_id: managerUserId,
+          user_id: sellerUserId,
+          label: teamLabel.trim() || null,
+          created_by: user?.id ?? null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'tenant_id,user_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manager-users-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['productivity-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-productivity'] });
+      setManagerUserId('');
+      setSellerUserId('');
+      setTeamLabel('');
+      toast.success('Vínculo de gerente salvo com sucesso');
+    },
+    onError: (error: any) => toast.error(error?.message || 'Erro ao salvar vínculo de gerente'),
+  });
+
+  const deleteManagerLinkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from('manager_users').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manager-users-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['productivity-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-productivity'] });
+      toast.success('Vínculo removido com sucesso');
+    },
+    onError: () => toast.error('Erro ao remover vínculo'),
+  });
+
   const handleReset = () => {
     if (weights) {
       const map: Record<string, number> = {};
@@ -182,6 +225,8 @@ export function ProductivityScoreSettings() {
   const hasTargetChanges = Object.entries(editedTargets).some(
     ([sellerId, score]) => (existingTargetMap.get(sellerId) ?? 0) !== score
   );
+
+  const getProfileName = (userId: string) => profiles?.find((p) => p.user_id === userId)?.full_name || userId;
 
   if (isLoading) return <Skeleton className="h-[300px] w-full" />;
 
