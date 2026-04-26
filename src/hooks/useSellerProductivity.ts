@@ -108,7 +108,7 @@ export function useSellerProductivity() {
         .select('manager_user_id');
       if (linksError) throw linksError;
 
-      const managerIds = Array.from(
+      const managerIds: string[] = Array.from(
         new Set((links ?? []).map((link: { manager_user_id: string }) => link.manager_user_id).filter(Boolean))
       );
 
