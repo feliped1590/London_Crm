@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Save, RotateCcw, Target } from 'lucide-react';
+import { Save, RotateCcw, Target, UserCog, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActivityWeight, ProductivityTarget } from '@/hooks/useSellerProductivity';
 
@@ -16,11 +17,38 @@ interface Profile {
   full_name: string;
 }
 
+interface ManagerUserLink {
+  id: string;
+  manager_user_id: string;
+  user_id: string;
+  label: string | null;
+}
+
 export function ProductivityScoreSettings() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editedWeights, setEditedWeights] = useState<Record<string, number>>({});
   const [targetPeriod, setTargetPeriod] = useState<'week' | 'month'>('month');
   const [editedTargets, setEditedTargets] = useState<Record<string, number>>({});
+  const [managerUserId, setManagerUserId] = useState<string>('');
+  const [sellerUserId, setSellerUserId] = useState<string>('');
+  const [teamLabel, setTeamLabel] = useState('');
+
+  const { data: tenantId } = useQuery({
+    queryKey: ['productivity-settings-tenant', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.tenant_id ?? null;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: weights, isLoading } = useQuery({
     queryKey: ['activity-weights'],
@@ -56,6 +84,21 @@ export function ProductivityScoreSettings() {
       if (error) throw error;
       return data as unknown as ProductivityTarget[];
     },
+  });
+
+  const { data: managerLinks, isLoading: isLoadingManagerLinks } = useQuery({
+    queryKey: ['manager-users-settings', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await (supabase as any)
+        .from('manager_users')
+        .select('id, manager_user_id, user_id, label')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ManagerUserLink[];
+    },
+    enabled: !!tenantId,
   });
 
   useEffect(() => {
@@ -123,6 +166,49 @@ export function ProductivityScoreSettings() {
     onError: () => toast.error('Erro ao salvar metas'),
   });
 
+  const saveManagerLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenantId || !managerUserId || !sellerUserId) throw new Error('Selecione gerente e vendedor');
+      if (managerUserId === sellerUserId) throw new Error('Gerente e vendedor devem ser usuários diferentes');
+
+      const { error } = await (supabase as any)
+        .from('manager_users')
+        .upsert({
+          tenant_id: tenantId,
+          manager_user_id: managerUserId,
+          user_id: sellerUserId,
+          label: teamLabel.trim() || null,
+          created_by: user?.id ?? null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'tenant_id,user_id' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manager-users-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['productivity-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-productivity'] });
+      setManagerUserId('');
+      setSellerUserId('');
+      setTeamLabel('');
+      toast.success('Vínculo de gerente salvo com sucesso');
+    },
+    onError: (error: any) => toast.error(error?.message || 'Erro ao salvar vínculo de gerente'),
+  });
+
+  const deleteManagerLinkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from('manager_users').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['manager-users-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['productivity-managers'] });
+      queryClient.invalidateQueries({ queryKey: ['seller-productivity'] });
+      toast.success('Vínculo removido com sucesso');
+    },
+    onError: () => toast.error('Erro ao remover vínculo'),
+  });
+
   const handleReset = () => {
     if (weights) {
       const map: Record<string, number> = {};
@@ -140,10 +226,94 @@ export function ProductivityScoreSettings() {
     ([sellerId, score]) => (existingTargetMap.get(sellerId) ?? 0) !== score
   );
 
+  const getProfileName = (userId: string) => profiles?.find((p) => p.user_id === userId)?.full_name || userId;
+
   if (isLoading) return <Skeleton className="h-[300px] w-full" />;
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="h-5 w-5" />
+            Gerentes Comerciais
+          </CardTitle>
+          <CardDescription>
+            Vincule vendedores a um gerente para habilitar o filtro por equipe no relatório de produtividade.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Gerente</label>
+              <Select value={managerUserId} onValueChange={setManagerUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((profile) => (
+                    <SelectItem key={profile.user_id} value={profile.user_id}>{profile.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Vendedor</label>
+              <Select value={sellerUserId} onValueChange={setSellerUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((profile) => (
+                    <SelectItem key={profile.user_id} value={profile.user_id}>{profile.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Time</label>
+              <Input value={teamLabel} onChange={(event) => setTeamLabel(event.target.value)} placeholder="Ex.: SDR" />
+            </div>
+            <Button onClick={() => saveManagerLinkMutation.mutate()} disabled={!managerUserId || !sellerUserId || saveManagerLinkMutation.isPending}>
+              <Save className="mr-2 h-4 w-4" />
+              Salvar
+            </Button>
+          </div>
+
+          {isLoadingManagerLinks ? (
+            <Skeleton className="h-[120px] w-full" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Gerente</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead className="w-[80px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {managerLinks?.map((link) => (
+                  <TableRow key={link.id}>
+                    <TableCell className="font-medium">{getProfileName(link.manager_user_id)}</TableCell>
+                    <TableCell>{getProfileName(link.user_id)}</TableCell>
+                    <TableCell>{link.label || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => deleteManagerLinkMutation.mutate(link.id)} disabled={deleteManagerLinkMutation.isPending}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {managerLinks?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                      Nenhum vínculo de gerente configurado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Weights */}
       <Card>
         <CardHeader>
