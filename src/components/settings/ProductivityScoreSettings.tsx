@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Save, RotateCcw, Target } from 'lucide-react';
+import { Save, RotateCcw, Target, UserCog, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActivityWeight, ProductivityTarget } from '@/hooks/useSellerProductivity';
 
@@ -16,11 +17,38 @@ interface Profile {
   full_name: string;
 }
 
+interface ManagerUserLink {
+  id: string;
+  manager_user_id: string;
+  user_id: string;
+  label: string | null;
+}
+
 export function ProductivityScoreSettings() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [editedWeights, setEditedWeights] = useState<Record<string, number>>({});
   const [targetPeriod, setTargetPeriod] = useState<'week' | 'month'>('month');
   const [editedTargets, setEditedTargets] = useState<Record<string, number>>({});
+  const [managerUserId, setManagerUserId] = useState<string>('');
+  const [sellerUserId, setSellerUserId] = useState<string>('');
+  const [teamLabel, setTeamLabel] = useState('');
+
+  const { data: tenantId } = useQuery({
+    queryKey: ['productivity-settings-tenant', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.tenant_id ?? null;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: weights, isLoading } = useQuery({
     queryKey: ['activity-weights'],
@@ -56,6 +84,21 @@ export function ProductivityScoreSettings() {
       if (error) throw error;
       return data as unknown as ProductivityTarget[];
     },
+  });
+
+  const { data: managerLinks, isLoading: isLoadingManagerLinks } = useQuery({
+    queryKey: ['manager-users-settings', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await (supabase as any)
+        .from('manager_users')
+        .select('id, manager_user_id, user_id, label')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ManagerUserLink[];
+    },
+    enabled: !!tenantId,
   });
 
   useEffect(() => {
