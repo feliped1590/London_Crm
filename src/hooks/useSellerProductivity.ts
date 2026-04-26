@@ -46,6 +46,7 @@ export interface ProductivityManagerOption {
   id: string;
   name: string;
   email: string | null;
+  label: string | null;
 }
 
 function getDateRange(period: PeriodFilter, customStart?: Date, customEnd?: Date) {
@@ -103,29 +104,28 @@ export function useSellerProductivity() {
   const { data: managers, isLoading: isLoadingManagers } = useQuery({
     queryKey: ['productivity-managers'],
     queryFn: async () => {
-      const { data: links, error: linksError } = await (supabase as any)
+      const { data: managerLinks, error } = await (supabase as any)
         .from('manager_users')
-        .select('manager_user_id');
-      if (linksError) throw linksError;
+        .select('manager_user_id, label, profiles:manager_user_id(user_id, full_name, email)')
+        .order('manager_user_id', { ascending: true });
+      if (error) throw error;
 
-      const managerIds: string[] = Array.from(
-        new Set((links ?? []).map((link: { manager_user_id: string }) => link.manager_user_id).filter(Boolean))
-      );
+      const managerMap = new Map<string, ProductivityManagerOption>();
 
-      if (managerIds.length === 0) return [] as ProductivityManagerOption[];
+      (managerLinks ?? []).forEach((link: any) => {
+        const profile = Array.isArray(link.profiles) ? link.profiles[0] : link.profiles;
+        const id = profile?.user_id ?? link.manager_user_id;
+        if (!id || managerMap.has(id)) return;
 
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', managerIds);
-      if (profilesError) throw profilesError;
+        managerMap.set(id, {
+          id,
+          name: profile?.full_name || profile?.email || 'Sem nome',
+          email: profile?.email ?? null,
+          label: link.label ?? null,
+        });
+      });
 
-      return (profiles ?? [])
-        .map((profile) => ({
-          id: profile.user_id,
-          name: profile.full_name || profile.email || 'Sem nome',
-          email: profile.email,
-        }))
+      return Array.from(managerMap.values())
         .sort((a, b) => a.name.localeCompare(b.name)) as ProductivityManagerOption[];
     },
   });
