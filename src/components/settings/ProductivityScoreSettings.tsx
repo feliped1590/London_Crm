@@ -232,6 +232,88 @@ export function ProductivityScoreSettings() {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserCog className="h-5 w-5" />
+            Gerentes Comerciais
+          </CardTitle>
+          <CardDescription>
+            Vincule vendedores a um gerente para habilitar o filtro por equipe no relatório de produtividade.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Gerente</label>
+              <Select value={managerUserId} onValueChange={setManagerUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((profile) => (
+                    <SelectItem key={profile.user_id} value={profile.user_id}>{profile.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Vendedor</label>
+              <Select value={sellerUserId} onValueChange={setSellerUserId}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((profile) => (
+                    <SelectItem key={profile.user_id} value={profile.user_id}>{profile.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-muted-foreground">Time</label>
+              <Input value={teamLabel} onChange={(event) => setTeamLabel(event.target.value)} placeholder="Ex.: SDR" />
+            </div>
+            <Button onClick={() => saveManagerLinkMutation.mutate()} disabled={!managerUserId || !sellerUserId || saveManagerLinkMutation.isPending}>
+              <Save className="mr-2 h-4 w-4" />
+              Salvar
+            </Button>
+          </div>
+
+          {isLoadingManagerLinks ? (
+            <Skeleton className="h-[120px] w-full" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Gerente</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead className="w-[80px] text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {managerLinks?.map((link) => (
+                  <TableRow key={link.id}>
+                    <TableCell className="font-medium">{getProfileName(link.manager_user_id)}</TableCell>
+                    <TableCell>{getProfileName(link.user_id)}</TableCell>
+                    <TableCell>{link.label || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" onClick={() => deleteManagerLinkMutation.mutate(link.id)} disabled={deleteManagerLinkMutation.isPending}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {managerLinks?.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                      Nenhum vínculo de gerente configurado.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Weights */}
       <Card>
         <CardHeader>
