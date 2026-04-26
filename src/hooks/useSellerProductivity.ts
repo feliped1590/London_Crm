@@ -106,15 +106,29 @@ export function useSellerProductivity() {
     queryFn: async () => {
       const { data: managerLinks, error } = await (supabase as any)
         .from('manager_users')
-        .select('manager_user_id, label, profiles:manager_user_id(user_id, full_name, email)')
+        .select('manager_user_id, label')
         .order('manager_user_id', { ascending: true });
       if (error) throw error;
+
+      const managerIds = Array.from(
+        new Set<string>((managerLinks ?? []).map((link: any) => link.manager_user_id).filter(Boolean))
+      );
+
+      if (managerIds.length === 0) return [] as ProductivityManagerOption[];
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', managerIds);
+      if (profilesError) throw profilesError;
+
+      const profileMap = new Map((profiles ?? []).map((profile) => [profile.user_id, profile]));
 
       const managerMap = new Map<string, ProductivityManagerOption>();
 
       (managerLinks ?? []).forEach((link: any) => {
-        const profile = Array.isArray(link.profiles) ? link.profiles[0] : link.profiles;
-        const id = profile?.user_id ?? link.manager_user_id;
+        const id = link.manager_user_id;
+        const profile = profileMap.get(id);
         if (!id || managerMap.has(id)) return;
 
         managerMap.set(id, {
