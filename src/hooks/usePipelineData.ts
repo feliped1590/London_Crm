@@ -17,6 +17,8 @@ import { logOwnershipWarning } from '@/lib/ownership';
 export type Deal = Tables<'deals'>;
 export type DealStage = string;
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const defaultStageConfig: Record<string, { label: string; color: string }> = {
   prospeccao: { label: 'Prospecção', color: 'bg-slate-500' },
   qualificacao: { label: 'Qualificação', color: 'bg-blue-500' },
@@ -331,6 +333,12 @@ export function usePipelineData(selectedPipelineId: string | null) {
           ? stageRows.find(s => s.stage === data.stage)
           : null;
 
+      if (targetStageRow?.stage) {
+        updateData.stage = targetStageRow.stage;
+      } else if (typeof updateData.stage === 'string' && UUID_PATTERN.test(updateData.stage)) {
+        delete updateData.stage;
+      }
+
       // Mark closed_at when moving to a won/lost stage in sales pipelines
       const dealPipeline = pipelines?.find(p => p.id === (currentDeal?.pipeline_id || currentPipelineId));
       const isDealSales = dealPipeline?.type === 'sales' || !dealPipeline;
@@ -384,9 +392,12 @@ export function usePipelineData(selectedPipelineId: string | null) {
       toast.success('Negócio atualizado!');
     },
     onError: (error: any) => {
+      console.error('Erro ao atualizar negócio:', error);
       const message = error?.message || '';
       if (message.includes('Este cliente pertence ao vendedor')) {
         toast.error(message, { duration: 6000 });
+      } else if (message) {
+        toast.error(`Erro ao atualizar negócio: ${message}`, { duration: 6000 });
       } else {
         toast.error('Erro ao atualizar negócio');
       }
