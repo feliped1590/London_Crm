@@ -496,22 +496,6 @@ Deno.serve(async (req) => {
         const clienteRetorno = parseClienteRetorno(responseData, { cnpj: company.cnpj });
         let erpCode: string | null = String(clienteRetorno.correntista);
 
-        // ═══ FASE C: Lookup pós-envio (necessário se needsFallback) ═══
-        if (false && !erpCode && company.cnpj) {
-          console.log('[process-company-sync] Fase C: needsFallback=true, buscando via EXP_CLIENTES_V2');
-          const delays = [3000, 8000];
-          for (const delay of delays) {
-            await new Promise(r => setTimeout(r, delay));
-            invalidateCache(company.cnpj);
-            erpCode = await searchWithCache(company.cnpj!);
-            if (erpCode) {
-              console.log(`[process-company-sync] Fase C: encontrado após ${delay}ms: ${erpCode}`);
-              break;
-            }
-            console.log(`[process-company-sync] Fase C: não encontrado após ${delay}ms, continuando...`);
-          }
-        }
-
         if (erpCode) {
           // Sucesso completo
           const syncStatus = 'completed';
