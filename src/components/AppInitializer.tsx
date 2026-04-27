@@ -112,7 +112,7 @@ export function AppInitializer({ children }: { children: ReactNode }) {
           queryClient.prefetchQuery({
             queryKey: ['user_modules', user.id],
             queryFn: async () => {
-              const { data, error } = await supabase.rpc('get_user_modules', { _user_id: user.id });
+              const { data, error } = await supabase.rpc('get_user_module_permissions', { _user_id: user.id });
               if (error) throw error;
               return data || [];
             },
