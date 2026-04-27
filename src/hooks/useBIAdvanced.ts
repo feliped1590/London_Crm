@@ -180,16 +180,18 @@ export function useBIAdvanced() {
   const isLoading = isLoadingPipelineHealth || isLoadingSellerPerformance || 
                     isLoadingAnomalies || isLoadingStalledDeals || isLoadingConversion;
 
-  const errors = [
-    pipelineHealthError,
-    sellerPerformanceError,
-    anomaliesError,
-    stalledDealsError,
-    conversionError,
-  ].filter(Boolean);
+  const getMessage = (error: unknown) => error instanceof Error ? error.message : null;
 
-  const isError = isPipelineHealthError || isSellerPerformanceError ||
-                  isAnomaliesError || isStalledDealsError || isConversionError;
+  const sectionErrors = {
+    pipelineHealth: getMessage(pipelineHealthError),
+    sellerPerformance: getMessage(sellerPerformanceError),
+    anomalies: getMessage(anomaliesError),
+    stalledDeals: getMessage(stalledDealsError),
+    conversionByStage: getMessage(conversionError),
+  };
+
+  const partialErrorMessages = Object.values(sectionErrors).filter(Boolean) as string[];
+  const isError = isPipelineHealthError && isSellerPerformanceError;
 
   const refetchAll = () => {
     refetchPipelineHealth();
@@ -215,7 +217,9 @@ export function useBIAdvanced() {
     // State
     isLoading,
     isError,
-    errorMessage: errors[0] instanceof Error ? errors[0].message : null,
+    errorMessage: partialErrorMessages[0] || null,
+    sectionErrors,
+    partialErrorMessages,
     refetchAll,
   };
 }
