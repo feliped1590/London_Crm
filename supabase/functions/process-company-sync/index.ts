@@ -497,7 +497,7 @@ Deno.serve(async (req) => {
         let erpCode: string | null = String(clienteRetorno.correntista);
 
         // ═══ FASE C: Lookup pós-envio (necessário se needsFallback) ═══
-        if (!erpCode && company.cnpj) {
+        if (false && !erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: needsFallback=true, buscando via EXP_CLIENTES_V2');
           const delays = [3000, 8000];
           for (const delay of delays) {
@@ -601,8 +601,9 @@ Deno.serve(async (req) => {
           entity_type: 'company',
           entity_id: queueItem.company_id,
           direction: 'crm_to_erp',
-          status: 'error',
-          error_message: err.message,
+            status: 'error',
+            error_message: err.message,
+            response_payload: { error: err.message, technical: true },
         });
 
         errorCount++;
