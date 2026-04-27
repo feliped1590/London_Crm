@@ -72,7 +72,7 @@ export function AppLayout() {
         {/* Desktop Header */}
         {!isMobile && (
           <header className="bg-background border-b px-6 py-3">
-            <div className="flex items-center justify-end gap-4">
+            <div className="flex items-center justify-center gap-4">
               <LegalEntitySelector />
             </div>
           </header>
