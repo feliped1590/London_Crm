@@ -179,8 +179,8 @@ export function CustomerOverviewTab({
               <Input id="fantasia" value={companyForm.fantasia} onChange={(e) => setCompanyForm({ ...companyForm, fantasia: e.target.value })} disabled={!isEditing || isErpCustomer} />
             </div>
             <div>
-              <Label htmlFor="cnpj">CNPJ/CPF</Label>
-              <Input id="cnpj" value={companyForm.cnpj} onChange={(e) => setCompanyForm({ ...companyForm, cnpj: formatCNPJ(e.target.value) })} disabled={!isEditing || isErpCustomer} maxLength={18} />
+              <Label htmlFor="cnpj">CNPJ/CPF <span className="text-destructive">*</span></Label>
+              <Input id="cnpj" value={companyForm.cnpj} onChange={(e) => setCompanyForm({ ...companyForm, cnpj: formatCNPJ(e.target.value) })} disabled={!isEditing || isErpCustomer} maxLength={18} required />
             </div>
             <div>
               <Label htmlFor="erp_code">Código ERP</Label>
@@ -188,8 +188,8 @@ export function CustomerOverviewTab({
               <p className="text-xs text-muted-foreground mt-1">Preencha manualmente se o sistema não retornou</p>
             </div>
             <div>
-              <Label htmlFor="inscricao_estadual">Inscrição Estadual</Label>
-              <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} />
+              <Label htmlFor="inscricao_estadual">Inscrição Estadual <span className="text-destructive">*</span></Label>
+              <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} required />
             </div>
             <div>
               <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
