@@ -159,6 +159,14 @@ export default function CustomerDetail() {
       toast.error('Nome Fantasia é obrigatório');
       return;
     }
+    if (!companyForm.cnpj?.trim()) {
+      toast.error('CNPJ/CPF é obrigatório');
+      return;
+    }
+    if (!companyForm.inscricao_estadual?.trim()) {
+      toast.error('Inscrição Estadual é obrigatória');
+      return;
+    }
     if (!companyForm.phone?.trim()) {
       toast.error('Telefone é obrigatório');
       return;
