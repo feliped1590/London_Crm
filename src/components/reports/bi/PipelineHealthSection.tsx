@@ -21,8 +21,16 @@ interface PipelineHealthSectionProps {
 }
 
 export function PipelineHealthSection({ data, onDrillDown }: PipelineHealthSectionProps) {
+  const isClosedStage = (stage: string) => {
+    const normalizedStage = stage.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return normalizedStage === 'fechado_ganho' ||
+      normalizedStage === 'fechado_perdido' ||
+      normalizedStage.includes('fechado ganho') ||
+      normalizedStage.includes('fechado perdido');
+  };
+
   const activeStages = data.filter(
-    (s) => s.stage !== 'fechado_ganho' && s.stage !== 'fechado_perdido'
+    (s) => !isClosedStage(s.stage)
   );
 
   const totalDeals = activeStages.reduce((acc, s) => acc + s.total_deals, 0);
