@@ -353,7 +353,7 @@ export default function Pipeline() {
 
     if (selectedStageRow?.stage) {
       cleanedFormData.stage = selectedStageRow.stage;
-    } else if (typeof cleanedFormData.stage === 'string' && UUID_PATTERN.test(cleanedFormData.stage)) {
+    } else if (selectedStageRow || (typeof cleanedFormData.stage === 'string' && UUID_PATTERN.test(cleanedFormData.stage))) {
       delete cleanedFormData.stage;
     }
 
@@ -662,7 +662,11 @@ export default function Pipeline() {
         pendingItems={checklistModalData?.pendingItems || []}
         onConfirm={() => {
           if (checklistModalData) {
-            updateMutation.mutate({ id: checklistModalData.deal.id, stage: checklistModalData.targetStage });
+            updateMutation.mutate({
+              id: checklistModalData.deal.id,
+              pipeline_stage_id: (checklistModalData as any).targetStageId,
+              ...(!UUID_PATTERN.test(checklistModalData.targetStage) ? { stage: checklistModalData.targetStage } : {}),
+            } as any);
           }
         }}
       />
@@ -681,7 +685,9 @@ export default function Pipeline() {
             const existingReason = slaModalData.deal.stagnation_reason || '';
             const updatedReason = existingReason ? `${existingReason}\n${newEntry}` : newEntry;
             updateMutation.mutate({
-              id: slaModalData.deal.id, stage: slaModalData.targetStage,
+              id: slaModalData.deal.id,
+              pipeline_stage_id: (slaModalData as any).targetStageId,
+              ...(!UUID_PATTERN.test(slaModalData.targetStage) ? { stage: slaModalData.targetStage } : {}),
               stagnation_reason: updatedReason,
             } as any);
             setSlaModalOpen(false);
