@@ -8,6 +8,8 @@ import { DrillDownModal } from './bi/DrillDownModal';
 import { StalledDealData } from '@/hooks/useBIAdvanced';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle, Users, Clock, TrendingDown } from 'lucide-react';
 
 export function BIAdvancedTab() {
@@ -20,6 +22,9 @@ export function BIAdvancedTab() {
     filters,
     setFilters,
     isLoading,
+    isError,
+    errorMessage,
+    refetchAll,
   } = useBIAdvanced();
 
   const [drillDownData, setDrillDownData] = useState<{
@@ -65,6 +70,25 @@ export function BIAdvancedTab() {
         </div>
         <Skeleton className="h-64" />
         <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <BIFiltersBar filters={filters} onFiltersChange={setFilters} />
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Não foi possível carregar o BI Avançado</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>As métricas do relatório encontraram uma inconsistência ao processar os dados do pipeline.</p>
+            {errorMessage && <p className="text-xs opacity-80">Detalhe técnico: {errorMessage}</p>}
+            <Button variant="outline" size="sm" onClick={refetchAll}>
+              Tentar novamente
+            </Button>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
