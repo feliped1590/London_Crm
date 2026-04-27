@@ -35,8 +35,6 @@ import { useUnreadCount } from '@/hooks/useWhatsApp';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSidebar } from '@/contexts/SidebarContext';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { UserProfileModal } from './UserProfileModal';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 
@@ -73,34 +71,18 @@ export function AppSidebar() {
   const { isCollapsed, isMobileOpen, toggleCollapsed, closeMobile } = useSidebar();
   const { data: unreadCount } = useUnreadCount();
   const isMobile = useIsMobile();
-  const { canAccess, isAdmin, isLoading: permissionsLoading } = useModulePermissions();
+  const { canAccess, isDeveloper, isFullyLoaded, error: permissionsError } = useModulePermissions();
   const { effectiveEntity } = useLegalEntities();
-
-  // Check if user is developer
-  const { data: isDeveloper } = useQuery({
-    queryKey: ['is_developer', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'desenvolvedor')
-        .maybeSingle();
-      return !!data;
-    },
-    enabled: !!user?.id,
-  });
 
   // Filter nav items based on user permissions
   const navItems = useMemo(() => {
-    if (permissionsLoading) return [];
+    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly);
     return allNavItems.filter(item => {
       // Dev-only items require developer role
       if (item.devOnly && !isDeveloper) return false;
       return canAccess(item.moduleKey);
     });
-  }, [canAccess, permissionsLoading, isDeveloper]);
+  }, [canAccess, isFullyLoaded, isDeveloper, permissionsError]);
 
   const handleNavClick = () => {
     if (isMobile) {

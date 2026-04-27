@@ -36,6 +36,8 @@ import type { TablesInsert, Json } from '@/integrations/supabase/types';
 import { format } from 'date-fns';
 import type { SearchableSelectOption } from '@/components/ui/searchable-select';
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function Pipeline() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -344,7 +346,16 @@ export default function Pipeline() {
     e.preventDefault();
     // Check portfolio protection before submitting
     if (!checkPortfolioAccess()) return;
-    const cleanedFormData = { ...formData, expected_close_date: formData.expected_close_date || null };
+    const cleanedFormData = { ...formData, expected_close_date: formData.expected_close_date || null } as Record<string, unknown>;
+    const selectedStageRow = cleanedFormData.pipeline_stage_id
+      ? stageRows.find(s => s.id === cleanedFormData.pipeline_stage_id)
+      : null;
+
+    if (selectedStageRow?.stage) {
+      cleanedFormData.stage = selectedStageRow.stage;
+    } else if (selectedStageRow || (typeof cleanedFormData.stage === 'string' && UUID_PATTERN.test(cleanedFormData.stage))) {
+      delete cleanedFormData.stage;
+    }
 
     if (formData.company_id) {
       const ownership = await requiresJustification(formData.company_id);
@@ -651,7 +662,11 @@ export default function Pipeline() {
         pendingItems={checklistModalData?.pendingItems || []}
         onConfirm={() => {
           if (checklistModalData) {
-            updateMutation.mutate({ id: checklistModalData.deal.id, stage: checklistModalData.targetStage });
+            updateMutation.mutate({
+              id: checklistModalData.deal.id,
+              pipeline_stage_id: (checklistModalData as any).targetStageId,
+              ...(!UUID_PATTERN.test(checklistModalData.targetStage) ? { stage: checklistModalData.targetStage } : {}),
+            } as any);
           }
         }}
       />
@@ -670,7 +685,9 @@ export default function Pipeline() {
             const existingReason = slaModalData.deal.stagnation_reason || '';
             const updatedReason = existingReason ? `${existingReason}\n${newEntry}` : newEntry;
             updateMutation.mutate({
-              id: slaModalData.deal.id, stage: slaModalData.targetStage,
+              id: slaModalData.deal.id,
+              pipeline_stage_id: (slaModalData as any).targetStageId,
+              ...(!UUID_PATTERN.test(slaModalData.targetStage) ? { stage: slaModalData.targetStage } : {}),
               stagnation_reason: updatedReason,
             } as any);
             setSlaModalOpen(false);
