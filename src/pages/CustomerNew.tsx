@@ -63,6 +63,7 @@ export default function CustomerNew() {
     name: '',
     fantasia: '',
     document: '', // CNPJ or CPF
+    inscricao_estadual: '',
     phone: '',
     email: '',
     setor_id: null as string | null,
@@ -221,6 +222,9 @@ export default function CustomerNew() {
         if (!isValidCNPJ(documentClean)) {
           throw new Error('CNPJ inválido');
         }
+      if (!companyForm.inscricao_estadual?.trim()) {
+        throw new Error('Inscrição Estadual é obrigatória');
+      }
       }
       
       // *** DUPLICATE CHECK - Database validation before insert ***
@@ -244,6 +248,7 @@ export default function CustomerNew() {
         name: customerType === 'PJ' ? companyForm.name : `${contactForm.first_name} ${contactForm.last_name}`.trim(),
         fantasia: companyForm.fantasia || null,
         cnpj: customerType === 'PJ' ? documentClean : null,
+        inscricao_estadual: customerType === 'PJ' ? companyForm.inscricao_estadual.trim() : null,
         phone: companyForm.phone || null,
         email: companyForm.email || null,
         setor_id: companyForm.setor_id || null,
