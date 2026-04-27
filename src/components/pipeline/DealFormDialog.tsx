@@ -110,13 +110,20 @@ export function DealFormDialog({
           value={(formData as any).pipeline_stage_id || ''}
           onValueChange={(v) => {
             const row = stageRows.find(s => s.id === v);
-            setFormData({
+            const nextFormData: Partial<TablesInsert<'deals'>> = {
               ...formData,
               pipeline_stage_id: v,
-              // Keep legacy `stage` in sync: use legacy code when present, else fall back to row id
-              // (the resolver handles UUID-in-stage as a defensive fallback).
-              stage: (row?.stage ?? v) as DealStage,
-            } as any);
+            };
+
+            // O campo legado `stage` não deve receber UUID da etapa.
+            // Para etapas dinâmicas sem código legado, a identidade real é `pipeline_stage_id`.
+            if (row?.stage) {
+              nextFormData.stage = row.stage as DealStage;
+            } else {
+              delete (nextFormData as any).stage;
+            }
+
+            setFormData(nextFormData);
           }}
         >
           <SelectTrigger>
