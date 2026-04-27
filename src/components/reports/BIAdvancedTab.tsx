@@ -24,6 +24,8 @@ export function BIAdvancedTab() {
     isLoading,
     isError,
     errorMessage,
+    sectionErrors,
+    partialErrorMessages,
     refetchAll,
   } = useBIAdvanced();
 
@@ -98,6 +100,19 @@ export function BIAdvancedTab() {
       {/* Filters */}
       <BIFiltersBar filters={filters} onFiltersChange={setFilters} />
 
+      {partialErrorMessages.length > 0 && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Algumas métricas estão temporariamente indisponíveis</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>O restante do BI continua disponível enquanto reprocessamos os indicadores afetados.</span>
+            <Button variant="outline" size="sm" onClick={refetchAll} className="w-fit">
+              Atualizar métricas
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card 
@@ -165,7 +180,15 @@ export function BIAdvancedTab() {
       </div>
 
       {/* Anomalies Section */}
-      {anomalies.length > 0 && (
+      {sectionErrors.anomalies && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Anomalias temporariamente indisponíveis</AlertTitle>
+          <AlertDescription>As demais métricas do BI seguem carregadas normalmente.</AlertDescription>
+        </Alert>
+      )}
+
+      {!sectionErrors.anomalies && anomalies.length > 0 && (
         <AnomaliesSection anomalies={anomalies} onAction={handleDrillDown} />
       )}
 
