@@ -1,62 +1,52 @@
-Plano de correção definitiva do menu lateral
+Você tem razão. Do jeito que está, é pior mostrar um módulo “disponível” que quebra na frente do usuário.
 
-Diagnóstico
+O erro atual foi identificado: a função de anomalias do BI está falhando no banco com:
 
-O menu não está “sumindo” por problema visual de CSS. Ele está sendo esvaziado por uma combinação de regra de permissões e estado de carregamento.
+```text
+column all_anomalies.severity does not exist
+```
 
-O que foi confirmado:
-- O usuário atual tem apenas o papel `desenvolvedor`.
-- A chamada de permissões do menu (`get_user_module_permissions`) está retornando lista vazia para esse usuário.
-- O `AppSidebar` primeiro mostra uma lista provisória enquanto as permissões carregam, mas quando a resposta vazia chega, ele filtra tudo por `canAccess(...)` e não sobra nenhum item de navegação.
-- O perfil `desenvolvedor` é tratado como privilegiado no frontend, mas a função de permissões no backend ainda depende de linhas em `role_module_permissions`; como não há permissões configuradas para esse papel, o resultado final fica vazio.
+Isso acontece porque a consulta usa `SELECT * FROM (...) all_anomalies` e depois tenta ordenar por `all_anomalies.severity`, mas as colunas internas do `UNION ALL` não receberam aliases explícitos. O banco não consegue enxergar `severity` pelo nome dentro desse bloco.
 
-Por isso o comportamento é intermitente:
-- ao recarregar/navegar, aparece temporariamente enquanto está carregando;
-- quando a validação de permissões termina e volta vazia, os menus desaparecem.
+Plano para resolver definitivamente:
 
-Correção definitiva proposta
+1. Corrigir a função de anomalias no banco
+   - Recriar `get_bi_anomalies()` com nomes de coluna explícitos.
+   - Trocar o `SELECT *` por uma estrutura segura com aliases como `anomaly_type`, `severity`, `title`, `affected_count`, etc.
+   - Manter acesso somente para usuários autenticados.
 
-1. Corrigir a regra de permissão no frontend
-- Ajustar `useModulePermissions` para tratar `admin` e `desenvolvedor` como perfis privilegiados de forma consistente.
-- Quando o usuário for privilegiado, `canAccess` deve permitir módulos ativos conhecidos sem depender de permissões granulares retornadas vazias.
-- O menu lateral não deve renderizar lista vazia para usuário privilegiado só porque a RPC retornou `[]`.
+2. Tornar o BI Avançado tolerante a falhas parciais
+   - Hoje, se uma única métrica falha, o módulo inteiro cai.
+   - Vou ajustar o frontend para que uma falha em “Anomalias” não derrube “Saúde do Pipeline”, “Performance de Vendedores” e demais indicadores.
+   - O usuário verá os dados que carregaram e, se necessário, um aviso discreto apenas na seção com problema.
 
-2. Corrigir a montagem do menu lateral
-- Atualizar `AppSidebar` para:
-  - usar fallback seguro para perfis privilegiados;
-  - nunca apagar todos os menus em uma revalidação transitória;
-  - mostrar itens `devOnly` apenas para `desenvolvedor`;
-  - preservar comportamento atual para vendedor/atendente/financeiro/etc.
+3. Revisar a lógica de estágios fechados
+   - Padronizar a identificação de etapas fechadas por texto normalizado, aceitando variações como:
+     - `fechado_ganho`
+     - `Fechado Ganho`
+     - `ganho`
+     - `fechado_perdido`
+     - `Fechado Perdido`
+     - `perdido`
+   - Isso evita que o BI trate negócios encerrados como abertos.
 
-3. Corrigir o prefetch inconsistente
-- Em `AppInitializer`, trocar o prefetch antigo de `get_user_modules` para o contrato atual `get_user_module_permissions`.
-- Isso evita cache divergente entre a inicialização do app e o hook real usado pelo menu/proteção de rotas.
+4. Adicionar uma proteção de produto
+   - Se o BI Avançado ainda encontrar erro crítico, ele não deve exibir uma tela vermelha assustando o usuário.
+   - Em vez disso, exibirá uma mensagem operacional mais limpa, por exemplo: “Algumas métricas estão temporariamente indisponíveis”.
+   - O restante da tela continua utilizável.
 
-4. Corrigir a regra no backend para produção
-- Criar migração para ajustar `get_user_module_permissions`:
-  - `admin` e `desenvolvedor` devem receber todos os módulos ativos como acesso total, sem depender de registros em `role_module_permissions`.
-  - demais papéis continuam usando permissões granulares configuradas por perfil.
-- Opcionalmente, garantir permissão explícita do módulo `integrations` para `desenvolvedor`, mas a solução principal deve ser pela regra privilegiada, não por remendo de dado.
+5. Validar diretamente no banco e no app
+   - Testar as 5 funções do BI:
+     - `get_pipeline_health`
+     - `get_seller_performance`
+     - `get_bi_anomalies`
+     - `get_stalled_deals_by_seller`
+     - `get_conversion_by_stage`
+   - Confirmar que o módulo não mostra tela de erro quando uma consulta específica falhar.
 
-5. Manter segurança das rotas
-- Validar `ProtectedRoute` para garantir que perfis privilegiados não sejam redirecionados indevidamente quando a lista de permissões vier vazia.
-- Garantir que usuários comuns continuem bloqueados quando não tiverem permissão real.
+Resultado esperado:
 
-6. Validação final
-- Executar checagem TypeScript.
-- Confirmar via consulta que `get_user_module_permissions` retorna módulos para o usuário desenvolvedor.
-- Confirmar que o menu mantém itens após navegação Pipeline -> Cliente -> Pipeline ou Cliente -> outro menu -> Cliente.
-- Confirmar que o menu não “pisca” para lista vazia durante revalidações.
-
-Arquivos previstos
-- `src/hooks/useModulePermissions.ts`
-- `src/components/layout/AppSidebar.tsx`
-- `src/components/AppInitializer.tsx`
-- `src/components/ProtectedRoute.tsx` se necessário
-- Nova migração em `supabase/migrations/...`
-
-Resultado esperado
-- O menu lateral não desaparece mais.
-- Usuário `desenvolvedor` mantém acesso aos módulos corretamente.
-- Usuários comuns continuam respeitando permissões por perfil.
-- A causa raiz fica resolvida no frontend e no backend, evitando recorrência em novas navegações ou novas sessões.
+- O BI Avançado volta a carregar dados reais.
+- Um erro isolado não derruba o módulo inteiro.
+- Os usuários deixam de ver uma tela vermelha como a do print.
+- Se alguma métrica estiver inconsistente, o sistema degrada com segurança em vez de parecer quebrado.
