@@ -34,7 +34,7 @@ export { mapCRMOrderToProjedata, buildOrderPayload, generatePedidoTerceiro, pars
 export { loadOrderForValidation } from './order-loader.ts';
 export type { LoadedOrderContext } from './order-loader.ts';
 
-// ─── Clientes (IMP_CLIENTE_V3) ──────────────────────────────────
+// ─── Clientes (IMP_CLIENTE_V4_TESTE) ────────────────────────────
 export type {
   ErpCompanyPayload,
   ErpCompanyAddress,
