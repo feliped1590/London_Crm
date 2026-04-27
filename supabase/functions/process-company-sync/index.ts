@@ -487,41 +487,18 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // 11. Parse retorno via parser unificado
+        // 11. Parse retorno V4: array externo + JSON interno em p_retorno
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
         } catch {
           responseData = { raw: responseText };
         }
-
-        const parsedResult = parseCustomerRetorno(responseData, {
-          cnpj: company.cnpj,
-          requestedAt: new Date().toISOString(),
-        });
-
-        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
-        await trackParserResult(supabase, parsedResult, {
-          source: 'process-company-sync',
-          entityId: queueItem.company_id,
-          tenantId: company.tenant_id ?? null,
-        });
-
-        // Erro explícito do ERP → lança para retry
-        if (parsedResult.errorType === 'erp') {
-          throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
-        }
-
-        // Padrão desconhecido → loga e lança (não-retryable)
-        if (parsedResult.action === 'unknown' && !parsedResult.isRetryable) {
-          console.error('[process-company-sync] Padrão de retorno desconhecido:', parsedResult.raw);
-          throw new Error(`Formato de retorno do ERP desconhecido: "${parsedResult.raw}". Investigar parser.`);
-        }
-
-        let erpCode: string | null = parsedResult.erpCode;
+        const clienteRetorno = parseClienteRetorno(responseData, { cnpj: company.cnpj });
+        let erpCode: string | null = String(clienteRetorno.correntista);
 
         // ═══ FASE C: Lookup pós-envio (necessário se needsFallback) ═══
-        if (parsedResult.needsFallback && company.cnpj) {
+        if (!erpCode && company.cnpj) {
           console.log('[process-company-sync] Fase C: needsFallback=true, buscando via EXP_CLIENTES_V2');
           const delays = [3000, 8000];
           for (const delay of delays) {
@@ -538,7 +515,7 @@ Deno.serve(async (req) => {
 
         if (erpCode) {
           // Sucesso completo
-          const syncStatus = parsedResult.needsFallback ? 'created_then_found' : 'completed';
+          const syncStatus = 'completed';
 
           await supabase
             .from('company_sync_queue')
@@ -546,7 +523,7 @@ Deno.serve(async (req) => {
               status: 'completed',
               processed_at: new Date().toISOString(),
               payload: JSON.parse(payload),
-              response: responseData,
+              response: { responseData, parsed: clienteRetorno, correlationId },
               updated_at: new Date().toISOString(),
             })
             .eq('id', queueItem.id);
@@ -563,7 +540,7 @@ Deno.serve(async (req) => {
               status: syncStatus,
               external_id: erpCode,
               request_payload: JSON.parse(payload),
-              response_payload: toLogPayload(parsedResult),
+              response_payload: { rawResponse: responseData, parsed: clienteRetorno, correlationId },
             });
 
           successCount++;
@@ -578,7 +555,7 @@ Deno.serve(async (req) => {
               status: 'waiting_propagation',
               error_message: 'Cliente enviado ao ERP com sucesso. Aguardando propagação do código.',
               payload: JSON.parse(payload),
-              response: responseData,
+              response: { responseData, correlationId },
               next_retry_at: new Date(Date.now() + 60_000).toISOString(),
               updated_at: new Date().toISOString(),
             })
@@ -590,7 +567,7 @@ Deno.serve(async (req) => {
               direction: 'crm_to_erp',
               status: 'waiting_propagation',
               request_payload: JSON.parse(payload),
-              response_payload: toLogPayload(parsedResult),
+              response_payload: { rawResponse: responseData, correlationId, technical_error: 'correntista ausente após parser' },
             });
 
           results.push({ company_id: queueItem.company_id, status: 'waiting_propagation' });
