@@ -71,18 +71,18 @@ export function AppSidebar() {
   const { isCollapsed, isMobileOpen, toggleCollapsed, closeMobile } = useSidebar();
   const { data: unreadCount } = useUnreadCount();
   const isMobile = useIsMobile();
-  const { canAccess, isDeveloper, isFullyLoaded } = useModulePermissions();
+  const { canAccess, isDeveloper, isFullyLoaded, error: permissionsError } = useModulePermissions();
   const { effectiveEntity } = useLegalEntities();
 
   // Filter nav items based on user permissions
   const navItems = useMemo(() => {
-    if (!isFullyLoaded) return allNavItems.filter(item => !item.devOnly);
+    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly);
     return allNavItems.filter(item => {
       // Dev-only items require developer role
       if (item.devOnly && !isDeveloper) return false;
       return canAccess(item.moduleKey);
     });
-  }, [canAccess, isFullyLoaded, isDeveloper]);
+  }, [canAccess, isFullyLoaded, isDeveloper, permissionsError]);
 
   const handleNavClick = () => {
     if (isMobile) {
