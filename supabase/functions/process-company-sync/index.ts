@@ -462,32 +462,23 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log(`[process-company-sync] Fase B: Enviando ${company.name} (CNPJ: ${company.cnpj})`);
-        console.log('[process-company-sync] [payload]', payload);
+        const correlationId = crypto.randomUUID();
+        console.log('[process-company-sync] Fase B: enviando cliente ao ERP', {
+          correlationId,
+          companyId: queueItem.company_id,
+          tenantId: company.tenant_id,
+        });
 
-        // 10. Enviar ao ERP com timeout de 30s
-        const fetchController = new AbortController();
-        const fetchTimeout = setTimeout(() => fetchController.abort(), 30000);
-
-        let response: Response;
-        try {
-          response = await fetch(apiUrl!, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiToken}`,
-            },
-            body: payload,
-            signal: fetchController.signal,
-          });
-        } catch (fetchErr: any) {
-          clearTimeout(fetchTimeout);
-          if (fetchErr.name === 'AbortError') {
-            throw new Error('Timeout (30s) ao enviar cliente ao ERP');
-          }
-          throw fetchErr;
-        }
-        clearTimeout(fetchTimeout);
+        // 10. Enviar ao ERP com timeout + retry
+        const response = await fetchWithRetry(apiUrl!, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiToken}`,
+            'X-Correlation-Id': correlationId,
+          },
+          body: payload,
+        }, correlationId);
 
         const responseText = await response.text();
         console.log(`[process-company-sync] Resposta ERP (${response.status}): ${responseText}`);
