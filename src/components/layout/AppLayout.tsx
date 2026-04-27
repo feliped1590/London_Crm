@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
-import { GlobalSearch } from './GlobalSearch';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -70,13 +69,10 @@ export function AppLayout() {
         "flex flex-col min-w-0",
         !isMobile && "min-h-screen"
       )}>
-        {/* Desktop Header with Global Search */}
+        {/* Desktop Header */}
         {!isMobile && (
           <header className="bg-background border-b px-6 py-3">
-            <div className="flex items-center gap-4">
-              <div className="max-w-md flex-1">
-                <GlobalSearch />
-              </div>
+            <div className="flex items-center justify-end gap-4">
               <LegalEntitySelector />
             </div>
           </header>
