@@ -357,8 +357,8 @@ Deno.serve(async (req) => {
         const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
         const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
 
-        // Resolver banco_padrao_erp da tabela financeira (default: 999 = CAIXA/CARTEIRA)
-        let bancoPadraoErp = 999;
+        // Resolver banco_padrao_erp da tabela financeira (obrigatório em produção)
+        let bancoPadraoErp = 0;
         const { data: erpFinancial } = await supabase
           .from('company_erp_financial')
           .select('banco_padrao_erp')
@@ -373,13 +373,13 @@ Deno.serve(async (req) => {
 
         // Resolver subsegmento_mercado pelo segmento do CRM (segmentos.erp_code)
         const segmentoData = (company as any).segmentos as any;
-        const subsegmentoMercado = segmentoData?.erp_code ?? 1;
+        const subsegmentoMercado = Number(segmentoData?.erp_code) || 0;
 
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
           vendedor_codigo: vendedorCodigo,
-          usuario_erp: usuarioErp || 1,
+          usuario_erp: usuarioErp,
           destino_mercadoria: destinoMercadoria,
           banco_padrao: bancoPadraoErp,
           segmento: segmentoMercado,
@@ -407,6 +407,43 @@ Deno.serve(async (req) => {
         };
 
         const mapped = mapCompanyToErp(crmCompany, context);
+        const validation = validateCompanyForSync({
+          cnpj: company.cnpj,
+          name: company.name,
+          tipo_pessoa: tipoPessoa,
+          cidade_codigo: cidadeCodigo,
+          city: company.city,
+          state: company.state,
+          address: company.address,
+          zip_code: company.zip_code,
+          banco_padrao: mapped.banco_padrao,
+          segmento_mercado: mapped.segmento_mercado,
+          subsegmento_mercado: mapped.subsegmento_mercado,
+          has_sales_rep: hasSalesRep,
+          sales_rep_name: salesRepName,
+          sales_rep_erp_code: vendedorCodigo || null,
+          has_erp_user: hasErpUser,
+          erp_user_name: usuarioErpName || null,
+          erp_user_code: usuarioErp || null,
+        });
+
+        if (!validation.valid) {
+          await supabase.from('company_sync_queue').update({
+            status: 'blocked_validation',
+            error_message: validation.errors.map((e) => e.message).join('; '),
+            validation_errors: validation.errors,
+            validation_fields: validation.fields,
+            updated_at: new Date().toISOString(),
+          }).eq('id', queueItem.id);
+          await supabase.from('companies').update({ integration_status: 'missing_data' }).eq('id', queueItem.company_id);
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'blocked_validation',
+            error_message: validation.errors.map((e) => `${e.field}: ${e.message}`).join('; '),
+          });
+          errorCount++;
+          results.push({ company_id: queueItem.company_id, status: 'blocked_validation', error: 'Dados incompletos' });
+          continue;
+        }
         const payload = buildCompanyPayload(mapped);
 
         // Recheck anti-duplicidade antes do envio (cenário de concorrência)
