@@ -1,5 +1,5 @@
 /**
- * Tipos para integração de Clientes CRM → ERP Projedata (IMP_CLIENTE_V3)
+ * Tipos para integração de Clientes CRM → ERP Projedata (IMP_CLIENTE_V4_TESTE)
  */
 
 export interface ErpCompanyAddress {
