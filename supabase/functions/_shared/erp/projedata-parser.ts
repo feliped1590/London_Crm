@@ -23,6 +23,11 @@ export interface CustomerParseContext {
   durationMs?: number;
 }
 
+export interface ClienteRetornoV4 {
+  cnpj_cpf: string;
+  correntista: number;
+}
+
 export interface ProductParseContext {
   sku?: string | null;
   requestedAt?: string;
@@ -257,6 +262,46 @@ export function parseCustomerRetorno(
     warnings,
     metadata: meta,
   });
+}
+
+export function parseClienteRetorno(rawResponse: unknown, ctx: CustomerParseContext = {}): ClienteRetornoV4 {
+  const raw = extractRawRetorno(rawResponse);
+  if (!raw) {
+    throw new Error('Resposta técnica inválida: campo p_retorno ausente');
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`Resposta técnica inválida: p_retorno não é JSON válido (${raw})`);
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Resposta técnica inválida: p_retorno deve ser um objeto JSON');
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const erro = typeof obj.erro === 'string' ? obj.erro.trim() : '';
+  if (erro) {
+    throw new Error(`ERP retornou erro: ${erro}`);
+  }
+
+  const cnpjCpf = String(obj.cnpj_cpf ?? '').replace(/\D/g, '');
+  const expected = String(ctx.cnpj ?? '').replace(/\D/g, '');
+  if (!cnpjCpf) {
+    throw new Error('Resposta técnica inválida: cnpj_cpf ausente no p_retorno');
+  }
+  if (expected && cnpjCpf !== expected) {
+    throw new Error(`Resposta técnica inválida: CNPJ retornado (${cnpjCpf}) difere do enviado (${expected})`);
+  }
+
+  const correntista = Number(obj.correntista);
+  if (!Number.isFinite(correntista) || correntista <= 0) {
+    throw new Error('Resposta técnica inválida: correntista ausente ou inválido');
+  }
+
+  return { cnpj_cpf: cnpjCpf, correntista };
 }
 
 export function parseProductRetorno(
