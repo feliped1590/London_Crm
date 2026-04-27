@@ -77,6 +77,8 @@ export function useBIAdvanced() {
   const {
     data: pipelineHealth,
     isLoading: isLoadingPipelineHealth,
+    isError: isPipelineHealthError,
+    error: pipelineHealthError,
     refetch: refetchPipelineHealth,
   } = useQuery({
     queryKey: ['bi-pipeline-health', filters.startDate, filters.endDate, filters.pipelineId],
@@ -95,6 +97,8 @@ export function useBIAdvanced() {
   const {
     data: sellerPerformance,
     isLoading: isLoadingSellerPerformance,
+    isError: isSellerPerformanceError,
+    error: sellerPerformanceError,
     refetch: refetchSellerPerformance,
   } = useQuery({
     queryKey: ['bi-seller-performance', filters.startDate, filters.endDate],
@@ -113,6 +117,8 @@ export function useBIAdvanced() {
   const {
     data: anomalies,
     isLoading: isLoadingAnomalies,
+    isError: isAnomaliesError,
+    error: anomaliesError,
     refetch: refetchAnomalies,
   } = useQuery({
     queryKey: ['bi-anomalies'],
@@ -127,6 +133,8 @@ export function useBIAdvanced() {
   const {
     data: stalledDeals,
     isLoading: isLoadingStalledDeals,
+    isError: isStalledDealsError,
+    error: stalledDealsError,
     refetch: refetchStalledDeals,
   } = useQuery({
     queryKey: ['bi-stalled-deals', filters.sellerId],
@@ -144,6 +152,8 @@ export function useBIAdvanced() {
   const {
     data: conversionByStage,
     isLoading: isLoadingConversion,
+    isError: isConversionError,
+    error: conversionError,
     refetch: refetchConversion,
   } = useQuery({
     queryKey: ['bi-conversion-stage', filters.startDate, filters.endDate],
@@ -170,6 +180,17 @@ export function useBIAdvanced() {
   const isLoading = isLoadingPipelineHealth || isLoadingSellerPerformance || 
                     isLoadingAnomalies || isLoadingStalledDeals || isLoadingConversion;
 
+  const errors = [
+    pipelineHealthError,
+    sellerPerformanceError,
+    anomaliesError,
+    stalledDealsError,
+    conversionError,
+  ].filter(Boolean);
+
+  const isError = isPipelineHealthError || isSellerPerformanceError ||
+                  isAnomaliesError || isStalledDealsError || isConversionError;
+
   const refetchAll = () => {
     refetchPipelineHealth();
     refetchSellerPerformance();
@@ -193,6 +214,8 @@ export function useBIAdvanced() {
     
     // State
     isLoading,
+    isError,
+    errorMessage: errors[0] instanceof Error ? errors[0].message : null,
     refetchAll,
   };
 }
