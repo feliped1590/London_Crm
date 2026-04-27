@@ -10,7 +10,6 @@ import { validateCompanyForSync } from '../_shared/projedata/company-validator.t
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
 import { parseClienteRetorno } from '../_shared/erp/projedata-parser.ts';
-import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
