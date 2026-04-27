@@ -644,6 +644,15 @@ export default function CustomerNew() {
                       required
                     />
                   </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <Label htmlFor="inscricao_estadual">Inscrição Estadual *</Label>
+                    <Input
+                      id="inscricao_estadual"
+                      value={companyForm.inscricao_estadual}
+                      onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })}
+                      required
+                    />
+                  </div>
                   <div className="col-span-2">
                     <ClassificacaoCascade
                       setorId={companyForm.setor_id}
