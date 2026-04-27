@@ -9,7 +9,7 @@ export interface ErpCompanyAddress {
   complemento: string;
   numero_endereco: string;
   bairro: string;
-  cep: number;
+  cep: string;
 }
 
 export interface ErpCompanyDeliveryAddress {
@@ -19,7 +19,7 @@ export interface ErpCompanyDeliveryAddress {
   complemento: string;
   numero_endereco: string;
   bairro: string;
-  cep: number;
+  cep: string;
   telefone: string;
 }
 
@@ -32,8 +32,8 @@ export interface ErpCompanySeller {
 }
 
 export interface ErpCompanyPayload {
-  cnpj_cpf: number;
-  pfpj: string;
+  cnpj_cpf: string;
+  pfpj: 'J' | 'F';
   nome: string;
   fantasia: string;
   fone: string;
@@ -44,7 +44,7 @@ export interface ErpCompanyPayload {
   rg: string;
   tributacao_ir: string;
   regiao: string;
-  destino_mercadoria: string;
+  destino_mercadoria: 'I' | 'C';
   usuario: number;
   banco_padrao: number;
   segmento_mercado: number;
@@ -60,7 +60,7 @@ export interface CompanySyncContext {
   vendedor_codigo?: number;
   usuario_erp?: number;
   regiao?: string;
-  destino_mercadoria?: string;
+  destino_mercadoria?: 'I' | 'C';
   banco_padrao?: number;
   segmento?: number;
   subsegmento?: number;

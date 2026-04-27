@@ -7,6 +7,9 @@ export type ValidationField =
   | 'cnpj'
   | 'company_name'
   | 'address'
+  | 'zip_code'
+  | 'bank'
+  | 'segment'
   | 'city_mapping'
   | 'sales_rep'
   | 'erp_user';
@@ -33,6 +36,9 @@ export interface CompanyToValidate {
   state?: string | null;
   address?: string | null;
   zip_code?: string | null;
+  banco_padrao?: number | null;
+  segmento_mercado?: number | null;
+  subsegmento_mercado?: number | null;
   sales_rep_name?: string | null;
   sales_rep_erp_code?: number | null;
   erp_user_name?: string | null;
@@ -45,7 +51,19 @@ function isValidCNPJ(cnpj: string): boolean {
   const digits = cnpj.replace(/\D/g, '');
   if (digits.length !== 14 && digits.length !== 11) return false;
   if (/^(\d)\1+$/.test(digits)) return false;
-  return true;
+  const calc = (base: string, factors: number[]) => {
+    const sum = factors.reduce((acc, factor, i) => acc + Number(base[i]) * factor, 0);
+    const mod = sum % 11;
+    return mod < 2 ? 0 : 11 - mod;
+  };
+  if (digits.length === 11) {
+    const d1 = calc(digits, [10, 9, 8, 7, 6, 5, 4, 3, 2]);
+    const d2 = calc(digits, [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]);
+    return d1 === Number(digits[9]) && d2 === Number(digits[10]);
+  }
+  const d1 = calc(digits, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  const d2 = calc(digits, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return d1 === Number(digits[12]) && d2 === Number(digits[13]);
 }
 
 export function validateCompanyForSync(data: CompanyToValidate): CompanyValidationResult {
@@ -81,6 +99,30 @@ export function validateCompanyForSync(data: CompanyToValidate): CompanyValidati
       field: 'address',
       message: 'Endereço é obrigatório',
       fixHint: 'Preencha o endereço no perfil do cliente.',
+    });
+  }
+
+  if (!data.zip_code || data.zip_code.replace(/\D/g, '').length !== 8) {
+    errors.push({
+      field: 'zip_code',
+      message: 'CEP é obrigatório e deve conter 8 dígitos',
+      fixHint: 'Corrija o CEP no perfil do cliente.',
+    });
+  }
+
+  if (!data.banco_padrao || data.banco_padrao <= 0) {
+    errors.push({
+      field: 'bank',
+      message: 'Banco padrão ERP não configurado para o cliente',
+      fixHint: 'Configure o banco padrão financeiro do cliente antes do envio.',
+    });
+  }
+
+  if (!data.segmento_mercado || data.segmento_mercado <= 0 || !data.subsegmento_mercado || data.subsegmento_mercado <= 0) {
+    errors.push({
+      field: 'segment',
+      message: 'Segmento ou subsegmento ERP não configurado',
+      fixHint: 'Configure setor/segmento do cliente com mapeamento ERP válido.',
     });
   }
 

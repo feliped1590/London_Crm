@@ -9,8 +9,7 @@ import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj, getSegmentoB
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
-import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
-import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { parseClienteRetorno } from '../_shared/erp/projedata-parser.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
 const corsHeaders = {
@@ -19,6 +18,25 @@ const corsHeaders = {
 };
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
+
+async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 2): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (err: any) {
+      lastError = err;
+      console.warn('[process-company-sync] ERP request failed', { correlationId, attempt, error: err.message });
+      if (attempt > retries) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError;
+}
 
 function errorResponse(status: number, message: string) {
   return new Response(JSON.stringify({ success: false, error: message }), {
@@ -333,65 +351,13 @@ Deno.serve(async (req) => {
         // independentemente do código ERP cadastrado na entidade jurídica.
         const empresaCodigo = DEFAULT_ERP_COMPANY_CODE;
 
-        // 8. Validação estruturada (defesa em profundidade)
-        const cnpjDigitsForValidation = (company.cnpj || '').replace(/\D/g, '');
-        const tipoPessoaInferred = company.tipo_pessoa || (cnpjDigitsForValidation.length === 11 ? 'PF' : 'PJ');
-
-        const validation = validateCompanyForSync({
-          cnpj: company.cnpj,
-          name: company.name,
-          tipo_pessoa: tipoPessoaInferred,
-          cidade_codigo: cidadeCodigo,
-          city: company.city,
-          state: company.state,
-          address: company.address,
-          zip_code: company.zip_code,
-          has_sales_rep: hasSalesRep,
-          sales_rep_name: salesRepName,
-          sales_rep_erp_code: vendedorCodigo || null,
-          has_erp_user: hasErpUser,
-          erp_user_name: usuarioErpName || null,
-          erp_user_code: usuarioErp || null,
-        });
-
-        if (!validation.valid) {
-          // Bloquear sem retry, com erros estruturados
-          await supabase
-            .from('company_sync_queue')
-            .update({
-              status: 'blocked_validation',
-              error_message: validation.errors.map((e) => e.message).join('; '),
-              validation_errors: validation.errors,
-              validation_fields: validation.fields,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', queueItem.id);
-
-          await supabase
-            .from('companies')
-            .update({ integration_status: 'missing_data' })
-            .eq('id', queueItem.company_id);
-
-          await supabase.from('erp_sync_logs').insert({
-            entity_type: 'company',
-            entity_id: queueItem.company_id,
-            direction: 'crm_to_erp',
-            status: 'blocked_validation',
-            error_message: validation.errors.map((e) => `${e.field}: ${e.message}`).join('; '),
-          });
-
-          errorCount++;
-          results.push({ company_id: queueItem.company_id, status: 'blocked_validation', error: 'Dados incompletos' });
-          continue;
-        }
-
-        // 9. Gerar payload
+        // 8. Preparar dados e validação estruturada (defesa em profundidade)
         // Resolver destino_mercadoria pelo setor: Indústria = I, demais = C (padrão)
         const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
         const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
 
-        // Resolver banco_padrao_erp da tabela financeira (default: 999 = CAIXA/CARTEIRA)
-        let bancoPadraoErp = 999;
+        // Resolver banco_padrao_erp da tabela financeira (obrigatório em produção)
+        let bancoPadraoErp = 0;
         const { data: erpFinancial } = await supabase
           .from('company_erp_financial')
           .select('banco_padrao_erp')
@@ -406,13 +372,13 @@ Deno.serve(async (req) => {
 
         // Resolver subsegmento_mercado pelo segmento do CRM (segmentos.erp_code)
         const segmentoData = (company as any).segmentos as any;
-        const subsegmentoMercado = segmentoData?.erp_code ?? 1;
+        const subsegmentoMercado = Number(segmentoData?.erp_code) || 0;
 
         const context: CompanySyncContext = {
           cidade_codigo: cidadeCodigo,
           empresa_codigo: empresaCodigo,
           vendedor_codigo: vendedorCodigo,
-          usuario_erp: usuarioErp || 1,
+          usuario_erp: usuarioErp,
           destino_mercadoria: destinoMercadoria,
           banco_padrao: bancoPadraoErp,
           segmento: segmentoMercado,
@@ -440,6 +406,43 @@ Deno.serve(async (req) => {
         };
 
         const mapped = mapCompanyToErp(crmCompany, context);
+        const validation = validateCompanyForSync({
+          cnpj: company.cnpj,
+          name: company.name,
+          tipo_pessoa: tipoPessoa,
+          cidade_codigo: cidadeCodigo,
+          city: company.city,
+          state: company.state,
+          address: company.address,
+          zip_code: company.zip_code,
+          banco_padrao: mapped.banco_padrao,
+          segmento_mercado: mapped.segmento_mercado,
+          subsegmento_mercado: mapped.subsegmento_mercado,
+          has_sales_rep: hasSalesRep,
+          sales_rep_name: salesRepName,
+          sales_rep_erp_code: vendedorCodigo || null,
+          has_erp_user: hasErpUser,
+          erp_user_name: usuarioErpName || null,
+          erp_user_code: usuarioErp || null,
+        });
+
+        if (!validation.valid) {
+          await supabase.from('company_sync_queue').update({
+            status: 'blocked_validation',
+            error_message: validation.errors.map((e) => e.message).join('; '),
+            validation_errors: validation.errors,
+            validation_fields: validation.fields,
+            updated_at: new Date().toISOString(),
+          }).eq('id', queueItem.id);
+          await supabase.from('companies').update({ integration_status: 'missing_data' }).eq('id', queueItem.company_id);
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'blocked_validation',
+            error_message: validation.errors.map((e) => `${e.field}: ${e.message}`).join('; '),
+          });
+          errorCount++;
+          results.push({ company_id: queueItem.company_id, status: 'blocked_validation', error: 'Dados incompletos' });
+          continue;
+        }
         const payload = buildCompanyPayload(mapped);
 
         // Recheck anti-duplicidade antes do envio (cenário de concorrência)
@@ -458,32 +461,23 @@ Deno.serve(async (req) => {
           }
         }
 
-        console.log(`[process-company-sync] Fase B: Enviando ${company.name} (CNPJ: ${company.cnpj})`);
-        console.log('[process-company-sync] [payload]', payload);
+        const correlationId = crypto.randomUUID();
+        console.log('[process-company-sync] Fase B: enviando cliente ao ERP', {
+          correlationId,
+          companyId: queueItem.company_id,
+          tenantId: company.tenant_id,
+        });
 
-        // 10. Enviar ao ERP com timeout de 30s
-        const fetchController = new AbortController();
-        const fetchTimeout = setTimeout(() => fetchController.abort(), 30000);
-
-        let response: Response;
-        try {
-          response = await fetch(apiUrl!, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiToken}`,
-            },
-            body: payload,
-            signal: fetchController.signal,
-          });
-        } catch (fetchErr: any) {
-          clearTimeout(fetchTimeout);
-          if (fetchErr.name === 'AbortError') {
-            throw new Error('Timeout (30s) ao enviar cliente ao ERP');
-          }
-          throw fetchErr;
-        }
-        clearTimeout(fetchTimeout);
+        // 10. Enviar ao ERP com timeout + retry
+        const response = await fetchWithRetry(apiUrl!, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiToken}`,
+            'X-Correlation-Id': correlationId,
+          },
+          body: payload,
+        }, correlationId);
 
         const responseText = await response.text();
         console.log(`[process-company-sync] Resposta ERP (${response.status}): ${responseText}`);
@@ -492,58 +486,19 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // 11. Parse retorno via parser unificado
+        // 11. Parse retorno V4: array externo + JSON interno em p_retorno
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
         } catch {
           responseData = { raw: responseText };
         }
-
-        const parsedResult = parseCustomerRetorno(responseData, {
-          cnpj: company.cnpj,
-          requestedAt: new Date().toISOString(),
-        });
-
-        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
-        await trackParserResult(supabase, parsedResult, {
-          source: 'process-company-sync',
-          entityId: queueItem.company_id,
-          tenantId: company.tenant_id ?? null,
-        });
-
-        // Erro explícito do ERP → lança para retry
-        if (parsedResult.errorType === 'erp') {
-          throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
-        }
-
-        // Padrão desconhecido → loga e lança (não-retryable)
-        if (parsedResult.action === 'unknown' && !parsedResult.isRetryable) {
-          console.error('[process-company-sync] Padrão de retorno desconhecido:', parsedResult.raw);
-          throw new Error(`Formato de retorno do ERP desconhecido: "${parsedResult.raw}". Investigar parser.`);
-        }
-
-        let erpCode: string | null = parsedResult.erpCode;
-
-        // ═══ FASE C: Lookup pós-envio (necessário se needsFallback) ═══
-        if (parsedResult.needsFallback && company.cnpj) {
-          console.log('[process-company-sync] Fase C: needsFallback=true, buscando via EXP_CLIENTES_V2');
-          const delays = [3000, 8000];
-          for (const delay of delays) {
-            await new Promise(r => setTimeout(r, delay));
-            invalidateCache(company.cnpj);
-            erpCode = await searchWithCache(company.cnpj!);
-            if (erpCode) {
-              console.log(`[process-company-sync] Fase C: encontrado após ${delay}ms: ${erpCode}`);
-              break;
-            }
-            console.log(`[process-company-sync] Fase C: não encontrado após ${delay}ms, continuando...`);
-          }
-        }
+        const clienteRetorno = parseClienteRetorno(responseData, { cnpj: company.cnpj });
+        let erpCode: string | null = String(clienteRetorno.correntista);
 
         if (erpCode) {
           // Sucesso completo
-          const syncStatus = parsedResult.needsFallback ? 'created_then_found' : 'completed';
+          const syncStatus = 'completed';
 
           await supabase
             .from('company_sync_queue')
@@ -551,7 +506,7 @@ Deno.serve(async (req) => {
               status: 'completed',
               processed_at: new Date().toISOString(),
               payload: JSON.parse(payload),
-              response: responseData,
+              response: { responseData, parsed: clienteRetorno, correlationId },
               updated_at: new Date().toISOString(),
             })
             .eq('id', queueItem.id);
@@ -568,7 +523,7 @@ Deno.serve(async (req) => {
               status: syncStatus,
               external_id: erpCode,
               request_payload: JSON.parse(payload),
-              response_payload: toLogPayload(parsedResult),
+              response_payload: { rawResponse: responseData, parsed: clienteRetorno, correlationId },
             });
 
           successCount++;
@@ -583,7 +538,7 @@ Deno.serve(async (req) => {
               status: 'waiting_propagation',
               error_message: 'Cliente enviado ao ERP com sucesso. Aguardando propagação do código.',
               payload: JSON.parse(payload),
-              response: responseData,
+              response: { responseData, correlationId },
               next_retry_at: new Date(Date.now() + 60_000).toISOString(),
               updated_at: new Date().toISOString(),
             })
@@ -595,7 +550,7 @@ Deno.serve(async (req) => {
               direction: 'crm_to_erp',
               status: 'waiting_propagation',
               request_payload: JSON.parse(payload),
-              response_payload: toLogPayload(parsedResult),
+              response_payload: { rawResponse: responseData, correlationId, technical_error: 'correntista ausente após parser' },
             });
 
           results.push({ company_id: queueItem.company_id, status: 'waiting_propagation' });
@@ -630,8 +585,9 @@ Deno.serve(async (req) => {
           entity_type: 'company',
           entity_id: queueItem.company_id,
           direction: 'crm_to_erp',
-          status: 'error',
-          error_message: err.message,
+            status: 'error',
+            error_message: err.message,
+            response_payload: { error: err.message, technical: true },
         });
 
         errorCount++;

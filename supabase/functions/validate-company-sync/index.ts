@@ -6,6 +6,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { validateCompanyForSync, type CompanyValidationResult } from '../_shared/projedata/company-validator.ts';
+import { getSegmentoBySetor } from '../_shared/projedata/company-mapper.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     // 1. Carregar empresa
     const { data: company, error: companyErr } = await supabase
       .from('companies')
-      .select('id, name, cnpj, tipo_pessoa, address, zip_code, city, state, sales_rep_id, created_by')
+      .select('id, name, cnpj, tipo_pessoa, address, zip_code, city, state, sales_rep_id, created_by, setor_id, segmento_id, setores(nome), segmentos(erp_code)')
       .eq('id', companyId)
       .single();
 
@@ -113,6 +114,15 @@ Deno.serve(async (req) => {
     const cnpjDigits = (company.cnpj || '').replace(/\D/g, '');
     const tipoPessoa = company.tipo_pessoa || (cnpjDigits.length === 11 ? 'PF' : 'PJ');
 
+    const { data: erpFinancial } = await supabase
+      .from('company_erp_financial')
+      .select('banco_padrao_erp')
+      .eq('company_id', companyId)
+      .maybeSingle();
+    const setorNome = ((company as any).setores as any)?.nome;
+    const segmentoMercado = getSegmentoBySetor(setorNome);
+    const subsegmentoMercado = Number(((company as any).segmentos as any)?.erp_code) || 0;
+
     // 6. Validar
     const result: CompanyValidationResult = validateCompanyForSync({
       cnpj: company.cnpj,
@@ -123,6 +133,9 @@ Deno.serve(async (req) => {
       state: company.state,
       address: company.address,
       zip_code: company.zip_code,
+      banco_padrao: erpFinancial?.banco_padrao_erp ?? null,
+      segmento_mercado: segmentoMercado,
+      subsegmento_mercado: subsegmentoMercado,
       has_sales_rep: hasSalesRep,
       sales_rep_name: salesRepName,
       sales_rep_erp_code: salesRepErpCode,

@@ -1,6 +1,6 @@
 /**
- * Mapeamento CRM → ERP Projedata para IMP_CLIENTE_V3
- * + Consulta EXP_CLIENTES_V2
+ * Mapeamento CRM → ERP Projedata para clientes.
+ * Comando padrão atual: IMP_CLIENTE_V4_TESTE, configurável por ambiente.
  */
 
 import type { ErpCompanyPayload, CompanySyncContext } from './company-types.ts';
@@ -59,62 +59,67 @@ export interface CRMCompanyForSync {
   state?: string | null;
 }
 
-function onlyNumbers(v: string | null | undefined): string {
+export function onlyNumbers(v: string | null | undefined): string {
   return (v || '').replace(/\D/g, '');
 }
 
+function limitText(value: string | null | undefined, max: number): string {
+  return (value || '').trim().slice(0, max);
+}
+
 export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySyncContext): ErpCompanyPayload {
-  const cnpjNum = Number(onlyNumbers(company.cnpj));
-  const cepNum = Number(onlyNumbers(company.zip_code)) || 0;
+  const cnpj = onlyNumbers(company.cnpj);
+  const cep = onlyNumbers(company.zip_code);
+  const phone = onlyNumbers(company.phone);
 
   // Resolver região: contexto explícito > inferência por UF
   const regiaoFinal = context.regiao || getRegiaoByUF(company.state);
 
   return {
-    cnpj_cpf: cnpjNum,
+    cnpj_cpf: cnpj,
     pfpj: company.tipo_pessoa === 'PJ' ? 'J' : 'F',
-    nome: company.name,
-    fantasia: company.fantasia || company.name,
-    fone: company.phone || '',
-    email: company.email || '',
-    insc_estadual: company.inscricao_estadual || '',
+    nome: limitText(company.name, 100),
+    fantasia: limitText(company.fantasia || company.name, 100),
+    fone: phone,
+    email: limitText(company.email, 120),
+    insc_estadual: limitText(company.inscricao_estadual, 20),
     obs_geral: '',
     tipo_correntista: 'C',
     rg: '',
     tributacao_ir: '',
     regiao: regiaoFinal,
     destino_mercadoria: context.destino_mercadoria || 'C',
-    usuario: context.usuario_erp || 1,
-    banco_padrao: context.banco_padrao ?? 999,
-    segmento_mercado: context.segmento || 0,
-    subsegmento_mercado: context.subsegmento || 1,
+    usuario: context.usuario_erp ?? 0,
+    banco_padrao: context.banco_padrao ?? 0,
+    segmento_mercado: context.segmento ?? 0,
+    subsegmento_mercado: context.subsegmento ?? 0,
     enderecos: [
       {
         cidade: context.cidade_codigo,
         tipo_endereco: 'L',
-        endereco: company.address || '',
-        complemento: company.address_complement || '',
-        numero_endereco: company.address_number || '',
-        bairro: company.neighborhood || '',
-        cep: cepNum,
+        endereco: limitText(company.address, 100),
+        complemento: limitText(company.address_complement, 60),
+        numero_endereco: limitText(company.address_number, 20),
+        bairro: limitText(company.neighborhood, 60),
+        cep,
       },
     ],
     enderecos_entrega: [
       {
         cidade: context.cidade_codigo,
         codigo_entrega: 1,
-        endereco: company.address || '',
-        complemento: company.address_complement || '',
-        numero_endereco: company.address_number || '',
-        bairro: company.neighborhood || '',
-        cep: cepNum,
-        telefone: company.phone || '',
+        endereco: limitText(company.address, 100),
+        complemento: limitText(company.address_complement, 60),
+        numero_endereco: limitText(company.address_number, 20),
+        bairro: limitText(company.neighborhood, 60),
+        cep,
+        telefone: phone,
       },
     ],
     vendedores: [
       {
-        empresa: context.empresa_codigo || 1,
-        codigo_vendedor: context.vendedor_codigo || 0,
+        empresa: context.empresa_codigo ?? 0,
+        codigo_vendedor: context.vendedor_codigo ?? 0,
         digita_pedidos: 'S',
         exibir_historico: 'S',
         remove_vendedor: 'N',
@@ -128,7 +133,8 @@ export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySync
  * V4 retorna o código ERP do cliente recém-criado em p_retorno (V3 retornava null).
  */
 export function buildCompanyPayload(mapped: ErpCompanyPayload): string {
-  const envelope = buildEnvelope('IMP_CLIENTE_V4_TESTE', mapped as unknown as Record<string, unknown>);
+  const command = Deno.env.get('PROJEDATA_CLIENT_COMMAND') || 'IMP_CLIENTE_V4_TESTE';
+  const envelope = buildEnvelope(command, mapped as unknown as Record<string, unknown>);
   return serializeEnvelope(envelope);
 }
 
