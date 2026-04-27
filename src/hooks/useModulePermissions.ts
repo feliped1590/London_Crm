@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { PermissionAction, permissionEngine, type AccessType, type KnownOrDynamicModuleKey } from '@/lib/permissions/permissionEngine';
+import { MODULE_KEYS, PermissionAction, permissionEngine, type AccessType, type KnownOrDynamicModuleKey } from '@/lib/permissions/permissionEngine';
 
 export type { AccessType } from '@/lib/permissions/permissionEngine';
 
@@ -20,6 +20,7 @@ export interface ModulePermission {
 
 export function useModulePermissions() {
   const { user } = useAuth();
+  const knownModuleKeys = useMemo(() => new Set<string>(MODULE_KEYS), []);
 
   const { data: permissions, isLoading, error } = useQuery({
     queryKey: ['user_modules', user?.id],
@@ -80,7 +81,8 @@ export function useModulePermissions() {
     enabled: !!user?.id,
   });
 
-  const isAdmin = hasRoleAdmin || hasRoleDeveloper || false;
+  const isPrivileged = hasRoleAdmin || hasRoleDeveloper || false;
+  const isAdmin = isPrivileged;
   const permissionMap = useMemo(() => permissionEngine.toMap(permissions || []), [permissions]);
 
   const handleMissingModule = (moduleKey: string, action?: PermissionAction) => {
@@ -90,6 +92,10 @@ export function useModulePermissions() {
   };
 
   const can = (moduleKey: KnownOrDynamicModuleKey, action: PermissionAction): boolean => {
+    if (isPrivileged && knownModuleKeys.has(moduleKey)) {
+      return action !== PermissionAction.Delete;
+    }
+
     return permissionEngine.can(permissionMap, moduleKey, action, { isPrivileged: isAdmin, onMissingModule: handleMissingModule });
   };
 
@@ -98,6 +104,8 @@ export function useModulePermissions() {
   };
 
   const getAccessType = (moduleKey: KnownOrDynamicModuleKey): AccessType => {
+    if (isPrivileged && knownModuleKeys.has(moduleKey)) return 'total';
+
     return permissionEngine.getAccessType(permissionMap, moduleKey, { onMissingModule: handleMissingModule });
   };
 
@@ -122,6 +130,7 @@ export function useModulePermissions() {
     isFullyLoaded,
     error,
     isAdmin,
+    isPrivileged,
     isDeveloper: hasRoleDeveloper || false,
     isVendedor: hasRoleVendedor || false,
     can,
