@@ -9,7 +9,7 @@ import { mapCompanyToErp, buildCompanyPayload, searchClienteByCnpj, getSegmentoB
 import { validateCompanyForSync } from '../_shared/projedata/company-validator.ts';
 import type { CompanySyncContext } from '../_shared/projedata/company-types.ts';
 import type { CRMCompanyForSync } from '../_shared/projedata/company-mapper.ts';
-import { parseCustomerRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
+import { parseClienteRetorno } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 
@@ -19,6 +19,25 @@ const corsHeaders = {
 };
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
+
+async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 2): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (err: any) {
+      lastError = err;
+      console.warn('[process-company-sync] ERP request failed', { correlationId, attempt, error: err.message });
+      if (attempt > retries) break;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError;
+}
 
 function errorResponse(status: number, message: string) {
   return new Response(JSON.stringify({ success: false, error: message }), {
