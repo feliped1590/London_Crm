@@ -352,59 +352,7 @@ Deno.serve(async (req) => {
         // independentemente do código ERP cadastrado na entidade jurídica.
         const empresaCodigo = DEFAULT_ERP_COMPANY_CODE;
 
-        // 8. Validação estruturada (defesa em profundidade)
-        const cnpjDigitsForValidation = (company.cnpj || '').replace(/\D/g, '');
-        const tipoPessoaInferred = company.tipo_pessoa || (cnpjDigitsForValidation.length === 11 ? 'PF' : 'PJ');
-
-        const validation = validateCompanyForSync({
-          cnpj: company.cnpj,
-          name: company.name,
-          tipo_pessoa: tipoPessoaInferred,
-          cidade_codigo: cidadeCodigo,
-          city: company.city,
-          state: company.state,
-          address: company.address,
-          zip_code: company.zip_code,
-          has_sales_rep: hasSalesRep,
-          sales_rep_name: salesRepName,
-          sales_rep_erp_code: vendedorCodigo || null,
-          has_erp_user: hasErpUser,
-          erp_user_name: usuarioErpName || null,
-          erp_user_code: usuarioErp || null,
-        });
-
-        if (!validation.valid) {
-          // Bloquear sem retry, com erros estruturados
-          await supabase
-            .from('company_sync_queue')
-            .update({
-              status: 'blocked_validation',
-              error_message: validation.errors.map((e) => e.message).join('; '),
-              validation_errors: validation.errors,
-              validation_fields: validation.fields,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', queueItem.id);
-
-          await supabase
-            .from('companies')
-            .update({ integration_status: 'missing_data' })
-            .eq('id', queueItem.company_id);
-
-          await supabase.from('erp_sync_logs').insert({
-            entity_type: 'company',
-            entity_id: queueItem.company_id,
-            direction: 'crm_to_erp',
-            status: 'blocked_validation',
-            error_message: validation.errors.map((e) => `${e.field}: ${e.message}`).join('; '),
-          });
-
-          errorCount++;
-          results.push({ company_id: queueItem.company_id, status: 'blocked_validation', error: 'Dados incompletos' });
-          continue;
-        }
-
-        // 9. Gerar payload
+        // 8. Preparar dados e validação estruturada (defesa em profundidade)
         // Resolver destino_mercadoria pelo setor: Indústria = I, demais = C (padrão)
         const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
         const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
