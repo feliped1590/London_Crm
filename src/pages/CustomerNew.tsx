@@ -345,6 +345,10 @@ export default function CustomerNew() {
         toast.error('Informe o nome fantasia');
         return;
       }
+      if (!companyForm.inscricao_estadual?.trim()) {
+        toast.error('Informe a inscrição estadual');
+        return;
+      }
     }
     
     // Telefone obrigatório
