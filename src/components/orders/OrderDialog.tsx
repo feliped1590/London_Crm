@@ -66,6 +66,8 @@ type LinkedCompanyProduct = ProductLookup & {
   last_interaction_at?: string | null;
 };
 
+const ORDER_TYPE_OPTIONS: OrderType[] = ['Novo/Alteração', 'Repeticao', 'Pronto Entrega'];
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
