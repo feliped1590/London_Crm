@@ -520,7 +520,7 @@ export default function Products() {
         data.length || 0,
         data.thickness || 0
       );
-      const { error } = await supabase.from('products').insert({
+      const { data: createdProduct, error } = await supabase.from('products').insert({
         sku: data.sku!,
         name: data.name!,
         description: data.description,
@@ -562,13 +562,31 @@ export default function Products() {
         erp_versao_situacao: data.erp_versao_situacao || 'A',
         erp_product_code: (data as any).erp_product_code?.trim() || null,
         nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
-      });
+      }).select('id, tenant_id').single();
       if (error) throw error;
+      if (createForCompanyId && createdProduct?.id && user?.id) {
+        const { error: linkError } = await supabase.from('company_products').insert([{
+          tenant_id: createdProduct.tenant_id,
+          company_id: createForCompanyId,
+          product_id: createdProduct.id,
+          relationship_type: 'INTEREST',
+          created_by: user.id,
+          updated_by: user.id,
+        }]);
+        if (linkError) throw linkError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      if (createForCompanyId) {
+        queryClient.invalidateQueries({ queryKey: ['company-products', createForCompanyId] });
+        queryClient.invalidateQueries({ queryKey: ['company-products-available-products', createForCompanyId] });
+      }
       toast.success('Produto criado com sucesso!');
       resetForm();
+      if (createForCompanyId) {
+        setSearchParams({}, { replace: true });
+      }
     },
     onError: (error: any) => {
       const duplicateMessage = getDuplicateErrorMessage(error);
