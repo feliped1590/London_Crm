@@ -976,11 +976,12 @@ export default function Products() {
   };
 
   useEffect(() => {
-    if (!createForCompanyId || isDialogOpen || !canCreateProducts) return;
+    if (!createForCompanyId || handledCreateForCompanyRef.current === createForCompanyId || !canCreateProducts) return;
+    handledCreateForCompanyRef.current = createForCompanyId;
     setEditingProduct(null);
     resetForm();
     setIsDialogOpen(true);
-  }, [createForCompanyId, canCreateProducts, isDialogOpen]);
+  }, [createForCompanyId, canCreateProducts]);
 
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
