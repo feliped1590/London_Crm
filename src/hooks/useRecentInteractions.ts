@@ -31,6 +31,7 @@ export interface RecentProductItem {
   tenant_id: string;
   last_interaction_at: string;
   interaction_type: RecentInteractionType;
+  [key: string]: unknown;
 }
 
 type RecentItemMap = {
@@ -117,7 +118,7 @@ export function useRecentInteractions<T extends RecentEntityType>(entityType: T)
 
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('id, sku, name, unit_measure, ncm_code, unit_price, active, tenant_id')
+        .select('*')
         .in('id', ids);
 
       if (productsError) throw productsError;
