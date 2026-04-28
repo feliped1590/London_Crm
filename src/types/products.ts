@@ -128,6 +128,8 @@ export interface ProposalItem {
   proposal_id: string;
   product_id?: string;
   description: string;
+  observations?: string | null;
+  observations_pcp?: string | null;
   quantity: number;
   unit_price: number;
   width?: number;
