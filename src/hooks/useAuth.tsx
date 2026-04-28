@@ -21,11 +21,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let initialized = false;
+    let cancelled = false;
+
+    const finishInitialization = (currentSession: Session | null) => {
+      if (cancelled || initialized) return;
+      initialized = true;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      setLoading(false);
+    };
+
+    const fallbackTimer = setTimeout(() => {
+      finishInitialization(null);
+    }, 8000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         // After first init, auth state changes always update
-        if (initialized) {
+        if (initialized && !cancelled) {
           setSession(currentSession);
           setUser(currentSession?.user ?? null);
           setLoading(false);
@@ -33,16 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (!initialized) {
-        initialized = true;
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-      }
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session: currentSession } }) => {
+        clearTimeout(fallbackTimer);
+        finishInitialization(currentSession);
+      })
+      .catch((error) => {
+        console.warn('Falha ao restaurar sessão:', error);
+        clearTimeout(fallbackTimer);
+        finishInitialization(null);
+      });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(fallbackTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
