@@ -1104,11 +1104,11 @@ export default function Products() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-end flex-wrap gap-2">
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
           if (!open) {
-            resetForm();
-            if (createForCompanyId) setSearchParams({}, { replace: true });
+            closeProductDialog();
+            return;
           }
+          setIsDialogOpen(true);
         }}>
            <div className="flex items-center gap-2 flex-wrap">
             <Tooltip>
@@ -1709,7 +1709,7 @@ export default function Products() {
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={closeProductDialog}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || isCheckingDuplicate}>
