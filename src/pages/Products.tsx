@@ -1783,7 +1783,7 @@ export default function Products() {
                   variant="outline"
                   size="sm"
                   className="h-auto max-w-full flex-col items-start gap-0 px-3 py-2 text-left"
-                  onClick={() => handleEdit(product as Product)}
+                  onClick={() => handleEdit(product as unknown as Product)}
                 >
                   <span className="max-w-[260px] truncate font-medium">{product.name}</span>
                   <span className="max-w-[260px] truncate text-xs text-muted-foreground">

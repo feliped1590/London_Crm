@@ -209,7 +209,7 @@ export default function Customers() {
         p_allowed_sales_rep_ids: null,
       } as any);
       if (error) throw error;
-      return data as CustomerRow[];
+      return data as unknown as CustomerRow[];
     },
     staleTime: 30000,
   });

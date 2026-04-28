@@ -8428,6 +8428,45 @@ export type Database = {
           },
         ]
       }
+      user_recent_interactions: {
+        Row: {
+          entity_id: string
+          entity_type: string
+          first_interaction_at: string
+          id: string
+          interaction_count: number
+          interaction_type: string
+          last_interaction_at: string
+          metadata: Json
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          entity_id: string
+          entity_type: string
+          first_interaction_at?: string
+          id?: string
+          interaction_count?: number
+          interaction_type?: string
+          last_interaction_at?: string
+          metadata?: Json
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: string
+          first_interaction_at?: string
+          id?: string
+          interaction_count?: number
+          interaction_type?: string
+          last_interaction_at?: string
+          metadata?: Json
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -9464,10 +9503,6 @@ export type Database = {
           id: string
           last_interaction_at: string
           last_order_at: string
-          last_relevant_interaction_at: string
-          last_relevant_interaction_source: string
-          last_relevant_legal_entity_id: string
-          last_relevant_legal_entity_name: string
           name: string
           owner_id: string
           owner_name: string
@@ -9480,6 +9515,7 @@ export type Database = {
           segmento_id: string
           setor_id: string
           state: string
+          tenant_id: string
           total_count: number
         }[]
       }
