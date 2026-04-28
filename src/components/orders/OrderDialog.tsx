@@ -236,6 +236,76 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [productSearch, setProductSearch] = useState('');
   const { products } = useProductSimpleSearch(productSearch);
 
+  const { data: linkedCompanyProducts = [], isLoading: isLoadingLinkedProducts } = useQuery({
+    queryKey: ['order-linked-company-products', companyId, productSearch],
+    queryFn: async (): Promise<LinkedCompanyProduct[]> => {
+      if (!companyId) return [];
+      const search = productSearch.trim();
+
+      let query = supabase
+        .from('company_products')
+        .select(`
+          relationship_type,
+          is_preferred,
+          last_interaction_at,
+          product:products(
+            id,
+            sku,
+            name,
+            tipo_id,
+            unit_price,
+            width,
+            length,
+            thickness,
+            aliquota_ipi,
+            fator_kg,
+            active
+          )
+        `)
+        .eq('company_id', companyId)
+        .is('archived_at', null)
+        .order('is_preferred', { ascending: false })
+        .order('last_interaction_at', { ascending: false, nullsFirst: false })
+        .limit(50);
+
+      if (search) {
+        query = query.or(`product.name.ilike.%${search}%,product.sku.ilike.%${search}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data ?? [])
+        .map((link: any) => ({
+          ...(link.product ?? {}),
+          relationship_type: link.relationship_type,
+          is_preferred: link.is_preferred,
+          last_interaction_at: link.last_interaction_at,
+        }))
+        .filter((product: any) => product.id && product.active !== false) as LinkedCompanyProduct[];
+    },
+    enabled: !!companyId,
+  });
+
+  const productOptions = useMemo(() => {
+    const source = companyId ? linkedCompanyProducts : products;
+    return (source ?? []).map((p: LinkedCompanyProduct) => {
+      const relationship = p.relationship_type ? relationshipLabels[p.relationship_type] || p.relationship_type : null;
+      const details = [p.is_preferred ? 'Preferencial' : null, relationship].filter(Boolean).join(' • ');
+      return {
+        value: p.id,
+        label: `${p.sku} - ${p.name}`,
+        searchTerms: details || undefined,
+      };
+    });
+  }, [companyId, linkedCompanyProducts, products]);
+
+  const productEmptyMessage = companyId
+    ? isLoadingLinkedProducts
+      ? 'Carregando produtos vinculados...'
+      : 'Nenhum produto vinculado ao cliente. Use a pesquisa avançada para buscar na lista geral.'
+    : 'Nenhum produto encontrado';
+
   // Deals da empresa selecionada (vínculo opcional Fase 2)
   // Filtra também por legal_entity_id ativo para evitar cruzamento entre CNPJs.
   const { data: companyDeals = [] } = useQuery({
