@@ -586,6 +586,86 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     onError: (err: Error) => toast.error(err.message || 'Erro ao desbloquear pedido'),
   });
 
+  const cloneOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) throw new Error('Pedido não encontrado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
+      if (items.length === 0) throw new Error('Pedido sem itens para clonar');
+
+      const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
+        number: '',
+        company_id: companyId || null,
+        contact_id: contactId || null,
+        deal_id: dealId || null,
+        delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
+        observations,
+        total_value: orderTotal,
+        status: 'pendente',
+        created_by: user.id,
+        legal_entity_id: legalEntityId || null,
+        ipi_mode: ipiMode,
+        order_type: orderType,
+        subtotal_products: orderSubtotalProducts,
+        total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null,
+        payment_terms: paymentTerms || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+      }).select().single();
+      if (orderError) throw orderError;
+
+      const clonedItems = items.map((item, index) => {
+        const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+        const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+        const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+        return {
+          order_id: newOrder.id,
+          product_id: item.product_id,
+          description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          discount_percent: item.discount_percent,
+          ipi_rate: ipiRate,
+          ipi_value: ipiVal,
+          subtotal_item: item.subtotal,
+          total_item: totalItem,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+          sort_order: index,
+          calculated_price_source: item.calculated_price_source || 'MANUAL',
+          commission_pct: item.commission_pct || 0,
+          is_locked: false,
+        };
+      });
+
+      const { error: itemsError } = await supabase.from('order_items').insert(clonedItems);
+      if (itemsError) throw itemsError;
+
+      await supabase.from('order_audit_log').insert({
+        order_id: newOrder.id,
+        field_name: 'cloned',
+        field_label: 'Pedido clonado',
+        old_value: order.number,
+        new_value: `Pedido ${newOrder.number} clonado a partir do pedido ${order.number}`,
+        changed_by: user.id,
+      });
+
+      return newOrder;
+    },
+    onSuccess: (newOrder: any) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order_items'] });
+      queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+      toast.success(`Pedido ${newOrder?.number || ''} clonado com sucesso!`);
+      setShowCloneAlert(false);
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao clonar pedido'),
+  });
+
   // --- Snapshot helpers (detecção de alterações pendentes) ---
   const buildCurrentSnapshot = useCallback((): OrderSnapshot => ({
     companyId, contactId,
