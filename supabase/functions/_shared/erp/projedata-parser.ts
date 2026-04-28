@@ -74,7 +74,7 @@ const CUSTOMER_PATTERNS: PatternDef[] = [
   // Erro genérico — capturado por último
   {
     id: 'customer.error.v1',
-    re: /#ERRO#(.*)$/i,
+    re: /#ERRO#([\s\S]*)$/i,
     action: 'error',
     codeIdx: null,
   },
@@ -97,7 +97,7 @@ const PRODUCT_PATTERNS: PatternDef[] = [
   },
   {
     id: 'product.error.v1',
-    re: /#ERRO#(.*)$/i,
+    re: /#ERRO#([\s\S]*)$/i,
     action: 'error',
     codeIdx: null,
   },
@@ -120,7 +120,7 @@ const ORDER_PATTERNS: PatternDef[] = [
   },
   {
     id: 'order.error.v1',
-    re: /#ERRO#(.*)$/i,
+    re: /#ERRO#([\s\S]*)$/i,
     action: 'error',
     codeIdx: null,
   },
