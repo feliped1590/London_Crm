@@ -51,7 +51,7 @@ async function resolveTenantId(entityType: RecentEntityType, entityId: string, t
   if (tenantId) return tenantId;
 
   const { data, error } = await supabase
-    .from(getEntityTable(entityType))
+    .from(getEntityTable(entityType) as any)
     .select('tenant_id')
     .eq('id', entityId)
     .maybeSingle();
@@ -173,7 +173,7 @@ export function useRecentInteractions<T extends RecentEntityType>(entityType: T)
       ...payload,
       entityType: payload.entityType || entityType,
     });
-  }, [entityType, recordRecent]);
+  }, [entityType, recordRecent.mutate]);
 
   return {
     recentItems: query.data || [],
