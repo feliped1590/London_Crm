@@ -134,7 +134,7 @@ export function useRecentInteractions<T extends RecentEntityType>(entityType: T)
             interaction_type: interaction.interaction_type,
           };
         })
-        .filter(Boolean) as RecentItemMap[T][];
+        .filter(Boolean) as unknown as RecentItemMap[T][];
     },
     enabled: !!user?.id,
     staleTime: 30_000,
