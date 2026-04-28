@@ -22,6 +22,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const PERMANENT_ORDER_SYNC_MESSAGE = 'A Projedata não permite sincronizar novamente este pedido porque ele já avançou no fluxo do ERP.';
+
+function isPermanentOrderSyncError(message: string): boolean {
+  const normalized = message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  return normalized.includes('nao e permitido alterar/remover pedido')
+    && normalized.includes('saiu do fluxo inicial');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -89,11 +101,20 @@ Deno.serve(async (req) => {
         // Check for any existing entry (failed, completed, etc.) to reset
         const { data: existingEntry } = await supabase
           .from('order_sync_queue')
-          .select('id')
+          .select('id, status, error_message')
           .eq('order_id', targetOrderId)
           .maybeSingle();
 
         if (existingEntry) {
+          if (existingEntry.status === 'permanent_failure' && isPermanentOrderSyncError(existingEntry.error_message || '')) {
+            return jsonResponse({
+              success: true,
+              processed: 0,
+              status: 'permanent_failure',
+              message: PERMANENT_ORDER_SYNC_MESSAGE,
+            });
+          }
+
           await supabase
             .from('order_sync_queue')
             .update({
@@ -414,6 +435,50 @@ Deno.serve(async (req) => {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         console.error(`[process-order-sync] Erro no pedido ${queueItem.order_id}:`, errorMsg);
+
+        if (isPermanentOrderSyncError(errorMsg)) {
+          await supabase
+            .from('order_sync_queue')
+            .update({
+              status: 'permanent_failure',
+              attempt_count: 0,
+              error_message: errorMsg,
+              next_retry_at: null,
+              processed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
+
+          await supabase
+            .from('orders')
+            .update({ erp_sync_status: 'error' })
+            .eq('id', queueItem.order_id);
+
+          await supabase.from('order_sync_log').insert({
+            order_id: queueItem.order_id,
+            queue_item_id: queueItem.id,
+            pedido_terceiro: queueItem.pedido_terceiro,
+            direction: 'crm_to_erp',
+            status: 'permanent_failure',
+            error_message: errorMsg,
+          });
+
+          await supabase.from('erp_sync_logs').insert({
+            entity_type: 'order',
+            entity_id: queueItem.order_id,
+            direction: 'crm_to_erp',
+            status: 'failed',
+            error_message: errorMsg,
+            response_payload: {
+              error_kind: 'permanent_failure',
+              reason: 'order_already_advanced_in_erp',
+            },
+          });
+
+          errorCount++;
+          results.push({ order_id: queueItem.order_id, status: 'permanent_failure', error: PERMANENT_ORDER_SYNC_MESSAGE });
+          continue;
+        }
 
         const newAttempt = (queueItem.attempt_count || 0) + 1;
         const delayMinutes = Math.min(60, Math.pow(2, newAttempt));

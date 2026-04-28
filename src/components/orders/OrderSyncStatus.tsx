@@ -18,6 +18,8 @@ interface OrderSyncStatusProps {
   onSyncTriggered?: () => void;
 }
 
+const PERMANENT_ORDER_SYNC_MESSAGE = 'A Projedata não permite sincronizar novamente este pedido porque ele já avançou no fluxo do ERP.';
+
 const syncStatusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   not_synced: {
     label: 'Não enviado',
@@ -49,6 +51,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: AlertTriangle,
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
   },
+  permanent_failure: {
+    label: 'Bloqueado ERP',
+    icon: AlertTriangle,
+    className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+  },
   blocked_validation: {
     label: 'Dados incompletos',
     icon: AlertTriangle,
@@ -77,10 +84,12 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
     },
   });
 
-  // Prioridade: blocked_validation > pending/processing > outdated > completed > demais
+  // Prioridade: blocked_validation/permanent_failure > pending/processing > outdated > completed > demais
   let displayStatus: string;
   if (queueEntry?.status === 'blocked_validation') {
     displayStatus = 'blocked_validation';
+  } else if (queueEntry?.status === 'permanent_failure') {
+    displayStatus = 'permanent_failure';
   } else if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
   } else if (erpOrderId && erpSyncedAt && updatedAt && (new Date(updatedAt).getTime() - new Date(erpSyncedAt).getTime()) > 5000) {
@@ -126,7 +135,10 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
               </ul>
             </div>
           )}
-          {displayStatus !== 'blocked_validation' && queueEntry?.error_message && (
+          {displayStatus === 'permanent_failure' && (
+            <p className="text-destructive">{PERMANENT_ORDER_SYNC_MESSAGE}</p>
+          )}
+          {displayStatus !== 'blocked_validation' && displayStatus !== 'permanent_failure' && queueEntry?.error_message && (
             <p className="text-destructive">{queueEntry.error_message}</p>
           )}
           {queueEntry?.attempt_count && queueEntry.attempt_count > 0 && (
@@ -150,7 +162,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('order_sync_queue')
-        .select('status, validation_errors')
+        .select('status, validation_errors, error_message')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -161,6 +173,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   });
 
   const isBlocked = queueEntry?.status === 'blocked_validation';
+  const isPermanentFailure = queueEntry?.status === 'permanent_failure';
 
   const buildLabel = (orderNum?: string | null) =>
     orderNum ? `Pedido ${orderNum}` : 'Pedido';
@@ -228,7 +241,8 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
 
   const tooltipLabel = isBlocked
     ? 'Corrigir dados pendentes'
-    : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
+    : isPermanentFailure ? 'Pedido bloqueado no ERP'
+      : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
     <>
@@ -241,15 +255,18 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
               onClick={(e) => {
                 e.stopPropagation();
                 if (isBlocked) handleShowBlocked();
+                else if (isPermanentFailure) toast.error(PERMANENT_ORDER_SYNC_MESSAGE);
                 else handleSync();
               }}
-              disabled={isSyncing}
+              disabled={isSyncing || isPermanentFailure}
               title={tooltipLabel}
             >
               {isSyncing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isBlocked ? (
                 <Wrench className="h-4 w-4 text-warning" />
+              ) : isPermanentFailure ? (
+                <AlertTriangle className="h-4 w-4 text-destructive" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
