@@ -349,7 +349,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
-        fator_kg: item.product?.fator_kg || 0,
+        fator_kg: item.fator_kg ?? item.product?.fator_kg ?? 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
         is_locked: item.is_locked || false,
       }));
@@ -393,6 +393,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false, // legacy field
         };
       });
@@ -482,6 +483,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false, // legacy field — no longer used as business rule
         };
       });
