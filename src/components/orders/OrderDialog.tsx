@@ -1033,9 +1033,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)} disabled={!canEdit}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {Object.entries(orderTypeConfig).map(([value, config]) => (
+              {ORDER_TYPE_OPTIONS.map((value) => {
+                const config = orderTypeConfig[value];
+                return (
                 <SelectItem key={value} value={value}>{config.label}</SelectItem>
-              ))}
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
