@@ -162,7 +162,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('order_sync_queue')
-        .select('status, validation_errors')
+        .select('status, validation_errors, error_message')
         .eq('order_id', orderId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -173,6 +173,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   });
 
   const isBlocked = queueEntry?.status === 'blocked_validation';
+  const isPermanentFailure = queueEntry?.status === 'permanent_failure';
 
   const buildLabel = (orderNum?: string | null) =>
     orderNum ? `Pedido ${orderNum}` : 'Pedido';
@@ -240,7 +241,8 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
 
   const tooltipLabel = isBlocked
     ? 'Corrigir dados pendentes'
-    : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
+    : isPermanentFailure ? 'Pedido bloqueado no ERP'
+      : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
     <>
@@ -253,15 +255,18 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
               onClick={(e) => {
                 e.stopPropagation();
                 if (isBlocked) handleShowBlocked();
+                else if (isPermanentFailure) toast.error(PERMANENT_ORDER_SYNC_MESSAGE);
                 else handleSync();
               }}
-              disabled={isSyncing}
+              disabled={isSyncing || isPermanentFailure}
               title={tooltipLabel}
             >
               {isSyncing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : isBlocked ? (
                 <Wrench className="h-4 w-4 text-warning" />
+              ) : isPermanentFailure ? (
+                <AlertTriangle className="h-4 w-4 text-destructive" />
               ) : (
                 <Send className="h-4 w-4" />
               )}
