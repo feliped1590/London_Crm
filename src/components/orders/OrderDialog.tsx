@@ -641,6 +641,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false,
         };
       });
@@ -692,6 +693,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       id: it.id || '', product_id: it.product_id, quantity: it.quantity,
       unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
       ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
+      fator_kg: it.fator_kg || 0,
       description: it.description,
       observations: it.observations || '',
       observations_pcp: it.observations_pcp || '',
