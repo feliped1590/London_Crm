@@ -1421,6 +1421,27 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <AlertDialog open={showCloneAlert} onOpenChange={setShowCloneAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clonar pedido?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Será criado um novo pedido com os mesmos dados comerciais, logística, pagamento e itens do pedido {order?.number}. O novo pedido será criado como pendente e sem sincronização ERP.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cloneOrderMutation.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => cloneOrderMutation.mutate()}
+            disabled={cloneOrderMutation.isPending}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            {cloneOrderMutation.isPending ? 'Clonando...' : 'Confirmar clonagem'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
