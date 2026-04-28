@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +30,7 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
 import { toast } from 'sonner';
+import { useRecentInteractions } from '@/hooks/useRecentInteractions';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,17 @@ export default function CustomerDetail() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const queryClient = useQueryClient();
+  const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
+
+  useEffect(() => {
+    if (customer?.id && customer.source === 'crm') {
+      recordCustomerInteraction({
+        entityId: customer.id,
+        tenantId: (customer as any).tenant_id,
+        interactionType: 'view',
+      });
+    }
+  }, [customer?.id, customer?.source]);
 
   const handleEnrichCompany = async () => {
     if (!customer?.cnpj) {
@@ -203,7 +215,18 @@ export default function CustomerDetail() {
     const cnpjLimpo = companyForm.cnpj ? cleanDocument(companyForm.cnpj) : null;
     updateCompanyMutation.mutate(
       { ...companyForm, cnpj: cnpjLimpo, custom_fields: customFieldsData as Json },
-      { onSuccess: () => setIsEditing(false) },
+      {
+        onSuccess: () => {
+          setIsEditing(false);
+          if (customer?.id) {
+            recordCustomerInteraction({
+              entityId: customer.id,
+              tenantId: (customer as any).tenant_id,
+              interactionType: 'update',
+            });
+          }
+        },
+      },
     );
   };
 
