@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderItemDetailModal } from './OrderItemDetailModal';
@@ -72,10 +72,11 @@ interface OrderDialogProps {
   order?: Order | null;
   onSuccess?: () => void;
   preSelectedCompanyId?: string | null;
+  canClone?: boolean;
 }
 
 
-export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId }: OrderDialogProps) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId, canClone = false }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
@@ -111,6 +112,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
   const [showLockUnsavedAlert, setShowLockUnsavedAlert] = useState(false);
+  const [showCloneAlert, setShowCloneAlert] = useState(false);
   // Vínculo opcional ao negócio (Fase 2)
   const [dealId, setDealId] = useState<string>('');
 

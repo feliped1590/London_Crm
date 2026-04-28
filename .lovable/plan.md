@@ -1,25 +1,56 @@
-Plano aprovado para implementar a melhoria no pedido:
+Plano para adicionar a função de clonar pedido nos detalhes:
 
-1. Ajustar a busca de produtos do pedido
-   - Quando houver cliente selecionado no pedido, o campo “Adicionar Produto” passará a carregar primeiro os produtos já vinculados àquele cliente.
-   - A listagem principal ficará focada nesses produtos vinculados, em vez de abrir apenas a lista geral de produtos.
-   - Se o usuário digitar no campo de busca, a busca será aplicada dentro dos produtos vinculados ao cliente.
+1. Adicionar ação “Clonar pedido” nos detalhes do pedido
+   - No modal de detalhes/edição do pedido, incluir um botão “Clonar Pedido”.
+   - O botão ficará disponível para usuários com permissão de criar pedidos.
+   - A ação ficará nos detalhes do pedido, próxima às ações do rodapé, sem alterar o fluxo atual de editar, salvar, bloquear ou gerar PDF.
 
-2. Manter acesso à busca geral
-   - O botão de pesquisa avançada continuará disponível para procurar qualquer produto ativo fora da carteira/vínculo do cliente.
-   - Assim o fluxo principal fica rápido para produtos recorrentes/homologados do cliente, mas ainda permite adicionar um produto novo quando necessário.
+2. Exibir confirmação antes de clonar
+   - Ao clicar em “Clonar Pedido”, abrir uma mensagem de confirmação.
+   - A mensagem deixará claro que será criado um novo pedido com os mesmos dados e itens do pedido atual.
+   - O usuário poderá cancelar ou confirmar a clonagem.
 
-3. Melhorar a identificação visual
-   - No seletor do pedido, os produtos vinculados serão exibidos com SKU e nome, e poderão trazer informações auxiliares como tipo de vínculo/preferencial quando disponíveis.
-   - A mensagem vazia será contextualizada: se o cliente não tiver produtos vinculados, indicar que não há produtos vinculados e orientar a usar a pesquisa avançada.
+3. Criar um novo pedido com os mesmos dados comerciais
+   - Ao confirmar, o sistema criará outro pedido copiando os principais dados do pedido original:
+     - cliente/contato;
+     - CNPJ emissor/legal entity;
+     - tipo do pedido;
+     - modo de IPI;
+     - data prevista de entrega;
+     - observações do pedido;
+     - forma e condições de pagamento;
+     - transportadora, frete e endereço de entrega;
+     - valores totais calculados.
+   - O novo pedido será criado como um pedido novo, em status inicial `pendente`, sem vínculo com sincronização ERP e sem bloqueio.
+   - O número continuará sendo gerado pelo fluxo atual do sistema, evitando duplicidade.
 
-4. Garantir cálculo e persistência iguais ao fluxo atual
-   - Ao selecionar um produto vinculado, o pedido continuará usando a mesma regra atual de preço, tabela de preço, fator KG, IPI e subtotal.
-   - O item adicionado continuará abrindo com as observações individuais do item disponíveis, conforme a última evolução.
+4. Copiar todos os itens do pedido
+   - Buscar os itens do pedido original e inserir no novo pedido mantendo:
+     - produto;
+     - descrição;
+     - quantidade;
+     - preço unitário;
+     - subtotal;
+     - desconto;
+     - IPI;
+     - comissão;
+     - dimensões;
+     - fator/preço calculado quando aplicável;
+     - observação geral do item;
+     - observação PCP/produção do item;
+     - ordem dos itens.
+   - Os itens do novo pedido não serão bloqueados, mesmo que o pedido original esteja bloqueado.
+
+5. Registrar e atualizar a tela
+   - Registrar um histórico/auditoria no novo pedido informando que ele foi clonado a partir do pedido original.
+   - Após a clonagem, atualizar a listagem de pedidos.
+   - Exibir mensagem de sucesso com o número do novo pedido quando disponível.
+   - Fechar o modal atual ou manter a tela atual estável sem perder dados; a prioridade será evitar alteração no pedido original.
 
 Detalhes técnicos:
-- Alterar `OrderDialog.tsx` para buscar `company_products` quando `companyId` estiver preenchido.
-- A consulta deve trazer os dados completos do produto necessários para `resolveProductPricing`: `id`, `sku`, `name`, `tipo_id`, `unit_price`, dimensões, `aliquota_ipi` e `fator_kg`.
-- Substituir as opções do `SearchableSelect` do pedido por uma lista derivada dos vínculos do cliente quando houver cliente selecionado.
-- Manter `useProductSimpleSearch` como fallback apenas quando não houver cliente selecionado ou quando for necessário buscar geral.
-- Validar que `addProductById` consiga localizar o produto tanto na lista vinculada quanto na lista geral/avançada.
+- A implementação ficará em `src/components/orders/OrderDialog.tsx`, pois é onde os detalhes do pedido e os itens já estão carregados.
+- Adicionar uma prop opcional como `canClone` para o modal receber a permissão de criação a partir de `src/pages/Orders.tsx`.
+- Usar `AlertDialog` já existente no componente para a confirmação.
+- Criar uma mutation `cloneOrderMutation` que faz `insert` em `orders`, depois `insert` em `order_items`.
+- Não copiar campos de integração como `erp_order_id`, `erp_synced_at`, fila de sincronização, lock ou status avançado.
+- Invalidar queries de `orders` e `order_items` após sucesso.
