@@ -84,10 +84,12 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
     },
   });
 
-  // Prioridade: blocked_validation > pending/processing > outdated > completed > demais
+  // Prioridade: blocked_validation/permanent_failure > pending/processing > outdated > completed > demais
   let displayStatus: string;
   if (queueEntry?.status === 'blocked_validation') {
     displayStatus = 'blocked_validation';
+  } else if (queueEntry?.status === 'permanent_failure') {
+    displayStatus = 'permanent_failure';
   } else if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing')) {
     displayStatus = queueEntry.status;
   } else if (erpOrderId && erpSyncedAt && updatedAt && (new Date(updatedAt).getTime() - new Date(erpSyncedAt).getTime()) > 5000) {
@@ -133,7 +135,10 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
               </ul>
             </div>
           )}
-          {displayStatus !== 'blocked_validation' && queueEntry?.error_message && (
+          {displayStatus === 'permanent_failure' && (
+            <p className="text-destructive">{PERMANENT_ORDER_SYNC_MESSAGE}</p>
+          )}
+          {displayStatus !== 'blocked_validation' && displayStatus !== 'permanent_failure' && queueEntry?.error_message && (
             <p className="text-destructive">{queueEntry.error_message}</p>
           )}
           {queueEntry?.attempt_count && queueEntry.attempt_count > 0 && (
