@@ -322,6 +322,9 @@ export default function Products() {
     setFormData((prev) => {
       const defaultTipoId = getDefaultTipoId();
       const defaultUnitMeasure = getDefaultUnitMeasure();
+      if (defaultTipoId && checkAutoDescriptionByTipo(defaultTipoId)) {
+        setIsAutoDescription(true);
+      }
       return {
         ...prev,
         tipo_id: prev.tipo_id || defaultTipoId,
@@ -634,11 +637,14 @@ export default function Products() {
   });
 
   const resetForm = () => {
+    const defaultTipoId = getDefaultTipoId();
+    const shouldAutoDescription = checkAutoDescriptionByTipo(defaultTipoId);
+
     setFormData({
       sku: '',
       name: '',
       description: '',
-      tipo_id: getDefaultTipoId(),
+      tipo_id: defaultTipoId,
       unit_measure: getDefaultUnitMeasure(),
       unit_price: 0,
       fator_kg: 0,
@@ -678,7 +684,7 @@ export default function Products() {
     setEditingProduct(null);
     setIsDialogOpen(false);
     setFormTab('geral');
-    setIsAutoDescription(false);
+    setIsAutoDescription(shouldAutoDescription);
   };
 
   const checkAutoDescriptionByTipo = (tipoId: string | undefined): boolean => {
