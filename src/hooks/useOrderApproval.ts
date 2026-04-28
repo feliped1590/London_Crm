@@ -70,7 +70,7 @@ const PRONTA_ENTREGA_TRANSITIONS: Record<OrderStatus, TransitionRule> = {
 };
 
 function getTransitionRules(orderType: OrderType): Record<OrderStatus, TransitionRule> {
-  return orderType === 'pronta_entrega' ? PRONTA_ENTREGA_TRANSITIONS : PRODUCAO_TRANSITIONS;
+  return orderType === 'pronta_entrega' || orderType === 'Pronto Entrega' ? PRONTA_ENTREGA_TRANSITIONS : PRODUCAO_TRANSITIONS;
 }
 
 // Transition labels for UI
@@ -106,7 +106,7 @@ export function useOrderApproval(
   orderId: string,
   orderStatus: OrderStatus,
   orderCreatedBy?: string | null,
-  orderType: OrderType = 'producao'
+  orderType: OrderType = 'Novo/Alteração'
 ) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
