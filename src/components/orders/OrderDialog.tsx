@@ -970,6 +970,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       >
                         <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
+                        {(item.observations || item.observations_pcp) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
+                            {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
