@@ -1,30 +1,33 @@
-Identifiquei o motivo principal: a tabela de apoio dos “recentes” (`user_recent_interactions`) não existe no backend atual. Como a listagem só exibe os recentes quando há registros nessa tabela, nada aparece mesmo após abrir/alterar clientes.
+Plano para alinhar as observações dos itens do pedido ao payload `IMP_PEDIDOS` / `IMP_PEDIDO_V3`:
 
-Também há um ajuste complementar importante: a listagem de clientes usa uma função de busca paginada que não retorna `tenant_id`, então a gravação pode depender de uma consulta extra ou falhar silenciosamente em alguns fluxos.
+1. Banco de dados
+   - Adicionar em `order_items` dois campos por item:
+     - `observations`: observação geral do item.
+     - `observations_pcp`: observação do item direcionada à produção/PCP.
+   - Usar campos texto opcionais, para não quebrar pedidos existentes.
 
-Plano de correção:
+2. Formulário do pedido no CRM
+   - Ao adicionar um produto ao pedido, o item já nasce com os dois campos vazios.
+   - No modal “Detalhes do Item”, exibir dois campos separados:
+     - “Observação do item”
+     - “Observação PCP / Produção”
+   - Salvar essas observações individualmente em cada item.
+   - Ao editar pedido existente, carregar esses campos de `order_items`.
+   - Ao salvar/criar pedido, persistir os dois campos em cada item.
 
-1. Criar/aplicar a estrutura de banco dos recentes
-   - Criar a tabela `user_recent_interactions` no backend.
-   - Campos principais: usuário, tenant, tipo da entidade (`company`/`product`), id da entidade, tipo de interação, data da última interação e contador.
-   - Criar índice para buscar rapidamente os últimos 5 por usuário e tipo.
+3. Validação e segurança de entrada
+   - Validar no frontend tamanho máximo e normalização das observações antes de salvar.
+   - Limitar cada observação a um tamanho seguro, por exemplo 1000 caracteres.
+   - Não enviar HTML ou conteúdo sem limpeza: armazenar como texto simples.
 
-2. Corrigir as permissões de acesso
-   - Ativar segurança por linha na tabela.
-   - Permitir que cada usuário veja, insira e atualize apenas os próprios recentes.
-   - Respeitar o tenant do usuário, sem abrir dados entre empresas/tenants.
+4. Integração ERP
+   - Ajustar o carregamento dos itens para trazer `observations` e `observations_pcp`.
+   - Ajustar o payload para enviar:
+     - `observacao`: vindo de `order_items.observations`.
+     - `observacao_pcp`: vindo de `order_items.observations_pcp`.
+   - Remover o uso incorreto da descrição do item como observação geral do payload.
+   - Manter a descrição do produto apenas como descrição interna do item, não como observação enviada ao ERP.
 
-3. Garantir que clientes gravem corretamente
-   - Ajustar a função/listagem de clientes para retornar `tenant_id`, ou garantir que o hook resolva o tenant de forma confiável antes de gravar.
-   - Manter gravação ao abrir/consultar cliente e ao salvar alterações.
-
-4. Melhorar robustez do hook de recentes
-   - Evitar falha silenciosa quando a gravação não acontecer.
-   - Invalidar a consulta correta após gravar, para o bloco “Clientes recentes” aparecer/atualizar ao voltar para a listagem.
-   - Manter o limite de 5 itens mais recentes.
-
-5. Validar o fluxo esperado
-   - Abrir um cliente na listagem.
-   - Salvar alteração no cliente.
-   - Voltar para `/customers` e confirmar que “Clientes recentes” aparece.
-   - Repetir o mesmo comportamento para produtos, já que usam a mesma estrutura.
+5. Compatibilidade
+   - Pedidos antigos continuarão abrindo normalmente com observações vazias nos itens.
+   - A observação geral do pedido (`orders.observations`) pode continuar existindo para observações do pedido como um todo, mas não será usada para preencher observações específicas de item.

@@ -45,6 +45,13 @@ import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 
+const MAX_ITEM_OBSERVATION_LENGTH = 1000;
+
+const normalizeItemObservation = (value?: string | null) => {
+  const normalized = (value || '').replace(/[<>]/g, '').trim();
+  return normalized ? normalized.slice(0, MAX_ITEM_OBSERVATION_LENGTH) : null;
+};
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -251,6 +258,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       return (data ?? []).map((item: any) => ({
         id: item.id, product_id: item.product_id || '', product_code: item.product?.sku || item.product?.erp_product_code || '',
         description: item.description,
+        observations: item.observations || '',
+        observations_pcp: item.observations_pcp || '',
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
@@ -290,6 +299,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
         return {
           order_id: newOrder.id, product_id: item.product_id, description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
@@ -377,6 +388,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
         return {
           order_id: order.id, product_id: item.product_id, description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
@@ -512,6 +525,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
       ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
       description: it.description,
+      observations: it.observations || '',
+      observations_pcp: it.observations_pcp || '',
     });
     const origMap = new Map(originalItems.map(o => [o.id || '', norm(o)]));
     for (const it of items) {
@@ -644,6 +659,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
+      observations: '', observations_pcp: '',
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
@@ -954,6 +970,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       >
                         <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
                         <p className="font-medium">{item.description}</p>
+                        {(item.observations || item.observations_pcp) && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
+                            {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

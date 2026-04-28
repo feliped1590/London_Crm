@@ -285,7 +285,8 @@ Deno.serve(async (req) => {
               discount_percent: Number(item.discount_percent) || 0,
               tipo_venda: tipoVenda,
               delivery_date: item.delivery_date || order.delivery_date,
-              observations: item.description || '',
+              observations: item.observations || '',
+              observations_pcp: item.observations_pcp || '',
             };
           }),
           payment_conditions: paymentConditions,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
+
+const MAX_ITEM_OBSERVATION_LENGTH = 1000;
+
+const sanitizeItemObservation = (value: string) =>
+  value.replace(/[<>]/g, '').replace(/\s+$/g, '').slice(0, MAX_ITEM_OBSERVATION_LENGTH);
 
 interface OrderItemDetailModalProps {
   open: boolean;
@@ -64,6 +70,10 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
 
   const handleSave = () => {
     if (!draft || draft.is_locked) return;
+    if ((draft.observations || '').length > MAX_ITEM_OBSERVATION_LENGTH || (draft.observations_pcp || '').length > MAX_ITEM_OBSERVATION_LENGTH) {
+      toast.error(`Cada observação deve ter no máximo ${MAX_ITEM_OBSERVATION_LENGTH} caracteres`);
+      return;
+    }
     onUpdate(index, draft);
     onOpenChange(false);
   };
@@ -227,6 +237,34 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
 
             <div className="p-3 bg-muted/50 rounded-lg">
               <p className="text-sm font-medium">Subtotal: {formatCurrency(draft.subtotal)}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observação do item</Label>
+              <Textarea
+                value={draft.observations || ''}
+                onChange={(e) => updateDraftField('observations', sanitizeItemObservation(e.target.value))}
+                placeholder="Observação geral deste item..."
+                rows={3}
+                maxLength={MAX_ITEM_OBSERVATION_LENGTH}
+                disabled={!isEditable}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground text-right">{(draft.observations || '').length}/{MAX_ITEM_OBSERVATION_LENGTH}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observação PCP / Produção</Label>
+              <Textarea
+                value={draft.observations_pcp || ''}
+                onChange={(e) => updateDraftField('observations_pcp', sanitizeItemObservation(e.target.value))}
+                placeholder="Orientações para produção deste item..."
+                rows={3}
+                maxLength={MAX_ITEM_OBSERVATION_LENGTH}
+                disabled={!isEditable}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground text-right">{(draft.observations_pcp || '').length}/{MAX_ITEM_OBSERVATION_LENGTH}</p>
             </div>
 
             {/* Comparison with current product */}
