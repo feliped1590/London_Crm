@@ -31,7 +31,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { NCMSelector } from '@/components/products/NCMSelector';
-import { NCMCode, NCMSemanticValidation, TipoProdutoFiscal } from '@/types/fiscal';
+import { TipoProdutoFiscal } from '@/types/fiscal';
 import { Product, calcularFatorMilheiro } from '@/types/products';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
@@ -216,8 +216,6 @@ export default function Products() {
     erp_versao_situacao: 'A',
   });
 
-  const [ncmValidation, setNcmValidation] = useState<NCMSemanticValidation | null>(null);
-  const [ncmOfficialIpi, setNcmOfficialIpi] = useState<number | null>(null);
   const [formTab, setFormTab] = useState('geral');
   const [isAutoDescription, setIsAutoDescription] = useState(true);
 
@@ -655,8 +653,6 @@ export default function Products() {
     });
     setEditingProduct(null);
     setIsDialogOpen(false);
-    setNcmValidation(null);
-    setNcmOfficialIpi(null);
     setFormTab('geral');
     setIsAutoDescription(false);
   };
@@ -939,16 +935,6 @@ export default function Products() {
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
-    setNcmOfficialIpi(null);
-    // Load official IPI from NCM if product has ncm_id
-    if (product.ncm_id) {
-      supabase.from('ncm_codes').select('aliquota_ipi_oficial').eq('id', product.ncm_id).single()
-        .then(({ data }) => {
-          if (data?.aliquota_ipi_oficial != null) {
-            setNcmOfficialIpi(data.aliquota_ipi_oficial);
-          }
-        });
-    }
   };
 
   const handleDuplicate = (product: Product) => {
@@ -1152,7 +1138,6 @@ export default function Products() {
                         value={formData.ncm_code}
                         onChange={(ncmCode, ncm) => {
                           const officialIpi = ncm?.aliquota_ipi_oficial ?? null;
-                          setNcmOfficialIpi(officialIpi);
                           const shouldAutoFill = !formData.aliquota_ipi && officialIpi != null;
                           setFormData({ 
                             ...formData, 
@@ -1163,8 +1148,6 @@ export default function Products() {
                         }}
                         productDescription={`${formData.name} ${formData.description || ''}`}
                         onValidationChange={(result) => {
-                          setNcmValidation(result);
-                          // Only set ncm_validated_at on real validation
                           if (result) {
                             setFormData(prev => ({ ...prev, ncm_validated_at: new Date().toISOString() }));
                           }
