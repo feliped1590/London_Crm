@@ -525,6 +525,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
       ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
       description: it.description,
+      observations: it.observations || '',
+      observations_pcp: it.observations_pcp || '',
     });
     const origMap = new Map(originalItems.map(o => [o.id || '', norm(o)]));
     for (const it of items) {
@@ -657,6 +659,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
+      observations: '', observations_pcp: '',
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
       ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
