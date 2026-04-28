@@ -299,6 +299,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
         return {
           order_id: newOrder.id, product_id: item.product_id, description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
@@ -386,6 +388,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
         return {
           order_id: order.id, product_id: item.product_id, description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
