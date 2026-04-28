@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -173,7 +174,7 @@ export function useRecentInteractions<T extends RecentEntityType>(entityType: T)
       ...payload,
       entityType: payload.entityType || entityType,
     });
-  }, [entityType, recordRecent.mutate]);
+  }, [entityType, recordRecent]);
 
   return {
     recentItems: query.data || [],

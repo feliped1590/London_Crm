@@ -57,6 +57,7 @@ interface CustomerRow {
   state: string | null;
   address: string | null;
   active: boolean;
+  tenant_id?: string;
   custom_fields: any;
   owner_id: string | null;
   owner_name: string | null;
@@ -310,11 +311,11 @@ export default function Customers() {
   const handleToggleActive = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
   const handleEditClick = (customer: CustomerRow, e: React.MouseEvent) => {
     e.stopPropagation();
-    recordCustomerInteraction({ entityId: customer.id, tenantId: (customer as any).tenant_id, interactionType: 'open' });
+    recordCustomerInteraction({ entityId: customer.id, tenantId: customer.tenant_id, interactionType: 'open' });
     navigate(`/customers/${customer.id}`);
   };
   const handleOpenCustomer = (customer: CustomerRow) => {
-    recordCustomerInteraction({ entityId: customer.id, tenantId: (customer as any).tenant_id, interactionType: 'view' });
+    recordCustomerInteraction({ entityId: customer.id, tenantId: customer.tenant_id, interactionType: 'view' });
     navigate(`/customers/${customer.id}`);
   };
   const handleOpenWhatsApp = (customer: CustomerRow, e: React.MouseEvent) => {

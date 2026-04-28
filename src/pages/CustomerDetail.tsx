@@ -57,7 +57,7 @@ export default function CustomerDetail() {
     if (customer?.id && customer.source === 'crm') {
       recordCustomerInteraction({
         entityId: customer.id,
-        tenantId: (customer as any).tenant_id,
+        tenantId: (customer as { tenant_id?: string | null }).tenant_id,
         interactionType: 'view',
       });
     }
@@ -221,7 +221,7 @@ export default function CustomerDetail() {
           if (customer?.id) {
             recordCustomerInteraction({
               entityId: customer.id,
-              tenantId: (customer as any).tenant_id,
+              tenantId: (customer as { tenant_id?: string | null }).tenant_id,
               interactionType: 'update',
             });
           }
