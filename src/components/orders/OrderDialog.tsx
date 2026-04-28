@@ -349,7 +349,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
-        fator_kg: item.product?.fator_kg || 0,
+        fator_kg: item.fator_kg ?? item.product?.fator_kg ?? 0,
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
         is_locked: item.is_locked || false,
       }));
@@ -393,6 +393,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false, // legacy field
         };
       });
@@ -482,6 +483,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           length: item.length, thickness: item.thickness, sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false, // legacy field — no longer used as business rule
         };
       });
@@ -639,6 +641,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           sort_order: index,
           calculated_price_source: item.calculated_price_source || 'MANUAL',
           commission_pct: item.commission_pct || 0,
+          fator_kg: Math.max(0, Number(item.fator_kg) || 0),
           is_locked: false,
         };
       });
@@ -690,6 +693,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       id: it.id || '', product_id: it.product_id, quantity: it.quantity,
       unit_price: it.unit_price, discount_percent: it.discount_percent || 0,
       ipi_rate: it.ipi_rate || 0, commission_pct: it.commission_pct || 0,
+      fator_kg: it.fator_kg || 0,
       description: it.description,
       observations: it.observations || '',
       observations_pcp: it.observations_pcp || '',
@@ -885,6 +889,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
         item.unit_price = Number(value) || 0;
         item.subtotal = item.quantity * item.unit_price;
+        return item;
+      });
+    } else if (field === 'fator_kg') {
+      hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
+        item.fator_kg = Math.max(0, Number(value) || 0);
         return item;
       });
     } else {
@@ -1156,8 +1165,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {(item.fator_kg || 0) > 0 ? formatCurrency(item.fator_kg!) : '—'}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.0001}
+                        value={item.fator_kg ?? ''}
+                        onChange={(e) => updateItem(index, 'fator_kg', e.target.value)}
+                        className="w-24 text-right text-sm"
+                        placeholder="0"
+                        disabled={!canEdit}
+                      />
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
