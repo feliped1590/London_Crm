@@ -1640,6 +1640,10 @@ export default function Products() {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="clientes" className="space-y-4 mt-4">
+                  <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
+                </TabsContent>
+
                 {editingProduct && (
                   <TabsContent value="historico" className="space-y-4 mt-4">
                     {isProductHistoryLoading ? (
