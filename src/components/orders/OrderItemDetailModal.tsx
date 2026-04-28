@@ -238,6 +238,34 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
               <p className="text-sm font-medium">Subtotal: {formatCurrency(draft.subtotal)}</p>
             </div>
 
+            <div className="space-y-2">
+              <Label>Observação do item</Label>
+              <Textarea
+                value={draft.observations || ''}
+                onChange={(e) => updateDraftField('observations', sanitizeItemObservation(e.target.value))}
+                placeholder="Observação geral deste item..."
+                rows={3}
+                maxLength={MAX_ITEM_OBSERVATION_LENGTH}
+                disabled={!isEditable}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground text-right">{(draft.observations || '').length}/{MAX_ITEM_OBSERVATION_LENGTH}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observação PCP / Produção</Label>
+              <Textarea
+                value={draft.observations_pcp || ''}
+                onChange={(e) => updateDraftField('observations_pcp', sanitizeItemObservation(e.target.value))}
+                placeholder="Orientações para produção deste item..."
+                rows={3}
+                maxLength={MAX_ITEM_OBSERVATION_LENGTH}
+                disabled={!isEditable}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground text-right">{(draft.observations_pcp || '').length}/{MAX_ITEM_OBSERVATION_LENGTH}</p>
+            </div>
+
             {/* Comparison with current product */}
             {hasDifferences && !isLocked && (
               <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg space-y-1">
