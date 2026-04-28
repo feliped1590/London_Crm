@@ -52,6 +52,20 @@ const normalizeItemObservation = (value?: string | null) => {
   return normalized ? normalized.slice(0, MAX_ITEM_OBSERVATION_LENGTH) : null;
 };
 
+const relationshipLabels: Record<string, string> = {
+  INTEREST: 'Interesse',
+  HOMOLOGATED: 'Homologado',
+  RECURRENT: 'Recorrente',
+  STRATEGIC: 'Estratégico',
+  BLACKLIST: 'Bloqueado',
+};
+
+type LinkedCompanyProduct = ProductLookup & {
+  relationship_type?: string | null;
+  is_preferred?: boolean | null;
+  last_interaction_at?: string | null;
+};
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
