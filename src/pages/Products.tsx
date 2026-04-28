@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,6 +106,7 @@ export default function Products() {
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
   const createForCompanyId = searchParams.get('createForCompany');
+  const handledCreateForCompanyRef = useRef<string | null>(null);
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
