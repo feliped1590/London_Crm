@@ -265,15 +265,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         .eq('company_id', companyId)
         .is('archived_at', null)
         .order('is_preferred', { ascending: false })
-        .order('last_interaction_at', { ascending: false, nullsFirst: false })
-        .limit(50);
-
-      if (search) {
-        query = query.or(`product.name.ilike.%${search}%,product.sku.ilike.%${search}%`);
-      }
+        .order('last_interaction_at', { ascending: false, nullsFirst: false });
 
       const { data, error } = await query;
       if (error) throw error;
+
+      const normalizedSearch = search.toLowerCase();
 
       return (data ?? [])
         .map((link: any) => ({
@@ -282,7 +279,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           is_preferred: link.is_preferred,
           last_interaction_at: link.last_interaction_at,
         }))
-        .filter((product: any) => product.id && product.active !== false) as LinkedCompanyProduct[];
+        .filter((product: any) => product.id && product.active !== false)
+        .filter((product: any) => !normalizedSearch || product.name?.toLowerCase().includes(normalizedSearch) || product.sku?.toLowerCase().includes(normalizedSearch)) as LinkedCompanyProduct[];
     },
     enabled: !!companyId,
   });
