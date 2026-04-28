@@ -4480,6 +4480,8 @@ export type Database = {
           is_locked: boolean
           item_date: string | null
           length: number | null
+          observations: string | null
+          observations_pcp: string | null
           order_id: string
           product_id: string | null
           quantity: number
@@ -4510,6 +4512,8 @@ export type Database = {
           is_locked?: boolean
           item_date?: string | null
           length?: number | null
+          observations?: string | null
+          observations_pcp?: string | null
           order_id: string
           product_id?: string | null
           quantity?: number
@@ -4540,6 +4544,8 @@ export type Database = {
           is_locked?: boolean
           item_date?: string | null
           length?: number | null
+          observations?: string | null
+          observations_pcp?: string | null
           order_id?: string
           product_id?: string | null
           quantity?: number
