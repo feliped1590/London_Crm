@@ -962,8 +962,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
                 return (
-                  <>
-                  <TableRow key={`${index}-item`}>
+                  <TableRow key={index}>
                     <TableCell>
                       <div
                         className="cursor-pointer hover:underline"
@@ -1020,37 +1019,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </TableCell>
                     )}
                   </TableRow>
-                  <TableRow key={`${index}-observations`} className="bg-muted/10 hover:bg-muted/10">
-                    <TableCell colSpan={ipiMode !== 'isento' ? 10 : 8} className="pt-0">
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Observação do item</Label>
-                          <Textarea
-                            value={item.observations || ''}
-                            onChange={(e) => updateItem(index, 'observations', normalizeItemObservation(e.target.value) || '')}
-                            placeholder="Observação geral deste item..."
-                            rows={2}
-                            maxLength={MAX_ITEM_OBSERVATION_LENGTH}
-                            disabled={!canEdit}
-                            className="min-h-[64px] resize-none text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Observação PCP / Produção</Label>
-                          <Textarea
-                            value={item.observations_pcp || ''}
-                            onChange={(e) => updateItem(index, 'observations_pcp', normalizeItemObservation(e.target.value) || '')}
-                            placeholder="Orientações para produção deste item..."
-                            rows={2}
-                            maxLength={MAX_ITEM_OBSERVATION_LENGTH}
-                            disabled={!canEdit}
-                            className="min-h-[64px] resize-none text-sm"
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                  </>
                 );
               })}
             </TableBody>
