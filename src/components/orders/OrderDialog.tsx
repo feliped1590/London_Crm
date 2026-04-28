@@ -104,7 +104,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [selectedProductId, setSelectedProductId] = useState('');
   const [legalEntityId, setLegalEntityId] = useState('');
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
-  const [orderType, setOrderType] = useState<OrderType>('producao');
+  const [orderType, setOrderType] = useState<OrderType>('Novo/Alteração');
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
   const { addRecent } = useRecentProducts();
@@ -797,7 +797,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!open) {
       setCompanyId(''); setContactId(''); setDeliveryDate(undefined); setObservations('');
       setItems([]); setOriginalItems([]); setSelectedProductId('');
-      setLegalEntityId(''); setOrderType('producao');
+      setLegalEntityId(''); setOrderType('Novo/Alteração');
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
