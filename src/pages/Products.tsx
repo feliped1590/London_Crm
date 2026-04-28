@@ -688,6 +688,13 @@ export default function Products() {
     setIsAutoDescription(shouldAutoDescription);
   };
 
+  const closeProductDialog = () => {
+    if (createForCompanyId) {
+      setSearchParams({}, { replace: true });
+    }
+    resetForm();
+  };
+
   const checkAutoDescriptionByTipo = (tipoId: string | undefined): boolean => {
     if (!tipoId) return false;
     const tipoItem = tipos.items.find(t => t.id === tipoId);
