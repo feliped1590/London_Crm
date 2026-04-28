@@ -738,7 +738,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   // --- Handlers ---
   const addProductById = useCallback((productId: string, productData?: any) => {
-    const product = productData || products?.find(p => p.id === productId);
+    const product = productData || linkedCompanyProducts.find(p => p.id === productId) || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
@@ -751,7 +751,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     });
     addRecent(product.id);
     setSelectedProductId('');
-  }, [products, ipiMode, resolveProductPricing, addItem, addRecent]);
+  }, [linkedCompanyProducts, products, ipiMode, resolveProductPricing, addItem, addRecent]);
 
   const addProductToItems = () => {
     if (!selectedProductId) return;
@@ -1003,9 +1003,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <div className="flex gap-2">
             <SearchableSelect
               value={selectedProductId} onChange={(v) => setSelectedProductId(v || '')}
-              placeholder="Buscar produto por nome ou SKU..." searchPlaceholder="Digite para buscar..."
-              emptyMessage="Nenhum produto encontrado" className="flex-1" onSearchChange={setProductSearch}
-              options={(products ?? []).map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` }))}
+              placeholder={companyId ? 'Produtos vinculados ao cliente...' : 'Buscar produto por nome ou SKU...'} searchPlaceholder="Digite para buscar..."
+              emptyMessage={productEmptyMessage} className="flex-1" onSearchChange={setProductSearch}
+              options={productOptions}
             />
             <Button variant="outline" size="icon" onClick={() => setAdvancedSearchOpen(true)} title="Pesquisa Avançada (F9)">
               <Search className="h-4 w-4" />
