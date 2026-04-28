@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -70,6 +70,7 @@ export default function Products() {
   const canCreateProducts = can('products', PermissionAction.Create);
   const canEditProducts = can('products', PermissionAction.Edit);
   const canDeleteProducts = can('products', PermissionAction.Delete);
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
   const { data: activeTenantId } = useQuery({
     queryKey: ['products-active-tenant-id', user?.id],
     queryFn: async () => {
@@ -311,6 +312,21 @@ export default function Products() {
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
   const isEditing = !!editingProduct;
+
+  useEffect(() => {
+    if (defaultsApplied || editingProduct || tipos.items.length === 0 || unitMeasures.items.length === 0) return;
+
+    setDefaultsApplied(true);
+    setFormData((prev) => {
+      const defaultTipoId = getDefaultTipoId();
+      const defaultUnitMeasure = getDefaultUnitMeasure();
+      return {
+        ...prev,
+        tipo_id: prev.tipo_id || defaultTipoId,
+        unit_measure: prev.unit_measure || defaultUnitMeasure,
+      };
+    });
+  }, [defaultsApplied, editingProduct, tipos.items, unitMeasures.items]);
 
   // Recalcula o SKU estrutural a partir dos códigos de lookup + dimensões
   const recalcularSku = (data: typeof formData) => {
@@ -1085,7 +1101,14 @@ export default function Products() {
             </Button>
             {canCreateProducts && (
               <DialogTrigger asChild>
-                <Button className="gap-2" size="sm">
+                <Button
+                  className="gap-2"
+                  size="sm"
+                  onClick={() => {
+                    setEditingProduct(null);
+                    resetForm();
+                  }}
+                >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Novo Produto</span>
                   <span className="sm:hidden">Novo</span>
@@ -1148,6 +1171,20 @@ export default function Products() {
                         }}
                       />
                     </div>
+                    {/* Código ERP */}
+                    <div className="col-span-2">
+                      <Label htmlFor="erp_product_code">Código ERP *</Label>
+                      <Input
+                        id="erp_product_code"
+                        value={formData.erp_product_code || ''}
+                        onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
+                        placeholder="Informe o código conforme cadastro no ERP"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Obrigatório. Não é gerado automaticamente.
+                      </p>
+                    </div>
+
                     {/* Descrição */}
                     <div className="col-span-2">
                       <Label htmlFor="name">Descrição *</Label>
