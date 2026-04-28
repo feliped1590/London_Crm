@@ -18,6 +18,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { resolveUserForSalesRep } from '@/lib/ownership';
+import { useRecentInteractions } from '@/hooks/useRecentInteractions';
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -28,6 +29,7 @@ export default function CustomerNew() {
   const { accessibleEntities: legalEntities, effectiveEntityId } = useLegalEntities();
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
   const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
+  const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
 
   // Set default sales rep when loaded
@@ -301,6 +303,8 @@ export default function CustomerNew() {
     },
     onSuccess: (company) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
+      recordCustomerInteraction({ entityId: company.id, tenantId: company.tenant_id, interactionType: 'create' });
       toast.success('Cliente criado com sucesso!');
       navigate(`/customers/${company.id}`);
     },

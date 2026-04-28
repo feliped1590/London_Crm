@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2, Send } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2, Send, History } from 'lucide-react';
 import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
 import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
 import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
@@ -29,6 +29,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
+import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import {
   Pagination,
   PaginationContent,
@@ -56,6 +57,7 @@ interface CustomerRow {
   state: string | null;
   address: string | null;
   active: boolean;
+  tenant_id?: string;
   custom_fields: any;
   owner_id: string | null;
   owner_name: string | null;
@@ -103,6 +105,7 @@ export default function Customers() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRow | null>(null);
+  const { recentItems: recentCustomers, recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
 
   // Filters
   const [filterCity, setFilterCity] = useState('');
@@ -306,8 +309,15 @@ export default function Customers() {
   const handleDeleteClick = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); setCustomerToDelete(customer); setDeleteDialogOpen(true); };
   const handleConfirmDelete = () => { if (customerToDelete) deleteMutation.mutate(customerToDelete.id); };
   const handleToggleActive = (customer: CustomerRow, e: React.MouseEvent) => { e.stopPropagation(); toggleActiveMutation.mutate({ customerId: customer.id, active: !customer.active }); };
-  const handleEditClick = (customerId: string, e: React.MouseEvent) => { e.stopPropagation(); navigate(`/customers/${customerId}`); };
-  const handleOpenCustomer = (customerId: string) => { navigate(`/customers/${customerId}`); };
+  const handleEditClick = (customer: CustomerRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    recordCustomerInteraction({ entityId: customer.id, tenantId: customer.tenant_id, interactionType: 'open' });
+    navigate(`/customers/${customer.id}`);
+  };
+  const handleOpenCustomer = (customer: CustomerRow) => {
+    recordCustomerInteraction({ entityId: customer.id, tenantId: customer.tenant_id, interactionType: 'view' });
+    navigate(`/customers/${customer.id}`);
+  };
   const handleOpenWhatsApp = (customer: CustomerRow, e: React.MouseEvent) => {
     e.stopPropagation();
     const phone = customer.primary_contact_mobile || customer.phone;
@@ -596,6 +606,33 @@ export default function Customers() {
           </div>
         </CardHeader>
         <CardContent>
+          {recentCustomers.length > 0 && (
+            <div className="mb-4 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="mb-3 flex items-center gap-2 text-sm font-medium">
+                <History className="h-4 w-4 text-primary" />
+                Clientes recentes
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {recentCustomers.map((customer) => (
+                  <Button
+                    key={customer.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-auto max-w-full flex-col items-start gap-0 px-3 py-2 text-left"
+                    onClick={() => handleOpenCustomer(customer as unknown as CustomerRow)}
+                  >
+                    <span className="max-w-[220px] truncate font-medium">{customer.fantasia || customer.name}</span>
+                    <span className="max-w-[220px] truncate text-xs text-muted-foreground">
+                      {getRecentInteractionLabel(customer.interaction_type)}
+                      {customer.cnpj ? ` • ${formatDocument(customer.cnpj)}` : ''}
+                      {customer.city && customer.state ? ` • ${customer.city}/${customer.state}` : ''}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -657,7 +694,7 @@ export default function Customers() {
                       <TableRow
                         key={customer.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleOpenCustomer(customer.id)}
+                        onClick={() => handleOpenCustomer(customer)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -715,7 +752,7 @@ export default function Customers() {
                             <div className="flex items-center justify-end gap-1">
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer.id, e)} disabled={!canEditCustomers}>
+                                  <Button variant="ghost" size="icon" onClick={(e) => handleEditClick(customer, e)} disabled={!canEditCustomers}>
                                     <Pencil className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>

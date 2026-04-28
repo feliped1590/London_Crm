@@ -35,6 +35,7 @@ export interface Product {
   length?: number;
   thickness?: number;
   active?: boolean;
+  tenant_id?: string;
   structure_hash?: string;
   created_by?: string;
   created_at: string;
