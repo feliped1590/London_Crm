@@ -58,7 +58,7 @@ async function resolveTenantId(entityType: RecentEntityType, entityId: string, t
     .maybeSingle();
 
   if (error) throw error;
-  return data?.tenant_id ?? null;
+  return (data as { tenant_id?: string | null } | null)?.tenant_id ?? null;
 }
 
 export function getRecentInteractionLabel(type: RecentInteractionType) {
@@ -166,6 +166,9 @@ export function useRecentInteractions<T extends RecentEntityType>(entityType: T)
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['recent-interactions', variables.entityType] });
+    },
+    onError: (error) => {
+      console.error('Erro ao registrar item recente:', error);
     },
   });
 
