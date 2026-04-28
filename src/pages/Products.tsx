@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
+import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
 import {
@@ -64,6 +66,7 @@ type ProductHistoryEntry = {
 export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
   const { isAdmin, can } = useModulePermissions();
@@ -102,6 +105,7 @@ export default function Products() {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
+  const createForCompanyId = searchParams.get('createForCompany');
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
