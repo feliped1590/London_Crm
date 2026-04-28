@@ -1310,6 +1310,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Button variant="outline" onClick={() => handleDialogClose(true)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
+          {isEditMode && canClone && (
+            <Button
+              variant="outline"
+              onClick={() => setShowCloneAlert(true)}
+              disabled={cloneOrderMutation.isPending || items.length === 0}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              {cloneOrderMutation.isPending ? 'Clonando...' : 'Clonar Pedido'}
+            </Button>
+          )}
           {isEditMode && !isOrderLocked && canEdit && items.length > 0 && (
             <Button
               variant="outline"
