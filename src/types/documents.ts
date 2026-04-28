@@ -25,6 +25,8 @@ export interface OrderItemDraft {
   product_id: string;
   product_code?: string;
   description: string;
+  observations?: string;
+  observations_pcp?: string;
   quantity: number;
   unit_price: number;
   subtotal: number;
