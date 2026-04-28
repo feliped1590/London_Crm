@@ -4474,6 +4474,7 @@ export type Database = {
           erp_item_sequence: number | null
           erp_status: string | null
           erp_synced_at: string | null
+          fator_kg: number | null
           id: string
           ipi_rate: number
           ipi_value: number
@@ -4506,6 +4507,7 @@ export type Database = {
           erp_item_sequence?: number | null
           erp_status?: string | null
           erp_synced_at?: string | null
+          fator_kg?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -4538,6 +4540,7 @@ export type Database = {
           erp_item_sequence?: number | null
           erp_status?: string | null
           erp_synced_at?: string | null
+          fator_kg?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
