@@ -437,6 +437,7 @@ export default function Orders() {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ['orders'] })}
+        canClone={canCreateOrders}
       />
 
       {/* Edit Order Dialog */}
@@ -447,6 +448,7 @@ export default function Orders() {
           if (!open) setEditingOrderId(null);
         }}
         order={editingOrder}
+        canClone={canCreateOrders}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['orders'] });
         }}

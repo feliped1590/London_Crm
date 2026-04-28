@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search, Copy } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderItemDetailModal } from './OrderItemDetailModal';
@@ -72,10 +72,11 @@ interface OrderDialogProps {
   order?: Order | null;
   onSuccess?: () => void;
   preSelectedCompanyId?: string | null;
+  canClone?: boolean;
 }
 
 
-export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId }: OrderDialogProps) {
+export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId, canClone = false }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
@@ -111,6 +112,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
   const [showLockUnsavedAlert, setShowLockUnsavedAlert] = useState(false);
+  const [showCloneAlert, setShowCloneAlert] = useState(false);
   // Vínculo opcional ao negócio (Fase 2)
   const [dealId, setDealId] = useState<string>('');
 
@@ -582,6 +584,86 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       toast.success('Pedido desbloqueado');
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao desbloquear pedido'),
+  });
+
+  const cloneOrderMutation = useMutation({
+    mutationFn: async () => {
+      if (!order) throw new Error('Pedido não encontrado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
+      if (items.length === 0) throw new Error('Pedido sem itens para clonar');
+
+      const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
+        number: '',
+        company_id: companyId || null,
+        contact_id: contactId || null,
+        deal_id: dealId || null,
+        delivery_date: deliveryDate?.toISOString().split('T')[0] || null,
+        observations,
+        total_value: orderTotal,
+        status: 'pendente',
+        created_by: user.id,
+        legal_entity_id: legalEntityId || null,
+        ipi_mode: ipiMode,
+        order_type: orderType,
+        subtotal_products: orderSubtotalProducts,
+        total_ipi: orderTotalIpi,
+        payment_method: paymentMethod || null,
+        payment_terms: paymentTerms || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+      }).select().single();
+      if (orderError) throw orderError;
+
+      const clonedItems = items.map((item, index) => {
+        const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
+        const ipiVal = calculateIpiValue(item.subtotal, ipiRate, ipiMode);
+        const totalItem = calculateItemTotal(item.subtotal, ipiVal, ipiMode);
+        return {
+          order_id: newOrder.id,
+          product_id: item.product_id,
+          description: item.description,
+          observations: normalizeItemObservation(item.observations),
+          observations_pcp: normalizeItemObservation(item.observations_pcp),
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          subtotal: item.subtotal,
+          discount_percent: item.discount_percent,
+          ipi_rate: ipiRate,
+          ipi_value: ipiVal,
+          subtotal_item: item.subtotal,
+          total_item: totalItem,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+          sort_order: index,
+          calculated_price_source: item.calculated_price_source || 'MANUAL',
+          commission_pct: item.commission_pct || 0,
+          is_locked: false,
+        };
+      });
+
+      const { error: itemsError } = await supabase.from('order_items').insert(clonedItems);
+      if (itemsError) throw itemsError;
+
+      await supabase.from('order_audit_log').insert({
+        order_id: newOrder.id,
+        field_name: 'cloned',
+        field_label: 'Pedido clonado',
+        old_value: order.number,
+        new_value: `Pedido ${newOrder.number} clonado a partir do pedido ${order.number}`,
+        changed_by: user.id,
+      });
+
+      return newOrder;
+    },
+    onSuccess: (newOrder: any) => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order_items'] });
+      queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
+      toast.success(`Pedido ${newOrder?.number || ''} clonado com sucesso!`);
+      setShowCloneAlert(false);
+      onSuccess?.();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao clonar pedido'),
   });
 
   // --- Snapshot helpers (detecção de alterações pendentes) ---
@@ -1228,6 +1310,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Button variant="outline" onClick={() => handleDialogClose(true)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
+          {isEditMode && canClone && (
+            <Button
+              variant="outline"
+              onClick={() => setShowCloneAlert(true)}
+              disabled={cloneOrderMutation.isPending || items.length === 0}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              {cloneOrderMutation.isPending ? 'Clonando...' : 'Clonar Pedido'}
+            </Button>
+          )}
           {isEditMode && !isOrderLocked && canEdit && items.length > 0 && (
             <Button
               variant="outline"
@@ -1325,6 +1417,27 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           >
             <Lock className="h-4 w-4 mr-2" />
             Salvar e Bloquear
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog open={showCloneAlert} onOpenChange={setShowCloneAlert}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clonar pedido?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Será criado um novo pedido com os mesmos dados comerciais, logística, pagamento e itens do pedido {order?.number}. O novo pedido será criado como pendente e sem sincronização ERP.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cloneOrderMutation.isPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => cloneOrderMutation.mutate()}
+            disabled={cloneOrderMutation.isPending}
+          >
+            <Copy className="h-4 w-4 mr-2" />
+            {cloneOrderMutation.isPending ? 'Clonando...' : 'Confirmar clonagem'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
