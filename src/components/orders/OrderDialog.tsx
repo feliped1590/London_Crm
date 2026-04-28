@@ -52,6 +52,20 @@ const normalizeItemObservation = (value?: string | null) => {
   return normalized ? normalized.slice(0, MAX_ITEM_OBSERVATION_LENGTH) : null;
 };
 
+const relationshipLabels: Record<string, string> = {
+  INTEREST: 'Interesse',
+  HOMOLOGATED: 'Homologado',
+  RECURRENT: 'Recorrente',
+  STRATEGIC: 'Estratégico',
+  BLACKLIST: 'Bloqueado',
+};
+
+type LinkedCompanyProduct = ProductLookup & {
+  relationship_type?: string | null;
+  is_preferred?: boolean | null;
+  last_interaction_at?: string | null;
+};
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -221,6 +235,74 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const [productSearch, setProductSearch] = useState('');
   const { products } = useProductSimpleSearch(productSearch);
+
+  const { data: linkedCompanyProducts = [], isLoading: isLoadingLinkedProducts } = useQuery({
+    queryKey: ['order-linked-company-products', companyId, productSearch],
+    queryFn: async (): Promise<LinkedCompanyProduct[]> => {
+      if (!companyId) return [];
+      const search = productSearch.trim();
+
+      let query = supabase
+        .from('company_products')
+        .select(`
+          relationship_type,
+          is_preferred,
+          last_interaction_at,
+          product:products(
+            id,
+            sku,
+            name,
+            tipo_id,
+            unit_price,
+            width,
+            length,
+            thickness,
+            aliquota_ipi,
+            fator_kg,
+            active
+          )
+        `)
+        .eq('company_id', companyId)
+        .is('archived_at', null)
+        .order('is_preferred', { ascending: false })
+        .order('last_interaction_at', { ascending: false, nullsFirst: false });
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const normalizedSearch = search.toLowerCase();
+
+      return (data ?? [])
+        .map((link: any) => ({
+          ...(link.product ?? {}),
+          relationship_type: link.relationship_type,
+          is_preferred: link.is_preferred,
+          last_interaction_at: link.last_interaction_at,
+        }))
+        .filter((product: any) => product.id && product.active !== false)
+        .filter((product: any) => !normalizedSearch || product.name?.toLowerCase().includes(normalizedSearch) || product.sku?.toLowerCase().includes(normalizedSearch)) as LinkedCompanyProduct[];
+    },
+    enabled: !!companyId,
+  });
+
+  const productOptions = useMemo(() => {
+    const source = companyId ? linkedCompanyProducts : products;
+    return (source ?? []).map((p: LinkedCompanyProduct) => {
+      const relationship = p.relationship_type ? relationshipLabels[p.relationship_type] || p.relationship_type : null;
+      const details = [p.is_preferred ? 'Preferencial' : null, relationship].filter(Boolean).join(' • ');
+      return {
+        value: p.id,
+        label: `${p.sku} - ${p.name}`,
+        searchTerms: details || undefined,
+      };
+    });
+  }, [companyId, linkedCompanyProducts, products]);
+
+  const productEmptyMessage = companyId
+    ? isLoadingLinkedProducts
+      ? 'Carregando produtos vinculados...'
+      : 'Nenhum produto vinculado ao cliente. Use a pesquisa avançada para buscar na lista geral.'
+    : 'Nenhum produto encontrado';
 
   // Deals da empresa selecionada (vínculo opcional Fase 2)
   // Filtra também por legal_entity_id ativo para evitar cruzamento entre CNPJs.
@@ -654,7 +736,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   // --- Handlers ---
   const addProductById = useCallback((productId: string, productData?: any) => {
-    const product = productData || products?.find(p => p.id === productId);
+    const product = productData || linkedCompanyProducts.find(p => p.id === productId) || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
     addItem({
@@ -667,7 +749,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     });
     addRecent(product.id);
     setSelectedProductId('');
-  }, [products, ipiMode, resolveProductPricing, addItem, addRecent]);
+  }, [linkedCompanyProducts, products, ipiMode, resolveProductPricing, addItem, addRecent]);
 
   const addProductToItems = () => {
     if (!selectedProductId) return;
@@ -919,9 +1001,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <div className="flex gap-2">
             <SearchableSelect
               value={selectedProductId} onChange={(v) => setSelectedProductId(v || '')}
-              placeholder="Buscar produto por nome ou SKU..." searchPlaceholder="Digite para buscar..."
-              emptyMessage="Nenhum produto encontrado" className="flex-1" onSearchChange={setProductSearch}
-              options={(products ?? []).map((p) => ({ value: p.id, label: `${p.sku} - ${p.name}` }))}
+              placeholder={companyId ? 'Produtos vinculados ao cliente...' : 'Buscar produto por nome ou SKU...'} searchPlaceholder="Digite para buscar..."
+              emptyMessage={productEmptyMessage} className="flex-1" onSearchChange={setProductSearch}
+              options={productOptions}
             />
             <Button variant="outline" size="icon" onClick={() => setAdvancedSearchOpen(true)} title="Pesquisa Avançada (F9)">
               <Search className="h-4 w-4" />

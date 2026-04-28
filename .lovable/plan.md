@@ -1,33 +1,25 @@
-Plano para alinhar as observações dos itens do pedido ao payload `IMP_PEDIDOS` / `IMP_PEDIDO_V3`:
+Plano aprovado para implementar a melhoria no pedido:
 
-1. Banco de dados
-   - Adicionar em `order_items` dois campos por item:
-     - `observations`: observação geral do item.
-     - `observations_pcp`: observação do item direcionada à produção/PCP.
-   - Usar campos texto opcionais, para não quebrar pedidos existentes.
+1. Ajustar a busca de produtos do pedido
+   - Quando houver cliente selecionado no pedido, o campo “Adicionar Produto” passará a carregar primeiro os produtos já vinculados àquele cliente.
+   - A listagem principal ficará focada nesses produtos vinculados, em vez de abrir apenas a lista geral de produtos.
+   - Se o usuário digitar no campo de busca, a busca será aplicada dentro dos produtos vinculados ao cliente.
 
-2. Formulário do pedido no CRM
-   - Ao adicionar um produto ao pedido, o item já nasce com os dois campos vazios.
-   - No modal “Detalhes do Item”, exibir dois campos separados:
-     - “Observação do item”
-     - “Observação PCP / Produção”
-   - Salvar essas observações individualmente em cada item.
-   - Ao editar pedido existente, carregar esses campos de `order_items`.
-   - Ao salvar/criar pedido, persistir os dois campos em cada item.
+2. Manter acesso à busca geral
+   - O botão de pesquisa avançada continuará disponível para procurar qualquer produto ativo fora da carteira/vínculo do cliente.
+   - Assim o fluxo principal fica rápido para produtos recorrentes/homologados do cliente, mas ainda permite adicionar um produto novo quando necessário.
 
-3. Validação e segurança de entrada
-   - Validar no frontend tamanho máximo e normalização das observações antes de salvar.
-   - Limitar cada observação a um tamanho seguro, por exemplo 1000 caracteres.
-   - Não enviar HTML ou conteúdo sem limpeza: armazenar como texto simples.
+3. Melhorar a identificação visual
+   - No seletor do pedido, os produtos vinculados serão exibidos com SKU e nome, e poderão trazer informações auxiliares como tipo de vínculo/preferencial quando disponíveis.
+   - A mensagem vazia será contextualizada: se o cliente não tiver produtos vinculados, indicar que não há produtos vinculados e orientar a usar a pesquisa avançada.
 
-4. Integração ERP
-   - Ajustar o carregamento dos itens para trazer `observations` e `observations_pcp`.
-   - Ajustar o payload para enviar:
-     - `observacao`: vindo de `order_items.observations`.
-     - `observacao_pcp`: vindo de `order_items.observations_pcp`.
-   - Remover o uso incorreto da descrição do item como observação geral do payload.
-   - Manter a descrição do produto apenas como descrição interna do item, não como observação enviada ao ERP.
+4. Garantir cálculo e persistência iguais ao fluxo atual
+   - Ao selecionar um produto vinculado, o pedido continuará usando a mesma regra atual de preço, tabela de preço, fator KG, IPI e subtotal.
+   - O item adicionado continuará abrindo com as observações individuais do item disponíveis, conforme a última evolução.
 
-5. Compatibilidade
-   - Pedidos antigos continuarão abrindo normalmente com observações vazias nos itens.
-   - A observação geral do pedido (`orders.observations`) pode continuar existindo para observações do pedido como um todo, mas não será usada para preencher observações específicas de item.
+Detalhes técnicos:
+- Alterar `OrderDialog.tsx` para buscar `company_products` quando `companyId` estiver preenchido.
+- A consulta deve trazer os dados completos do produto necessários para `resolveProductPricing`: `id`, `sku`, `name`, `tipo_id`, `unit_price`, dimensões, `aliquota_ipi` e `fator_kg`.
+- Substituir as opções do `SearchableSelect` do pedido por uma lista derivada dos vínculos do cliente quando houver cliente selecionado.
+- Manter `useProductSimpleSearch` como fallback apenas quando não houver cliente selecionado ou quando for necessário buscar geral.
+- Validar que `addProductById` consiga localizar o produto tanto na lista vinculada quanto na lista geral/avançada.
