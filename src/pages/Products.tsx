@@ -964,7 +964,7 @@ export default function Products() {
     setEditingProduct(null);
     resetForm();
     setIsDialogOpen(true);
-  }, [createForCompanyId, canCreateProducts]);
+  }, [createForCompanyId, canCreateProducts, isDialogOpen]);
 
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
@@ -1137,10 +1137,14 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="clientes" className="gap-2">
+                    <User className="h-4 w-4" />
+                    Clientes vinculados
                   </TabsTrigger>
                   {editingProduct && (
                     <TabsTrigger value="historico" className="gap-2">
