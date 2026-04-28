@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Archive, Link2, Package, Plus, ShoppingCart, Star } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,8 @@ import {
   useCompanyProducts,
   type CompanyProductRelationshipType,
 } from '@/hooks/useCompanyProducts';
+import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { formatCurrency } from '@/lib/formatters';
 
 interface CustomerProductsTabProps {
@@ -31,6 +34,9 @@ const relationshipTypeVariant: Record<CompanyProductRelationshipType, 'default' 
 };
 
 export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabProps) {
+  const navigate = useNavigate();
+  const { can } = useModulePermissions();
+  const canCreateProducts = can('products', PermissionAction.Create);
   const {
     companyProducts,
     isLoading,
@@ -92,13 +98,28 @@ export function CustomerProductsTab({ companyId, canEdit }: CustomerProductsTabP
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link2 className="h-5 w-5" />
-            Itens vinculados
-          </CardTitle>
-          <CardDescription>
-            Relação manual e estratégica entre este cliente e os produtos do catálogo.
-          </CardDescription>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Itens vinculados
+              </CardTitle>
+              <CardDescription>
+                Relação manual e estratégica entre este cliente e os produtos do catálogo.
+              </CardDescription>
+            </div>
+            {canEdit && canCreateProducts && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 self-start"
+                onClick={() => navigate(`/products?createForCompany=${companyId}`)}
+              >
+                <Plus className="h-4 w-4" />
+                Criar item
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">

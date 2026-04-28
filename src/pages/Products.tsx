@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,7 @@ import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
+import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
 import {
@@ -64,6 +66,7 @@ type ProductHistoryEntry = {
 export default function Products() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
   const { isAdmin, can } = useModulePermissions();
@@ -102,6 +105,7 @@ export default function Products() {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
+  const createForCompanyId = searchParams.get('createForCompany');
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -516,7 +520,7 @@ export default function Products() {
         data.length || 0,
         data.thickness || 0
       );
-      const { error } = await supabase.from('products').insert({
+      const { data: createdProduct, error } = await supabase.from('products').insert({
         sku: data.sku!,
         name: data.name!,
         description: data.description,
@@ -556,15 +560,33 @@ export default function Products() {
         erp_versao_detalhes: data.erp_versao_detalhes || null,
         erp_versao_roteiro: data.erp_versao_roteiro || null,
         erp_versao_situacao: data.erp_versao_situacao || 'A',
-        erp_product_code: (data as any).erp_product_code?.trim() || null,
-        nome_impresso: (data as any).nome_impresso?.trim().toUpperCase() || null,
-      });
+        erp_product_code: data.erp_product_code?.trim() || null,
+        nome_impresso: data.nome_impresso?.trim().toUpperCase() || null,
+      }).select('id, tenant_id').single();
       if (error) throw error;
+      if (createForCompanyId && createdProduct?.id && user?.id) {
+        const { error: linkError } = await supabase.from('company_products').insert([{
+          tenant_id: createdProduct.tenant_id,
+          company_id: createForCompanyId,
+          product_id: createdProduct.id,
+          relationship_type: 'INTEREST',
+          created_by: user.id,
+          updated_by: user.id,
+        }]);
+        if (linkError) throw linkError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      if (createForCompanyId) {
+        queryClient.invalidateQueries({ queryKey: ['company-products', createForCompanyId] });
+        queryClient.invalidateQueries({ queryKey: ['company-products-available-products', createForCompanyId] });
+      }
       toast.success('Produto criado com sucesso!');
       resetForm();
+      if (createForCompanyId) {
+        setSearchParams({}, { replace: true });
+      }
     },
     onError: (error: any) => {
       const duplicateMessage = getDuplicateErrorMessage(error);
@@ -937,6 +959,13 @@ export default function Products() {
     setIsAutoDescription(false);
   };
 
+  useEffect(() => {
+    if (!createForCompanyId || isDialogOpen || !canCreateProducts) return;
+    setEditingProduct(null);
+    resetForm();
+    setIsDialogOpen(true);
+  }, [createForCompanyId, canCreateProducts, isDialogOpen]);
+
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
     const duplicatedData = {
@@ -1057,7 +1086,13 @@ export default function Products() {
         <TabsContent value="catalogo">
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-end flex-wrap gap-2">
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            resetForm();
+            if (createForCompanyId) setSearchParams({}, { replace: true });
+          }
+        }}>
            <div className="flex items-center gap-2 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -1108,10 +1143,14 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-3' : 'grid-cols-2'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="clientes" className="gap-2">
+                    <User className="h-4 w-4" />
+                    Clientes vinculados
                   </TabsTrigger>
                   {editingProduct && (
                     <TabsTrigger value="historico" className="gap-2">
@@ -1605,6 +1644,10 @@ export default function Products() {
                       <Label htmlFor="active">Produto Ativo</Label>
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="clientes" className="space-y-4 mt-4">
+                  <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
                 </TabsContent>
 
                 {editingProduct && (

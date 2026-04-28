@@ -1,52 +1,70 @@
-Plano de implementação:
+Plano de implementação
 
-1. Simplificar as abas do cadastro de produtos
-- Remover a aba “ERP Projedata” do modal de produto.
-- Remover a aba “Fiscal / NCM” do modal.
-- Manter a aba “Histórico” apenas quando estiver editando produto, como já acontece hoje.
-- A estrutura final do modal ficará:
-  - Novo produto: somente “Geral”
-  - Editar produto: “Geral” + “Histórico”
+1. Reaproveitar o cadastro de produtos em um componente compartilhado
+- Extrair o formulário/modal atual de `src/pages/Products.tsx` para um componente reutilizável, mantendo as mesmas regras já existentes:
+  - defaults de Unidade = Milheiro e Tipo = Produto Acabado;
+  - preenchimento automático de NCM por grupo;
+  - validações de SKU, ERP, dimensões, duplicidade e produtos similares;
+  - edição, criação e duplicação quando usado na tela de Produtos.
+- A página de Produtos continuará funcionando visualmente como hoje, mas o formulário poderá ser aberto também por outras telas.
 
-2. Mover o Código ERP para a aba Geral
-- Levar o campo “Código ERP” para o formulário geral.
-- Mantê-lo obrigatório, como já é hoje.
-- Ajustar a validação para, se faltar Código ERP, manter o usuário na aba “Geral” em vez de tentar abrir a aba ERP removida.
-- Não exibir no formulário geral os demais campos da antiga aba ERP: Grupo ERP, Subgrupo ERP, Tipo Ficha, Empresa ERP, Roteiro, Situação e Detalhes.
+2. Criar item diretamente pela aba “Itens vinculados” do cliente
+- Em `CustomerProductsTab`, adicionar um botão “Criar item”.
+- Ao clicar, abrir o mesmo formulário de cadastro de itens.
+- Depois que o item for criado com sucesso, criar automaticamente o vínculo entre o cliente atual e o novo item em `company_products`.
+- Atualizar a lista da aba “Itens vinculados” imediatamente, para o item recém-criado aparecer sem precisar recarregar a página.
+- Respeitar permissões atuais: o botão só aparece quando o usuário pode editar o cliente e também tem permissão para criar produtos.
 
-3. Remover a poluição fiscal visual
-- Remover o conteúdo da antiga aba Fiscal.
-- Manter o seletor de NCM onde ele já está hoje, no topo da aba Geral.
-- Remover do formulário a exibição do card de sugestões fiscais, já que a ideia é manter somente NCM como informação fiscal visível no cadastro do item.
-- Preservar internamente os campos fiscais existentes para não quebrar dados antigos, mas eles não ficarão mais expostos no cadastro do produto.
+3. Adicionar aba “Clientes vinculados” no formulário de item
+- No formulário de cadastro/edição de produtos, adicionar uma nova aba chamada “Clientes vinculados”.
+- No modo edição de produto, essa aba permitirá:
+  - buscar clientes por razão social, nome fantasia ou CNPJ;
+  - selecionar o cliente;
+  - escolher o tipo de vínculo: Interesse, Homologado, Recorrente, Estratégico ou Bloqueado;
+  - adicionar observações;
+  - marcar como preferencial;
+  - vincular o cliente ao produto;
+  - listar os clientes já vinculados ao produto;
+  - arquivar/remover vínculo quando permitido.
+- No modo criação de produto, a aba ficará disponível com uma mensagem simples explicando que os clientes poderão ser vinculados após salvar o item. Se o formulário tiver sido aberto a partir do cadastro do cliente, o vínculo automático com aquele cliente será feito após salvar.
 
-4. NCM automático por grupo
-- Ao selecionar um grupo no cadastro de produto novo, o sistema analisará a descrição/label do grupo:
-  - se contiver “saco”, preencher NCM `39232990` automaticamente;
-  - se contiver “bobina”, preencher NCM `39173290` automaticamente.
-- Já confirmei que os dois NCMs existem na base.
-- O preenchimento será automático e continuará editável, ou seja, o usuário poderá trocar manualmente se algum produto específico precisar de outro NCM.
-- Para evitar sobrescrever escolhas manuais, a automação será aplicada principalmente quando o NCM estiver vazio ou quando o usuário trocar o grupo durante o cadastro de um item novo.
+4. Garantir reflexo nos dois sentidos
+- O vínculo continuará usando a tabela existente `company_products`, que já representa a relação cliente-produto.
+- Quando vincular um produto dentro do cliente, ele aparecerá na aba “Clientes vinculados” do produto.
+- Quando vincular um cliente dentro do produto, ele aparecerá na aba “Itens vinculados” do cliente.
+- Invalidar/atualizar os caches de consultas dos dois lados após criar ou arquivar vínculos.
 
-5. Defaults para novos produtos
-- Unidade padrão para novo produto: `Milheiro` (`value = mil`).
-- Tipo padrão para novo produto: `Produto Acabado` (`value = PA`).
-- Já confirmei que ambos existem nas tabelas de cadastro básico.
-- O reset do formulário e abertura de novo produto também passarão a usar esses defaults.
-- Ao duplicar produto, manterei o comportamento atual de herdar unidade/tipo do produto original, porque duplicação normalmente deve preservar a estrutura original.
+Detalhes técnicos
 
-6. Ajustes técnicos esperados
-- A alteração principal será em `src/pages/Products.tsx`.
-- O import do card fiscal deixará de ser usado e será removido.
-- A lógica de `TabsList` será ajustada para não deixar abas vazias/inexistentes.
-- Será criada uma função auxiliar para localizar defaults de lookup por `value`/`label`, sem hardcode de UUID.
-- Será criada uma função auxiliar para aplicar NCM automático a partir do grupo selecionado.
-- Não será necessário alterar estrutura do banco de dados.
+- Não será necessário criar nova tabela: `company_products` já tem `company_id`, `product_id`, `relationship_type`, `notes`, `is_preferred`, `archived_at` e RLS.
+- Criar um hook complementar, por exemplo `useProductCompanies(productId)`, espelhando o comportamento de `useCompanyProducts(companyId)`:
+  - buscar vínculos ativos por `product_id` com dados do cliente;
+  - buscar clientes disponíveis para vínculo;
+  - inserir vínculo em `company_products`;
+  - arquivar vínculo.
+- Ajustar `useCompanyProducts` para expor uma função de criação de vínculo reutilizável após criação de produto, ou aceitar callback no novo componente de formulário.
+- Manter a proteção de vínculo duplicado pelo índice único ativo existente em `company_products`.
+- Não alterar os arquivos gerados da integração (`src/integrations/supabase/client.ts` e `types.ts`).
 
-Resultado esperado:
-- Cadastro de produto mais limpo.
-- Código ERP visível na aba Geral.
-- NCM permanece acessível na aba Geral.
-- Sem abas ERP e Fiscal.
-- Novo produto já abre com Unidade = Milheiro e Tipo = Produto Acabado.
-- Grupo “saco” e “bobina” sugerem/preenchem automaticamente o NCM correto.
+Resultado esperado
+
+Fluxo cliente para item:
+```text
+Cliente > Itens vinculados > Criar item > Salvar produto
+                                      > vínculo automático cliente-produto
+                                      > item aparece em Itens vinculados
+```
+
+Fluxo item para cliente:
+```text
+Produto > Editar > Clientes vinculados > Selecionar cliente > Vincular
+                                            > cliente aparece no produto
+                                            > produto aparece no cliente
+```
+
+Arquivos principais previstos
+- `src/pages/Products.tsx`: reduzir a duplicação e usar o formulário compartilhado.
+- Novo componente em `src/components/products/`, por exemplo `ProductFormDialog.tsx`.
+- Novo componente em `src/components/products/`, por exemplo `ProductCompaniesTab.tsx`.
+- Novo hook em `src/hooks/useProductCompanies.ts`.
+- Ajustes em `src/components/customer/CustomerProductsTab.tsx` para o botão “Criar item” e vínculo automático.
