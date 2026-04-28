@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,6 +106,7 @@ export default function Products() {
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
   const createForCompanyId = searchParams.get('createForCompany');
+  const handledCreateForCompanyRef = useRef<string | null>(null);
 
   const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -687,6 +688,13 @@ export default function Products() {
     setIsAutoDescription(shouldAutoDescription);
   };
 
+  const closeProductDialog = () => {
+    if (createForCompanyId) {
+      setSearchParams({}, { replace: true });
+    }
+    resetForm();
+  };
+
   const checkAutoDescriptionByTipo = (tipoId: string | undefined): boolean => {
     if (!tipoId) return false;
     const tipoItem = tipos.items.find(t => t.id === tipoId);
@@ -968,11 +976,12 @@ export default function Products() {
   };
 
   useEffect(() => {
-    if (!createForCompanyId || isDialogOpen || !canCreateProducts) return;
+    if (!createForCompanyId || handledCreateForCompanyRef.current === createForCompanyId || !canCreateProducts) return;
+    handledCreateForCompanyRef.current = createForCompanyId;
     setEditingProduct(null);
     resetForm();
     setIsDialogOpen(true);
-  }, [createForCompanyId, canCreateProducts, isDialogOpen]);
+  }, [createForCompanyId, canCreateProducts]);
 
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
@@ -1095,11 +1104,11 @@ export default function Products() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-end flex-wrap gap-2">
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
           if (!open) {
-            resetForm();
-            if (createForCompanyId) setSearchParams({}, { replace: true });
+            closeProductDialog();
+            return;
           }
+          setIsDialogOpen(true);
         }}>
            <div className="flex items-center gap-2 flex-wrap">
             <Tooltip>
@@ -1700,7 +1709,7 @@ export default function Products() {
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button type="button" variant="outline" onClick={closeProductDialog}>
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || isCheckingDuplicate}>
