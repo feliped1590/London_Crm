@@ -45,6 +45,13 @@ import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 
+const MAX_ITEM_OBSERVATION_LENGTH = 1000;
+
+const normalizeItemObservation = (value?: string | null) => {
+  const normalized = (value || '').replace(/[<>]/g, '').trim();
+  return normalized ? normalized.slice(0, MAX_ITEM_OBSERVATION_LENGTH) : null;
+};
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -251,6 +258,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       return (data ?? []).map((item: any) => ({
         id: item.id, product_id: item.product_id || '', product_code: item.product?.sku || item.product?.erp_product_code || '',
         description: item.description,
+        observations: item.observations || '',
+        observations_pcp: item.observations_pcp || '',
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
