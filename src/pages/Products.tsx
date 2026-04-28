@@ -1086,7 +1086,13 @@ export default function Products() {
         <TabsContent value="catalogo">
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-end flex-wrap gap-2">
-        <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            resetForm();
+            if (createForCompanyId) setSearchParams({}, { replace: true });
+          }
+        }}>
            <div className="flex items-center gap-2 flex-wrap">
             <Tooltip>
               <TooltipTrigger asChild>
