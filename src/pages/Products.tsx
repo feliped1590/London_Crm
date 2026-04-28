@@ -23,7 +23,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, FileText, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, ArrowUpDown, ArrowUp, ArrowDown, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -31,7 +31,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { NCMSelector } from '@/components/products/NCMSelector';
-import { FiscalSuggestionsCard } from '@/components/products/FiscalSuggestionsCard';
 import { NCMCode, NCMSemanticValidation, TipoProdutoFiscal } from '@/types/fiscal';
 import { Product, calcularFatorMilheiro } from '@/types/products';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
@@ -177,7 +176,7 @@ export default function Products() {
     name: '',
     description: '',
     tipo_id: '' as string | undefined,
-    unit_measure: 'un',
+    unit_measure: 'mil',
     unit_price: 0,
     fator_kg: 0,
     fator_milheiro: 0,
@@ -205,7 +204,7 @@ export default function Products() {
     ncm_validated_at: null as string | null,
     // Campos ERP Projedata
     erp_product_code: '',
-    tipo_item: '',
+    tipo_item: 'PA',
     tipo_ficha: undefined as number | undefined,
     erp_grupo: '',
     erp_subgrupo: '',
@@ -231,6 +230,26 @@ export default function Products() {
   const getLookupValue = (items: LookupItem[], id?: string) => {
     if (!id) return undefined;
     return items.find((i) => i.id === id)?.value;
+  };
+
+  const findLookupId = (items: LookupItem[], matchers: string[]) => {
+    const normalizedMatchers = matchers.map((m) => m.toLowerCase());
+    return items.find((item) => {
+      const value = item.value?.toLowerCase() || '';
+      const label = item.label?.toLowerCase() || '';
+      return normalizedMatchers.some((matcher) => value === matcher || label.includes(matcher));
+    })?.id;
+  };
+
+  const getDefaultTipoId = () => findLookupId(tipos.items, ['pa', 'produto acabado']);
+  const getDefaultUnitMeasure = () => unitMeasures.items.find((u) => u.value?.toLowerCase() === 'mil' || u.label?.toLowerCase().includes('milheiro'))?.value || 'mil';
+
+  const getAutoNcmByGroup = (grupoId?: string) => {
+    if (!grupoId) return null;
+    const label = getLookupLabel(grupos.items, grupoId)?.toLowerCase() || '';
+    if (label.includes('saco')) return '39232990';
+    if (label.includes('bobina')) return '39173290';
+    return null;
   };
 
   // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
@@ -581,8 +600,8 @@ export default function Products() {
       sku: '',
       name: '',
       description: '',
-      tipo_id: undefined,
-      unit_measure: 'un',
+      tipo_id: getDefaultTipoId(),
+      unit_measure: getDefaultUnitMeasure(),
       unit_price: 0,
       fator_kg: 0,
       fator_milheiro: 0,
@@ -608,7 +627,7 @@ export default function Products() {
       tipo_produto_fiscal: undefined,
       ncm_validated_at: null,
       erp_product_code: '',
-      tipo_item: '',
+      tipo_item: 'PA',
       tipo_ficha: undefined,
       erp_grupo: '',
       erp_subgrupo: '',
@@ -769,7 +788,7 @@ export default function Products() {
     // Código ERP é obrigatório — informado manualmente pelo usuário
     if (!formData.erp_product_code?.trim()) {
       toast.error('Código ERP é obrigatório');
-      setFormTab('erp');
+      setFormTab('geral');
       return;
     }
 
@@ -865,7 +884,7 @@ export default function Products() {
       name: product.name,
       description: product.description || '',
       tipo_id: product.tipo_id || undefined,
-      unit_measure: product.unit_measure || 'un',
+      unit_measure: product.unit_measure || getDefaultUnitMeasure(),
       unit_price: product.unit_price || 0,
       fator_kg: product.fator_kg || 0,
       fator_milheiro: product.fator_milheiro || 0,
@@ -923,7 +942,7 @@ export default function Products() {
       name: product.name,
       description: product.description || '',
       tipo_id: product.tipo_id || undefined,
-      unit_measure: product.unit_measure || 'un',
+      unit_measure: product.unit_measure || getDefaultUnitMeasure(),
       unit_price: product.unit_price || 0,
       fator_kg: product.fator_kg || 0,
       fator_milheiro: product.fator_milheiro || 0,
@@ -1080,23 +1099,10 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-2' : 'grid-cols-1'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
-                  </TabsTrigger>
-                  <TabsTrigger value="erp" className="gap-2">
-                    <RefreshCw className="h-4 w-4" />
-                    ERP Projedata
-                  </TabsTrigger>
-                  <TabsTrigger value="fiscal" className="gap-2">
-                    <FileText className="h-4 w-4" />
-                    Fiscal / NCM
-                    {formData.ncm_code && (
-                      <Badge variant="secondary" className="ml-1 text-xs">
-                        {formData.ncm_code}
-                      </Badge>
-                    )}
                   </TabsTrigger>
                   {editingProduct && (
                     <TabsTrigger value="historico" className="gap-2">
@@ -1254,7 +1260,12 @@ export default function Products() {
                             disabled={isEditing}
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
-                              const updated = { ...formData, grupo_id: newGrupoId };
+                              const autoNcm = !isEditing ? getAutoNcmByGroup(newGrupoId) : null;
+                              const updated = {
+                                ...formData,
+                                grupo_id: newGrupoId,
+                                ...(!isEditing && autoNcm ? { ncm_code: autoNcm, ncm_id: undefined } : {}),
+                              };
                               if (!isGroupPrinted(newGrupoId)) {
                                 updated.nome_impresso = '';
                               }
@@ -1572,190 +1583,6 @@ export default function Products() {
                       />
                       <Label htmlFor="active">Produto Ativo</Label>
                     </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="fiscal" className="space-y-4 mt-4">
-
-                  {/* Alerta de divergência IPI */}
-                  {ncmOfficialIpi != null && formData.aliquota_ipi != null && formData.aliquota_ipi !== ncmOfficialIpi && (
-                    <div className="flex items-start gap-2 rounded-md border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-700 p-3 text-sm">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-yellow-800 dark:text-yellow-400">Divergência de alíquota de IPI</p>
-                        <p className="text-yellow-700 dark:text-yellow-500">
-                          A alíquota de IPI deste produto ({formData.aliquota_ipi}%) diverge da alíquota oficial da TIPI para o NCM selecionado ({ncmOfficialIpi}%).
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Dados Fiscais */}
-                  <FiscalSuggestionsCard
-                    data={{
-                      cst_icms: formData.cst_icms,
-                      csosn: formData.csosn,
-                      aliquota_icms: formData.aliquota_icms,
-                      tem_icms_st: formData.tem_icms_st,
-                      aliquota_ipi: formData.aliquota_ipi,
-                      cst_pis_cofins: formData.cst_pis_cofins,
-                      aliquota_pis: formData.aliquota_pis,
-                      aliquota_cofins: formData.aliquota_cofins,
-                      tipo_produto_fiscal: formData.tipo_produto_fiscal,
-                    }}
-                    onChange={(field, value) => {
-                      setFormData({ ...formData, [field]: value });
-                    }}
-                    ncmCode={formData.ncm_code}
-                    isSuggestion={!!ncmValidation}
-                  />
-                </TabsContent>
-
-                <TabsContent value="erp" className="space-y-4 mt-4">
-                  <div className="rounded-md border p-3 bg-muted/30">
-                    <p className="text-sm text-muted-foreground">
-                      Campos mapeados para o comando <code className="font-mono text-xs bg-muted px-1 rounded">IMP_ITEM_VERSAO_V3</code> do ERP Projedata.
-                    </p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="erp_product_code">Código ERP *</Label>
-                      <Input
-                        id="erp_product_code"
-                        value={formData.erp_product_code || ''}
-                        onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
-                        placeholder="Informe o código conforme cadastro no ERP"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Obrigatório. Não é gerado automaticamente.
-                      </p>
-                    </div>
-                  </div>
-
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Dados do Item</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="erp_grupo">Grupo ERP</Label>
-                      <Input
-                        id="erp_grupo"
-                        value={formData.erp_grupo}
-                        onChange={(e) => setFormData({ ...formData, erp_grupo: e.target.value })}
-                        placeholder="Ex: 01"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="erp_subgrupo">Subgrupo ERP</Label>
-                      <Input
-                        id="erp_subgrupo"
-                        value={formData.erp_subgrupo}
-                        onChange={(e) => setFormData({ ...formData, erp_subgrupo: e.target.value })}
-                        placeholder="Ex: 001"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="tipo_item">Tipo Item</Label>
-                      <Select
-                        value={formData.tipo_item || 'none'}
-                        onValueChange={(v) => setFormData({ ...formData, tipo_item: v === 'none' ? '' : v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nenhum</SelectItem>
-                          <SelectItem value="MP">MP - Matéria Prima</SelectItem>
-                          <SelectItem value="PA">PA - Produto Acabado</SelectItem>
-                          <SelectItem value="PI">PI - Produto Intermediário</SelectItem>
-                          <SelectItem value="ME">ME - Material de Embalagem</SelectItem>
-                          <SelectItem value="MC">MC - Material de Consumo</SelectItem>
-                          <SelectItem value="SA">SA - Subproduto / Acessório</SelectItem>
-                          <SelectItem value="OU">OU - Outros</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="tipo_ficha">Tipo Ficha</Label>
-                      <Input
-                        id="tipo_ficha"
-                        type="number"
-                        value={formData.tipo_ficha ?? ''}
-                        onChange={(e) => setFormData({ ...formData, tipo_ficha: e.target.value ? Number(e.target.value) : undefined })}
-                        placeholder="Ex: 1"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="erp_empresa">Empresa ERP</Label>
-                      <Input
-                        id="erp_empresa"
-                        type="number"
-                        value={formData.erp_empresa}
-                        onChange={(e) => setFormData({ ...formData, erp_empresa: Number(e.target.value) || 1 })}
-                        placeholder="1"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                  </div>
-
-                  <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mt-6">Versão do Produto</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="erp_versao">Versão</Label>
-                      <Input
-                        id="erp_versao"
-                        value={formData.erp_versao}
-                        onChange={(e) => setFormData({ ...formData, erp_versao: e.target.value })}
-                        placeholder={isAutoVersion ? 'Gerado automaticamente' : 'Ex: 1'}
-                        onFocus={(e) => e.target.select()}
-                        readOnly={isAutoVersion}
-                        className={isAutoVersion ? 'bg-muted cursor-not-allowed' : ''}
-                      />
-                      {isAutoVersion && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Gerado automaticamente a partir das dimensões
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label htmlFor="erp_versao_situacao">Situação</Label>
-                      <Select
-                        value={formData.erp_versao_situacao || 'A'}
-                        onValueChange={(v) => setFormData({ ...formData, erp_versao_situacao: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A">A - Ativo</SelectItem>
-                          <SelectItem value="I">I - Inativo</SelectItem>
-                          <SelectItem value="B">B - Bloqueado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="erp_versao_roteiro">Roteiro</Label>
-                      <Input
-                        id="erp_versao_roteiro"
-                        type="number"
-                        value={formData.erp_versao_roteiro ?? ''}
-                        onChange={(e) => setFormData({ ...formData, erp_versao_roteiro: e.target.value ? Number(e.target.value) : undefined })}
-                        placeholder="Ex: 1"
-                        onFocus={(e) => e.target.select()}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="erp_versao_detalhes">Detalhes da Versão</Label>
-                    <Textarea
-                      id="erp_versao_detalhes"
-                      value={formData.erp_versao_detalhes}
-                      onChange={(e) => setFormData({ ...formData, erp_versao_detalhes: e.target.value })}
-                      rows={2}
-                      placeholder="Detalhes técnicos da versão"
-                    />
                   </div>
                 </TabsContent>
 
