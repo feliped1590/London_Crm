@@ -49,10 +49,12 @@ export function NCMSelector({
 
   // Carregar NCM selecionado quando value muda externamente
   useEffect(() => {
-    if (value && value.length === 8 && !selectedNCM) {
+    if (value && value.length === 8 && selectedNCM?.codigo !== value) {
       fetchNCMByCode(value).then((ncm) => {
         if (ncm) {
           setSelectedNCM(ncm);
+        } else {
+          setSelectedNCM(null);
         }
       });
     } else if (!value) {
