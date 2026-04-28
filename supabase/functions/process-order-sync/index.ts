@@ -467,9 +467,12 @@ Deno.serve(async (req) => {
             entity_type: 'order',
             entity_id: queueItem.order_id,
             direction: 'crm_to_erp',
-            status: 'permanent_failure',
+            status: 'failed',
             error_message: errorMsg,
-            metadata: { reason: 'order_already_advanced_in_erp' },
+            response_payload: {
+              error_kind: 'permanent_failure',
+              reason: 'order_already_advanced_in_erp',
+            },
           });
 
           errorCount++;
