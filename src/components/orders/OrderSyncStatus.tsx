@@ -18,6 +18,8 @@ interface OrderSyncStatusProps {
   onSyncTriggered?: () => void;
 }
 
+const PERMANENT_ORDER_SYNC_MESSAGE = 'A Projedata não permite sincronizar novamente este pedido porque ele já avançou no fluxo do ERP.';
+
 const syncStatusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   not_synced: {
     label: 'Não enviado',
@@ -46,6 +48,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
   },
   failed: {
     label: 'Erro',
+    icon: AlertTriangle,
+    className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+  },
+  permanent_failure: {
+    label: 'Bloqueado ERP',
     icon: AlertTriangle,
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
   },
