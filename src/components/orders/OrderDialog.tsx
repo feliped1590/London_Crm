@@ -891,6 +891,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         item.subtotal = item.quantity * item.unit_price;
         return item;
       });
+    } else if (field === 'fator_kg') {
+      hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
+        item.fator_kg = Math.max(0, Number(value) || 0);
+        return item;
+      });
     } else {
       hookUpdateItem(index, field, value);
     }
@@ -1160,8 +1165,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         {hasPricingTable && (<DollarSign className={cn('absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4', isAdmin ? 'text-amber-500' : 'text-muted-foreground')} />)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-sm text-muted-foreground">
-                      {(item.fator_kg || 0) > 0 ? formatCurrency(item.fator_kg!) : '—'}
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.0001}
+                        value={item.fator_kg ?? ''}
+                        onChange={(e) => updateItem(index, 'fator_kg', e.target.value)}
+                        className="w-24 text-right text-sm"
+                        placeholder="0"
+                        disabled={!canEdit}
+                      />
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
