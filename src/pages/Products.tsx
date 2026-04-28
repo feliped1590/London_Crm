@@ -959,6 +959,13 @@ export default function Products() {
     setIsAutoDescription(false);
   };
 
+  useEffect(() => {
+    if (!createForCompanyId || isDialogOpen || !canCreateProducts) return;
+    setEditingProduct(null);
+    resetForm();
+    setIsDialogOpen(true);
+  }, [createForCompanyId, canCreateProducts]);
+
   const handleDuplicate = (product: Product) => {
     setEditingProduct(null); // modo criação — campos estruturais editáveis
     const duplicatedData = {
