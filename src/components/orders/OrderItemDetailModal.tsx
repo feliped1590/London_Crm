@@ -12,6 +12,11 @@ import { formatCurrency } from '@/lib/formatters';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 
+const MAX_ITEM_OBSERVATION_LENGTH = 1000;
+
+const sanitizeItemObservation = (value: string) =>
+  value.replace(/[<>]/g, '').replace(/\s+$/g, '').slice(0, MAX_ITEM_OBSERVATION_LENGTH);
+
 interface OrderItemDetailModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -64,6 +69,10 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
 
   const handleSave = () => {
     if (!draft || draft.is_locked) return;
+    if ((draft.observations || '').length > MAX_ITEM_OBSERVATION_LENGTH || (draft.observations_pcp || '').length > MAX_ITEM_OBSERVATION_LENGTH) {
+      toast.error(`Cada observação deve ter no máximo ${MAX_ITEM_OBSERVATION_LENGTH} caracteres`);
+      return;
+    }
     onUpdate(index, draft);
     onOpenChange(false);
   };
