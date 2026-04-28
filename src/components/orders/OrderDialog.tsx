@@ -66,6 +66,8 @@ type LinkedCompanyProduct = ProductLookup & {
   last_interaction_at?: string | null;
 };
 
+const ORDER_TYPE_OPTIONS: OrderType[] = ['Novo/Alteração', 'Repeticao', 'Pronto Entrega'];
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -102,7 +104,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [selectedProductId, setSelectedProductId] = useState('');
   const [legalEntityId, setLegalEntityId] = useState('');
   const [ipiMode, setIpiMode] = useState<IpiMode>('destacar');
-  const [orderType, setOrderType] = useState<OrderType>('producao');
+  const [orderType, setOrderType] = useState<OrderType>('Novo/Alteração');
   const [originalItems, setOriginalItems] = useState<OrderItemDraft[]>([]);
   const [advancedSearchOpen, setAdvancedSearchOpen] = useState(false);
   const { addRecent } = useRecentProducts();
@@ -734,7 +736,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setObservations(order.observations || '');
       setLegalEntityId((order as any).legal_entity_id || activeLegalEntityId || '');
       setIpiMode((order as any).ipi_mode || 'destacar');
-      setOrderType((order as any).order_type || 'producao');
+      setOrderType((order as any).order_type || 'Novo/Alteração');
       setPaymentMethod((order as any).payment_method || '');
       setPaymentTerms((order as any).payment_terms || '');
       const logistics = extractLogisticsFromRecord(order);
@@ -783,7 +785,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       observations: order.observations || '',
       legalEntityId: (order as any).legal_entity_id || activeLegalEntityId || '',
       ipiMode: (order as any).ipi_mode || 'destacar',
-      orderType: (order as any).order_type || 'producao',
+      orderType: (order as any).order_type || 'Novo/Alteração',
       paymentMethod: (order as any).payment_method || '',
       paymentTerms: (order as any).payment_terms || '',
       dealId: (order as any).deal_id || '',
@@ -795,7 +797,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!open) {
       setCompanyId(''); setContactId(''); setDeliveryDate(undefined); setObservations('');
       setItems([]); setOriginalItems([]); setSelectedProductId('');
-      setLegalEntityId(''); setOrderType('producao');
+      setLegalEntityId(''); setOrderType('Novo/Alteração');
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
@@ -1031,9 +1033,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           <Select value={orderType} onValueChange={(v) => setOrderType(v as OrderType)} disabled={!canEdit}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {Object.entries(orderTypeConfig).map(([value, config]) => (
+              {ORDER_TYPE_OPTIONS.map((value) => {
+                const config = orderTypeConfig[value];
+                return (
                 <SelectItem key={value} value={value}>{config.label}</SelectItem>
-              ))}
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
@@ -1289,7 +1294,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             </TabsContent>
 
             <TabsContent value="approvals" className="space-y-4 mt-4">
-              <OrderApprovalActions orderId={order!.id} orderStatus={order!.status} orderCreatedBy={order!.created_by} orderType={(order!.order_type as OrderType) || 'producao'} />
+              <OrderApprovalActions orderId={order!.id} orderStatus={order!.status} orderCreatedBy={order!.created_by} orderType={(order!.order_type as OrderType) || 'Novo/Alteração'} />
               <div className="border rounded-lg p-4">
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />Histórico de Liberações

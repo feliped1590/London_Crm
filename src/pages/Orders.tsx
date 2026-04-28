@@ -308,8 +308,8 @@ export default function Orders() {
                           </TableCell>
                           <TableCell>
                             {(() => {
-                              const ot = (order as any).order_type as OrderType || 'producao';
-                              const cfg = orderTypeConfig[ot];
+                              const ot = (order as any).order_type as OrderType || 'Novo/Alteração';
+                              const cfg = orderTypeConfig[ot] || orderTypeConfig['Novo/Alteração'];
                               return <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>;
                             })()}
                           </TableCell>

@@ -2,10 +2,13 @@ import { TipoProdutoFiscal } from './fiscal';
 
 export type ProposalStatus = 'rascunho' | 'enviada' | 'em_analise' | 'aprovada' | 'recusada' | 'expirada';
 export type OrderStatus = 'pendente' | 'em_producao' | 'produzido' | 'em_faturamento' | 'faturado' | 'entregue' | 'cancelado';
-export type OrderType = 'producao' | 'pronta_entrega';
+export type OrderType = 'Novo/Alteração' | 'Repeticao' | 'Pronto Entrega' | 'producao' | 'pronta_entrega';
 export type IpiMode = 'destacar' | 'incluso' | 'isento';
 
 export const orderTypeConfig: Record<OrderType, { label: string; color: string }> = {
+  'Novo/Alteração': { label: 'Novo/Alteração', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
+  Repeticao: { label: 'Repetição', color: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800' },
+  'Pronto Entrega': { label: 'Pronto Entrega', color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800' },
   producao: { label: 'Produção', color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
   pronta_entrega: { label: 'Pronta Entrega', color: 'bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800' },
 };

@@ -44,7 +44,7 @@ export function OrderApprovalActions({
   orderId, 
   orderStatus, 
   orderCreatedBy,
-  orderType = 'producao',
+  orderType = 'Novo/Alteração',
   compact = false 
 }: OrderApprovalActionsProps) {
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -90,7 +90,7 @@ export function OrderApprovalActions({
   }
 
   // Final states - no actions
-  if (orderStatus === 'entregue' || orderStatus === 'cancelado' || (orderType === 'pronta_entrega' && orderStatus === 'faturado')) {
+  if (orderStatus === 'entregue' || orderStatus === 'cancelado' || ((orderType === 'pronta_entrega' || orderType === 'Pronto Entrega') && orderStatus === 'faturado')) {
     return null;
   }
 
