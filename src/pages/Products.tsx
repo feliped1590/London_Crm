@@ -51,6 +51,7 @@ import {
 } from '@/utils/products/generateVersion';
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
+import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -105,6 +106,7 @@ export default function Products() {
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const ITEMS_PER_PAGE = itemsPerPage;
   const fileInputRef = useState<HTMLInputElement | null>(null);
+  const { recentItems: recentProducts, recordInteraction: recordProductInteraction } = useRecentInteractions('product');
   const createForCompanyId = searchParams.get('createForCompany');
   const handledCreateForCompanyRef = useRef<string | null>(null);
 
@@ -590,6 +592,7 @@ export default function Products() {
       toast.success('Produto criado com sucesso!');
       setEditingProduct(createdProduct);
       setFormTab('clientes');
+      recordProductInteraction({ entityId: createdProduct.id, tenantId: createdProduct.tenant_id, interactionType: 'create' });
       if (createForCompanyId) {
         setSearchParams({}, { replace: true });
       }
@@ -608,14 +611,16 @@ export default function Products() {
         data.length || 0,
         data.thickness || 0
       );
-      const { error } = await supabase.from('products').update({
+      const { data: updatedProduct, error } = await supabase.from('products').update({
         ...data,
         fator_milheiro: fatorMilheiro,
-      } as any).eq('id', id);
+      } as any).eq('id', id).select('*').single();
       if (error) throw error;
+      return updatedProduct as Product;
     },
-    onSuccess: () => {
+    onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      recordProductInteraction({ entityId: updatedProduct.id, tenantId: updatedProduct.tenant_id, interactionType: 'update' });
       toast.success('Produto atualizado!');
       resetForm();
     },
@@ -928,6 +933,7 @@ export default function Products() {
   };
 
   const handleEdit = (product: Product) => {
+    recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
     setEditingProduct(product);
     setFormData({
       sku: product.sku,
@@ -1759,6 +1765,37 @@ export default function Products() {
           </div>
         </CardContent>
       </Card>
+
+      {recentProducts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4 text-primary" />
+              Itens recentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {recentProducts.map((product) => (
+                <Button
+                  key={product.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-auto max-w-full flex-col items-start gap-0 px-3 py-2 text-left"
+                  onClick={() => handleEdit(product as Product)}
+                >
+                  <span className="max-w-[260px] truncate font-medium">{product.name}</span>
+                  <span className="max-w-[260px] truncate text-xs text-muted-foreground">
+                    {getRecentInteractionLabel(product.interaction_type)} • {product.sku}
+                    {product.ncm_code ? ` • NCM ${product.ncm_code}` : ''}
+                  </span>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Products Table */}
       <Card>
