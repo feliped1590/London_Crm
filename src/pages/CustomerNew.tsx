@@ -101,6 +101,11 @@ export default function CustomerNew() {
       const response = await supabase.functions.invoke('lookup-cnpj', {
         body: { cnpj: cnpjClean }
       });
+
+      if (response.error) {
+        setCnpjLookupError(response.error.message || 'Não foi possível consultar. Preencha manualmente.');
+        return;
+      }
       
       if (response.data?.success) {
         const { data } = response.data;
