@@ -108,8 +108,8 @@ Deno.serve(async (req) => {
       if (!response.ok) {
         console.error(`[lookup-cnpj] Erro BrasilAPI: ${response.status}`);
         return new Response(
-          JSON.stringify({ success: false, error: 'Serviço de consulta temporariamente indisponível' }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: false, error: 'Serviço de consulta temporariamente indisponível', code: 'CNPJ_SERVICE_UNAVAILABLE' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
@@ -149,8 +149,8 @@ Deno.serve(async (req) => {
       if ((fetchError as Error).name === 'AbortError') {
         console.error('[lookup-cnpj] Timeout na consulta');
         return new Response(
-          JSON.stringify({ success: false, error: 'Consulta demorou muito. Tente novamente' }),
-          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: false, error: 'Consulta demorou muito. Preencha manualmente ou tente novamente.', code: 'CNPJ_LOOKUP_TIMEOUT' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       throw fetchError;
