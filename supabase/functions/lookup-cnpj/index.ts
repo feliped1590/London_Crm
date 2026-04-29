@@ -100,8 +100,8 @@ Deno.serve(async (req) => {
       if (response.status === 404) {
         console.log(`[lookup-cnpj] CNPJ não encontrado: ${cnpjClean}`);
         return new Response(
-          JSON.stringify({ success: false, error: 'CNPJ não encontrado na base da Receita Federal' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ success: false, error: 'CNPJ não encontrado na base da Receita Federal', code: 'CNPJ_NOT_FOUND' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
