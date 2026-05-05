@@ -153,7 +153,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
   const [companyName, setCompanyName] = useState<string>('');
 
-  // Saber se já está bloqueado para mostrar "Corrigir dados"
+  // Saber se já está bloqueado para destacar que será uma nova validação/envio
   const { data: queueEntry } = useQuery({
     queryKey: ['company_sync_status_btn', companyId],
     queryFn: async () => {
@@ -168,6 +168,8 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
     },
     staleTime: 10_000,
   });
+
+  const isBlocked = queueEntry?.status === 'blocked_validation';
 
   const refreshSyncStatus = () => {
     queryClient.invalidateQueries({ queryKey: ['company_sync_status', companyId] });
