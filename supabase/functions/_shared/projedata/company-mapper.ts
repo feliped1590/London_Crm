@@ -1,6 +1,6 @@
 /**
  * Mapeamento CRM → ERP Projedata para clientes.
- * Comando padrão atual: IMP_CLIENTE_V4, configurável por ambiente.
+ * Comando padrão atual: IMP_CLIENTE_V4_TESTE, configurável por ambiente.
  */
 
 import type { ErpCompanyPayload, CompanySyncContext } from './company-types.ts';
@@ -129,11 +129,11 @@ export function mapCompanyToErp(company: CRMCompanyForSync, context: CompanySync
 }
 
 /**
- * Gera o payload final serializado para envio ao ERP (IMP_CLIENTE_V4).
+ * Gera o payload final serializado para envio ao ERP (IMP_CLIENTE_V4_TESTE).
  * V4 retorna o código ERP do cliente recém-criado em p_retorno (V3 retornava null).
  */
 export function buildCompanyPayload(mapped: ErpCompanyPayload): string {
-  const command = Deno.env.get('PROJEDATA_CLIENT_COMMAND') || 'IMP_CLIENTE_V4';
+  const command = Deno.env.get('PROJEDATA_CLIENT_COMMAND') || 'IMP_CLIENTE_V4_TESTE';
   const envelope = buildEnvelope(command, mapped as unknown as Record<string, unknown>);
   return serializeEnvelope(envelope);
 }

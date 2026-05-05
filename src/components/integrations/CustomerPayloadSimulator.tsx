@@ -343,7 +343,7 @@ export function CustomerPayloadSimulator() {
         message: erpFinancial?.banco_padrao_erp == null ? 'Padrão: 999 (CAIXA/CARTEIRA)' : undefined,
       });
 
-      // 11. Build the IMP_CLIENTE_V4 payload
+      // 11. Build the IMP_CLIENTE_V4_TESTE payload
       const innerJson = {
         cnpj_cpf: cnpjDigits ? Number(cnpjDigits) : null,
         pfpj,
@@ -392,7 +392,7 @@ export function CustomerPayloadSimulator() {
 
       const envelope = {
         tipoComando: 'ASDCOMANDO',
-        grupoComando: 'IMP_CLIENTE_V4',
+        grupoComando: 'IMP_CLIENTE_V4_TESTE',
         '#out#p_retorno': 'T',
         json: JSON.stringify(innerJson),
       };
@@ -426,7 +426,7 @@ export function CustomerPayloadSimulator() {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <FileJson className="h-4 w-4" />
-          Simulador de Payload ERP — Cliente (IMP_CLIENTE_V4)
+          Simulador de Payload ERP — Cliente (IMP_CLIENTE_V4_TESTE)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
