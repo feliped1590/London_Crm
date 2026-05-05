@@ -233,6 +233,8 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
         // Defesa em profundidade detectou pendência no backend
         toast.error('Pendências detectadas durante o envio. Verifique o status do cliente.');
           refreshSyncStatus();
+      } else if (result?.status === 'failed' || result?.status === 'retry') {
+        toast.error(result.error || 'ERP recusou o envio do cliente.');
       } else if (result?.erp_code) {
         toast.success(`Cliente sincronizado! Código ERP: ${result.erp_code}`);
       } else if (result?.status === 'waiting_propagation') {
