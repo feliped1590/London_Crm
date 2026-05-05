@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
       state: company.state,
       address: company.address,
       zip_code: company.zip_code,
-      banco_padrao: erpFinancial?.banco_padrao_erp ?? null,
+      banco_padrao: erpFinancial?.banco_padrao_erp ?? 999,
       segmento_mercado: segmentoMercado,
       subsegmento_mercado: subsegmentoMercado,
       has_sales_rep: hasSalesRep,
