@@ -356,8 +356,8 @@ Deno.serve(async (req) => {
         const setorNome = ((company as any).setores as any)?.nome?.toUpperCase?.() || '';
         const destinoMercadoria = setorNome.includes('INDUSTRIA') || setorNome.includes('INDÚSTRIA') ? 'I' : 'C';
 
-        // Resolver banco_padrao_erp da tabela financeira (obrigatório em produção)
-        let bancoPadraoErp = 0;
+        // Resolver banco_padrao_erp da tabela financeira; fallback padrão ERP = 999
+        let bancoPadraoErp = 999;
         const { data: erpFinancial } = await supabase
           .from('company_erp_financial')
           .select('banco_padrao_erp')
