@@ -52,6 +52,15 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
+function isPermanentCompanySyncError(message: string): boolean {
+  const normalized = message.toUpperCase();
+  return (
+    normalized.includes('CNPJ_CPF_ALFANUMERICO') ||
+    (normalized.includes('ORA-06550') && normalized.includes('PLS-00302')) ||
+    (normalized.includes('ORA-06550') && normalized.includes('PLS-00320'))
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -182,6 +191,7 @@ Deno.serve(async (req) => {
     }
 
     for (const queueItem of queue) {
+      let payloadForLog: Record<string, unknown> | null = null;
       try {
         // ⏰ Janela de acesso por tenant (strict)
         try {
@@ -444,6 +454,7 @@ Deno.serve(async (req) => {
           continue;
         }
         const payload = buildCompanyPayload(mapped);
+        payloadForLog = JSON.parse(payload);
 
         // Recheck anti-duplicidade antes do envio (cenário de concorrência)
         if (company.cnpj) {
@@ -560,19 +571,24 @@ Deno.serve(async (req) => {
         console.error(`[process-company-sync] Erro:`, err.message);
 
         const newAttempts = (queueItem.attempts || 0) + 1;
-        const isFinal = newAttempts >= 5;
+        const isPermanent = isPermanentCompanySyncError(err.message || '');
+        const isFinal = isPermanent || newAttempts >= 5;
         const retryDelay = Math.min(60 * Math.pow(2, newAttempts), 3600);
         const nextRetry = new Date(Date.now() + retryDelay * 1000).toISOString();
 
+        const queueUpdate: Record<string, unknown> = {
+          status: isFinal ? 'failed' : 'pending',
+          attempts: newAttempts,
+          error_message: err.message,
+          next_retry_at: isFinal ? null : nextRetry,
+          response: { error: err.message, permanent: isPermanent, retryable: !isPermanent },
+          updated_at: new Date().toISOString(),
+        };
+        if (payloadForLog) queueUpdate.payload = payloadForLog;
+
         await supabase
           .from('company_sync_queue')
-          .update({
-            status: isFinal ? 'failed' : 'pending',
-            attempts: newAttempts,
-            error_message: err.message,
-            next_retry_at: isFinal ? null : nextRetry,
-            updated_at: new Date().toISOString(),
-          })
+          .update(queueUpdate)
           .eq('id', queueItem.id);
 
         // Marcar integration_status como sync_error (trigger não cobre erros de sync)
@@ -587,7 +603,7 @@ Deno.serve(async (req) => {
           direction: 'crm_to_erp',
             status: 'error',
             error_message: err.message,
-            response_payload: { error: err.message, technical: true },
+            response_payload: { error: err.message, technical: true, permanent: isPermanent },
         });
 
         errorCount++;
