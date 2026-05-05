@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -147,6 +147,7 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
 }
 
 export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: CompanySyncStatusProps) {
+  const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
@@ -168,12 +169,11 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
     staleTime: 10_000,
   });
 
-  const isBlocked = queueEntry?.status === 'blocked_validation';
-
-  const handleShowBlocked = () => {
-    setValidationErrors((queueEntry?.validation_errors || []) as SyncValidationError[]);
-    setCompanyName('');
-    setValidationOpen(true);
+  const refreshSyncStatus = () => {
+    queryClient.invalidateQueries({ queryKey: ['company_sync_status', companyId] });
+    queryClient.invalidateQueries({ queryKey: ['company_sync_status_btn', companyId] });
+    queryClient.invalidateQueries({ queryKey: ['company_erp_code', companyId] });
+    onSyncTriggered?.();
   };
 
   const handleSync = async () => {
@@ -193,13 +193,14 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
         setValidationErrors(validation.errors || []);
         setCompanyName(validation.company_name || '');
         setValidationOpen(true);
+        refreshSyncStatus();
         toast.warning('Cliente possui pendências. Corrija antes de enviar ao ERP.');
         return;
       }
 
       // 2. Envio
       toast.success('Cliente adicionado à fila de envio ao ERP');
-      onSyncTriggered?.();
+      refreshSyncStatus();
 
       const { data, error } = await supabase.functions.invoke('process-company-sync', {
         body: { company_id: companyId },
@@ -215,6 +216,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
       if (result?.status === 'blocked_validation') {
         // Defesa em profundidade detectou pendência no backend
         toast.error('Pendências detectadas durante o envio. Verifique o status do cliente.');
+          refreshSyncStatus();
       } else if (result?.erp_code) {
         toast.success(`Cliente sincronizado! Código ERP: ${result.erp_code}`);
       } else if (result?.status === 'waiting_propagation') {
@@ -230,7 +232,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
             } else {
               toast.warning('Código ERP ainda não disponível. Tente novamente em alguns minutos.');
             }
-            onSyncTriggered?.();
+            refreshSyncStatus();
           } catch {
             // silent
           }
@@ -239,7 +241,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
         toast.success(`Cliente já existia no ERP: ${result.erp_code}`);
       }
 
-      onSyncTriggered?.();
+      refreshSyncStatus();
     } catch (err: any) {
       toast.error(`Erro ao enviar cliente: ${err.message}`);
     } finally {
@@ -248,7 +250,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
   };
 
   const tooltipLabel = isBlocked
-    ? 'Corrigir dados pendentes'
+    ? 'Validar e reenviar ao ERP'
     : erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
@@ -261,8 +263,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
               size="icon"
               onClick={(e) => {
                 e.stopPropagation();
-                if (isBlocked) handleShowBlocked();
-                else handleSync();
+                handleSync();
               }}
               disabled={isSyncing}
               title={tooltipLabel}
