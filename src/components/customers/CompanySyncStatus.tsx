@@ -46,6 +46,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
     icon: AlertTriangle,
     className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
   },
+  technical_error: {
+    label: 'Erro ERP',
+    icon: AlertTriangle,
+    className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800',
+  },
   blocked_validation: {
     label: 'Dados incompletos',
     icon: AlertTriangle,
@@ -77,7 +82,7 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('company_sync_queue')
-        .select('status, error_message, attempts, processed_at, validation_errors')
+        .select('status, error_message, attempts, processed_at, validation_errors, response')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -105,6 +110,15 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
     displayStatus = queueEntry.status;
   } else {
     displayStatus = 'not_synced';
+  }
+
+  const isTechnicalError =
+    (displayStatus === 'failed' || displayStatus === 'pending') &&
+    typeof queueEntry?.error_message === 'string' &&
+    (queueEntry.error_message.includes('ORA-') || queueEntry.error_message.includes('PLS-'));
+
+  if (isTechnicalError) {
+    displayStatus = 'technical_error';
   }
 
   const config = syncStatusConfig[displayStatus] || syncStatusConfig.not_synced;
