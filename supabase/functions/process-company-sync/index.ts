@@ -1,6 +1,6 @@
 /**
  * Edge Function: process-company-sync
- * Processa a fila company_sync_queue enviando clientes ao ERP Projedata (IMP_CLIENTE_V4_TESTE).
+ * Processa a fila company_sync_queue enviando clientes ao ERP Projedata (IMP_CLIENTE_V4).
  * Inclui consulta EXP_CLIENTES_V2 para anti-duplicidade e recuperação de erp_code.
  */
 
@@ -278,7 +278,7 @@ Deno.serve(async (req) => {
           }
         }
 
-        // ═══ FASE B: Validação + Envio IMP_CLIENTE_V4_TESTE ═══
+        // ═══ FASE B: Validação + Envio IMP_CLIENTE_V4 ═══
 
         // 4. Buscar cidade_codigo
         const { data: cityMapping } = await supabase

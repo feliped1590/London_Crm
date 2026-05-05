@@ -1,5 +1,5 @@
 /**
- * Validação pré-envio de clientes para ERP Projedata (IMP_CLIENTE_V4_TESTE)
+ * Validação pré-envio de clientes para ERP Projedata (IMP_CLIENTE_V4)
  * Retorna erros estruturados com hint de correção e rota navegável.
  */
 
