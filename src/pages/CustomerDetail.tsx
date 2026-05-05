@@ -25,6 +25,7 @@ import { CustomerActivitiesTab } from '@/components/customer/CustomerActivitiesT
 import { CustomerProductsTab } from '@/components/customer/CustomerProductsTab';
 import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory';
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
+import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/CompanySyncStatus';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
@@ -35,7 +36,7 @@ import { useRecentInteractions } from '@/hooks/useRecentInteractions';
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, isDeveloper, isVendedor } = useModulePermissions();
   const { hasDirectAccess, needsAdminIntervention, isAdmin: isSalesRepAdmin } = useSalesRepAccess();
   const { getNomeById } = useClassificacao();
   const { salesReps, allUserSalesReps } = useSalesReps();
@@ -295,6 +296,18 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!isErpCustomer && (isAdmin || isDeveloper || isVendedor) && (
+            <div className="flex items-center gap-1">
+              <CompanySyncBadge companyId={id!} erpCode={customer.erp_code} />
+              <CompanySyncButton
+                companyId={id!}
+                erpCode={customer.erp_code}
+                onSyncTriggered={() => {
+                  queryClient.invalidateQueries({ queryKey: ['customer', id] });
+                }}
+              />
+            </div>
+          )}
           {!isErpCustomer && (
             <div className="flex items-center gap-2">
               {isReviewOverdue(customer.last_reviewed_at) ? (
