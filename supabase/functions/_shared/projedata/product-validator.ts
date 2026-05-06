@@ -46,14 +46,14 @@ export function validateProductForSync(
 export async function loadProductForSync(
   supabase: any,
   productId: string,
-  executorUserId: string | null,
+  executorUserId?: string | null,
 ): Promise<{ product: ProductForSync; ctx: ProductSyncContext; tenantId: string | null }> {
   const { data: product, error } = await supabase
     .from('products')
     .select(`
       id, tenant_id, name, erp_product_code, erp_empresa,
       erp_grupo, erp_subgrupo, tipo_item, tipo_ficha,
-      unit_measure, ncm_code, family_id, class_id
+      unit_measure, ncm_code, family_id, class_id, created_by
     `)
     .eq('id', productId)
     .single();
@@ -61,6 +61,9 @@ export async function loadProductForSync(
   if (error || !product) {
     throw new Error(`Produto não encontrado: ${productId}`);
   }
+
+  // Fallback: usa created_by quando o executor não foi informado
+  const userIdForErp = executorUserId || product.created_by || null;
 
   let familia_label: string | null = null;
   if (product.family_id) {
