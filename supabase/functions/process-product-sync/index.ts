@@ -1,11 +1,19 @@
 /**
  * Edge Function: process-product-sync
  * Processa a fila product_sync_queue enviando produtos pendentes ao ERP Projedata.
- * Pode ser invocado via cron (automático) ou manualmente.
+ *
+ * Mapper V2: payload simplificado, versão/depósito/conta_contabil fixos,
+ * familia/classe como string, codigo controlado por erp_product_code.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { mapCRMProductToProjedata, buildProductPayload } from '../_shared/projedata/mapper.ts';
+import {
+  loadProductForSync,
+  validateProductForSync,
+  buildProductPayloadV2,
+  isProductUpdate,
+  getProductGrupoComando,
+} from '../_shared/projedata/index.ts';
 import { parseProductRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
