@@ -1834,6 +1834,7 @@ export default function Products() {
                     <TableHead>Comprimento</TableHead>
                     <TableHead>Espessura</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
