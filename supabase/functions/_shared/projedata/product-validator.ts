@@ -86,11 +86,11 @@ export async function loadProductForSync(
   }
 
   let erp_usuario = 0;
-  if (executorUserId) {
+  if (userIdForErp) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('erp_user_code')
-      .eq('user_id', executorUserId)
+      .eq('user_id', userIdForErp)
       .maybeSingle();
     erp_usuario = Number(profile?.erp_user_code) || 0;
   }
