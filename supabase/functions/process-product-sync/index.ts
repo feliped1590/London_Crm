@@ -104,21 +104,17 @@ Deno.serve(async (req) => {
           .update({ status: 'processing', updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
-        // Buscar produto
-        const { data: product, error: productError } = await supabase
-          .from('products')
-          .select('*')
-          .eq('id', item.product_id)
-          .single();
+        // Carregar produto + labels + erp_usuario
+        const { product: productForSync, ctx, tenantId } = await loadProductForSync(
+          supabase,
+          item.product_id,
+          null, // usa created_by como fallback
+        );
 
-        if (productError || !product) {
-          throw new Error(`Produto não encontrado: ${item.product_id}`);
-        }
-
-        // Código ERP é OBRIGATÓRIO e deve ser informado manualmente.
-        // Se ausente, marca como falha permanente sem retry (sai da fila).
-        if (!product.erp_product_code || !String(product.erp_product_code).trim()) {
-          const errorMsg = 'Código ERP ausente — preencha manualmente no cadastro do produto';
+        // Validar campos obrigatórios antes do envio
+        const validation = validateProductForSync(productForSync, ctx);
+        if (!validation.valid) {
+          const errorMsg = 'Validação falhou: ' + validation.errors.map(e => `${e.field}: ${e.message}`).join('; ');
           await supabase
             .from('product_sync_queue')
             .update({
@@ -139,47 +135,17 @@ Deno.serve(async (req) => {
             ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
           });
 
-          await supabase.from('erp_sync_logs').insert({
-            entity_type: 'product',
-            entity_id: item.product_id,
-            direction: 'crm_to_erp',
-            status: 'failed',
-            error_message: errorMsg,
-          });
-
           errorCount++;
           results.push({ product_id: item.product_id, status: 'error', error: errorMsg });
           continue;
         }
 
-        // Mapear para formato Projedata
-        const crmProduct = {
-          sku: product.sku,
-          name: product.name,
-          description: product.description,
-          category: product.category,
-          unit: product.unit_measure,
-          ncm: product.ncm_code,
-          weight: product.weight,
-          color: product.color,
-          material: product.material,
-          erp_product_code: product.erp_product_code,
-          tipo_item: product.tipo_item,
-          tipo_ficha: product.tipo_ficha,
-          erp_grupo: product.erp_grupo,
-          erp_subgrupo: product.erp_subgrupo,
-          erp_empresa: product.erp_empresa,
-          erp_versao: product.erp_versao,
-          erp_versao_detalhes: product.erp_versao_detalhes,
-          erp_versao_roteiro: product.erp_versao_roteiro,
-          erp_versao_situacao: product.erp_versao_situacao,
-          nome_impresso: product.nome_impresso,
-        };
+        const isUpdate = isProductUpdate(productForSync);
+        const grupoComando = getProductGrupoComando();
+        const payload = buildProductPayloadV2(productForSync, ctx, grupoComando);
 
-        const produto = mapCRMProductToProjedata(crmProduct);
-        const payload = buildProductPayload(produto);
-
-        console.log(`[process-product-sync] Enviando produto ${product.sku} ao ERP`);
+        console.log(`[process-product-sync] ${isUpdate ? 'UPDATE' : 'CREATE'} produto ${productForSync.id} (codigo="${productForSync.erp_product_code ?? ''}")`);
+        console.log(`[process-product-sync] grupoComando=${grupoComando}`);
         console.log(`[process-product-sync] Payload: ${payload}`);
 
         // Enviar ao ERP Projedata
@@ -199,7 +165,6 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
 
-        // Parse response — ERP pode retornar array ou objeto
         let responseData: any;
         try {
           responseData = JSON.parse(responseText);
@@ -207,22 +172,21 @@ Deno.serve(async (req) => {
           responseData = { raw: responseText };
         }
 
-        // Parser unificado
         const parsedResult = parseProductRetorno(responseData, {
-          sku: product.sku,
+          sku: productForSync.erp_product_code ?? null,
           requestedAt: new Date().toISOString(),
         });
 
-        // Telemetria: padrão desconhecido = ERP pode ter mudado formato
         await trackParserResult(supabase, parsedResult, {
           source: 'process-product-sync',
           entityId: item.product_id,
-          tenantId: product.tenant_id ?? null,
+          tenantId: tenantId,
         });
 
         if (parsedResult.errorType === 'erp') {
           throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
         }
+
 
         // Sucesso - atualizar fila e produto
         await supabase
