@@ -52,6 +52,7 @@ import {
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
