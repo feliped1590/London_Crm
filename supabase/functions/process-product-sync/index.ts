@@ -188,7 +188,7 @@ Deno.serve(async (req) => {
         }
 
 
-        // Sucesso - atualizar fila e produto
+        // Sucesso - atualizar fila
         await supabase
           .from('product_sync_queue')
           .update({
@@ -198,16 +198,26 @@ Deno.serve(async (req) => {
           })
           .eq('id', item.id);
 
+        // Atualizar produto: grava erp_product_code retornado (no CREATE)
+        // e marca origem_alteracao = 'SYNC' para evitar loop
+        const productUpdate: Record<string, unknown> = {
+          pendente_envio: false,
+          erp_synced_at: new Date().toISOString(),
+          origem_alteracao: 'SYNC',
+          erp_status: 'synced',
+        };
+
+        // Se ERP retornou um código (CREATE), persiste; em UPDATE mantém o existente
+        if (!isUpdate && parsedResult.erpCode) {
+          productUpdate.erp_product_code = parsedResult.erpCode;
+        }
+
         await supabase
           .from('products')
-          .update({
-            pendente_envio: false,
-            erp_synced_at: new Date().toISOString(),
-            origem_alteracao: 'SYNC',
-          })
+          .update(productUpdate)
           .eq('id', item.product_id);
 
-        // Registrar log detalhado de sync
+        // Log detalhado
         const parsedPayload = JSON.parse(payload);
         await supabase.from('product_sync_log').insert({
           product_id: item.product_id,
@@ -216,11 +226,9 @@ Deno.serve(async (req) => {
           status: 'success',
           request_payload: parsedPayload,
           response_payload: toLogPayload(parsedResult),
-          erp_hash_at_sync: product.erp_hash,
           ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'edge-function',
         });
 
-        // Manter log legado em erp_sync_logs com payload estruturado
         await supabase.from('erp_sync_logs').insert({
           entity_type: 'product',
           entity_id: item.product_id,
