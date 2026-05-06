@@ -1881,8 +1881,20 @@ export default function Products() {
                           {product.active ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <ProductSyncBadge
+                          productId={product.id}
+                          erpProductCode={(product as any).erp_product_code}
+                        />
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {canEditProducts && (
+                            <ProductSyncButton
+                              productId={product.id}
+                              erpProductCode={(product as any).erp_product_code}
+                            />
+                          )}
                           {canCreateProducts && (
                           <Tooltip>
                             <TooltipTrigger asChild>
