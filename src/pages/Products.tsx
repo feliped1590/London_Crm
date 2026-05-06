@@ -1177,7 +1177,23 @@ export default function Products() {
           </div>
           <DialogContent className="w-[calc(100vw-1rem)] max-w-[95vw] sm:max-w-[90vw] lg:max-w-[70vw] max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
+              <div className="flex items-center justify-between gap-3 pr-8">
+                <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
+                {editingProduct && (
+                  <div className="flex items-center gap-2">
+                    <ProductSyncBadge
+                      productId={editingProduct.id}
+                      erpProductCode={(editingProduct as any).erp_product_code}
+                    />
+                    {canEditProducts && (
+                      <ProductSyncButton
+                        productId={editingProduct.id}
+                        erpProductCode={(editingProduct as any).erp_product_code}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
