@@ -17,6 +17,20 @@ export { parseCodigoVersao, formatCodigoVersao } from './parser.ts';
 export { buildEnvelope, serializeEnvelope, buildAndSerialize } from './serializer.ts';
 export { validateProduto, validateVersaoProduto } from './validator.ts';
 export { mapCRMProductToProjedata, buildProductPayload } from './mapper.ts';
+export {
+  mapProductToProjedata,
+  buildProductPayloadV2,
+  isProductUpdate,
+  getProductGrupoComando,
+  PRODUCT_GRUPO_COMANDO_DEFAULT,
+  PRODUCT_FIXED,
+} from './product-mapper-v2.ts';
+export type { ProductForSync, ProductSyncContext } from './product-mapper-v2.ts';
+export {
+  validateProductForSync,
+  loadProductForSync,
+} from './product-validator.ts';
+export type { ProductValidationError, ProductValidationResult } from './product-validator.ts';
 
 // ─── Pedidos (IMP_PEDIDO_V3) ────────────────────────────────────
 export type {

@@ -840,9 +840,23 @@ export default function Products() {
       return;
     }
 
-    // Código ERP é obrigatório — informado manualmente pelo usuário
-    if (!formData.erp_product_code?.trim()) {
-      toast.error('Código ERP é obrigatório');
+    // Validação dos campos obrigatórios para sincronização com o ERP Projedata
+    // (codigo / erp_product_code é opcional: vazio = CREATE; preenchido = UPDATE)
+    const erpRequiredErrors: string[] = [];
+    if (!formData.erp_grupo?.trim()) erpRequiredErrors.push('Grupo ERP');
+    if (!formData.erp_subgrupo?.trim()) erpRequiredErrors.push('Subgrupo ERP');
+    if (!formData.family_id) erpRequiredErrors.push('Família');
+    if (!formData.class_id) erpRequiredErrors.push('Classe');
+    if (!formData.tipo_item?.trim()) erpRequiredErrors.push('Tipo de item');
+    if (!formData.tipo_ficha) erpRequiredErrors.push('Tipo de ficha');
+    if (!formData.unit_measure?.trim()) erpRequiredErrors.push('Unidade de medida');
+    const ncmDigits = (formData.ncm_code ?? '').replace(/\D/g, '');
+    if (!/^\d{8}$/.test(ncmDigits)) erpRequiredErrors.push('NCM (8 dígitos)');
+    if (erpRequiredErrors.length > 0) {
+      toast.error(
+        `Campos obrigatórios para sincronização ERP:\n• ${erpRequiredErrors.join('\n• ')}`,
+        { duration: 7000 },
+      );
       setFormTab('geral');
       return;
     }
