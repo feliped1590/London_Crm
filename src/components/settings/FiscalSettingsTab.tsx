@@ -8,6 +8,7 @@ import { TransicaoTributariaPanel } from '@/components/fiscal/TransicaoTributari
 import { ImpostoSeletivoManager } from '@/components/fiscal/ImpostoSeletivoManager';
 import { CreditoPresumidoManager } from '@/components/fiscal/CreditoPresumidoManager';
 import { NCMManager } from '@/components/fiscal/NCMManager';
+import { GroupNcmDefaultsManager } from '@/components/fiscal/GroupNcmDefaultsManager';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
