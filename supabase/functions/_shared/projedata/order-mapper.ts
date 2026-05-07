@@ -35,6 +35,7 @@ export interface CRMOrderItemForSync {
   unit_price: number;
   discount_percent?: number;
   tipo_venda: number;           // obrigatório
+  commission_pct?: number;
   delivery_date?: string | null;   // ISO date
   observations?: string | null;
   observations_pcp?: string | null;
@@ -107,6 +108,7 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
       seq_item: item.seq,
       tipo_venda: item.tipo_venda,
       desconto_item: item.discount_percent ?? 0,
+      comissao: item.commission_pct ?? 0,
       unitario: item.unit_price,
       versao: item.erp_versao,
       entregas,

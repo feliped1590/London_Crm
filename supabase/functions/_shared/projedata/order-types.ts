@@ -21,6 +21,7 @@ export interface ProjedataOrderItem {
   seq_item: number;
   tipo_venda: number;
   desconto_item: number;
+  comissao: number;
   unitario: number;
   versao: string;
   entregas: ProjedataOrderDelivery[];

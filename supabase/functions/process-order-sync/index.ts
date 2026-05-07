@@ -283,6 +283,7 @@ Deno.serve(async (req) => {
               quantity: Number(item.quantity) || 0,
               unit_price: Number(item.unit_price) || 0,
               discount_percent: Number(item.discount_percent) || 0,
+              commission_pct: Number(item.commission_pct) || 0,
               tipo_venda: tipoVenda,
               delivery_date: item.delivery_date || order.delivery_date,
               observations: item.observations || '',
