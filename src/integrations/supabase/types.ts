@@ -5873,6 +5873,7 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          default_ncm_code: string | null
           dimension_profile: Database["public"]["Enums"]["dimension_profile"]
           id: string
           is_active: boolean | null
@@ -5885,6 +5886,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          default_ncm_code?: string | null
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null
@@ -5897,6 +5899,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          default_ncm_code?: string | null
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
           id?: string
           is_active?: boolean | null

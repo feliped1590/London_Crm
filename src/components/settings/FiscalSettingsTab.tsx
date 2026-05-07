@@ -8,6 +8,7 @@ import { TransicaoTributariaPanel } from '@/components/fiscal/TransicaoTributari
 import { ImpostoSeletivoManager } from '@/components/fiscal/ImpostoSeletivoManager';
 import { CreditoPresumidoManager } from '@/components/fiscal/CreditoPresumidoManager';
 import { NCMManager } from '@/components/fiscal/NCMManager';
+import { GroupNcmDefaultsManager } from '@/components/fiscal/GroupNcmDefaultsManager';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -82,6 +83,10 @@ export function FiscalSettingsTab() {
             <Landmark className="h-4 w-4" />
             Imposto Seletivo
           </TabsTrigger>
+          <TabsTrigger value="ncm-grupos" className="gap-2">
+            <FileText className="h-4 w-4" />
+            NCM por Grupo
+          </TabsTrigger>
           <TabsTrigger value="cadastros" className="gap-2">
             <FileText className="h-4 w-4" />
             Cadastros Base
@@ -106,6 +111,10 @@ export function FiscalSettingsTab() {
 
         <TabsContent value="imposto-seletivo" className="mt-6">
           <ImpostoSeletivoManager />
+        </TabsContent>
+
+        <TabsContent value="ncm-grupos" className="mt-6">
+          <GroupNcmDefaultsManager />
         </TabsContent>
 
         <TabsContent value="cadastros" className="mt-6">
