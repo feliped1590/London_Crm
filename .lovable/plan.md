@@ -1,25 +1,25 @@
-# Fix: Banco padrão 999 bloqueando envio ao ERP
+## Objetivo
+Incluir o campo `comissao` em cada item do payload `IMP_PEDIDO_V3` enviado à Projedata, usando o `commission_pct` já existente no `order_items`.
 
-## Causa
-O **simulador de payload** já aplica fallback `banco_padrao = 999` (CAIXA/CARTEIRA) quando o cliente não tem `company_erp_financial.banco_padrao_erp`. Mas o **validador real** (`validate-company-sync`) envia `null`, e o `company-validator.ts` bloqueia com a mensagem "Banco padrão ERP não configurado para o cliente". Por isso o SEA GOLD falha mesmo com o preview mostrando 999.
+## Mudanças
 
-## Alterações
+### 1. `supabase/functions/_shared/projedata/order-types.ts`
+Adicionar `comissao: number` em `ProjedataOrderItem` (logo após `desconto_item`, mantendo a ordem do payload validado).
 
-### 1. `supabase/functions/validate-company-sync/index.ts` (linha 136)
-Aplicar o mesmo fallback do simulador:
-```ts
-banco_padrao: erpFinancial?.banco_padrao_erp ?? 999,
-```
+### 2. `supabase/functions/_shared/projedata/order-mapper.ts`
+- Adicionar `commission_pct?: number` em `CRMOrderItemForSync`.
+- No `mapCRMOrderToProjedata`, incluir `comissao: item.commission_pct ?? 0` no objeto de cada item.
 
-### 2. `supabase/functions/_shared/projedata/company-mapper.ts` (linha 93)
-Garantir 999 como default final caso outro caller não envie o contexto:
-```ts
-banco_padrao: context.banco_padrao ?? 999,
-```
+### 3. `supabase/functions/process-order-sync/index.ts`
+No `items.map(...)` (linha ~276), incluir `commission_pct: Number(item.commission_pct) || 0`.
 
-### 3. Redeploy
-- `validate-company-sync`
-- `process-company-sync` (consome o mapper)
+### 4. `supabase/functions/_shared/projedata/order-loader.ts`
+Adicionar `commission_pct` no `select` de `order_items` (linha 138-142) — apenas para que esteja disponível caso outros consumidores do loader passem a usar. (Não obrigatório para o fluxo de envio, pois `process-order-sync` faz o próprio select; verificar e ajustar se necessário.)
 
-## Resultado esperado
-Cliente sem banco específico passa a validação e entra na fila do ERP usando 999 (CAIXA/CARTEIRA), idêntico ao preview do simulador. Clientes com `banco_padrao_erp` definido continuam usando o valor específico.
+## Não muda
+- Estrutura de `entregas`, `pagto`, `frete`, datas e demais campos do envelope.
+- Lógica de validação (`order-validator.ts`) — `comissao = 0` é aceito pelo ERP conforme exemplos anteriores.
+- UI: `commission_pct` já é editável no item do pedido.
+
+## Risco
+Nenhum — campo opcional aditivo no payload; default `0` mantém compatibilidade com pedidos sem comissão definida.
