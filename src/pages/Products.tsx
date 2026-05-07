@@ -1384,7 +1384,7 @@ export default function Products() {
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
                               const autoNcm = !isEditing ? getAutoNcmByGroup(newGrupoId) : null;
-                              const canApplyAutoNcm = !formData.ncm_code || ['39232990', '39173290'].includes(formData.ncm_code);
+                              const canApplyAutoNcm = !formData.ncm_code || knownDefaultNcms().includes(formData.ncm_code);
                               const updated = {
                                 ...formData,
                                 grupo_id: newGrupoId,
