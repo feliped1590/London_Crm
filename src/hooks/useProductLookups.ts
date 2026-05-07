@@ -119,6 +119,7 @@ function useGroupsTable() {
         ...g,
         dimension_profile: g.dimension_profile || 'none',
         is_printed: g.is_printed ?? false,
+        default_ncm_code: g.default_ncm_code ?? null,
       })) as GroupLookupItem[];
     },
   });
