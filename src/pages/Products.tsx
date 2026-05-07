@@ -253,10 +253,20 @@ export default function Products() {
 
   const getAutoNcmByGroup = (grupoId?: string) => {
     if (!grupoId) return null;
-    const label = getLookupLabel(grupos.items, grupoId)?.toLowerCase() || '';
-    if (label.includes('saco')) return '39232990';
-    if (label.includes('bobina')) return '39173290';
-    return null;
+    const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
+    const ncm = (group?.default_ncm_code || '').replace(/\D/g, '');
+    return /^\d{8}$/.test(ncm) ? ncm : null;
+  };
+
+  // Lista de NCMs configurados como padrão de algum grupo (para permitir auto-substituição)
+  const knownDefaultNcms = (): string[] => {
+    return Array.from(
+      new Set(
+        (grupos.items as GroupLookupItem[])
+          .map((g) => (g.default_ncm_code || '').replace(/\D/g, ''))
+          .filter((n) => /^\d{8}$/.test(n)),
+      ),
+    );
   };
 
   // Resolve perfil de dimensão do grupo pelo banco (dimension_profile)
