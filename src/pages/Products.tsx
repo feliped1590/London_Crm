@@ -1259,15 +1259,15 @@ export default function Products() {
                     </div>
                     {/* Código ERP */}
                     <div className="col-span-2">
-                      <Label htmlFor="erp_product_code">Código ERP *</Label>
+                      <Label htmlFor="erp_product_code">Código ERP</Label>
                       <Input
                         id="erp_product_code"
                         value={formData.erp_product_code || ''}
                         onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
-                        placeholder="Informe o código conforme cadastro no ERP"
+                        placeholder="Opcional — preencher só se já existir no ERP"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Obrigatório. Não é gerado automaticamente.
+                        Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.
                       </p>
                     </div>
 

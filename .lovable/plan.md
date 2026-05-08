@@ -1,25 +1,29 @@
-## Objetivo
-Incluir o campo `comissao` em cada item do payload `IMP_PEDIDO_V3` enviado à Projedata, usando o `commission_pct` já existente no `order_items`.
+## Contexto
 
-## Mudanças
+O backend (`product-validator.ts`) já trata `erp_product_code` como **opcional**: vazio = CREATE no ERP, preenchido = UPDATE. O `handleSubmit` em `Products.tsx` também já não bloqueia salvar sem código. Porém a UI ainda comunica como obrigatório, o que confunde o usuário.
 
-### 1. `supabase/functions/_shared/projedata/order-types.ts`
-Adicionar `comissao: number` em `ProjedataOrderItem` (logo após `desconto_item`, mantendo a ordem do payload validado).
+## Mudanças (somente UI)
 
-### 2. `supabase/functions/_shared/projedata/order-mapper.ts`
-- Adicionar `commission_pct?: number` em `CRMOrderItemForSync`.
-- No `mapCRMOrderToProjedata`, incluir `comissao: item.commission_pct ?? 0` no objeto de cada item.
+### `src/pages/Products.tsx` — campo "Código ERP" (linha ~1262)
 
-### 3. `supabase/functions/process-order-sync/index.ts`
-No `items.map(...)` (linha ~276), incluir `commission_pct: Number(item.commission_pct) || 0`.
+- Trocar label de `Código ERP *` para `Código ERP`.
+- Atualizar texto auxiliar de:
+  > "Obrigatório. Não é gerado automaticamente."
 
-### 4. `supabase/functions/_shared/projedata/order-loader.ts`
-Adicionar `commission_pct` no `select` de `order_items` (linha 138-142) — apenas para que esteja disponível caso outros consumidores do loader passem a usar. (Não obrigatório para o fluxo de envio, pois `process-order-sync` faz o próprio select; verificar e ajustar se necessário.)
+  para:
+  > "Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP."
+
+- Ajustar `placeholder` para: `"Opcional — preencher só se já existir no ERP"`.
+
+Nenhuma outra alteração de lógica é necessária — `handleSubmit` (linhas 854–873) já não inclui `erp_product_code` nos `erpRequiredErrors`.
 
 ## Não muda
-- Estrutura de `entregas`, `pagto`, `frete`, datas e demais campos do envelope.
-- Lógica de validação (`order-validator.ts`) — `comissao = 0` é aceito pelo ERP conforme exemplos anteriores.
-- UI: `commission_pct` já é editável no item do pedido.
+
+- Validação de submit (já está correta).
+- Backend, mapper, validator, fila de sync.
+- `ProductSyncStatus` (continua exibindo o código quando existir).
+- Constraint de unicidade (`sku_unique`) — códigos preenchidos continuam não podendo duplicar.
 
 ## Risco
-Nenhum — campo opcional aditivo no payload; default `0` mantém compatibilidade com pedidos sem comissão definida.
+
+Mínimo: alteração textual em um único campo do formulário.
