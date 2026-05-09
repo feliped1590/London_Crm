@@ -1365,6 +1365,27 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {/* Tipo de Ficha */}
+                    <div>
+                      <Label htmlFor="tipo_ficha" className="flex items-center gap-1">
+                        Tipo de Ficha <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={formData.tipo_ficha ? String(formData.tipo_ficha) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, tipo_ficha: Number(v) })}
+                      >
+                        <SelectTrigger id="tipo_ficha">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="2">2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Obrigatório para sincronização com o ERP.
+                      </p>
+                    </div>
                     {/* Unidade */}
                     <div>
                       <Label htmlFor="unit_measure">Unidade</Label>
