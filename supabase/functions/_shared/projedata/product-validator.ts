@@ -53,7 +53,7 @@ export async function loadProductForSync(
     .select(`
       id, tenant_id, name, erp_product_code, erp_empresa,
       erp_grupo, erp_subgrupo, tipo_item, tipo_ficha,
-      unit_measure, ncm_code, family_id, class_id, created_by
+      unit_measure, ncm_code, family_id, class_id, tipo_id, created_by
     `)
     .eq('id', productId)
     .single();
@@ -83,6 +83,16 @@ export async function loadProductForSync(
       .eq('id', product.class_id)
       .maybeSingle();
     classe_label = data?.label ?? null;
+  }
+
+  let tipo_item: string | null = product.tipo_item ?? null;
+  if (product.tipo_id) {
+    const { data } = await supabase
+      .from('product_types')
+      .select('value')
+      .eq('id', product.tipo_id)
+      .maybeSingle();
+    tipo_item = data?.value ?? tipo_item;
   }
 
   let erp_usuario = 0;
@@ -119,7 +129,7 @@ export async function loadProductForSync(
       erp_subgrupo: product.erp_subgrupo,
       familia_label,
       classe_label,
-      tipo_item: product.tipo_item,
+      tipo_item,
       tipo_ficha: product.tipo_ficha,
       unit_measure: product.unit_measure,
       ncm_code: product.ncm_code,
