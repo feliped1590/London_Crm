@@ -243,7 +243,6 @@ Deno.serve(async (req) => {
           pendente_envio: false,
           erp_synced_at: new Date().toISOString(),
           origem_alteracao: 'SYNC',
-          erp_status: 'synced',
         };
 
         // Se ERP retornou um código (CREATE), persiste; em UPDATE mantém o existente
@@ -251,10 +250,14 @@ Deno.serve(async (req) => {
           productUpdate.erp_product_code = parsedResult.erpCode;
         }
 
-        await supabase
+        const { error: productUpdateError } = await supabase
           .from('products')
           .update(productUpdate)
           .eq('id', item.product_id);
+
+        if (productUpdateError) {
+          throw new Error(`ERP sincronizou, mas falhou ao gravar código no CRM: ${productUpdateError.message}`);
+        }
 
         // Log detalhado
         const parsedPayload = JSON.parse(payload);
