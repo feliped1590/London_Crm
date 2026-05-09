@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Buscar itens pendentes da fila (máx 20 por execução)
     const { data: queue, error: queueError } = await supabase
       .from('product_sync_queue')
-      .select('id, product_id, attempt_count')
+      .select('id, product_id, attempt_count, payload')
       .eq('status', 'pending')
       .lt('attempt_count', 5)
       .order('created_at', { ascending: true })
@@ -88,10 +88,14 @@ Deno.serve(async (req) => {
         }
 
         // Carregar produto + labels + erp_usuario (também devolve tenantId para a checagem de janela)
+        const executorUserId = typeof item.payload?.executor_user_id === 'string'
+          ? item.payload.executor_user_id
+          : null;
+
         const { product: productForSync, ctx, tenantId } = await loadProductForSync(
           supabase,
           item.product_id,
-          null, // usa created_by como fallback
+          executorUserId,
         );
 
         // ⏰ Janela de acesso por tenant (strict) — depois do load, com tenantId resolvido
