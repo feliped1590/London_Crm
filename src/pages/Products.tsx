@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -528,6 +528,21 @@ export default function Products() {
     await refetch();
     toast.success('Dados atualizados!');
   };
+
+  const handleProductSyncUpdated = useCallback((syncedProduct: Partial<Product> & { id: string; erp_product_code?: string | null }) => {
+    queryClient.setQueriesData({ queryKey: ['products'] }, (old: unknown) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((product: Product) => product.id === syncedProduct.id ? { ...product, ...syncedProduct } : product);
+    });
+
+    setEditingProduct((current) => current?.id === syncedProduct.id ? { ...current, ...syncedProduct } as Product : current);
+    if (editingProduct?.id === syncedProduct.id) {
+      setFormData((current) => ({
+        ...current,
+        erp_product_code: syncedProduct.erp_product_code ?? current.erp_product_code,
+      }));
+    }
+  }, [editingProduct?.id, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Product>) => {
@@ -1205,11 +1220,13 @@ export default function Products() {
                     <ProductSyncBadge
                       productId={editingProduct.id}
                       erpProductCode={(editingProduct as any).erp_product_code}
+                      onProductUpdated={handleProductSyncUpdated}
                     />
                     {canEditProducts && (
                       <ProductSyncButton
                         productId={editingProduct.id}
                         erpProductCode={(editingProduct as any).erp_product_code}
+                        onProductUpdated={handleProductSyncUpdated}
                       />
                     )}
                   </div>
@@ -1943,6 +1960,7 @@ export default function Products() {
                         <ProductSyncBadge
                           productId={product.id}
                           erpProductCode={(product as any).erp_product_code}
+                          onProductUpdated={handleProductSyncUpdated}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1951,6 +1969,7 @@ export default function Products() {
                             <ProductSyncButton
                               productId={product.id}
                               erpProductCode={(product as any).erp_product_code}
+                              onProductUpdated={handleProductSyncUpdated}
                             />
                           )}
                           {canCreateProducts && (
