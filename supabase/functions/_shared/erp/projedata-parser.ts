@@ -333,6 +333,43 @@ export function parseProductRetorno(
     });
   }
 
+  // Novo formato JSON: {"codigo_produto":"123","erro":""} ou {"codigo_produto":"","erro":"..."}
+  const jsonShape = tryParseJsonShape(raw);
+  if (jsonShape) {
+    const { codigo_produto, erro } = jsonShape;
+    if (erro && erro.trim() !== '') {
+      return buildIntegrationResult({
+        entity: 'product',
+        action: 'error',
+        erpCode: null,
+        raw,
+        rawResponse,
+        matchedPattern: 'product.error.json.v1',
+        errorMessage: erro.trim(),
+        errorType: 'erp',
+        isRetryable: false,
+        warnings: [],
+        metadata: baseMeta,
+      });
+    }
+    if (codigo_produto && isValidErpCode(codigo_produto)) {
+      return buildIntegrationResult({
+        entity: 'product',
+        action: 'created',
+        erpCode: codigo_produto,
+        raw,
+        rawResponse,
+        matchedPattern: 'product.created.json.v1',
+        errorMessage: null,
+        errorType: null,
+        isRetryable: false,
+        warnings: [],
+        metadata: baseMeta,
+        requireCodeForSuccess: false,
+      });
+    }
+  }
+
   const found = tryMatch(raw, PRODUCT_PATTERNS);
 
   if (!found) {
@@ -344,7 +381,7 @@ export function parseProductRetorno(
       raw,
       rawResponse,
       matchedPattern: null,
-      errorMessage: null,
+      errorMessage: `Formato de retorno desconhecido: "${raw}"`,
       errorType: 'parse',
       isRetryable: false,
       warnings: [`Formato de retorno desconhecido: "${raw}"`],
