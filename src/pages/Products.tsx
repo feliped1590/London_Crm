@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -528,6 +528,19 @@ export default function Products() {
     await refetch();
     toast.success('Dados atualizados!');
   };
+
+  const handleProductSyncUpdated = useCallback((syncedProduct: Partial<Product> & { id: string; erp_product_code?: string | null }) => {
+    queryClient.setQueriesData({ queryKey: ['products'] }, (old: unknown) => {
+      if (!Array.isArray(old)) return old;
+      return old.map((product: Product) => product.id === syncedProduct.id ? { ...product, ...syncedProduct } : product);
+    });
+
+    setEditingProduct((current) => current?.id === syncedProduct.id ? { ...current, ...syncedProduct } as Product : current);
+    setFormData((current) => ({
+      ...current,
+      erp_product_code: syncedProduct.erp_product_code ?? current.erp_product_code,
+    }));
+  }, [queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Product>) => {
