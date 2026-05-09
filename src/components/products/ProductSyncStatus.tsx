@@ -1,19 +1,29 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useAuth } from '@/hooks/useAuth';
+
+type ProductSyncSnapshot = {
+  id: string;
+  erp_product_code?: string | null;
+  erp_synced_at?: string | null;
+  pendente_envio?: boolean | null;
+  origem_alteracao?: string | null;
+  updated_at?: string | null;
+};
 
 interface ProductSyncStatusProps {
   productId: string;
   erpProductCode?: string | null;
   showAction?: boolean;
   onSyncTriggered?: () => void;
+  onProductUpdated?: (product: ProductSyncSnapshot) => void;
 }
 
 const syncStatusConfig: Record<string, { label: string; icon: React.ElementType; className: string }> = {
@@ -65,6 +75,42 @@ function useProductErpCode(productId: string, erpCodeProp?: string | null) {
     initialData: erpCodeProp !== undefined ? { erp_product_code: erpCodeProp ?? null } : undefined,
   });
   return data?.erp_product_code ?? erpCodeProp ?? null;
+}
+
+function cacheProductSnapshot(queryClient: QueryClient, snapshot: ProductSyncSnapshot) {
+  queryClient.setQueryData(['product_erp_code', snapshot.id], {
+    erp_product_code: snapshot.erp_product_code ?? null,
+  });
+  queryClient.setQueriesData({ queryKey: ['products'] }, (old: unknown) => {
+    if (!Array.isArray(old)) return old;
+    return old.map((product: any) => product?.id === snapshot.id ? { ...product, ...snapshot } : product);
+  });
+}
+
+function useProductSyncRealtime(productId: string, onProductUpdated?: (product: ProductSyncSnapshot) => void) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!productId) return;
+
+    const channel = supabase
+      .channel(`product-sync-ui-${productId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products', filter: `id=eq.${productId}` }, (payload) => {
+        const updated = payload.new as ProductSyncSnapshot;
+        cacheProductSnapshot(queryClient, updated);
+        queryClient.invalidateQueries({ queryKey: ['product_sync_status', productId] });
+        onProductUpdated?.(updated);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_sync_queue', filter: `product_id=eq.${productId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['product_sync_status', productId] });
+        queryClient.invalidateQueries({ queryKey: ['product_erp_code', productId] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [productId, queryClient, onProductUpdated]);
 }
 
 function useProductQueueEntry(productId: string) {
