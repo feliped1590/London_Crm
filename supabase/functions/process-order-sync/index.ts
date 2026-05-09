@@ -201,11 +201,19 @@ Deno.serve(async (req) => {
           throw winErr;
         }
 
-        // 2. Marcar como processing
-        await supabase
+        // 2. Marcar como processing (lock atômico — só pega se ainda estiver pending)
+        const { data: locked } = await supabase
           .from('order_sync_queue')
           .update({ status: 'processing', updated_at: new Date().toISOString() })
-          .eq('id', queueItem.id);
+          .eq('id', queueItem.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+
+        if (!locked) {
+          console.log(`[process-order-sync] Item ${queueItem.id} já em processamento, pulando`);
+          continue;
+        }
 
         await supabase
           .from('orders')

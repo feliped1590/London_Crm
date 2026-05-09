@@ -98,11 +98,19 @@ Deno.serve(async (req) => {
           throw winErr;
         }
 
-        // Marcar como processing
-        await supabase
+        // Marcar como processing (lock atômico — só pega se ainda estiver pending)
+        const { data: locked } = await supabase
           .from('product_sync_queue')
           .update({ status: 'processing', updated_at: new Date().toISOString() })
-          .eq('id', item.id);
+          .eq('id', item.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+
+        if (!locked) {
+          console.log(`[process-product-sync] Item ${item.id} já em processamento, pulando`);
+          continue;
+        }
 
         // Carregar produto + labels + erp_usuario
         const { product: productForSync, ctx, tenantId } = await loadProductForSync(
