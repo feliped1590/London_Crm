@@ -853,9 +853,11 @@ export default function Products() {
 
     // Validação dos campos obrigatórios para sincronização com o ERP Projedata
     // (codigo / erp_product_code é opcional: vazio = CREATE; preenchido = UPDATE)
+    // Grupo e Subgrupo ERP são derivados automaticamente da descrição (label)
+    // do Grupo/Subgrupo selecionado pelo usuário no CRM.
     const erpRequiredErrors: string[] = [];
-    if (!formData.erp_grupo?.trim()) erpRequiredErrors.push('Grupo ERP');
-    if (!formData.erp_subgrupo?.trim()) erpRequiredErrors.push('Subgrupo ERP');
+    if (!formData.grupo_id) erpRequiredErrors.push('Grupo');
+    if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
     if (!formData.family_id) erpRequiredErrors.push('Família');
     if (!formData.class_id) erpRequiredErrors.push('Classe');
     if (!formData.tipo_item?.trim()) erpRequiredErrors.push('Tipo de item');
