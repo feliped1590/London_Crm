@@ -140,6 +140,25 @@ export function extractRawRetorno(rawResponse: unknown): string {
   return typeof r === 'string' ? r.trim() : '';
 }
 
+/** Tenta interpretar `raw` como JSON no formato { codigo_produto, erro }. */
+function tryParseJsonShape(raw: string): { codigo_produto?: string; erro?: string } | null {
+  if (!raw || (raw[0] !== '{' && raw[0] !== '[')) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!obj || typeof obj !== 'object') return null;
+    if ('codigo_produto' in obj || 'erro' in obj) {
+      return {
+        codigo_produto: typeof (obj as any).codigo_produto === 'string' ? (obj as any).codigo_produto : undefined,
+        erro: typeof (obj as any).erro === 'string' ? (obj as any).erro : undefined,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function tryMatch(
   raw: string,
   patterns: PatternDef[],
