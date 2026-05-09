@@ -62,8 +62,8 @@ export async function loadProductForSync(
     throw new Error(`Produto não encontrado: ${productId}`);
   }
 
-  // Fallback: usa created_by quando o executor não foi informado
-  const userIdForErp = executorUserId || product.created_by || null;
+  // Prioridade: executor informado pela fila/JWT → created_by do produto → usuário padrão do tenant.
+  let userIdForErp = executorUserId || product.created_by || null;
 
   let familia_label: string | null = null;
   if (product.family_id) {
@@ -93,6 +93,20 @@ export async function loadProductForSync(
       .eq('user_id', userIdForErp)
       .maybeSingle();
     erp_usuario = Number(profile?.erp_user_code) || 0;
+  }
+
+  if (!erp_usuario && product.tenant_id) {
+    const { data: tenantProfile } = await supabase
+      .from('profiles')
+      .select('user_id, erp_user_code')
+      .eq('active_tenant_id', product.tenant_id)
+      .not('erp_user_code', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    userIdForErp = tenantProfile?.user_id ?? userIdForErp;
+    erp_usuario = Number(tenantProfile?.erp_user_code) || 0;
   }
 
   return {
