@@ -53,7 +53,7 @@ export async function loadProductForSync(
     .select(`
       id, tenant_id, name, erp_product_code, erp_empresa,
       erp_grupo, erp_subgrupo, tipo_item, tipo_ficha,
-      unit_measure, ncm_code, family_id, class_id, created_by
+      unit_measure, ncm_code, family_id, class_id, tipo_id, created_by
     `)
     .eq('id', productId)
     .single();
@@ -62,8 +62,8 @@ export async function loadProductForSync(
     throw new Error(`Produto não encontrado: ${productId}`);
   }
 
-  // Fallback: usa created_by quando o executor não foi informado
-  const userIdForErp = executorUserId || product.created_by || null;
+  // Prioridade: executor informado pela fila/JWT → created_by do produto → usuário padrão do tenant.
+  let userIdForErp = executorUserId || product.created_by || null;
 
   let familia_label: string | null = null;
   if (product.family_id) {
@@ -85,6 +85,16 @@ export async function loadProductForSync(
     classe_label = data?.label ?? null;
   }
 
+  let tipo_item: string | null = product.tipo_item ?? null;
+  if (product.tipo_id) {
+    const { data } = await supabase
+      .from('product_types')
+      .select('value')
+      .eq('id', product.tipo_id)
+      .maybeSingle();
+    tipo_item = data?.value ?? tipo_item;
+  }
+
   let erp_usuario = 0;
   if (userIdForErp) {
     const { data: profile } = await supabase
@@ -93,6 +103,20 @@ export async function loadProductForSync(
       .eq('user_id', userIdForErp)
       .maybeSingle();
     erp_usuario = Number(profile?.erp_user_code) || 0;
+  }
+
+  if (!erp_usuario && product.tenant_id) {
+    const { data: tenantProfile } = await supabase
+      .from('profiles')
+      .select('user_id, erp_user_code')
+      .eq('active_tenant_id', product.tenant_id)
+      .not('erp_user_code', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    userIdForErp = tenantProfile?.user_id ?? userIdForErp;
+    erp_usuario = Number(tenantProfile?.erp_user_code) || 0;
   }
 
   return {
@@ -105,7 +129,7 @@ export async function loadProductForSync(
       erp_subgrupo: product.erp_subgrupo,
       familia_label,
       classe_label,
-      tipo_item: product.tipo_item,
+      tipo_item,
       tipo_ficha: product.tipo_ficha,
       unit_measure: product.unit_measure,
       ncm_code: product.ncm_code,

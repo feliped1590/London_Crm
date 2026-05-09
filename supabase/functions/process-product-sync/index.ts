@@ -44,14 +44,34 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const requestBody = await req.json().catch(() => ({}));
+    const requestedProductId = typeof requestBody?.product_id === 'string' ? requestBody.product_id : null;
+    let requesterUserId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const userClient = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } },
+      );
+      const { data: { user } } = await userClient.auth.getUser();
+      requesterUserId = user?.id ?? null;
+    }
+
     // Buscar itens pendentes da fila (máx 20 por execução)
-    const { data: queue, error: queueError } = await supabase
+    let queueQuery = supabase
       .from('product_sync_queue')
-      .select('id, product_id, attempt_count')
+      .select('id, product_id, attempt_count, payload')
       .eq('status', 'pending')
       .lt('attempt_count', 5)
       .order('created_at', { ascending: true })
       .limit(20);
+
+    if (requestedProductId) {
+      queueQuery = queueQuery.eq('product_id', requestedProductId);
+    }
+
+    const { data: queue, error: queueError } = await queueQuery;
 
     if (queueError) {
       console.error('[process-product-sync] Erro ao ler fila:', queueError);
@@ -88,10 +108,14 @@ Deno.serve(async (req) => {
         }
 
         // Carregar produto + labels + erp_usuario (também devolve tenantId para a checagem de janela)
+        const executorUserId = typeof item.payload?.executor_user_id === 'string'
+          ? item.payload.executor_user_id
+          : requesterUserId;
+
         const { product: productForSync, ctx, tenantId } = await loadProductForSync(
           supabase,
           item.product_id,
-          null, // usa created_by como fallback
+          executorUserId,
         );
 
         // ⏰ Janela de acesso por tenant (strict) — depois do load, com tenantId resolvido
@@ -219,7 +243,6 @@ Deno.serve(async (req) => {
           pendente_envio: false,
           erp_synced_at: new Date().toISOString(),
           origem_alteracao: 'SYNC',
-          erp_status: 'synced',
         };
 
         // Se ERP retornou um código (CREATE), persiste; em UPDATE mantém o existente
@@ -227,10 +250,14 @@ Deno.serve(async (req) => {
           productUpdate.erp_product_code = parsedResult.erpCode;
         }
 
-        await supabase
+        const { error: productUpdateError } = await supabase
           .from('products')
           .update(productUpdate)
           .eq('id', item.product_id);
+
+        if (productUpdateError) {
+          throw new Error(`ERP sincronizou, mas falhou ao gravar código no CRM: ${productUpdateError.message}`);
+        }
 
         // Log detalhado
         const parsedPayload = JSON.parse(payload);
