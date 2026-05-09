@@ -140,6 +140,25 @@ export function extractRawRetorno(rawResponse: unknown): string {
   return typeof r === 'string' ? r.trim() : '';
 }
 
+/** Tenta interpretar `raw` como JSON no formato { codigo_produto, erro }. */
+function tryParseJsonShape(raw: string): { codigo_produto?: string; erro?: string } | null {
+  if (!raw || (raw[0] !== '{' && raw[0] !== '[')) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const obj = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (!obj || typeof obj !== 'object') return null;
+    if ('codigo_produto' in obj || 'erro' in obj) {
+      return {
+        codigo_produto: typeof (obj as any).codigo_produto === 'string' ? (obj as any).codigo_produto : undefined,
+        erro: typeof (obj as any).erro === 'string' ? (obj as any).erro : undefined,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function tryMatch(
   raw: string,
   patterns: PatternDef[],
@@ -333,6 +352,43 @@ export function parseProductRetorno(
     });
   }
 
+  // Novo formato JSON: {"codigo_produto":"123","erro":""} ou {"codigo_produto":"","erro":"..."}
+  const jsonShape = tryParseJsonShape(raw);
+  if (jsonShape) {
+    const { codigo_produto, erro } = jsonShape;
+    if (erro && erro.trim() !== '') {
+      return buildIntegrationResult({
+        entity: 'product',
+        action: 'error',
+        erpCode: null,
+        raw,
+        rawResponse,
+        matchedPattern: 'product.error.json.v1',
+        errorMessage: erro.trim(),
+        errorType: 'erp',
+        isRetryable: false,
+        warnings: [],
+        metadata: baseMeta,
+      });
+    }
+    if (codigo_produto && isValidErpCode(codigo_produto)) {
+      return buildIntegrationResult({
+        entity: 'product',
+        action: 'created',
+        erpCode: codigo_produto,
+        raw,
+        rawResponse,
+        matchedPattern: 'product.created.json.v1',
+        errorMessage: null,
+        errorType: null,
+        isRetryable: false,
+        warnings: [],
+        metadata: baseMeta,
+        requireCodeForSuccess: false,
+      });
+    }
+  }
+
   const found = tryMatch(raw, PRODUCT_PATTERNS);
 
   if (!found) {
@@ -344,7 +400,7 @@ export function parseProductRetorno(
       raw,
       rawResponse,
       matchedPattern: null,
-      errorMessage: null,
+      errorMessage: `Formato de retorno desconhecido: "${raw}"`,
       errorType: 'parse',
       isRetryable: false,
       warnings: [`Formato de retorno desconhecido: "${raw}"`],

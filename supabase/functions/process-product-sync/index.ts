@@ -195,6 +195,13 @@ Deno.serve(async (req) => {
           throw new Error(`ERP retornou erro: ${parsedResult.errorMessage || parsedResult.raw}`);
         }
 
+        // Em CREATE, exigir erpCode; sem ele, considerar falha de parse
+        if (!isUpdate && !parsedResult.erpCode) {
+          throw new Error(
+            `ERP não retornou código do produto. Resposta: ${parsedResult.errorMessage || parsedResult.raw || 'vazia'}`,
+          );
+        }
+
 
         // Sucesso - atualizar fila
         await supabase
