@@ -7,6 +7,7 @@ import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send } from 'lucide-rea
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProductSyncStatusProps {
   productId: string;
@@ -132,6 +133,7 @@ export function ProductSyncBadge({ productId, erpProductCode }: ProductSyncStatu
 
 export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }: ProductSyncStatusProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
@@ -174,15 +176,28 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }
       }
 
       // 2. Enfileirar
+      const queuePayload = {
+        executor_user_id: user?.id ?? null,
+        queued_from: 'manual_product_sync',
+      };
+      const queueRecord = {
+        product_id: productId,
+        status: 'pending',
+        attempt_count: 0,
+        error_message: null,
+        next_retry_at: null,
+        payload: queuePayload,
+      };
       const { error: queueErr } = await (supabase as any)
         .from('product_sync_queue')
-        .upsert(
-          { product_id: productId, status: 'pending', attempt_count: 0, error_message: null, next_retry_at: null },
-          { onConflict: 'product_id' },
-        );
+        .insert(queueRecord);
       if (queueErr) {
-        // fallback insert se onConflict não estiver disponível
-        await (supabase as any).from('product_sync_queue').insert({ product_id: productId, status: 'pending' });
+        const { error: updateQueueErr } = await (supabase as any)
+          .from('product_sync_queue')
+          .update(queueRecord)
+          .eq('product_id', productId)
+          .in('status', ['pending', 'retry', 'processing']);
+        if (updateQueueErr) throw updateQueueErr;
       }
 
       toast.success('Produto adicionado à fila de envio ao ERP');

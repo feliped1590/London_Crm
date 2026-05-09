@@ -541,6 +541,7 @@ export default function Products() {
         sku: data.sku!,
         name: data.name!,
         description: data.description,
+        created_by: user?.id ?? null,
         tipo_id: data.tipo_id || null,
         grupo_id: data.grupo_id || null,
         subgrupo_id: data.subgrupo_id || null,
