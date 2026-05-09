@@ -61,10 +61,10 @@ function useProductErpCode(productId: string, erpCodeProp?: string | null) {
       if (error) throw error;
       return data;
     },
-    staleTime: 30_000,
-    enabled: erpCodeProp === undefined,
+    staleTime: 5_000,
+    initialData: erpCodeProp !== undefined ? { erp_product_code: erpCodeProp ?? null } : undefined,
   });
-  return erpCodeProp ?? data?.erp_product_code ?? null;
+  return data?.erp_product_code ?? erpCodeProp ?? null;
 }
 
 function useProductQueueEntry(productId: string) {
