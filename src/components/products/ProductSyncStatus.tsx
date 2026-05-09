@@ -135,7 +135,8 @@ function useProductQueueEntry(productId: string) {
   });
 }
 
-export function ProductSyncBadge({ productId, erpProductCode }: ProductSyncStatusProps) {
+export function ProductSyncBadge({ productId, erpProductCode, onProductUpdated }: ProductSyncStatusProps) {
+  useProductSyncRealtime(productId, onProductUpdated);
   const erpCode = useProductErpCode(productId, erpProductCode);
   const { data: queueEntry } = useProductQueueEntry(productId);
 
@@ -177,7 +178,7 @@ export function ProductSyncBadge({ productId, erpProductCode }: ProductSyncStatu
   );
 }
 
-export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }: ProductSyncStatusProps) {
+export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered, onProductUpdated }: ProductSyncStatusProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -187,10 +188,19 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }
 
   const erpCode = useProductErpCode(productId, erpProductCode);
 
-  const refreshSyncStatus = () => {
+  const refreshSyncStatus = async () => {
     queryClient.invalidateQueries({ queryKey: ['product_sync_status', productId] });
     queryClient.invalidateQueries({ queryKey: ['product_erp_code', productId] });
     queryClient.invalidateQueries({ queryKey: ['products'] });
+    const { data } = await supabase
+      .from('products')
+      .select('id, erp_product_code, erp_synced_at, pendente_envio, origem_alteracao, updated_at')
+      .eq('id', productId)
+      .maybeSingle();
+    if (data) {
+      cacheProductSnapshot(queryClient, data as ProductSyncSnapshot);
+      onProductUpdated?.(data as ProductSyncSnapshot);
+    }
     onSyncTriggered?.();
   };
 
@@ -247,7 +257,7 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }
       }
 
       toast.success('Produto adicionado à fila de envio ao ERP');
-      refreshSyncStatus();
+      await refreshSyncStatus();
 
       // 3. Disparar processamento
       const { data, error } = await supabase.functions.invoke('process-product-sync', {
@@ -269,7 +279,7 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered }
         toast.info(result.error || 'Envio adiado por janela de acesso.');
       }
 
-      refreshSyncStatus();
+      await refreshSyncStatus();
     } catch (err: any) {
       toast.error(`Erro ao enviar produto: ${err.message}`);
     } finally {
