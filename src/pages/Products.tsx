@@ -536,11 +536,13 @@ export default function Products() {
     });
 
     setEditingProduct((current) => current?.id === syncedProduct.id ? { ...current, ...syncedProduct } as Product : current);
-    setFormData((current) => ({
-      ...current,
-      erp_product_code: syncedProduct.erp_product_code ?? current.erp_product_code,
-    }));
-  }, [queryClient]);
+    if (editingProduct?.id === syncedProduct.id) {
+      setFormData((current) => ({
+        ...current,
+        erp_product_code: syncedProduct.erp_product_code ?? current.erp_product_code,
+      }));
+    }
+  }, [editingProduct?.id, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Product>) => {
