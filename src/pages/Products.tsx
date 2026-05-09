@@ -853,9 +853,11 @@ export default function Products() {
 
     // Validação dos campos obrigatórios para sincronização com o ERP Projedata
     // (codigo / erp_product_code é opcional: vazio = CREATE; preenchido = UPDATE)
+    // Grupo e Subgrupo ERP são derivados automaticamente da descrição (label)
+    // do Grupo/Subgrupo selecionado pelo usuário no CRM.
     const erpRequiredErrors: string[] = [];
-    if (!formData.erp_grupo?.trim()) erpRequiredErrors.push('Grupo ERP');
-    if (!formData.erp_subgrupo?.trim()) erpRequiredErrors.push('Subgrupo ERP');
+    if (!formData.grupo_id) erpRequiredErrors.push('Grupo');
+    if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
     if (!formData.family_id) erpRequiredErrors.push('Família');
     if (!formData.class_id) erpRequiredErrors.push('Classe');
     if (!formData.tipo_item?.trim()) erpRequiredErrors.push('Tipo de item');
@@ -892,6 +894,14 @@ export default function Products() {
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
+
+    // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
+    // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
+    // não um código separado.
+    const grupoLabel = grupos.items.find((g) => g.id === submitData.grupo_id)?.label?.trim() || '';
+    const subgrupoLabel = subgrupos.items.find((s) => s.id === submitData.subgrupo_id)?.label?.trim() || '';
+    submitData.erp_grupo = grupoLabel;
+    submitData.erp_subgrupo = subgrupoLabel;
     if (hasAutoDimensions(profile)) {
       try {
         const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
@@ -1354,6 +1364,27 @@ export default function Products() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    {/* Tipo de Ficha */}
+                    <div>
+                      <Label htmlFor="tipo_ficha" className="flex items-center gap-1">
+                        Tipo de Ficha <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={formData.tipo_ficha ? String(formData.tipo_ficha) : ''}
+                        onValueChange={(v) => setFormData({ ...formData, tipo_ficha: Number(v) })}
+                      >
+                        <SelectTrigger id="tipo_ficha">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1</SelectItem>
+                          <SelectItem value="2">2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Obrigatório para sincronização com o ERP.
+                      </p>
                     </div>
                     {/* Unidade */}
                     <div>
