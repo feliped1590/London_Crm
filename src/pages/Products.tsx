@@ -1220,11 +1220,13 @@ export default function Products() {
                     <ProductSyncBadge
                       productId={editingProduct.id}
                       erpProductCode={(editingProduct as any).erp_product_code}
+                      onProductUpdated={handleProductSyncUpdated}
                     />
                     {canEditProducts && (
                       <ProductSyncButton
                         productId={editingProduct.id}
                         erpProductCode={(editingProduct as any).erp_product_code}
+                        onProductUpdated={handleProductSyncUpdated}
                       />
                     )}
                   </div>
@@ -1958,6 +1960,7 @@ export default function Products() {
                         <ProductSyncBadge
                           productId={product.id}
                           erpProductCode={(product as any).erp_product_code}
+                          onProductUpdated={handleProductSyncUpdated}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1966,6 +1969,7 @@ export default function Products() {
                             <ProductSyncButton
                               productId={product.id}
                               erpProductCode={(product as any).erp_product_code}
+                              onProductUpdated={handleProductSyncUpdated}
                             />
                           )}
                           {canCreateProducts && (
