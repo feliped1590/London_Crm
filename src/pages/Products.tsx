@@ -894,6 +894,14 @@ export default function Products() {
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
+
+    // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
+    // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
+    // não um código separado.
+    const grupoLabel = grupos.items.find((g) => g.id === submitData.grupo_id)?.label?.trim() || '';
+    const subgrupoLabel = subgrupos.items.find((s) => s.id === submitData.subgrupo_id)?.label?.trim() || '';
+    submitData.erp_grupo = grupoLabel;
+    submitData.erp_subgrupo = subgrupoLabel;
     if (hasAutoDimensions(profile)) {
       try {
         const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
