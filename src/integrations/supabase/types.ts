@@ -1689,6 +1689,66 @@ export type Database = {
           },
         ]
       }
+      company_sync_queue_archive: {
+        Row: {
+          archived_at: string
+          attempts: number
+          company_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          payload: Json | null
+          processed_at: string | null
+          response: Json | null
+          scheduled_at: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          validation_errors: Json | null
+          validation_fields: string[] | null
+        }
+        Insert: {
+          archived_at?: string
+          attempts?: number
+          company_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          scheduled_at?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
+        }
+        Update: {
+          archived_at?: string
+          attempts?: number
+          company_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          response?: Json | null
+          scheduled_at?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
+        }
+        Relationships: []
+      }
       contact_erp_data: {
         Row: {
           contact_id: string
@@ -4748,6 +4808,60 @@ export type Database = {
           },
         ]
       }
+      order_sync_queue_archive: {
+        Row: {
+          archived_at: string
+          attempt_count: number
+          created_at: string
+          error_message: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          order_id: string
+          pedido_terceiro: number
+          processed_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          validation_errors: Json | null
+          validation_fields: string[] | null
+        }
+        Insert: {
+          archived_at?: string
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          order_id: string
+          pedido_terceiro: number
+          processed_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
+        }
+        Update: {
+          archived_at?: string
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          order_id?: string
+          pedido_terceiro?: number
+          processed_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_fields?: string[] | null
+        }
+        Relationships: []
+      }
       order_type_erp_mapping: {
         Row: {
           created_at: string | null
@@ -6177,6 +6291,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      product_sync_queue_archive: {
+        Row: {
+          archived_at: string
+          attempt_count: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number | null
+          next_retry_at: string | null
+          payload: Json | null
+          processed_at: string | null
+          product_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          archived_at?: string
+          attempt_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          archived_at?: string
+          attempt_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       product_types: {
         Row: {
@@ -8948,6 +9107,7 @@ export type Database = {
         Args: { p_request_id: string; p_review_note?: string }
         Returns: Json
       }
+      archive_old_sync_records: { Args: { days_old?: number }; Returns: Json }
       can_access_legal_entity: {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean

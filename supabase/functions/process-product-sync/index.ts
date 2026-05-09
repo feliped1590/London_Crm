@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     // Buscar itens pendentes da fila (máx 20 por execução)
     const { data: queue, error: queueError } = await supabase
       .from('product_sync_queue')
-      .select('id, product_id, attempt_count, tenant_id')
+      .select('id, product_id, attempt_count')
       .eq('status', 'pending')
       .lt('attempt_count', 5)
       .order('created_at', { ascending: true })
@@ -73,9 +73,30 @@ Deno.serve(async (req) => {
 
     for (const item of queue) {
       try {
-        // ⏰ Janela de acesso por tenant (strict)
+        // Marcar como processing (lock atômico — só pega se ainda estiver pending)
+        const { data: locked } = await supabase
+          .from('product_sync_queue')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', item.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
+
+        if (!locked) {
+          console.log(`[process-product-sync] Item ${item.id} já em processamento, pulando`);
+          continue;
+        }
+
+        // Carregar produto + labels + erp_usuario (também devolve tenantId para a checagem de janela)
+        const { product: productForSync, ctx, tenantId } = await loadProductForSync(
+          supabase,
+          item.product_id,
+          null, // usa created_by como fallback
+        );
+
+        // ⏰ Janela de acesso por tenant (strict) — depois do load, com tenantId resolvido
         try {
-          await checkAccessWindowForTenant(supabase, (item as any).tenant_id, {
+          await checkAccessWindowForTenant(supabase, tenantId, {
             mode: 'strict',
             context: 'process-product-sync',
           });
@@ -97,19 +118,6 @@ Deno.serve(async (req) => {
           }
           throw winErr;
         }
-
-        // Marcar como processing
-        await supabase
-          .from('product_sync_queue')
-          .update({ status: 'processing', updated_at: new Date().toISOString() })
-          .eq('id', item.id);
-
-        // Carregar produto + labels + erp_usuario
-        const { product: productForSync, ctx, tenantId } = await loadProductForSync(
-          supabase,
-          item.product_id,
-          null, // usa created_by como fallback
-        );
 
         // Validar campos obrigatórios antes do envio
         const validation = validateProductForSync(productForSync, ctx);
