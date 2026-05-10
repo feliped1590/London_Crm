@@ -50,7 +50,9 @@ export function OperationalPermissionsManager() {
         .select('id, legal_entity_id')
         .eq('id', pipelineId)
         .maybeSingle();
-      const { data: tenant } = await supabase.rpc('get_user_tenant_ids', { _user_id: (await supabase.auth.getUser()).data.user?.id });
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      if (!userId) throw new Error('Sessão expirada');
+      const { data: tenant } = await supabase.rpc('get_user_tenant_ids', { p_user_id: userId });
       const tenantId = Array.isArray(tenant) ? tenant[0] : tenant;
       const { error } = await supabase.from('operational_stage_permissions').insert({
         pipeline_id: pipelineId,
@@ -113,7 +115,7 @@ export function OperationalPermissionsManager() {
             <SelectTrigger><SelectValue placeholder="Papel" /></SelectTrigger>
             <SelectContent>
               {ASSIGNABLE_ROLES.map(r => (
-                <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                <SelectItem key={r.role} value={r.role}>{ROLE_LABELS[r.role]}</SelectItem>
               ))}
             </SelectContent>
           </Select>
