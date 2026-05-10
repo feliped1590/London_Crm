@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import type { ProductSearchResult } from './useProductSearch';
 
 const STORAGE_KEY = 'recent-product-ids';
@@ -19,7 +20,9 @@ function loadRecentIds(): string[] {
  * Tracks and fetches recently selected products.
  * Stores up to 10 product IDs in localStorage, preserving usage order.
  */
-export function useRecentProducts(legalEntityId?: string | null) {
+export function useRecentProducts(legalEntityIdOverride?: string | null) {
+  const { activeLegalEntityId } = useLegalEntities();
+  const legalEntityId = legalEntityIdOverride ?? activeLegalEntityId;
   const [recentIds, setRecentIds] = useState<string[]>(loadRecentIds);
 
   useEffect(() => {
