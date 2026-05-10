@@ -115,7 +115,7 @@ export function OperationalPermissionsManager() {
             <SelectTrigger><SelectValue placeholder="Papel" /></SelectTrigger>
             <SelectContent>
               {ASSIGNABLE_ROLES.map(r => (
-                <SelectItem key={r.role} value={r.role}>{ROLE_LABELS[r.role]}</SelectItem>
+                <SelectItem key={r.value} value={r.value}>{ROLE_LABELS[r.value]}</SelectItem>
               ))}
             </SelectContent>
           </Select>
