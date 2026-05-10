@@ -24,6 +24,7 @@ import {
   DollarSign,
   CalendarCheck,
   SearchCheck,
+  Workflow,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
