@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCurrency } from '@/lib/formatters';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { NCMSelector } from '@/components/products/NCMSelector';
@@ -67,6 +68,7 @@ type ProductHistoryEntry = {
 
 export default function Products() {
   const { user } = useAuth();
+  const { activeLegalEntityId, isContextReady } = useLegalEntities();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
@@ -416,11 +418,12 @@ export default function Products() {
 
   // Count query for total
   const { data: totalCount } = useQuery({
-    queryKey: ['products-count', filterTipo, filterActive, searchTerm],
+    queryKey: ['products-count', activeLegalEntityId, filterTipo, filterActive, searchTerm],
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('id', { count: 'exact', head: true });
+        .select('id', { count: 'exact', head: true })
+        .eq('legal_entity_id', activeLegalEntityId!);
 
       if (filterTipo !== 'all') {
         query = query.eq('tipo_id', filterTipo);
@@ -438,6 +441,7 @@ export default function Products() {
       if (error) throw error;
       return count || 0;
     },
+    enabled: isContextReady,
     staleTime: 0,
   });
 
@@ -447,12 +451,13 @@ export default function Products() {
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
 
   const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
+    queryKey: ['products', activeLegalEntityId, filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
     queryFn: async () => {
       const orderColumn = sortField === 'tipo' ? 'tipo_id' : sortField;
       let query = supabase
         .from('products')
         .select('*')
+        .eq('legal_entity_id', activeLegalEntityId!)
         .order(orderColumn, { ascending: sortDirection === 'asc' })
         .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
 
@@ -472,6 +477,7 @@ export default function Products() {
       if (error) throw error;
       return data as unknown as Product[];
     },
+    enabled: isContextReady,
     staleTime: 0,
     refetchOnMount: 'always',
   });
@@ -552,10 +558,14 @@ export default function Products() {
         data.length || 0,
         data.thickness || 0
       );
+      if (!activeLegalEntityId) {
+        throw new Error('Selecione uma entidade jurídica antes de criar um produto.');
+      }
       const { data: createdProduct, error } = await supabase.from('products').insert({
         sku: data.sku!,
         name: data.name!,
         description: data.description,
+        legal_entity_id: activeLegalEntityId,
         created_by: user?.id ?? null,
         tipo_id: data.tipo_id || null,
         grupo_id: data.grupo_id || null,
