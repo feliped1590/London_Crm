@@ -4248,6 +4248,47 @@ export type Database = {
           },
         ]
       }
+      operational_stage_permissions: {
+        Row: {
+          access_level: string
+          created_at: string
+          created_by: string | null
+          department: string
+          id: string
+          pipeline_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string
+          created_by?: string | null
+          department: string
+          id?: string
+          pipeline_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          id?: string
+          pipeline_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_stage_permissions_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_approval_rules: {
         Row: {
           created_at: string | null
@@ -4648,39 +4689,61 @@ export type Database = {
       }
       order_operational_stage_history: {
         Row: {
+          from_pipeline_id: string | null
           from_stage_id: string | null
           id: string
+          is_non_sequential: boolean
+          move_kind: string | null
           moved_at: string
           moved_by: string | null
           order_id: string
           pipeline_id: string
           reason: string | null
           tenant_id: string
+          time_in_stage_seconds: number | null
+          to_pipeline_id: string | null
           to_stage_id: string | null
         }
         Insert: {
+          from_pipeline_id?: string | null
           from_stage_id?: string | null
           id?: string
+          is_non_sequential?: boolean
+          move_kind?: string | null
           moved_at?: string
           moved_by?: string | null
           order_id: string
           pipeline_id: string
           reason?: string | null
           tenant_id: string
+          time_in_stage_seconds?: number | null
+          to_pipeline_id?: string | null
           to_stage_id?: string | null
         }
         Update: {
+          from_pipeline_id?: string | null
           from_stage_id?: string | null
           id?: string
+          is_non_sequential?: boolean
+          move_kind?: string | null
           moved_at?: string
           moved_by?: string | null
           order_id?: string
           pipeline_id?: string
           reason?: string | null
           tenant_id?: string
+          time_in_stage_seconds?: number | null
+          to_pipeline_id?: string | null
           to_stage_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_operational_stage_history_from_pipeline_id_fkey"
+            columns: ["from_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_operational_stage_history_from_stage_id_fkey"
             columns: ["from_stage_id"]
@@ -4698,6 +4761,13 @@ export type Database = {
           {
             foreignKeyName: "order_operational_stage_history_pipeline_id_fkey"
             columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_operational_stage_history_to_pipeline_id_fkey"
+            columns: ["to_pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
             referencedColumns: ["id"]
@@ -5005,7 +5075,11 @@ export type Database = {
           locked_by: string | null
           number: string
           observations: string | null
+          operational_entered_pipeline_at: string | null
+          operational_entered_stage_at: string | null
+          operational_owner_id: string | null
           operational_pipeline_id: string | null
+          operational_priority: string
           operational_stage_id: string | null
           order_date: string | null
           order_type: string
@@ -5061,7 +5135,11 @@ export type Database = {
           locked_by?: string | null
           number: string
           observations?: string | null
+          operational_entered_pipeline_at?: string | null
+          operational_entered_stage_at?: string | null
+          operational_owner_id?: string | null
           operational_pipeline_id?: string | null
+          operational_priority?: string
           operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
@@ -5117,7 +5195,11 @@ export type Database = {
           locked_by?: string | null
           number?: string
           observations?: string | null
+          operational_entered_pipeline_at?: string | null
+          operational_entered_stage_at?: string | null
+          operational_owner_id?: string | null
           operational_pipeline_id?: string | null
+          operational_priority?: string
           operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
@@ -5376,9 +5458,12 @@ export type Database = {
           created_at: string
           default_owner_id: string | null
           id: string
+          is_critical_stage: boolean
           name: string
+          operational_department: string | null
           pipeline_id: string | null
           probability: number | null
+          sla_critical_hours: number | null
           sla_hours: number | null
           sla_warning_hours: number | null
           sort_order: number
@@ -5386,6 +5471,7 @@ export type Database = {
           stage_category: string
           stage_phase: string
           stage_status: string
+          waiting_for_customer: boolean
         }
         Insert: {
           allowed_roles?: string[] | null
@@ -5393,9 +5479,12 @@ export type Database = {
           created_at?: string
           default_owner_id?: string | null
           id?: string
+          is_critical_stage?: boolean
           name: string
+          operational_department?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          sla_critical_hours?: number | null
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order: number
@@ -5403,6 +5492,7 @@ export type Database = {
           stage_category?: string
           stage_phase?: string
           stage_status?: string
+          waiting_for_customer?: boolean
         }
         Update: {
           allowed_roles?: string[] | null
@@ -5410,9 +5500,12 @@ export type Database = {
           created_at?: string
           default_owner_id?: string | null
           id?: string
+          is_critical_stage?: boolean
           name?: string
+          operational_department?: string | null
           pipeline_id?: string | null
           probability?: number | null
+          sla_critical_hours?: number | null
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order?: number
@@ -5420,6 +5513,7 @@ export type Database = {
           stage_category?: string
           stage_phase?: string
           stage_status?: string
+          waiting_for_customer?: boolean
         }
         Relationships: [
           {
@@ -9202,6 +9296,10 @@ export type Database = {
       }
       can_manage_portfolio: {
         Args: { p_entity_type?: string; p_owner_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      can_move_operational_stage: {
+        Args: { _to_stage_id: string; _user_id: string }
         Returns: boolean
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
