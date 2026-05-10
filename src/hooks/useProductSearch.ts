@@ -56,8 +56,9 @@ async function fetchProducts(filters: ProductSearchFilters, page: number, limit:
  */
 export function useProductSearch({ filters, page = 0, limit = 20, enabled = true }: UseProductSearchOptions) {
   const queryClient = useQueryClient();
+  const { activeLegalEntityId, isContextReady } = useLegalEntities();
+  const isReady = enabled && isContextReady && !!activeLegalEntityId;
 
-  // Cancel stale queries on filter change
   useEffect(() => {
     return () => {
       queryClient.cancelQueries({ queryKey: ['products-search'] });
@@ -65,26 +66,25 @@ export function useProductSearch({ filters, page = 0, limit = 20, enabled = true
   }, [filters, queryClient]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products-search', filters, page, limit],
-    queryFn: () => fetchProducts(filters, page, limit),
-    enabled,
+    queryKey: ['products-search', activeLegalEntityId, filters, page, limit],
+    queryFn: () => fetchProducts(filters, page, limit, activeLegalEntityId!),
+    enabled: isReady,
     staleTime: 120_000,
     gcTime: 5 * 60_000,
-    placeholderData: (prev) => prev, // Keep previous data while fetching
+    placeholderData: (prev) => prev,
   });
 
   const totalPages = Math.ceil((data?.total ?? 0) / limit);
 
-  // Prefetch next page
   useEffect(() => {
-    if (enabled && page < totalPages - 1) {
+    if (isReady && page < totalPages - 1) {
       queryClient.prefetchQuery({
-        queryKey: ['products-search', filters, page + 1, limit],
-        queryFn: () => fetchProducts(filters, page + 1, limit),
+        queryKey: ['products-search', activeLegalEntityId, filters, page + 1, limit],
+        queryFn: () => fetchProducts(filters, page + 1, limit, activeLegalEntityId!),
         staleTime: 120_000,
       });
     }
-  }, [enabled, filters, page, limit, totalPages, queryClient]);
+  }, [isReady, activeLegalEntityId, filters, page, limit, totalPages, queryClient]);
 
   return {
     products: data?.products ?? [],
