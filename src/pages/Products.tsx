@@ -761,6 +761,7 @@ export default function Products() {
       .from('products')
       .select('id, sku, name')
       .eq('tenant_id', activeTenantId)
+      .eq('legal_entity_id', activeLegalEntityId!)
       .eq('active', true);
 
     // Handle nullable UUID fields — use .is(null) for empty, .eq for values
@@ -834,6 +835,7 @@ export default function Products() {
       .from('products')
       .select('id, sku, name, nome_impresso')
       .eq('tenant_id', activeTenantId)
+      .eq('legal_entity_id', activeLegalEntityId!)
       .eq('active', true);
 
     const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
