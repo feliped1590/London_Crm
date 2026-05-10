@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProductLookup } from '@/types/documents';
 import { useEffect } from 'react';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg';
 
@@ -27,10 +28,11 @@ export interface ProductSearchResult extends ProductLookup {
   class_id?: string | null;
 }
 
-async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number) {
+async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number, legalEntityId: string) {
   let query = supabase
     .from('products')
     .select(PRODUCT_SELECT_COLUMNS, { count: 'exact' })
+    .eq('legal_entity_id', legalEntityId)
     .eq('active', true)
     .order('name')
     .range(page * limit, (page + 1) * limit - 1);
