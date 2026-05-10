@@ -6626,6 +6626,7 @@ export type Database = {
           grupo_id: string | null
           id: string
           is_acabado: boolean | null
+          legal_entity_id: string
           length: number | null
           name: string
           ncm_code: string | null
@@ -6697,6 +6698,7 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null
+          legal_entity_id: string
           length?: number | null
           name: string
           ncm_code?: string | null
@@ -6768,6 +6770,7 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null
+          legal_entity_id?: string
           length?: number | null
           name?: string
           ncm_code?: string | null
@@ -6838,6 +6841,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
             referencedColumns: ["id"]
           },
           {
