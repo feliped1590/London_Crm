@@ -78,16 +78,18 @@ export function AppSidebar() {
   const { canAccess, isDeveloper, isPrivileged, isFullyLoaded, error: permissionsError } = useModulePermissions();
   const { effectiveEntity } = useLegalEntities();
 
-  // Filter nav items based on user permissions
+  // Filter nav items based on user permissions + legal entity scoping
   const navItems = useMemo(() => {
-    if (isPrivileged) return allNavItems.filter(item => !item.devOnly || isDeveloper);
-    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly);
+    const matchesEntity = (item: NavItem) =>
+      !item.legalEntityId || effectiveEntity?.id === item.legalEntityId;
+    if (isPrivileged) return allNavItems.filter(item => (!item.devOnly || isDeveloper) && matchesEntity(item));
+    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly && matchesEntity(item));
     return allNavItems.filter(item => {
-      // Dev-only items require developer role
       if (item.devOnly && !isDeveloper) return false;
+      if (!matchesEntity(item)) return false;
       return canAccess(item.moduleKey);
     });
-  }, [canAccess, isFullyLoaded, isDeveloper, isPrivileged, permissionsError]);
+  }, [canAccess, isFullyLoaded, isDeveloper, isPrivileged, permissionsError, effectiveEntity?.id]);
 
   const handleNavClick = () => {
     if (isMobile) {
