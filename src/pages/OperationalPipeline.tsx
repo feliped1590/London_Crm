@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Workflow, AlertTriangle } from 'lucide-react';
+import { Workflow, AlertTriangle, LayoutDashboard, Kanban } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useOperationalFeatureFlag } from '@/hooks/useOperationalFeatureFlag';
 import { useOperationalPipelines } from '@/hooks/useOperationalPipelines';
 import { useOperationalKanbanData } from '@/hooks/useOperationalKanbanData';
+import { useOperationalFilters } from '@/hooks/useOperationalFilters';
 import { OperationalDisclaimerBanner } from '@/components/pipeline/operational/OperationalDisclaimerBanner';
 import { OperationalKanbanBoard } from '@/components/pipeline/operational/OperationalKanbanBoard';
+import { OperationalFiltersBar } from '@/components/pipeline/operational/OperationalFiltersBar';
+import { OperationalDashboardPanel } from '@/components/pipeline/operational/OperationalDashboardPanel';
 
 export default function OperationalPipeline() {
   const { isEnabled, isLoading: flagLoading } = useOperationalFeatureFlag();
@@ -20,10 +24,15 @@ export default function OperationalPipeline() {
   }, [pipelines, selectedId]);
 
   const { orders, isLoading: ordersLoading } = useOperationalKanbanData(selectedId);
-
   const stagesForPipeline = useMemo(
     () => stages.filter(s => s.pipeline_id === selectedId),
     [stages, selectedId],
+  );
+
+  const { filters, update, reset, apply } = useOperationalFilters(selectedId);
+  const filteredOrders = useMemo(
+    () => apply(orders, stagesForPipeline),
+    [orders, stagesForPipeline, apply],
   );
 
   if (flagLoading || pipelinesLoading) {
@@ -37,13 +46,10 @@ export default function OperationalPipeline() {
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-1 shrink-0" />
             <div>
-              <h2 className="font-semibold text-base mb-1">
-                Experiência operacional desativada
-              </h2>
+              <h2 className="font-semibold text-base mb-1">Experiência operacional desativada</h2>
               <p className="text-sm text-muted-foreground">
-                A nova arquitetura operacional está implantada mas ainda não foi
-                ativada para esta tenant. Um administrador pode habilitar em
-                Configurações &rarr; Pipelines Operacionais.
+                A nova arquitetura operacional está implantada mas ainda não foi ativada para esta
+                tenant. Um administrador pode habilitar em Configurações &rarr; Pipelines Operacionais.
               </p>
             </div>
           </div>
@@ -86,15 +92,29 @@ export default function OperationalPipeline() {
 
       <OperationalDisclaimerBanner />
 
-      {ordersLoading ? (
-        <div className="text-sm text-muted-foreground">Carregando pedidos...</div>
-      ) : (
-        <OperationalKanbanBoard
-          pipelineId={selectedId!}
-          stages={stagesForPipeline}
-          orders={orders}
-        />
-      )}
+      <Tabs defaultValue="kanban" className="space-y-3">
+        <TabsList>
+          <TabsTrigger value="kanban" className="gap-1"><Kanban className="h-3 w-3" /> Kanban</TabsTrigger>
+          <TabsTrigger value="dashboard" className="gap-1"><LayoutDashboard className="h-3 w-3" /> Dashboard</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="kanban" className="space-y-3">
+          <OperationalFiltersBar filters={filters} update={update} reset={reset} stages={stagesForPipeline} />
+          {ordersLoading ? (
+            <div className="text-sm text-muted-foreground">Carregando pedidos...</div>
+          ) : (
+            <OperationalKanbanBoard
+              pipelineId={selectedId!}
+              stages={stagesForPipeline}
+              orders={filteredOrders}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="dashboard">
+          <OperationalDashboardPanel orders={orders} stages={stagesForPipeline} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

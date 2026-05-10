@@ -1,45 +1,91 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 
 interface Props {
   open: boolean;
   fromStageName: string;
   toStageName: string;
+  requireReason?: boolean;
+  warning?: string | null;
   onCancel: () => void;
   onConfirm: (reason: string | null) => void;
   isPending?: boolean;
 }
 
-export function MoveStageDialog({ open, fromStageName, toStageName, onCancel, onConfirm, isPending }: Props) {
+export function MoveStageDialog({
+  open,
+  fromStageName,
+  toStageName,
+  requireReason,
+  warning,
+  onCancel,
+  onConfirm,
+  isPending,
+}: Props) {
   const [reason, setReason] = useState('');
+  const blocked = requireReason && reason.trim().length === 0;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setReason('');
+          onCancel();
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Mover pedido</DialogTitle>
+          <DialogTitle>Confirmar movimentação</DialogTitle>
           <DialogDescription>
-            De <strong>{fromStageName || '—'}</strong> para <strong>{toStageName}</strong>.
-            Movimentação interna do CRM (não afeta o ERP).
+            <span className="block">
+              <span className="text-muted-foreground">De: </span>
+              <span className="font-medium">{fromStageName || '—'}</span>
+            </span>
+            <span className="block">
+              <span className="text-muted-foreground">Para: </span>
+              <span className="font-medium">{toStageName}</span>
+            </span>
+            {warning && (
+              <span className="block mt-2 text-amber-700 dark:text-amber-400 text-xs">
+                ⚠ {warning}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="reason">Motivo (opcional)</Label>
+          <label className="text-xs font-medium text-muted-foreground">
+            Motivo {requireReason ? '(obrigatório)' : '(opcional)'}
+          </label>
           <Textarea
-            id="reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Ex.: liberado pela qualidade"
+            placeholder={requireReason ? 'Descreva o motivo da movimentação…' : 'Opcional…'}
             rows={3}
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel} disabled={isPending}>Cancelar</Button>
-          <Button onClick={() => onConfirm(reason.trim() || null)} disabled={isPending}>
-            {isPending ? 'Movendo...' : 'Confirmar movimentação'}
+          <Button variant="outline" onClick={onCancel} disabled={isPending}>
+            Cancelar
+          </Button>
+          <Button
+            disabled={isPending || blocked}
+            onClick={() => {
+              onConfirm(reason.trim() || null);
+              setReason('');
+            }}
+          >
+            Confirmar
           </Button>
         </DialogFooter>
       </DialogContent>

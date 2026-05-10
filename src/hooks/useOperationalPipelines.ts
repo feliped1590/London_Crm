@@ -15,12 +15,13 @@ export interface OperationalStage {
   name: string;
   sort_order: number;
   color: string | null;
+  operational_department: string | null;
+  sla_warning_hours: number | null;
+  sla_critical_hours: number | null;
+  is_critical_stage: boolean;
+  waiting_for_customer: boolean;
 }
 
-/**
- * Lista pipelines operacionais (is_operational = true) acessíveis ao usuário,
- * já filtrados via RLS por tenant + entidades vinculadas.
- */
 export function useOperationalPipelines() {
   const { user } = useAuth();
 
@@ -45,7 +46,11 @@ export function useOperationalPipelines() {
       if (!ids.length) return [];
       const { data, error } = await supabase
         .from('pipeline_stages')
-        .select('id, pipeline_id, name, sort_order, color')
+        .select(`
+          id, pipeline_id, name, sort_order, color,
+          operational_department, sla_warning_hours, sla_critical_hours,
+          is_critical_stage, waiting_for_customer
+        `)
         .in('pipeline_id', ids)
         .order('sort_order');
       if (error) throw error;
