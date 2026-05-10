@@ -45,6 +45,8 @@ interface NavItem {
   label: string;
   moduleKey: string;
   devOnly?: boolean;
+  /** When set, item only shows if user's effective legal entity matches */
+  legalEntityId?: string;
 }
 
 const allNavItems: NavItem[] = [
