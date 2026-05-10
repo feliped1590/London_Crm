@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProductLookup } from '@/types/documents';
 import { useEffect } from 'react';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg';
 
@@ -27,10 +28,11 @@ export interface ProductSearchResult extends ProductLookup {
   class_id?: string | null;
 }
 
-async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number) {
+async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number, legalEntityId: string) {
   let query = supabase
     .from('products')
     .select(PRODUCT_SELECT_COLUMNS, { count: 'exact' })
+    .eq('legal_entity_id', legalEntityId)
     .eq('active', true)
     .order('name')
     .range(page * limit, (page + 1) * limit - 1);
@@ -56,8 +58,9 @@ async function fetchProducts(filters: ProductSearchFilters, page: number, limit:
  */
 export function useProductSearch({ filters, page = 0, limit = 20, enabled = true }: UseProductSearchOptions) {
   const queryClient = useQueryClient();
+  const { activeLegalEntityId, isContextReady } = useLegalEntities();
+  const isReady = enabled && isContextReady && !!activeLegalEntityId;
 
-  // Cancel stale queries on filter change
   useEffect(() => {
     return () => {
       queryClient.cancelQueries({ queryKey: ['products-search'] });
@@ -65,26 +68,25 @@ export function useProductSearch({ filters, page = 0, limit = 20, enabled = true
   }, [filters, queryClient]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products-search', filters, page, limit],
-    queryFn: () => fetchProducts(filters, page, limit),
-    enabled,
+    queryKey: ['products-search', activeLegalEntityId, filters, page, limit],
+    queryFn: () => fetchProducts(filters, page, limit, activeLegalEntityId!),
+    enabled: isReady,
     staleTime: 120_000,
     gcTime: 5 * 60_000,
-    placeholderData: (prev) => prev, // Keep previous data while fetching
+    placeholderData: (prev) => prev,
   });
 
   const totalPages = Math.ceil((data?.total ?? 0) / limit);
 
-  // Prefetch next page
   useEffect(() => {
-    if (enabled && page < totalPages - 1) {
+    if (isReady && page < totalPages - 1) {
       queryClient.prefetchQuery({
-        queryKey: ['products-search', filters, page + 1, limit],
-        queryFn: () => fetchProducts(filters, page + 1, limit),
+        queryKey: ['products-search', activeLegalEntityId, filters, page + 1, limit],
+        queryFn: () => fetchProducts(filters, page + 1, limit, activeLegalEntityId!),
         staleTime: 120_000,
       });
     }
-  }, [enabled, filters, page, limit, totalPages, queryClient]);
+  }, [isReady, activeLegalEntityId, filters, page, limit, totalPages, queryClient]);
 
   return {
     products: data?.products ?? [],

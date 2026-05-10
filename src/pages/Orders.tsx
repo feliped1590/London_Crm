@@ -15,6 +15,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Order, orderStatusConfig, OrderStatus, orderTypeConfig, OrderType } from '@/types/products';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ const freightBadgeStyles: Record<string, string> = {
 export default function Orders() {
   const queryClient = useQueryClient();
   const { isAdmin, can } = useModulePermissions();
+  const { activeLegalEntityId, isContextReady } = useLegalEntities();
   const canCreateOrders = can('orders', PermissionAction.Create);
   const canEditOrders = can('orders', PermissionAction.Edit);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +41,7 @@ export default function Orders() {
   const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
 
   const { data: orders, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['orders', filterStatus],
+    queryKey: ['orders', activeLegalEntityId, filterStatus],
     queryFn: async () => {
       let query = supabase
         .from('orders')
@@ -50,6 +52,7 @@ export default function Orders() {
           proposal:proposals(id, number),
           carrier:carriers(id, name, trade_name)
         `)
+        .eq('legal_entity_id', activeLegalEntityId!)
         .order('created_at', { ascending: false })
         .limit(200);
 
@@ -61,6 +64,7 @@ export default function Orders() {
       if (error) throw error;
       return data as unknown as Order[];
     },
+    enabled: isContextReady,
     staleTime: 0,
     refetchOnMount: 'always',
   });

@@ -14,6 +14,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { VersionChecker } from "@/components/VersionChecker";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
+import { useLegalEntities } from "@/hooks/useLegalEntities";
+import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Today from "./pages/Today";
@@ -117,10 +119,12 @@ function AuthStateListener() {
   return null;
 }
 
-// Initializes realtime subscriptions when authenticated
+// Initializes realtime subscriptions only when authenticated AND with valid legal entity context.
+// Garante que nenhum canal realtime conecta antes de isContextReady === true.
 function RealtimeSync() {
   const { user } = useAuth();
-  useRealtimeSync(user?.id);
+  const { isContextReady } = useLegalEntities();
+  useRealtimeSync(isContextReady ? user?.id : undefined);
   return null;
 }
 
@@ -143,7 +147,7 @@ const App = () => (
             <Route path="/proposta/:token" element={<ProposalPublic />} />
             <Route path="/" element={<Navigate to="/today" replace />} />
             <Route element={<ProtectedRoute />}>
-              <Route element={<AppLayout />}>
+              <Route element={<LegalEntityGuard><AppLayout /></LegalEntityGuard>}>
                 <Route path="/today" element={<Today />} />
                 <Route path="/dashboard" element={<Navigate to="/today?tab=visao-geral" replace />} />
                 <Route path="/customers" element={<Customers />} />
