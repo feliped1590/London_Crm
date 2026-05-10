@@ -36,6 +36,7 @@ import { NCMSelector } from '@/components/products/NCMSelector';
 import { TipoProdutoFiscal } from '@/types/fiscal';
 import { Product, calcularFatorMilheiro } from '@/types/products';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { tokenizeSearchTerm, escapePostgrestOrToken } from '@/utils/search/normalizeSearchTerm';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
@@ -434,7 +435,10 @@ export default function Products() {
         query = query.eq('active', false);
       }
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+        for (const raw of tokenizeSearchTerm(searchTerm)) {
+          const t = escapePostgrestOrToken(raw);
+          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+        }
       }
 
       const { count, error } = await query;
@@ -470,7 +474,10 @@ export default function Products() {
         query = query.eq('active', false);
       }
       if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
+        for (const raw of tokenizeSearchTerm(searchTerm)) {
+          const t = escapePostgrestOrToken(raw);
+          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+        }
       }
 
       const { data, error } = await query;
