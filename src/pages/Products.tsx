@@ -54,6 +54,7 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
+import { applyProductSearchFilter } from '@/utils/search/normalizeSearchTerm';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
