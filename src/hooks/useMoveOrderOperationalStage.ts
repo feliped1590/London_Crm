@@ -9,12 +9,6 @@ interface MoveStageInput {
   reason?: string | null;
 }
 
-/**
- * Mutation manual de movimentação operacional.
- * - Atualiza orders.operational_stage_id (e operational_pipeline_id se ainda não setado).
- * - Histórico é gravado automaticamente pelo trigger no banco.
- * - Reason opcional é gravado em uma segunda chamada (UPDATE direto na última linha de histórico).
- */
 export function useMoveOrderOperationalStage() {
   const queryClient = useQueryClient();
 
@@ -30,7 +24,6 @@ export function useMoveOrderOperationalStage() {
       if (error) throw error;
 
       if (reason && reason.trim().length > 0) {
-        // Atualiza a última linha de histórico para esse pedido (criada pelo trigger)
         const { data: lastRow } = await supabase
           .from('order_operational_stage_history')
           .select('id')
@@ -48,6 +41,7 @@ export function useMoveOrderOperationalStage() {
     },
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: ['operational_orders', vars.pipelineId] });
+      queryClient.invalidateQueries({ queryKey: ['operational_order_history', vars.orderId] });
       toast.success('Pedido movido');
     },
     onError: (err: any) => {
