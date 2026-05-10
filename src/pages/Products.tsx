@@ -433,9 +433,7 @@ export default function Products() {
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
       }
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
-      }
+      query = applyProductSearchFilter(query, searchTerm);
 
       const { count, error } = await query;
       if (error) throw error;
@@ -469,9 +467,7 @@ export default function Products() {
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
       }
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
-      }
+      query = applyProductSearchFilter(query, searchTerm);
 
       const { data, error } = await query;
       if (error) throw error;
