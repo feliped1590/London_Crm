@@ -52,6 +52,7 @@ interface NavItem {
 const allNavItems: NavItem[] = [
   { to: '/today', icon: CalendarCheck, label: 'Meu Dia', moduleKey: 'dashboard' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
+  { to: '/operational', icon: Workflow, label: 'Operacional', moduleKey: 'pipeline', legalEntityId: '0379445a-811b-4842-8d1c-d0b326fed307' },
   { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
