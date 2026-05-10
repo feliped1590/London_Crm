@@ -13,7 +13,7 @@ export interface OperationalStage {
   id: string;
   pipeline_id: string;
   name: string;
-  position: number;
+  sort_order: number;
   color: string | null;
 }
 
