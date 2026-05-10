@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
-import { OperationalOrderCard } from './OperationalOrderCard';
+import { OperationalStageColumn } from './OperationalStageColumn';
 import { MoveStageDialog } from './MoveStageDialog';
+import { OperationalChangePipelineDialog } from './OperationalChangePipelineDialog';
+import { OperationalHistoryDrawer } from './OperationalHistoryDrawer';
 import { useMoveOrderOperationalStage } from '@/hooks/useMoveOrderOperationalStage';
+import { useOperationalPermissions } from '@/hooks/useOperationalPermissions';
+import { useOperationalPipelines } from '@/hooks/useOperationalPipelines';
 import type { OperationalOrder } from '@/hooks/useOperationalKanbanData';
 import type { OperationalStage } from '@/hooks/useOperationalPipelines';
-import { cn } from '@/lib/utils';
 
 interface Props {
   pipelineId: string;
@@ -15,14 +18,21 @@ interface Props {
 interface PendingMove {
   order: OperationalOrder;
   toStage: OperationalStage;
-  fromStageName: string;
+  fromStage: OperationalStage | null;
+  requireReason: boolean;
+  warning: string | null;
 }
 
 export function OperationalKanbanBoard({ pipelineId, stages, orders }: Props) {
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null);
   const [draggedOrderId, setDraggedOrderId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+  const [historyOrder, setHistoryOrder] = useState<OperationalOrder | null>(null);
+  const [changePipelineOrder, setChangePipelineOrder] = useState<OperationalOrder | null>(null);
+
   const moveMutation = useMoveOrderOperationalStage();
+  const { canMove } = useOperationalPermissions();
+  const { pipelines, stages: allStages } = useOperationalPipelines();
 
   const ordersByStage = useMemo(() => {
     const map = new Map<string, OperationalOrder[]>();
@@ -35,6 +45,11 @@ export function OperationalKanbanBoard({ pipelineId, stages, orders }: Props) {
         unassigned.push(o);
       }
     });
+    // ordenação por prioridade dentro da coluna
+    const order = ['bloqueado', 'urgente', 'alta', 'media', 'baixa'];
+    map.forEach(list => {
+      list.sort((a, b) => order.indexOf(a.operational_priority) - order.indexOf(b.operational_priority));
+    });
     return { map, unassigned };
   }, [stages, orders]);
 
@@ -43,29 +58,27 @@ export function OperationalKanbanBoard({ pipelineId, stages, orders }: Props) {
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleDragOver = (e: React.DragEvent, stageId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverStageId(stageId);
-  };
-
-  const handleDrop = (e: React.DragEvent, stage: OperationalStage) => {
-    e.preventDefault();
+  const handleDrop = (toStage: OperationalStage) => {
     setDragOverStageId(null);
     const orderId = draggedOrderId;
     setDraggedOrderId(null);
     if (!orderId) return;
-
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
-    if (order.operational_stage_id === stage.id) return;
+    if (order.operational_stage_id === toStage.id) return;
+    if (!canMove(pipelineId, toStage.operational_department)) return;
 
-    const fromStage = stages.find(s => s.id === order.operational_stage_id);
-    setPendingMove({
-      order,
-      toStage: stage,
-      fromStageName: fromStage?.name ?? '',
-    });
+    const fromStage = stages.find(s => s.id === order.operational_stage_id) ?? null;
+
+    // detecta salto não sequencial
+    let requireReason = false;
+    let warning: string | null = null;
+    if (fromStage && Math.abs((fromStage.sort_order ?? 0) - (toStage.sort_order ?? 0)) > 1) {
+      requireReason = true;
+      warning = 'Salto não sequencial entre etapas — motivo é obrigatório.';
+    }
+
+    setPendingMove({ order, toStage, fromStage, requireReason, warning });
   };
 
   const handleConfirm = (reason: string | null) => {
@@ -81,54 +94,67 @@ export function OperationalKanbanBoard({ pipelineId, stages, orders }: Props) {
     );
   };
 
+  const handleChangePipelineConfirm = (input: { toPipelineId: string; toStageId: string; reason: string }) => {
+    if (!changePipelineOrder) return;
+    moveMutation.mutate(
+      {
+        orderId: changePipelineOrder.id,
+        pipelineId: input.toPipelineId,
+        toStageId: input.toStageId,
+        reason: input.reason,
+      },
+      { onSuccess: () => setChangePipelineOrder(null) },
+    );
+  };
+
   return (
     <>
+      {/* minimapa de chips */}
+      <div className="flex flex-wrap gap-1 mb-2 px-1">
+        {stages.map(s => (
+          <a
+            key={s.id}
+            href={`#stage-${s.id}`}
+            className="text-[10px] px-2 py-0.5 rounded-full border bg-muted/40 hover:bg-muted truncate max-w-[120px]"
+          >
+            {s.name} ({(ordersByStage.map.get(s.id) ?? []).length})
+          </a>
+        ))}
+      </div>
+
       <div className="flex gap-3 overflow-x-auto pb-4">
         {stages.map(stage => {
           const stageOrders = ordersByStage.map.get(stage.id) ?? [];
+          const allowed = canMove(pipelineId, stage.operational_department);
           return (
-            <div
-              key={stage.id}
-              onDragOver={(e) => handleDragOver(e, stage.id)}
-              onDragLeave={() => setDragOverStageId(prev => (prev === stage.id ? null : prev))}
-              onDrop={(e) => handleDrop(e, stage)}
-              className={cn(
-                'min-w-[280px] w-[280px] bg-muted/30 rounded-lg p-3 border-2 transition-colors',
-                dragOverStageId === stage.id ? 'border-primary bg-primary/5' : 'border-transparent',
-              )}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="inline-block w-2 h-2 rounded-full"
-                    style={{ background: stage.color ?? '#6366f1' }}
-                  />
-                  <h3 className="font-semibold text-sm">{stage.name}</h3>
-                </div>
-                <span className="text-xs text-muted-foreground">{stageOrders.length}</span>
-              </div>
-              <div className="space-y-2 min-h-[100px]">
-                {stageOrders.map(order => (
-                  <OperationalOrderCard key={order.id} order={order} onDragStart={handleDragStart} />
-                ))}
-                {stageOrders.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-6">
-                    Solte um pedido aqui
-                  </p>
-                )}
-              </div>
+            <div key={stage.id} id={`stage-${stage.id}`}>
+              <OperationalStageColumn
+                pipelineId={pipelineId}
+                stage={stage}
+                orders={stageOrders}
+                canMoveInto={allowed}
+                isDragOver={dragOverStageId === stage.id}
+                onDragOver={(e) => { e.preventDefault(); setDragOverStageId(stage.id); }}
+                onDragLeave={() => setDragOverStageId(prev => (prev === stage.id ? null : prev))}
+                onDrop={(e) => { e.preventDefault(); handleDrop(stage); }}
+                onCardDragStart={handleDragStart}
+                onOpenHistory={(o) => setHistoryOrder(o)}
+                onChangePipeline={(o) => setChangePipelineOrder(o)}
+              />
             </div>
           );
         })}
 
         {ordersByStage.unassigned.length > 0 && (
-          <div className="min-w-[280px] w-[280px] bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3 border border-amber-200 dark:border-amber-900">
+          <div className="shrink-0 min-w-[280px] w-[280px] bg-amber-50 dark:bg-amber-950/20 rounded-lg p-3 border border-amber-200 dark:border-amber-900">
             <h3 className="font-semibold text-sm mb-3 text-amber-900 dark:text-amber-200">
               Sem etapa ({ordersByStage.unassigned.length})
             </h3>
             <div className="space-y-2">
               {ordersByStage.unassigned.map(order => (
-                <OperationalOrderCard key={order.id} order={order} onDragStart={handleDragStart} />
+                <div key={order.id} className="text-xs border rounded p-2 bg-background">
+                  #{order.number} — {order.company_name ?? '—'}
+                </div>
               ))}
             </div>
           </div>
@@ -137,11 +163,30 @@ export function OperationalKanbanBoard({ pipelineId, stages, orders }: Props) {
 
       <MoveStageDialog
         open={!!pendingMove}
-        fromStageName={pendingMove?.fromStageName ?? ''}
+        fromStageName={pendingMove?.fromStage?.name ?? ''}
         toStageName={pendingMove?.toStage.name ?? ''}
+        requireReason={pendingMove?.requireReason}
+        warning={pendingMove?.warning ?? null}
         onCancel={() => setPendingMove(null)}
         onConfirm={handleConfirm}
         isPending={moveMutation.isPending}
+      />
+
+      <OperationalChangePipelineDialog
+        open={!!changePipelineOrder}
+        order={changePipelineOrder ? { id: changePipelineOrder.id, number: changePipelineOrder.number } : null}
+        currentPipelineId={pipelineId}
+        pipelines={pipelines}
+        stages={allStages}
+        onCancel={() => setChangePipelineOrder(null)}
+        onConfirm={handleChangePipelineConfirm}
+        isPending={moveMutation.isPending}
+      />
+
+      <OperationalHistoryDrawer
+        open={!!historyOrder}
+        order={historyOrder ? { id: historyOrder.id, number: historyOrder.number } : null}
+        onClose={() => setHistoryOrder(null)}
       />
     </>
   );
