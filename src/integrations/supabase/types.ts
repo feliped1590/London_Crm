@@ -4248,47 +4248,6 @@ export type Database = {
           },
         ]
       }
-      operational_stage_permissions: {
-        Row: {
-          access_level: string
-          created_at: string
-          created_by: string | null
-          department: string
-          id: string
-          pipeline_id: string
-          role: Database["public"]["Enums"]["app_role"]
-          tenant_id: string
-        }
-        Insert: {
-          access_level?: string
-          created_at?: string
-          created_by?: string | null
-          department: string
-          id?: string
-          pipeline_id: string
-          role: Database["public"]["Enums"]["app_role"]
-          tenant_id: string
-        }
-        Update: {
-          access_level?: string
-          created_at?: string
-          created_by?: string | null
-          department?: string
-          id?: string
-          pipeline_id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "operational_stage_permissions_pipeline_id_fkey"
-            columns: ["pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_approval_rules: {
         Row: {
           created_at: string | null
@@ -4687,100 +4646,6 @@ export type Database = {
           },
         ]
       }
-      order_operational_stage_history: {
-        Row: {
-          from_pipeline_id: string | null
-          from_stage_id: string | null
-          id: string
-          is_non_sequential: boolean
-          move_kind: string | null
-          moved_at: string
-          moved_by: string | null
-          order_id: string
-          pipeline_id: string
-          reason: string | null
-          tenant_id: string
-          time_in_stage_seconds: number | null
-          to_pipeline_id: string | null
-          to_stage_id: string | null
-        }
-        Insert: {
-          from_pipeline_id?: string | null
-          from_stage_id?: string | null
-          id?: string
-          is_non_sequential?: boolean
-          move_kind?: string | null
-          moved_at?: string
-          moved_by?: string | null
-          order_id: string
-          pipeline_id: string
-          reason?: string | null
-          tenant_id: string
-          time_in_stage_seconds?: number | null
-          to_pipeline_id?: string | null
-          to_stage_id?: string | null
-        }
-        Update: {
-          from_pipeline_id?: string | null
-          from_stage_id?: string | null
-          id?: string
-          is_non_sequential?: boolean
-          move_kind?: string | null
-          moved_at?: string
-          moved_by?: string | null
-          order_id?: string
-          pipeline_id?: string
-          reason?: string | null
-          tenant_id?: string
-          time_in_stage_seconds?: number | null
-          to_pipeline_id?: string | null
-          to_stage_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_operational_stage_history_from_pipeline_id_fkey"
-            columns: ["from_pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_operational_stage_history_from_stage_id_fkey"
-            columns: ["from_stage_id"]
-            isOneToOne: false
-            referencedRelation: "pipeline_stages"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_operational_stage_history_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_operational_stage_history_pipeline_id_fkey"
-            columns: ["pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_operational_stage_history_to_pipeline_id_fkey"
-            columns: ["to_pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_operational_stage_history_to_stage_id_fkey"
-            columns: ["to_stage_id"]
-            isOneToOne: false
-            referencedRelation: "pipeline_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       order_status_transitions: {
         Row: {
           allowed_roles: Database["public"]["Enums"]["app_role"][]
@@ -5075,12 +4940,6 @@ export type Database = {
           locked_by: string | null
           number: string
           observations: string | null
-          operational_entered_pipeline_at: string | null
-          operational_entered_stage_at: string | null
-          operational_owner_id: string | null
-          operational_pipeline_id: string | null
-          operational_priority: string
-          operational_stage_id: string | null
           order_date: string | null
           order_type: string
           origin: string
@@ -5135,12 +4994,6 @@ export type Database = {
           locked_by?: string | null
           number: string
           observations?: string | null
-          operational_entered_pipeline_at?: string | null
-          operational_entered_stage_at?: string | null
-          operational_owner_id?: string | null
-          operational_pipeline_id?: string | null
-          operational_priority?: string
-          operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
           origin?: string
@@ -5195,12 +5048,6 @@ export type Database = {
           locked_by?: string | null
           number?: string
           observations?: string | null
-          operational_entered_pipeline_at?: string | null
-          operational_entered_stage_at?: string | null
-          operational_owner_id?: string | null
-          operational_pipeline_id?: string | null
-          operational_priority?: string
-          operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
           origin?: string
@@ -5260,20 +5107,6 @@ export type Database = {
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_operational_pipeline_id_fkey"
-            columns: ["operational_pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orders_operational_stage_id_fkey"
-            columns: ["operational_stage_id"]
-            isOneToOne: false
-            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
           {
@@ -5458,12 +5291,9 @@ export type Database = {
           created_at: string
           default_owner_id: string | null
           id: string
-          is_critical_stage: boolean
           name: string
-          operational_department: string | null
           pipeline_id: string | null
           probability: number | null
-          sla_critical_hours: number | null
           sla_hours: number | null
           sla_warning_hours: number | null
           sort_order: number
@@ -5471,7 +5301,6 @@ export type Database = {
           stage_category: string
           stage_phase: string
           stage_status: string
-          waiting_for_customer: boolean
         }
         Insert: {
           allowed_roles?: string[] | null
@@ -5479,12 +5308,9 @@ export type Database = {
           created_at?: string
           default_owner_id?: string | null
           id?: string
-          is_critical_stage?: boolean
           name: string
-          operational_department?: string | null
           pipeline_id?: string | null
           probability?: number | null
-          sla_critical_hours?: number | null
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order: number
@@ -5492,7 +5318,6 @@ export type Database = {
           stage_category?: string
           stage_phase?: string
           stage_status?: string
-          waiting_for_customer?: boolean
         }
         Update: {
           allowed_roles?: string[] | null
@@ -5500,12 +5325,9 @@ export type Database = {
           created_at?: string
           default_owner_id?: string | null
           id?: string
-          is_critical_stage?: boolean
           name?: string
-          operational_department?: string | null
           pipeline_id?: string | null
           probability?: number | null
-          sla_critical_hours?: number | null
           sla_hours?: number | null
           sla_warning_hours?: number | null
           sort_order?: number
@@ -5513,7 +5335,6 @@ export type Database = {
           stage_category?: string
           stage_phase?: string
           stage_status?: string
-          waiting_for_customer?: boolean
         }
         Relationships: [
           {
@@ -5660,7 +5481,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_default: boolean | null
-          is_operational: boolean
           legal_entity_id: string | null
           name: string
           pipeline_mode: string
@@ -5677,7 +5497,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          is_operational?: boolean
           legal_entity_id?: string | null
           name: string
           pipeline_mode?: string
@@ -5694,7 +5513,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
-          is_operational?: boolean
           legal_entity_id?: string | null
           name?: string
           pipeline_mode?: string
@@ -9296,10 +9114,6 @@ export type Database = {
       }
       can_manage_portfolio: {
         Args: { p_entity_type?: string; p_owner_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      can_move_operational_stage: {
-        Args: { _to_stage_id: string; _user_id: string }
         Returns: boolean
       }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }

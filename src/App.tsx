@@ -23,7 +23,6 @@ import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import CustomerNew from "./pages/CustomerNew";
 import Pipeline from "./pages/Pipeline";
-import OperationalPipeline from "./pages/OperationalPipeline";
 import Tasks from "./pages/Tasks";
 import Emails from "./pages/Emails";
 import Reports from "./pages/Reports";
@@ -153,7 +152,6 @@ const App = () => (
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/pipeline" element={<Pipeline />} />
-                <Route path="/operational" element={<OperationalPipeline />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/stock" element={<Stock />} />

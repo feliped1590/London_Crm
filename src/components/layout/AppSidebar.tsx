@@ -24,7 +24,6 @@ import {
   DollarSign,
   CalendarCheck,
   SearchCheck,
-  Workflow,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -45,14 +44,11 @@ interface NavItem {
   label: string;
   moduleKey: string;
   devOnly?: boolean;
-  /** When set, item only shows if user's effective legal entity matches */
-  legalEntityId?: string;
 }
 
 const allNavItems: NavItem[] = [
   { to: '/today', icon: CalendarCheck, label: 'Meu Dia', moduleKey: 'dashboard' },
   { to: '/pipeline', icon: Target, label: 'Pipeline', moduleKey: 'pipeline' },
-  { to: '/operational', icon: Workflow, label: 'Operacional', moduleKey: 'pipeline', legalEntityId: '0379445a-811b-4842-8d1c-d0b326fed307' },
   { to: '/customers', icon: Users, label: 'Clientes', moduleKey: 'companies' },
   { to: '/products', icon: Package, label: 'Produtos', moduleKey: 'products' },
   { to: '/orders', icon: ShoppingCart, label: 'Pedidos', moduleKey: 'orders' },
@@ -78,18 +74,16 @@ export function AppSidebar() {
   const { canAccess, isDeveloper, isPrivileged, isFullyLoaded, error: permissionsError } = useModulePermissions();
   const { effectiveEntity } = useLegalEntities();
 
-  // Filter nav items based on user permissions + legal entity scoping
+  // Filter nav items based on user permissions
   const navItems = useMemo(() => {
-    const matchesEntity = (item: NavItem) =>
-      !item.legalEntityId || effectiveEntity?.id === item.legalEntityId;
-    if (isPrivileged) return allNavItems.filter(item => (!item.devOnly || isDeveloper) && matchesEntity(item));
-    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly && matchesEntity(item));
+    if (isPrivileged) return allNavItems.filter(item => !item.devOnly || isDeveloper);
+    if (!isFullyLoaded || permissionsError) return allNavItems.filter(item => !item.devOnly);
     return allNavItems.filter(item => {
+      // Dev-only items require developer role
       if (item.devOnly && !isDeveloper) return false;
-      if (!matchesEntity(item)) return false;
       return canAccess(item.moduleKey);
     });
-  }, [canAccess, isFullyLoaded, isDeveloper, isPrivileged, permissionsError, effectiveEntity?.id]);
+  }, [canAccess, isFullyLoaded, isDeveloper, isPrivileged, permissionsError]);
 
   const handleNavClick = () => {
     if (isMobile) {
