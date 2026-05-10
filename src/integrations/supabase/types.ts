@@ -4646,6 +4646,71 @@ export type Database = {
           },
         ]
       }
+      order_operational_stage_history: {
+        Row: {
+          from_stage_id: string | null
+          id: string
+          moved_at: string
+          moved_by: string | null
+          order_id: string
+          pipeline_id: string
+          reason: string | null
+          tenant_id: string
+          to_stage_id: string | null
+        }
+        Insert: {
+          from_stage_id?: string | null
+          id?: string
+          moved_at?: string
+          moved_by?: string | null
+          order_id: string
+          pipeline_id: string
+          reason?: string | null
+          tenant_id: string
+          to_stage_id?: string | null
+        }
+        Update: {
+          from_stage_id?: string | null
+          id?: string
+          moved_at?: string
+          moved_by?: string | null
+          order_id?: string
+          pipeline_id?: string
+          reason?: string | null
+          tenant_id?: string
+          to_stage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_operational_stage_history_from_stage_id_fkey"
+            columns: ["from_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_operational_stage_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_operational_stage_history_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_operational_stage_history_to_stage_id_fkey"
+            columns: ["to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_status_transitions: {
         Row: {
           allowed_roles: Database["public"]["Enums"]["app_role"][]
@@ -4940,6 +5005,8 @@ export type Database = {
           locked_by: string | null
           number: string
           observations: string | null
+          operational_pipeline_id: string | null
+          operational_stage_id: string | null
           order_date: string | null
           order_type: string
           origin: string
@@ -4994,6 +5061,8 @@ export type Database = {
           locked_by?: string | null
           number: string
           observations?: string | null
+          operational_pipeline_id?: string | null
+          operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
           origin?: string
@@ -5048,6 +5117,8 @@ export type Database = {
           locked_by?: string | null
           number?: string
           observations?: string | null
+          operational_pipeline_id?: string | null
+          operational_stage_id?: string | null
           order_date?: string | null
           order_type?: string
           origin?: string
@@ -5107,6 +5178,20 @@ export type Database = {
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_operational_pipeline_id_fkey"
+            columns: ["operational_pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_operational_stage_id_fkey"
+            columns: ["operational_stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
           {
@@ -5481,6 +5566,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_default: boolean | null
+          is_operational: boolean
           legal_entity_id: string | null
           name: string
           pipeline_mode: string
@@ -5497,6 +5583,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          is_operational?: boolean
           legal_entity_id?: string | null
           name: string
           pipeline_mode?: string
@@ -5513,6 +5600,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_default?: boolean | null
+          is_operational?: boolean
           legal_entity_id?: string | null
           name?: string
           pipeline_mode?: string
