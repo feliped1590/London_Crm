@@ -5,11 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign } from 'lucide-react';
+import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
 import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
+import { DealOrdersTab } from '@/components/pipeline/DealOrdersTab';
 import { DealParticipants } from '@/components/pipeline/DealParticipants';
 import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 import { QuickNotes } from '@/components/notes/QuickNotes';
@@ -282,7 +283,7 @@ export function DealFormDialog({
 
         {editingDeal ? (
           <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="notas" className="flex items-center gap-2">
                 <StickyNote className="h-4 w-4" />
@@ -291,6 +292,10 @@ export function DealFormDialog({
               <TabsTrigger value="propostas" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Propostas</span>
+              </TabsTrigger>
+              <TabsTrigger value="pedidos" className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                <span className="hidden sm:inline">Pedidos</span>
               </TabsTrigger>
               <TabsTrigger value="participantes" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -373,6 +378,10 @@ export function DealFormDialog({
                 companyId={editingDeal.company_id}
                 contactId={editingDeal.contact_id}
               />
+            </TabsContent>
+
+            <TabsContent value="pedidos" className="flex-1 overflow-auto mt-4">
+              <DealOrdersTab dealId={editingDeal.id} />
             </TabsContent>
 
             <TabsContent value="participantes" className="flex-1 overflow-auto mt-4">

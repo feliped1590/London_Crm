@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import type { ProductSearchResult } from './useProductSearch';
 
 const STORAGE_KEY = 'recent-product-ids';
@@ -19,7 +20,9 @@ function loadRecentIds(): string[] {
  * Tracks and fetches recently selected products.
  * Stores up to 10 product IDs in localStorage, preserving usage order.
  */
-export function useRecentProducts() {
+export function useRecentProducts(legalEntityIdOverride?: string | null) {
+  const { activeLegalEntityId } = useLegalEntities();
+  const legalEntityId = legalEntityIdOverride ?? activeLegalEntityId;
   const [recentIds, setRecentIds] = useState<string[]>(loadRecentIds);
 
   useEffect(() => {
@@ -34,21 +37,21 @@ export function useRecentProducts() {
   }, []);
 
   const { data: recentProducts = [] } = useQuery({
-    queryKey: ['recent-products', recentIds],
+    queryKey: ['recent-products', legalEntityId, recentIds],
     queryFn: async () => {
-      if (recentIds.length === 0) return [];
+      if (recentIds.length === 0 || !legalEntityId) return [];
       const { data, error } = await supabase
         .from('products')
         .select('id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg')
+        .eq('legal_entity_id', legalEntityId)
         .in('id', recentIds);
       if (error) throw error;
-      // Preserve usage order
       const map = new Map((data ?? []).map(p => [p.id, p]));
       return recentIds
         .map(id => map.get(id))
         .filter(Boolean) as unknown as ProductSearchResult[];
     },
-    enabled: recentIds.length > 0,
+    enabled: recentIds.length > 0 && !!legalEntityId,
     staleTime: 60_000,
   });
 
