@@ -45,9 +45,9 @@ export function useOperationalPipelines() {
       if (!ids.length) return [];
       const { data, error } = await supabase
         .from('pipeline_stages')
-        .select('id, pipeline_id, name, position, color')
+        .select('id, pipeline_id, name, sort_order, color')
         .in('pipeline_id', ids)
-        .order('position');
+        .order('sort_order');
       if (error) throw error;
       return (data ?? []) as OperationalStage[];
     },
