@@ -54,6 +54,7 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
+import { applyProductSearchFilter } from '@/utils/search/normalizeSearchTerm';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -433,9 +434,7 @@ export default function Products() {
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
       }
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
-      }
+      query = applyProductSearchFilter(query, searchTerm);
 
       const { count, error } = await query;
       if (error) throw error;
@@ -469,9 +468,7 @@ export default function Products() {
       } else if (filterActive === 'inactive') {
         query = query.eq('active', false);
       }
-      if (searchTerm) {
-        query = query.or(`name.ilike.%${searchTerm}%,sku.ilike.%${searchTerm}%`);
-      }
+      query = applyProductSearchFilter(query, searchTerm);
 
       const { data, error } = await query;
       if (error) throw error;

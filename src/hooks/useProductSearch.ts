@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { ProductLookup } from '@/types/documents';
 import { useEffect } from 'react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { applyProductSearchFilter } from '@/utils/search/normalizeSearchTerm';
 
 const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg';
 
@@ -38,8 +39,7 @@ async function fetchProducts(filters: ProductSearchFilters, page: number, limit:
     .range(page * limit, (page + 1) * limit - 1);
 
   if (filters.text?.trim()) {
-    const t = filters.text.trim();
-    query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+    query = applyProductSearchFilter(query, filters.text);
   }
   if (filters.family_id) query = query.eq('family_id', filters.family_id);
   if (filters.grupo_id) query = query.eq('grupo_id', filters.grupo_id);
