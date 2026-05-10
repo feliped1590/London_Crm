@@ -18,8 +18,9 @@ export function normalizeSearchTerm(input: string): string {
 }
 
 /**
- * Quebra texto em tokens significativos (>=2 chars), no máximo 8.
- * Tokens muito curtos (1 char) são descartados pra evitar busca ampla demais.
+ * Quebra texto em tokens significativos (>=2 chars), preservando também os
+ * tokens finais mais discriminantes (SKU, medidas e espessura). O limite maior
+ * evita que descrições longas parem só nos termos genéricos do início.
  */
 export function tokenizeSearchTerm(input: string): string[] {
   const normalized = normalizeSearchTerm(input);
@@ -27,7 +28,7 @@ export function tokenizeSearchTerm(input: string): string[] {
   return normalized
     .split(' ')
     .filter((t) => t.length >= 2)
-    .slice(0, 8);
+    .slice(0, 16);
 }
 
 /**
