@@ -310,7 +310,7 @@ export function CustomerPayloadSimulator() {
         AC: 'NORTE', AP: 'NORTE', AM: 'NORTE', PA: 'NORTE', RO: 'NORTE', RR: 'NORTE', TO: 'NORTE',
         AL: 'NORDESTE', BA: 'NORDESTE', CE: 'NORDESTE', MA: 'NORDESTE', PB: 'NORDESTE',
         PE: 'NORDESTE', PI: 'NORDESTE', RN: 'NORDESTE', SE: 'NORDESTE',
-        DF: 'CENTRO-OESTE', GO: 'CENTRO-OESTE', MT: 'CENTRO-OESTE', MS: 'CENTRO-OESTE',
+        DF: 'CENTRO OESTE', GO: 'CENTRO OESTE', MT: 'CENTRO OESTE', MS: 'CENTRO OESTE',
         ES: 'SUDESTE', MG: 'SUDESTE', RJ: 'SUDESTE', SP: 'SUDESTE',
         PR: 'SUL', RS: 'SUL', SC: 'SUL',
       };
