@@ -223,7 +223,7 @@ export async function loadOrderForValidation(
     erp_fluxo_venda: typeMapping?.erp_flow_code ?? null,
     erp_vendedor: isNaN(erpVendedor) ? null : erpVendedor,
     erp_frete: freightMapping?.erp_freight_code ?? null,
-    payment_method_mapped: crmPaymentMethod ? !!paymentMapping : true,
+    payment_method_mapped: allMethodsMapped && (crmPaymentMethod ? !!paymentMapping || methodCodeMap.has(crmPaymentMethod) : true),
     items: (items || []).map((i: any) => ({
       product_id: i.products?.id,
       product_name: i.products?.name,
