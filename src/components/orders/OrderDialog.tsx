@@ -1145,7 +1145,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
-                <TableHead className="w-24">Qtd</TableHead>
+                <TableHead className="w-32">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-28">Fator KG</TableHead>
                 <TableHead className="w-28 text-right">Subtotal</TableHead>
