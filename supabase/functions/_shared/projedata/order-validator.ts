@@ -231,23 +231,28 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
       }
       const tipo = p.tipo === 'V' ? 'V' : 'P';
       const fator = Number(p.fator ?? 0);
-      if (!fator || fator <= 0) {
+      // Para tipo 'V' (valor fixo), fator é obrigatório > 0.
+      // Para tipo 'P' (percentual), fator = 0/null significa rateio automático do saldo pelo ERP — válido.
+      if (tipo === 'V' && (!fator || fator <= 0)) {
         errors.push({
           field: `payment_conditions[${idx}].fator`,
-          message: `Parcela ${idx + 1}: ${tipo === 'V' ? 'valor' : 'percentual'} deve ser maior que zero`,
-          fixHint: 'Preencha o valor ou percentual da parcela no pedido.',
+          message: `Parcela ${idx + 1}: valor deve ser maior que zero`,
+          fixHint: 'Preencha o valor da parcela no pedido.',
         });
         fields.add('payment_terms');
       }
-      if (tipo === 'P') {
+      if (tipo === 'P' && fator > 0) {
         hasPercent = true;
         percentSum += fator;
       }
     });
     if (hasPercent && Math.abs(percentSum - 100) > 0.01) {
-      // Só exige soma=100 quando TODAS as parcelas são percentuais
-      const allPercent = order.payment_conditions.every(p => (p.tipo === 'V' ? false : true));
-      if (allPercent) {
+      // Só exige soma=100 quando TODAS as parcelas são percentuais COM percentual explícito (>0).
+      // Se alguma parcela P tem fator=0, está em modo rateio automático — ERP distribui o saldo.
+      const allPercentExplicit = order.payment_conditions.every(
+        p => p.tipo !== 'V' && Number(p.fator ?? 0) > 0
+      );
+      if (allPercentExplicit) {
         errors.push({
           field: 'payment_conditions.percentual_sum',
           message: `Soma dos percentuais das parcelas deve ser 100% (atual: ${percentSum.toFixed(2)}%)`,
