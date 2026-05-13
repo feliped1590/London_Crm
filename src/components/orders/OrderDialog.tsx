@@ -100,6 +100,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
+  const [deliveryDateOpen, setDeliveryDateOpen] = useState(false);
   const [observations, setObservations] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [legalEntityId, setLegalEntityId] = useState('');
@@ -960,48 +961,63 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Empresa</Label>
-          <SearchableSelect
-            options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
-            value={companyId || null}
-            onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v).then(data => { if (data?.default_carrier_id) setCarrierId(data.default_carrier_id); if (data?.default_freight_type) setFreightType(data.default_freight_type); }); }}
-            placeholder="Selecione uma empresa" searchPlaceholder="Buscar empresa..."
-            disabled={!canEdit} onSearchChange={setOrderCompanySearch}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Contato</Label>
-          <SearchableSelect
-            options={(contacts || []).map(c => ({ value: c.id, label: `${c.first_name} ${c.last_name || ''}`.trim() }))}
-            value={contactId || null} onChange={(v) => setContactId(v || '')}
-            placeholder="Selecione um contato" searchPlaceholder="Buscar contato..."
-            disabled={!canEdit} onSearchChange={setOrderContactSearch}
-          />
-        </div>
+      <div className="space-y-2">
+        <Label>Empresa</Label>
+        <SearchableSelect
+          options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+          value={companyId || null}
+          onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v).then(data => { if (data?.default_carrier_id) setCarrierId(data.default_carrier_id); if (data?.default_freight_type) setFreightType(data.default_freight_type); }); }}
+          placeholder="Selecione uma empresa" searchPlaceholder="Buscar empresa..."
+          disabled={!canEdit} onSearchChange={setOrderCompanySearch}
+        />
       </div>
 
-      {/* Vínculo opcional ao negócio (Fase 2) */}
-      {companyId && (
+      {/* Vínculo opcional ao negócio (Fase 2) + Data de Entrega lado a lado */}
+      <div className="grid grid-cols-2 gap-4">
+        {companyId ? (
+          <div className="space-y-2">
+            <Label>Vincular ao Negócio (opcional)</Label>
+            <SearchableSelect
+              options={[
+                { value: '__NONE__', label: 'Sem vínculo' },
+                ...companyDeals.map(d => ({ value: d.id, label: d.name })),
+              ]}
+              value={dealId || '__NONE__'}
+              onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
+              placeholder="Selecione um negócio"
+              searchPlaceholder="Buscar negócio..."
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-muted-foreground">
+              Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
+            </p>
+          </div>
+        ) : (
+          <div />
+        )}
+
         <div className="space-y-2">
-          <Label>Vincular ao Negócio (opcional)</Label>
-          <SearchableSelect
-            options={[
-              { value: '__NONE__', label: 'Sem vínculo' },
-              ...companyDeals.map(d => ({ value: d.id, label: d.name })),
-            ]}
-            value={dealId || '__NONE__'}
-            onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
-            placeholder="Selecione um negócio"
-            searchPlaceholder="Buscar negócio..."
-            disabled={!canEdit}
-          />
-          <p className="text-xs text-muted-foreground">
-            Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
-          </p>
+          <Label>Data de Entrega</Label>
+          <Popover open={deliveryDateOpen} onOpenChange={setDeliveryDateOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !deliveryDate && 'text-muted-foreground')} disabled={!canEdit}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {deliveryDate ? format(deliveryDate, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={deliveryDate}
+                onSelect={(date) => { setDeliveryDate(date); setDeliveryDateOpen(false); }}
+                locale={ptBR}
+                initialFocus
+                className={cn('p-3 pointer-events-auto')}
+              />
+            </PopoverContent>
+          </Popover>
         </div>
-      )}
+      </div>
 
       {linkedPricingTable && (
         <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
@@ -1016,21 +1032,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           </div>
         </div>
       )}
-
-      <div className="space-y-2">
-        <Label>Data de Entrega</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn('w-full justify-start text-left font-normal', !deliveryDate && 'text-muted-foreground')} disabled={!canEdit}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {deliveryDate ? format(deliveryDate, 'PPP', { locale: ptBR }) : 'Selecione uma data'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar mode="single" selected={deliveryDate} onSelect={setDeliveryDate} locale={ptBR} initialFocus />
-          </PopoverContent>
-        </Popover>
-      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
