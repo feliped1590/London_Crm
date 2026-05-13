@@ -74,6 +74,7 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { linksByGroup } = useGroupSubgroupLinks();
   const { isAdmin, can } = useModulePermissions();
   const canCreateProducts = can('products', PermissionAction.Create);
   const canEditProducts = can('products', PermissionAction.Edit);
