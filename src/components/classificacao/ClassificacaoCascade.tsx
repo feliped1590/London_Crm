@@ -72,7 +72,7 @@ export function ClassificacaoCascade({
             </Select>
           </div>
         )}
-        {segmentoId && filteredAtividades.length > 0 && (
+        {!hideAtividade && segmentoId && filteredAtividades.length > 0 && (
           <div>
             <Label className="text-xs">Atividade</Label>
             <Select value={atividadeId || '_none'} onValueChange={handleAtividadeChange} disabled={disabled}>
