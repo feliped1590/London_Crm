@@ -1457,6 +1457,13 @@ export default function Products() {
                               if (!isGroupPrinted(newGrupoId)) {
                                 updated.nome_impresso = '';
                               }
+                              // Limpa subgrupo se não pertencer aos vínculos do novo grupo
+                              if (newGrupoId && updated.subgrupo_id) {
+                                const allowed = linksByGroup[newGrupoId] || [];
+                                if (allowed.length > 0 && !allowed.includes(updated.subgrupo_id)) {
+                                  updated.subgrupo_id = undefined;
+                                }
+                              }
                               updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
