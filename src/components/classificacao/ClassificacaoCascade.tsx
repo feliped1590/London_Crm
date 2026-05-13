@@ -89,7 +89,7 @@ export function ClassificacaoCascade({
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className={hideAtividade ? "grid grid-cols-2 gap-4" : "grid grid-cols-3 gap-4"}>
       <div>
         <Label>Setor {required && '*'}</Label>
         <Select value={setorId || undefined} onValueChange={handleSetorChange} disabled={disabled}>
@@ -116,21 +116,23 @@ export function ClassificacaoCascade({
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <Label>Atividade {required && '*'}</Label>
-        <Select
-          value={atividadeId || undefined}
-          onValueChange={handleAtividadeChange}
-          disabled={disabled || !segmentoId || filteredAtividades.length === 0}
-        >
-          <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
-            <SelectValue placeholder={segmentoId ? 'Selecione a atividade' : 'Selecione o segmento primeiro'} />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredAtividades.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+      {!hideAtividade && (
+        <div>
+          <Label>Atividade {required && '*'}</Label>
+          <Select
+            value={atividadeId || undefined}
+            onValueChange={handleAtividadeChange}
+            disabled={disabled || !segmentoId || filteredAtividades.length === 0}
+          >
+            <SelectTrigger className={required && !atividadeId ? 'border-muted-foreground/50' : ''}>
+              <SelectValue placeholder={segmentoId ? 'Selecione a atividade' : 'Selecione o segmento primeiro'} />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredAtividades.map(a => <SelectItem key={a.id} value={a.id}>{a.nome}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   );
 }
