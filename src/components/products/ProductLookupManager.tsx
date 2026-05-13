@@ -117,7 +117,8 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
                   <TableHead>Rótulo</TableHead>
                   <TableHead className="w-20">Ordem</TableHead>
                   <TableHead className="w-20">Ativo</TableHead>
-                  <TableHead className="w-24 text-right">Ações</TableHead>
+                  {onLink && <TableHead className="w-24">{linkColumnLabel || 'Vínculos'}</TableHead>}
+                  <TableHead className="w-28 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
