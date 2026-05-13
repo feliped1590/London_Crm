@@ -44,6 +44,8 @@ import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtec
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { useProductSimpleSearch } from '@/hooks/useProductSearch';
+import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from './PaymentConditionsEditor';
+import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
