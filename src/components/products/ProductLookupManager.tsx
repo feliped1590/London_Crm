@@ -29,7 +29,7 @@ interface LookupSectionProps {
 
 const ITEMS_PER_PAGE = 5;
 
-function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, onDelete }: LookupSectionProps) {
+function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, onDelete, onLink, linkCounts, linkColumnLabel }: LookupSectionProps) {
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LookupItem | null>(null);
