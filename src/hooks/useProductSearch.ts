@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { ProductLookup } from '@/types/documents';
 import { useEffect } from 'react';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { tokenizeSearchTerm, escapePostgrestOrToken } from '@/utils/search/normalizeSearchTerm';
 
 const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg';
@@ -29,23 +28,20 @@ export interface ProductSearchResult extends ProductLookup {
   class_id?: string | null;
 }
 
-async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number, legalEntityId: string) {
+async function fetchProducts(filters: ProductSearchFilters, page: number, limit: number) {
   let query = supabase
     .from('products')
     .select(PRODUCT_SELECT_COLUMNS, { count: 'exact' })
-    .eq('legal_entity_id', legalEntityId)
     .eq('active', true)
     .order('name')
     .range(page * limit, (page + 1) * limit - 1);
 
   if (filters.text?.trim()) {
     const tokens = tokenizeSearchTerm(filters.text);
-    // Cada token vira um filtro AND (encadeado via múltiplas chamadas .or())
-    // Dentro de cada token: name OR sku contém o token (case-insensitive, sem acento via ilike+normalize na app).
     for (const raw of tokens) {
       const t = escapePostgrestOrToken(raw);
       if (!t) continue;
-      query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+      query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
     }
   }
   if (filters.family_id) query = query.eq('family_id', filters.family_id);
@@ -60,13 +56,10 @@ async function fetchProducts(filters: ProductSearchFilters, page: number, limit:
 
 /**
  * Base hook for product search — single source of truth.
- * Uses pg_trgm index for optimized ILIKE searches.
- * Prefetches next page for instant navigation.
+ * Products têm visibilidade global por tenant (igual a clientes); não filtra por entidade jurídica.
  */
 export function useProductSearch({ filters, page = 0, limit = 20, enabled = true }: UseProductSearchOptions) {
   const queryClient = useQueryClient();
-  const { activeLegalEntityId, isContextReady } = useLegalEntities();
-  const isReady = enabled && isContextReady && !!activeLegalEntityId;
 
   useEffect(() => {
     return () => {
@@ -75,9 +68,9 @@ export function useProductSearch({ filters, page = 0, limit = 20, enabled = true
   }, [filters, queryClient]);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['products-search', activeLegalEntityId, filters, page, limit],
-    queryFn: () => fetchProducts(filters, page, limit, activeLegalEntityId!),
-    enabled: isReady,
+    queryKey: ['products-search', filters, page, limit],
+    queryFn: () => fetchProducts(filters, page, limit),
+    enabled,
     staleTime: 120_000,
     gcTime: 5 * 60_000,
     placeholderData: (prev) => prev,
@@ -86,14 +79,14 @@ export function useProductSearch({ filters, page = 0, limit = 20, enabled = true
   const totalPages = Math.ceil((data?.total ?? 0) / limit);
 
   useEffect(() => {
-    if (isReady && page < totalPages - 1) {
+    if (enabled && page < totalPages - 1) {
       queryClient.prefetchQuery({
-        queryKey: ['products-search', activeLegalEntityId, filters, page + 1, limit],
-        queryFn: () => fetchProducts(filters, page + 1, limit, activeLegalEntityId!),
+        queryKey: ['products-search', filters, page + 1, limit],
+        queryFn: () => fetchProducts(filters, page + 1, limit),
         staleTime: 120_000,
       });
     }
-  }, [isReady, activeLegalEntityId, filters, page, limit, totalPages, queryClient]);
+  }, [enabled, filters, page, limit, totalPages, queryClient]);
 
   return {
     products: data?.products ?? [],

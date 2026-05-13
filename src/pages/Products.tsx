@@ -423,8 +423,7 @@ export default function Products() {
     queryFn: async () => {
       let query = supabase
         .from('products')
-        .select('id', { count: 'exact', head: true })
-        .eq('legal_entity_id', activeLegalEntityId!);
+        .select('id', { count: 'exact', head: true });
 
       if (filterTipo !== 'all') {
         query = query.eq('tipo_id', filterTipo);
@@ -437,7 +436,7 @@ export default function Products() {
       if (searchTerm) {
         for (const raw of tokenizeSearchTerm(searchTerm)) {
           const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
         }
       }
 
@@ -461,7 +460,6 @@ export default function Products() {
       let query = supabase
         .from('products')
         .select('*')
-        .eq('legal_entity_id', activeLegalEntityId!)
         .order(orderColumn, { ascending: sortDirection === 'asc' })
         .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
 
@@ -476,7 +474,7 @@ export default function Products() {
       if (searchTerm) {
         for (const raw of tokenizeSearchTerm(searchTerm)) {
           const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%`);
+          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
         }
       }
 
@@ -768,7 +766,6 @@ export default function Products() {
       .from('products')
       .select('id, sku, name')
       .eq('tenant_id', activeTenantId)
-      .eq('legal_entity_id', activeLegalEntityId!)
       .eq('active', true);
 
     // Handle nullable UUID fields — use .is(null) for empty, .eq for values
@@ -842,7 +839,7 @@ export default function Products() {
       .from('products')
       .select('id, sku, name, nome_impresso')
       .eq('tenant_id', activeTenantId)
-      .eq('legal_entity_id', activeLegalEntityId!)
+      
       .eq('active', true);
 
     const uuidFields = ['tipo_id', 'grupo_id', 'subgrupo_id', 'family_id', 'class_id'] as const;
