@@ -6626,7 +6626,7 @@ export type Database = {
           grupo_id: string | null
           id: string
           is_acabado: boolean | null
-          legal_entity_id: string
+          legal_entity_id: string | null
           length: number | null
           name: string
           ncm_code: string | null
@@ -6698,7 +6698,7 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null
-          legal_entity_id: string
+          legal_entity_id?: string | null
           length?: number | null
           name: string
           ncm_code?: string | null
@@ -6770,7 +6770,7 @@ export type Database = {
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null
-          legal_entity_id?: string
+          legal_entity_id?: string | null
           length?: number | null
           name?: string
           ncm_code?: string | null

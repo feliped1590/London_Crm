@@ -563,14 +563,11 @@ export default function Products() {
         data.length || 0,
         data.thickness || 0
       );
-      if (!activeLegalEntityId) {
-        throw new Error('Selecione uma entidade jurídica antes de criar um produto.');
-      }
       const { data: createdProduct, error } = await supabase.from('products').insert({
         sku: data.sku!,
         name: data.name!,
         description: data.description,
-        legal_entity_id: activeLegalEntityId,
+        legal_entity_id: activeLegalEntityId ?? null,
         created_by: user?.id ?? null,
         tipo_id: data.tipo_id || null,
         grupo_id: data.grupo_id || null,
