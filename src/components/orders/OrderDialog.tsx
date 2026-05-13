@@ -1184,14 +1184,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <NumberInput
-                        value={item.quantity}
-                        onChange={(val) => updateItem(index, 'quantity', val ?? 0)}
-                        decimals={3}
-                        min={0}
-                        className="w-24"
-                        disabled={!canEdit}
-                      />
+                      <div className="flex items-center gap-1">
+                        <NumberInput
+                          value={item.quantity}
+                          onChange={(val) => updateItem(index, 'quantity', val ?? 0)}
+                          decimals={3}
+                          min={0}
+                          className="w-24"
+                          disabled={!canEdit}
+                        />
+                        <span className="text-xs text-muted-foreground uppercase whitespace-nowrap">
+                          {(item.unit_measure || product?.unit_measure || '').toString()}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="relative">
