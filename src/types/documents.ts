@@ -15,6 +15,7 @@ export interface ProductLookup {
   thickness?: number | null;
   aliquota_ipi?: number | null;
   fator_kg?: number | null;
+  unit_measure?: string | null;
 }
 
 /**
