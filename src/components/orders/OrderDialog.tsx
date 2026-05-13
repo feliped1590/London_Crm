@@ -415,6 +415,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // Persiste condições de pagamento (multi-formas)
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('order', newOrder.id, paymentConditions);
+      }
+
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id, field_name: 'created', field_label: 'Pedido criado',
         old_value: null, new_value: `Pedido ${newOrder.number} criado manualmente`,
