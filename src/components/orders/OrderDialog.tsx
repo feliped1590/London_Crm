@@ -679,6 +679,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       const { error: itemsError } = await supabase.from('order_items').insert(clonedItems);
       if (itemsError) throw itemsError;
 
+      // Clona condições de pagamento
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('order', newOrder.id, paymentConditions);
+      }
+
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id,
         field_name: 'cloned',
