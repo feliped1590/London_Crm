@@ -1,47 +1,50 @@
-# Formatação profissional dos campos da tabela de itens
+## Diagnóstico
 
-Aplicar formatação numérica padrão pt-BR nos três campos editáveis da tabela de itens do pedido (e replicar na proposta).
+No pedido `PED-2026-0072` o CRM tem 5 parcelas em `order_payment_conditions`:
 
-## Campos afetados
+| # | dias | método      | tipo | valor   |
+|---|------|-------------|------|---------|
+| 1 | 0    | dinheiro    | V    | 1000,00 |
+| 2 | 0    | dinheiro    | V    | 2000,00 |
+| 3 | 0    | antecipado  | V    | 5000,00 |
+| 4 | 0    | ted         | V    | 3000,00 |
+| 5 | 28   | boleto      | P    | -       |
 
-| Campo     | Formato exibido     | Decimais | Notas |
-|-----------|---------------------|----------|-------|
-| Qtd       | `1.234,000`         | 3        | Separador de milhar + 3 casas |
-| Fator KG  | `1.234,56` (contábil)| 2       | Separador de milhar + alinhado à direita |
-| Com %     | `5,00 %`            | 2        | Sufixo `%`, alinhado à direita |
-| IPI %     | `5,00 %`            | 2        | Célula somente leitura, mesma formatação |
+Mas o ERP recebeu apenas **1 parcela: 28 dias / DINHEIRO**.
 
-Subtotal / Total / IPI R$ continuam usando `formatCurrency`.
+**Causa:** `supabase/functions/_shared/projedata/order-loader.ts` ignora a tabela `order_payment_conditions` e usa só os campos legados `orders.payment_terms` ("0/0/0/0/28") + `orders.payment_method` ("dinheiro"). A função `parsePaymentTerms` (em `order-mapper.ts`) descarta `dias <= 0`, sobrando apenas a parcela "28", e aplica a forma de recebimento do cabeçalho a todas — perdendo o método por parcela e o `valor`/`percentual` (fator).
 
-## Comportamento dos inputs
+Além disso, o tipo `ProjedataOrderPayment` (`order-types.ts`) não tem o campo **fator**, que aparece no ERP (print enviado: Dias / Tipo / Fator / Forma Recebimento) e é obrigatório para representar valor (tipo V) ou percentual (tipo P).
 
-Padrão "exibir formatado / editar limpo":
-- **Sem foco:** valor formatado em pt-BR.
-- **Com foco:** entrada com vírgula como separador decimal, sem separador de milhar.
-- **No blur:** normaliza, faz parse, atualiza estado, re-renderiza formatado.
-- Mantém `disabled={!canEdit}` e largura atual das colunas.
+## Mudanças (apenas backend de sync — não toca UI)
 
-## Implementação
+### 1. `supabase/functions/_shared/projedata/order-types.ts`
+Adicionar `fator: number` em `ProjedataOrderPayment`.
 
-1. **Novo `src/components/ui/NumberInput.tsx`**
-   - Props: `value: number | null`, `onChange(value)`, `decimals`, `suffix?`, `min`, `max`, `disabled`, `className`, `placeholder`.
-   - Formata com `Intl.NumberFormat('pt-BR', { minimumFractionDigits, maximumFractionDigits })`.
-   - Estado interno `displayValue`; sincroniza com `value` externo quando não focado.
-   - Parse no blur: remove `suffix`, remove `.` (milhar), troca `,` por `.`, `Number(...)`.
+### 2. `supabase/functions/_shared/projedata/order-loader.ts`
+- Carregar parcelas de `order_payment_conditions` (ordenadas por `parcela`).
+- Coletar todos os `payment_method` distintos das parcelas + o do cabeçalho e buscar de uma vez em `payment_method_erp_mapping` (cache em Map).
+- Para cada parcela montar:
+  - `dias` (aceita 0)
+  - `forma_recebimento` = código ERP do método daquela parcela (fallback ao método do cabeçalho se a parcela não tiver método).
+  - `tipo` = `'V'` ou `'P'` conforme registro.
+  - `fator` = `valor` quando tipo `V`; `percentual` quando tipo `P`; senão `0`.
+  - `parcela` = índice sequencial (1..N).
+- Fallback de retrocompatibilidade: se `order_payment_conditions` estiver vazio, manter o parse atual de `payment_terms` + `payment_method` (com `fator: 0` e tipo `'P'`), preservando o comportamento legado.
+- `payment_method_mapped` continua refletindo se todos os métodos usados nas parcelas têm mapeamento ERP.
 
-2. **`src/components/orders/OrderDialog.tsx`** — substituir os três `<Input type="number">` (Qtd, Fator KG, Com %) por `<NumberInput>` com decimais 3 / 2 / 2 e `suffix=" %"` em Com %. Atualizar a célula `IPI %` para usar `Intl.NumberFormat` pt-BR com 2 casas + ` %`.
+### 3. `supabase/functions/_shared/projedata/order-mapper.ts`
+Incluir `fator` no objeto `pagto[]` retornado por `mapCRMOrderToProjedata` e no `buildOrderPayload`.
 
-3. **`src/components/proposals/ProposalDialog.tsx`** — mesma troca nos campos equivalentes para manter paridade visual.
+### 4. `supabase/functions/_shared/projedata/order-validator.ts`
+- Permitir `dias = 0` (parcela à vista). Rejeitar apenas `dias < 0` ou nulo.
+- Para tipo `'V'` validar `fator > 0`; para tipo `'P'` validar `fator > 0` e somatório de percentuais = 100 (com tolerância 0,01).
+- Continuar exigindo `forma_recebimento` por parcela.
 
-4. Nenhuma mudança em hooks, persistência, validação, cálculos ou schema. `quantity`, `fator_kg`, `commission_pct` e `ipi_rate` continuam armazenados como `number`.
-
-## Arquivos
-
-- criar `src/components/ui/NumberInput.tsx`
-- editar `src/components/orders/OrderDialog.tsx`
-- editar `src/components/proposals/ProposalDialog.tsx`
+### 5. Reenfileirar o pedido
+Após o deploy, sinalizar para o usuário reenviar `PED-2026-0072` para o ERP (botão de sync) — nenhuma migration necessária.
 
 ## Fora de escopo
-
-- Outras telas (documentos, relatórios) não são alteradas.
-- Regras de negócio e validações permanecem idênticas.
+- UI do `PaymentConditionsEditor` (já está correto, salvando em `order_payment_conditions`).
+- Propostas (`proposal_payment_conditions`) — só ajustar quando houver sync de propostas para ERP.
+- Mudanças no schema do banco.

@@ -33,7 +33,8 @@ export interface ProjedataOrderPayment {
   dias: number;
   forma_recebimento: number;
   parcela: number;
-  tipo: string;
+  tipo: string;       // 'V' = valor, 'P' = percentual
+  fator: number;      // valor (R$) quando tipo='V'; percentual quando tipo='P'
 }
 
 // ─── Pedido completo ────────────────────────────────────────────
