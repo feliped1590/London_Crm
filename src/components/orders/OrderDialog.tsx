@@ -885,7 +885,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       observations: '', observations_pcp: '',
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, unit_measure: product.unit_measure || '', width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource, is_locked: false,
     });
