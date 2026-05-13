@@ -209,8 +209,6 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
     });
     fields.add('payment_terms');
   } else {
-    let percentSum = 0;
-    let hasPercent = false;
     order.payment_conditions.forEach((p, idx) => {
       if (!p.forma_recebimento || isNaN(p.forma_recebimento)) {
         errors.push({
@@ -232,7 +230,7 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
       const tipo = p.tipo === 'V' ? 'V' : 'P';
       const fator = Number(p.fator ?? 0);
       // Tipo 'V' (valor fixo): fator obrigatório > 0.
-      // Tipo 'P' (percentual): fator é IGNORADO — ERP faz rateio automático do saldo.
+      // Tipo 'P' (percentual): fator NÃO é enviado — ERP faz rateio automático do saldo.
       if (tipo === 'V' && (!fator || fator <= 0)) {
         errors.push({
           field: `payment_conditions[${idx}].fator`,
@@ -243,8 +241,6 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
       }
     });
   }
-  // Variáveis preservadas para futura expansão (não usadas após mudança para rateio automático).
-  void percentSum; void hasPercent;
 
   return { valid: errors.length === 0, errors, fields: Array.from(fields) };
 }
