@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { Plus, Trash2, Wand2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 export interface PaymentConditionDraft {
   id?: string;
