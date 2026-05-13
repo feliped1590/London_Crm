@@ -343,7 +343,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (!order) return [];
       const { data, error } = await supabase
         .from('order_items')
-        .select('*, product:products(sku, erp_product_code, fator_kg)')
+        .select('*, product:products(sku, erp_product_code, fator_kg, unit_measure)')
         .eq('order_id', order.id)
         .order('sort_order');
       if (error) throw error;
