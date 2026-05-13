@@ -113,6 +113,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [paymentConditions, setPaymentConditions] = useState<PaymentConditionDraft[]>([]);
+  const [originalPaymentConditions, setOriginalPaymentConditions] = useState<PaymentConditionDraft[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
