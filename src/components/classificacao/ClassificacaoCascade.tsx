@@ -13,6 +13,8 @@ interface ClassificacaoCascadeProps {
   required?: boolean;
   /** Show only atividade (compact mode for filters) */
   compact?: boolean;
+  /** Hide the Atividade field entirely */
+  hideAtividade?: boolean;
 }
 
 export function ClassificacaoCascade({
