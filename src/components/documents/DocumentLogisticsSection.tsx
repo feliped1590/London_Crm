@@ -87,6 +87,9 @@ export function DocumentLogisticsSection({
               <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
               <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
               <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+              <SelectItem value="PCIF">PCIF — Parcial CIF</SelectItem>
+              <SelectItem value="PFOB">PFOB — Parcial FOB</SelectItem>
+              <SelectItem value="SEM">Sem Frete</SelectItem>
             </SelectContent>
           </Select>
         </div>
