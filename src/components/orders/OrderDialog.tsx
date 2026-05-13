@@ -44,6 +44,8 @@ import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtec
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { useProductSimpleSearch } from '@/hooks/useProductSearch';
+import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from './PaymentConditionsEditor';
+import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
@@ -111,6 +113,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { addRecent } = useRecentProducts();
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('');
+  const [paymentConditions, setPaymentConditions] = useState<PaymentConditionDraft[]>([]);
+  const [originalPaymentConditions, setOriginalPaymentConditions] = useState<PaymentConditionDraft[]>([]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [detailItemIndex, setDetailItemIndex] = useState<number>(-1);
   const [showExitAlert, setShowExitAlert] = useState(false);
@@ -360,11 +364,29 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     refetchOnMount: 'always',
   });
 
+  const { data: existingPaymentConditions } = useQuery({
+    queryKey: ['order_payment_conditions', order?.id],
+    queryFn: async () => order?.id ? loadPaymentConditions('order', order.id) : [],
+    enabled: !!order?.id && open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
   // --- Mutations ---
   const createOrderMutation = useMutation({
     mutationFn: async () => {
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
+
+      const condErr = validatePaymentConditions(paymentConditions, orderTotal);
+      if (condErr) throw new Error(condErr);
+
+      // Sincroniza os campos legados com a 1ª condição (manter compat com fallback do mapper)
+      const firstCond = paymentConditions[0];
+      const legacyMethod = firstCond?.payment_method || paymentMethod || null;
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (paymentTerms || null);
 
       const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
         number: '', company_id: companyId || null, contact_id: contactId || null,
@@ -373,7 +395,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
-        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
+        payment_method: legacyMethod, payment_terms: legacyTerms,
         ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
@@ -400,6 +422,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       });
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
+
+      // Persiste condições de pagamento (multi-formas)
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('order', newOrder.id, paymentConditions);
+      }
 
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id, field_name: 'created', field_label: 'Pedido criado',
@@ -451,6 +478,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
 
+      const condErr = validatePaymentConditions(paymentConditions, orderTotal);
+      if (condErr) throw new Error(condErr);
+
+      const firstCond = paymentConditions[0];
+      const legacyMethod = firstCond?.payment_method || paymentMethod || null;
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (paymentTerms || null);
+
       const { error: orderError } = await supabase.from('orders').update({
         company_id: companyId || null, contact_id: contactId || null,
         deal_id: dealId || null, // Vínculo opcional Fase 2
@@ -458,11 +494,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
-        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        
+        payment_method: legacyMethod, payment_terms: legacyTerms,
         ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).eq('id', order.id);
       if (orderError) throw orderError;
+
+      await persistPaymentConditions('order', order.id, paymentConditions);
 
       await logItemChanges(order.id);
       await supabase.from('order_items').delete().eq('order_id', order.id);
@@ -650,6 +687,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       const { error: itemsError } = await supabase.from('order_items').insert(clonedItems);
       if (itemsError) throw itemsError;
 
+      // Clona condições de pagamento
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('order', newOrder.id, paymentConditions);
+      }
+
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id,
         field_name: 'cloned',
@@ -779,6 +821,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setOriginalItems(existingOrderItems ?? []);
   }, [open, order?.id, existingOrderItems]);
 
+  useEffect(() => {
+    if (!open || !order?.id) return;
+    if (existingPaymentConditions === undefined) return;
+    setPaymentConditions(existingPaymentConditions);
+    setOriginalPaymentConditions(existingPaymentConditions);
+  }, [open, order?.id, existingPaymentConditions]);
+
   // Captura snapshot do estado original assim que o pedido carrega (após hidratação dos campos).
   useEffect(() => {
     if (!open || !order?.id) return;
@@ -806,6 +855,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
+      setPaymentConditions([]); setOriginalPaymentConditions([]);
       setDealId('');
       setOriginalSnapshot(null);
       setDetailModalOpen(false); setDetailItemIndex(-1);
@@ -1058,31 +1108,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Forma de Pagamento</Label>
-          <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={!canEdit}>
-            <SelectTrigger><SelectValue placeholder="Selecione a forma de pagamento" /></SelectTrigger>
-            <SelectContent>
-              {paymentMethods.map((pm) => (
-                <SelectItem key={pm.crm_payment_method} value={pm.crm_payment_method}>
-                  {pm.erp_payment_description}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Condições de Pagamento (dias)</Label>
-          <Input
-            value={paymentTerms}
-            onChange={(e) => setPaymentTerms(e.target.value)}
-            placeholder="Ex: 28/35/42"
-            disabled={!canEdit}
-          />
-          <p className="text-xs text-muted-foreground">Separe os dias de cada parcela com /</p>
-        </div>
-      </div>
+      <PaymentConditionsEditor
+        value={paymentConditions}
+        onChange={setPaymentConditions}
+        totalAmount={orderTotal}
+        disabled={!canEdit}
+      />
       {canEdit && (
 
         <div className="space-y-2">

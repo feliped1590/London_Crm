@@ -31,6 +31,8 @@ import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { getWonStageForPipeline } from '@/lib/stageStatus';
+import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from '@/components/orders/PaymentConditionsEditor';
+import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -89,16 +91,24 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
   const [deliveryFields, setDeliveryFields] = useState(EMPTY_DELIVERY_FIELDS);
 
+  // Multi-formas de pagamento
+  const [paymentConditions, setPaymentConditions] = useState<PaymentConditionDraft[]>([]);
+
   // --- Mutations ---
   const createProposalMutation = useMutation({
     mutationFn: async () => {
+      const condErr = validatePaymentConditions(paymentConditions, total);
+      if (condErr) throw new Error(condErr);
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (formData.payment_terms || null);
       const { data: newProposal, error: proposalError } = await supabase
         .from('proposals')
         .insert({
           number: '', deal_id: dealId, company_id: companyId, contact_id: contactId,
           legal_entity_id: dealData?.legal_entity_id || null,
           status: formData.status, validity_date: formData.validity_date || null,
-          payment_terms: formData.payment_terms || null, delivery_terms: formData.delivery_terms || null,
+          payment_terms: legacyTerms, delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null, total_value: total,
           ipi_mode: formData.ipi_mode, subtotal_products: subtotalProducts, total_ipi: totalIpi,
           ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
@@ -126,6 +136,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
         const { error: itemsError } = await supabase.from('proposal_items').insert(itemsToInsert);
         if (itemsError) throw itemsError;
       }
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('proposal', newProposal.id, paymentConditions);
+      }
       if (formData.status === 'aprovada') await createOrderFromProposal(newProposal.id);
       return newProposal;
     },
@@ -142,17 +155,24 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   const updateProposalMutation = useMutation({
     mutationFn: async () => {
       if (!proposal) return;
+      const condErr = validatePaymentConditions(paymentConditions, total);
+      if (condErr) throw new Error(condErr);
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (formData.payment_terms || null);
       const { error: proposalError } = await supabase
         .from('proposals')
         .update({
           status: formData.status, validity_date: formData.validity_date || null,
-          payment_terms: formData.payment_terms || null, delivery_terms: formData.delivery_terms || null,
+          payment_terms: legacyTerms, delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null, total_value: total,
           ipi_mode: formData.ipi_mode, subtotal_products: subtotalProducts, total_ipi: totalIpi,
           ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
         })
         .eq('id', proposal.id);
       if (proposalError) throw proposalError;
+
+      await persistPaymentConditions('proposal', proposal.id, paymentConditions);
 
       await supabase.from('proposal_items').delete().eq('proposal_id', proposal.id);
       if (items.length > 0) {
@@ -209,6 +229,13 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     },
   });
 
+  const { data: existingPaymentConditions } = useQuery({
+    queryKey: ['proposal_payment_conditions', proposal?.id],
+    queryFn: async () => proposal?.id ? loadPaymentConditions('proposal', proposal.id) : [],
+    enabled: !!proposal?.id && open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
   const { data: existingItems } = useQuery({
     queryKey: ['proposal_items', proposal?.id],
     queryFn: async () => {
@@ -264,6 +291,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   }, [proposal, open]);
 
   useEffect(() => { if (existingItems) setItems(existingItems); }, [existingItems]);
+  useEffect(() => { if (existingPaymentConditions !== undefined) setPaymentConditions(existingPaymentConditions); }, [existingPaymentConditions]);
 
   useEffect(() => {
     if (!companyFiscalData || items.length === 0) return;
@@ -473,15 +501,16 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="payment_terms">Cond. Pagamento</Label>
-                  <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} placeholder="Ex: 30/60/90" />
+                <div className="hidden">
+                  <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} />
                 </div>
                 <div>
                   <Label htmlFor="delivery_terms">Prazo Entrega</Label>
                   <Input id="delivery_terms" value={formData.delivery_terms} onChange={(e) => setFormData({ ...formData, delivery_terms: e.target.value })} placeholder="Ex: 15 dias" />
                 </div>
               </div>
+
+              <PaymentConditionsEditor value={paymentConditions} onChange={setPaymentConditions} totalAmount={total} />
 
               {/* IPI Mode */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

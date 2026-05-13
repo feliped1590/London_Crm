@@ -4781,6 +4781,56 @@ export type Database = {
           },
         ]
       }
+      order_payment_conditions: {
+        Row: {
+          created_at: string
+          dias: number
+          id: string
+          order_id: string
+          parcela: number
+          payment_method: string
+          percentual: number | null
+          tenant_id: string
+          tipo: string
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string
+          dias?: number
+          id?: string
+          order_id: string
+          parcela: number
+          payment_method: string
+          percentual?: number | null
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string
+          dias?: number
+          id?: string
+          order_id?: string
+          parcela?: number
+          payment_method?: string
+          percentual?: number | null
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_payment_conditions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_status_transitions: {
         Row: {
           allowed_roles: Database["public"]["Enums"]["app_role"][]
@@ -7071,6 +7121,56 @@ export type Database = {
           },
           {
             foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_payment_conditions: {
+        Row: {
+          created_at: string
+          dias: number
+          id: string
+          parcela: number
+          payment_method: string
+          percentual: number | null
+          proposal_id: string
+          tenant_id: string
+          tipo: string
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          created_at?: string
+          dias?: number
+          id?: string
+          parcela: number
+          payment_method: string
+          percentual?: number | null
+          proposal_id: string
+          tenant_id: string
+          tipo: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          created_at?: string
+          dias?: number
+          id?: string
+          parcela?: number
+          payment_method?: string
+          percentual?: number | null
+          proposal_id?: string
+          tenant_id?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_payment_conditions_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"

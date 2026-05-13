@@ -1,34 +1,91 @@
-## Objetivo
+# Múltiplas formas de pagamento por pedido
 
-Unificar a visibilidade de produtos entre todas as entidades jurídicas (CNPJs), igual ao que já acontece com Clientes. Assim, qualquer usuário enxerga todos os produtos do tenant, independentemente da entidade ativa selecionada no topo.
+Suportar mistura de formas/parcelas (ex.: R$ 5.000 antecipado + saldo em boleto 28/35) em Pedidos, Propostas e Documentos, com sync correto para o ERP.
 
-## Mudanças
+## Banco
 
-### 1. Listagem de Produtos (`/products`)
-- Remover o filtro por `legal_entity_id` nas queries de contagem e listagem.
-- Manter apenas o filtro por tenant (já garantido pela RLS) e os filtros de tipo, status e busca textual.
-- Ampliar a busca textual para considerar também: `sku_unique`, `erp_product_code`, `erp_grupo`, `erp_subgrupo`, `erp_versao`, `nome_impresso` (além de `name` e `sku`).
-- Ajustar a coluna/indicador da entidade jurídica para apenas exibir a qual CNPJ o produto pertence (informativo), sem filtrar.
+Nova tabela `order_payment_conditions`:
+- `id`, `tenant_id`, `order_id` (FK), `parcela` (int), `dias` (int, ≥0)
+- `forma_recebimento_id` (FK para tabela de formas de recebimento, com `erp_code`)
+- `tipo` (`'V'` | `'P'`)
+- `valor` (numeric, nullable — usado quando `tipo='V'`)
+- `percentual` (numeric, nullable — usado quando `tipo='P'`)
+- `created_at`, `updated_at`
+- Unique `(order_id, parcela)`
+- RLS por `tenant_id` + acesso herdado do pedido
 
-### 2. Busca de produtos em Pedidos / Propostas / Documentos
-- Aplicar o mesmo princípio em `useProductSearch` (busca usada nos formulários de itens): remover o filtro por `activeLegalEntityId`, mantendo apenas tenant + ativo.
-- Garantir que o seletor de produtos nos pedidos liste itens de qualquer CNPJ.
+Tabelas espelho: `proposal_payment_conditions` e `document_payment_conditions` com mesma estrutura, FK para `proposals.id` e `documents.id`.
 
-### 3. Criação / Edição de Produto
-- O cadastro continua exigindo uma entidade jurídica (campo `legal_entity_id`), pois é exigido para a sincronização com o ERP correspondente.
-- Ao criar um novo produto, sugerir a entidade ativa como padrão, mas permitir trocar para qualquer entidade que o usuário tenha acesso.
+Pedidos antigos: **não** mexer. Continuam lendo `orders.payment_method` + `payment_terms` (fallback no mapper).
 
-### 4. Sincronização ERP
-- Sem alterações na lógica de sync. Cada produto continua vinculado a uma entidade jurídica (CNPJ) e é sincronizado apenas para o ERP daquela entidade.
-- A unificação é apenas de **visibilidade/busca**, não de dados.
+## Backend / Sync ERP
 
-### 5. Validação
-- Buscar `1-LM-IS-STANDUP- AB FACIL+ZIP LOCK-8-200-340-180` na lista de produtos com qualquer CNPJ ativo: deve aparecer.
-- Abrir um pedido em qualquer CNPJ e buscar o mesmo SKU no seletor de itens: deve aparecer.
-- Confirmar que ao editar/criar produto a entidade jurídica continua sendo gravada corretamente.
+`supabase/functions/_shared/projedata/order-types.ts`:
+- Adicionar `valor?: number` em `ProjedataOrderPayment`.
 
-## Pontos de atenção
+`supabase/functions/_shared/projedata/order-mapper.ts`:
+- Se houver linhas em `order_payment_conditions` → mapeia 1:1 (incluindo `valor` quando `tipo='V'`).
+- Se não houver (pedido legado) → mantém `parsePaymentTerms` atual.
 
-- **Pricing**: a tabela de preços/regras continua aplicada por entidade. Selecionar um produto de outra entidade em um pedido pode não ter regra de preço associada — nesse caso o sistema cai no preço base, comportamento já existente.
-- **Sync ERP**: produtos só sincronizam com o ERP da entidade dona. Isso permanece igual.
-- **Memória do projeto**: atualizar Core para refletir que produtos têm visibilidade global por tenant (igual a clientes), mas continuam vinculados a uma entidade jurídica para fins de ERP.
+`supabase/functions/validate-order-sync/index.ts`:
+- Validar que toda parcela tem `forma_recebimento` mapeada (`erp_code`).
+- Validar que soma de `V` ≤ total do pedido.
+- Validar que percentuais somam exatamente 100% do saldo restante (após subtrair os `V`).
+- Bloqueia sync com `blocked_validation` se inválido.
+
+## Frontend — Editor de Parcelas
+
+Componente novo `src/components/orders/PaymentConditionsEditor.tsx`, reutilizado em Pedidos, Propostas e Documentos.
+
+Layout (tabela editável):
+
+```text
+| # | Dias | Tipo | Valor / %        | Forma de Recebimento | [x] |
+| 1 |   0  |  R$  | R$ 5.000,00      | Antecipado           |  x  |
+| 2 |  28  |  %   | 50%              | Boleto               |  x  |
+| 3 |  35  |  %   | 50%              | Boleto               |  x  |
+[+ Adicionar parcela]
+
+Total alocado: R$ 12.500,00 de R$ 12.500,00 ✓
+```
+
+Comportamento:
+- Toggle **R$ / %** por linha define o `tipo` (`V` / `P`). Default = `%`.
+- Digitar no campo de R$ marca automaticamente `tipo='V'`; digitar no de % marca `tipo='P'`.
+- Rateio automático: se houver linhas `V` e demais em branco/`P`, distribui igualmente o saldo restante em % entre as `P`.
+- Resumo ao vivo do total alocado vs total do pedido. Bloqueia salvar se não fechar 100%.
+- Atalhos no topo:
+  - **À vista** → 1 parcela, 0 dias, 100%
+  - **Parcelado simples** → input `28/35/42` + 1 forma → gera N parcelas iguais em `P` (mantém o fluxo atual rápido)
+  - **Entrada + parcelas** → input do valor da entrada + dias das demais → gera 1 linha `V` (0 dias) + N linhas `P`
+
+Substitui os 2 campos atuais (`Forma de Pagamento` + `Condições (dias)`) em:
+- `OrderForm` (Pedidos)
+- `ProposalDialog` (Propostas)
+- `DocumentLogisticsSection` ou equivalente (Documentos)
+
+Aprovação pública de proposta (`proposal-approve`) já gera Pedido herdando dados — vai herdar também as parcelas (copia `proposal_payment_conditions` → `order_payment_conditions`).
+
+## Arquivos previstos
+
+**Banco (migration):**
+- `order_payment_conditions`, `proposal_payment_conditions`, `document_payment_conditions` + RLS + índices
+
+**Backend:**
+- `supabase/functions/_shared/projedata/order-types.ts` — `valor?` em `ProjedataOrderPayment`
+- `supabase/functions/_shared/projedata/order-mapper.ts` — leitura das condições novas + fallback legado
+- `supabase/functions/_shared/projedata/order-loader.ts` — JOIN com `order_payment_conditions`
+- `supabase/functions/validate-order-sync/index.ts` — novas validações
+- `supabase/functions/proposal-approve/index.ts` — copiar parcelas da proposta para o pedido
+
+**Frontend:**
+- `src/components/orders/PaymentConditionsEditor.tsx` (novo, compartilhado)
+- `src/components/orders/OrderForm.tsx` — substituir campos
+- `src/components/proposals/ProposalDialog.tsx` — substituir campos
+- `src/components/documents/DocumentLogisticsSection.tsx` — substituir campos
+- `src/types/orders.ts` (e equivalentes) — tipo `PaymentCondition`
+- Hooks de leitura/persistência das parcelas
+
+## Memória do projeto
+
+Atualizar `mem://database/orders-payment-fields` para refletir o novo modelo (tabela própria com mix V/P) e marcar `orders.payment_method` / `payment_terms` como legado/fallback.
