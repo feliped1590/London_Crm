@@ -501,16 +501,16 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
                 <div className="hidden">
                   <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} />
-                </div>
                 </div>
                 <div>
                   <Label htmlFor="delivery_terms">Prazo Entrega</Label>
                   <Input id="delivery_terms" value={formData.delivery_terms} onChange={(e) => setFormData({ ...formData, delivery_terms: e.target.value })} placeholder="Ex: 15 dias" />
                 </div>
               </div>
+
+              <PaymentConditionsEditor value={paymentConditions} onChange={setPaymentConditions} totalAmount={total} />
 
               {/* IPI Mode */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
