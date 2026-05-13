@@ -1332,7 +1332,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleDialogClose(true)}>
+          <Button variant="outline" onClick={() => handleDialogClose(false)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
           {isEditMode && canClone && (
