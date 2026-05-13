@@ -1590,30 +1590,32 @@ export default function Products() {
                             placeholder="Em milímetros"
                           />
                         </div>
-                        <div>
-                          <Label htmlFor="length">Comprimento (mm)</Label>
-                          <Input
-                            id="length"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            disabled={isEditing}
-                            value={formData.length || ''}
-                            onChange={(e) => {
-                              const newLength = parseFloat(e.target.value) || 0;
-                              const newData = { ...formData, length: newLength };
-                              newData.fator_milheiro = recalcularFatorMilheiro(newData);
-                              const prof = getGroupProfile(newData.grupo_id);
-                              if (hasAutoDimensions(prof)) {
-                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
-                              }
-                              newData.sku = recalcularSku(newData);
-                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
-                              setFormData(newData);
-                            }}
-                            placeholder="Em milímetros"
-                          />
-                        </div>
+                        {currentDimensionProfile !== 'partial' && (
+                          <div>
+                            <Label htmlFor="length">Comprimento (mm)</Label>
+                            <Input
+                              id="length"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              disabled={isEditing}
+                              value={formData.length || ''}
+                              onChange={(e) => {
+                                const newLength = parseFloat(e.target.value) || 0;
+                                const newData = { ...formData, length: newLength };
+                                newData.fator_milheiro = recalcularFatorMilheiro(newData);
+                                const prof = getGroupProfile(newData.grupo_id);
+                                if (hasAutoDimensions(prof)) {
+                                  newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                                }
+                                newData.sku = recalcularSku(newData);
+                                if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                setFormData(newData);
+                              }}
+                              placeholder="Em milímetros"
+                            />
+                          </div>
+                        )}
                         <div>
                           <Label htmlFor="thickness">Espessura (micras)</Label>
                           <Input
