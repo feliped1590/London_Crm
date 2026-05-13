@@ -91,6 +91,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
   const [deliveryFields, setDeliveryFields] = useState(EMPTY_DELIVERY_FIELDS);
 
+  // Multi-formas de pagamento
+  const [paymentConditions, setPaymentConditions] = useState<PaymentConditionDraft[]>([]);
+
   // --- Mutations ---
   const createProposalMutation = useMutation({
     mutationFn: async () => {
