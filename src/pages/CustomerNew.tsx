@@ -670,6 +670,7 @@ export default function CustomerNew() {
                       onSetorChange={(v) => setCompanyForm(prev => ({ ...prev, setor_id: v, segmento_id: null, atividade_id: null }))}
                       onSegmentoChange={(v) => setCompanyForm(prev => ({ ...prev, segmento_id: v, atividade_id: null }))}
                       onAtividadeChange={(v) => setCompanyForm(prev => ({ ...prev, atividade_id: v }))}
+                      hideAtividade
                       required
                     />
                   </div>
@@ -694,6 +695,7 @@ export default function CustomerNew() {
                       onSetorChange={(v) => setCompanyForm(prev => ({ ...prev, setor_id: v, segmento_id: null, atividade_id: null }))}
                       onSegmentoChange={(v) => setCompanyForm(prev => ({ ...prev, segmento_id: v, atividade_id: null }))}
                       onAtividadeChange={(v) => setCompanyForm(prev => ({ ...prev, atividade_id: v }))}
+                      hideAtividade
                       required
                     />
                   </div>
