@@ -100,6 +100,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
+  const [deliveryDateOpen, setDeliveryDateOpen] = useState(false);
   const [observations, setObservations] = useState('');
   const [selectedProductId, setSelectedProductId] = useState('');
   const [legalEntityId, setLegalEntityId] = useState('');
