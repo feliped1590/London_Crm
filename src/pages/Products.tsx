@@ -1449,9 +1449,7 @@ export default function Products() {
                                 grupo_id: newGrupoId,
                                 ...(!isEditing && autoNcm && canApplyAutoNcm ? { ncm_code: autoNcm, ncm_id: undefined } : {}),
                               };
-                              if (!isGroupPrinted(newGrupoId)) {
-                                updated.nome_impresso = '';
-                              }
+                              // Nome Complementar é preservado ao trocar de grupo
                               // Limpa subgrupo se não pertencer aos vínculos do novo grupo
                               if (newGrupoId && updated.subgrupo_id) {
                                 const allowed = linksByGroup[newGrupoId] || [];
