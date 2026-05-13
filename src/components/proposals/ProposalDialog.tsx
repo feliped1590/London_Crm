@@ -97,13 +97,18 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   // --- Mutations ---
   const createProposalMutation = useMutation({
     mutationFn: async () => {
+      const condErr = validatePaymentConditions(paymentConditions, total);
+      if (condErr) throw new Error(condErr);
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (formData.payment_terms || null);
       const { data: newProposal, error: proposalError } = await supabase
         .from('proposals')
         .insert({
           number: '', deal_id: dealId, company_id: companyId, contact_id: contactId,
           legal_entity_id: dealData?.legal_entity_id || null,
           status: formData.status, validity_date: formData.validity_date || null,
-          payment_terms: formData.payment_terms || null, delivery_terms: formData.delivery_terms || null,
+          payment_terms: legacyTerms, delivery_terms: formData.delivery_terms || null,
           observations: formData.observations || null, total_value: total,
           ipi_mode: formData.ipi_mode, subtotal_products: subtotalProducts, total_ipi: totalIpi,
           ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
