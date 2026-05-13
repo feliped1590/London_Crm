@@ -373,7 +373,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
 
@@ -459,7 +459,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).eq('id', order.id);
       if (orderError) throw orderError;
 
@@ -613,7 +613,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null,
         payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
 
