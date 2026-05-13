@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { Plus, Trash2, Wand2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { NumberInput } from '@/components/ui/NumberInput';
 
 export interface PaymentConditionDraft {
   id?: string;
@@ -40,7 +41,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
   const [shortcutOpen, setShortcutOpen] = useState<null | 'simples' | 'entrada'>(null);
   const [simplesDias, setSimplesDias] = useState('');
   const [simplesForma, setSimplesForma] = useState('');
-  const [entradaValor, setEntradaValor] = useState('');
+  const [entradaValor, setEntradaValor] = useState<number | null>(null);
   const [entradaFormaV, setEntradaFormaV] = useState('');
   const [entradaDias, setEntradaDias] = useState('');
   const [entradaFormaP, setEntradaFormaP] = useState('');
@@ -111,7 +112,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
   };
 
   const aplicarEntrada = () => {
-    const valor = Number(entradaValor.replace(',', '.'));
+    const valor = Number(entradaValor) || 0;
     const dias = entradaDias.split('/').map(s => Number(s.trim())).filter(d => !isNaN(d) && d >= 0);
     if (!valor || valor <= 0 || dias.length === 0 || !entradaFormaV || !entradaFormaP) return;
     const linhas: PaymentConditionDraft[] = [
@@ -120,7 +121,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
     ];
     onChange(linhas);
     setShortcutOpen(null);
-    setEntradaValor(''); setEntradaDias(''); setEntradaFormaV(''); setEntradaFormaP('');
+    setEntradaValor(null); setEntradaDias(''); setEntradaFormaV(''); setEntradaFormaP('');
   };
 
   return (
@@ -168,7 +169,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
           <div className="border rounded-md p-3 bg-muted/30 grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Valor da entrada (R$)</Label>
-              <Input value={entradaValor} onChange={e => setEntradaValor(e.target.value)} placeholder="5000" />
+              <NumberInput value={entradaValor} onChange={setEntradaValor} decimals={2} min={0} placeholder="0,00" />
             </div>
             <div>
               <Label className="text-xs">Forma da entrada</Label>
@@ -253,24 +254,23 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
                     </td>
                     <td className="p-2">
                       {row.tipo === 'V' ? (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <NumberInput
+                          value={row.valor ?? null}
+                          onChange={(v) => updateRow(idx, { valor: v })}
+                          decimals={2}
                           min={0}
-                          value={row.valor ?? ''}
-                          onChange={e => updateRow(idx, { valor: e.target.value === '' ? null : Number(e.target.value) })}
-                          placeholder="R$"
+                          placeholder="R$ 0,00"
                           disabled={disabled}
                           className="h-8"
                         />
                       ) : (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <NumberInput
+                          value={row.percentual ?? null}
+                          onChange={(v) => updateRow(idx, { percentual: v })}
+                          decimals={2}
                           min={0}
                           max={100}
-                          value={row.percentual ?? ''}
-                          onChange={e => updateRow(idx, { percentual: e.target.value === '' ? null : Number(e.target.value) })}
+                          suffix=" %"
                           placeholder="auto"
                           disabled={disabled}
                           className="h-8"
