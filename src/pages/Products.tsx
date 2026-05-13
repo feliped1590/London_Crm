@@ -370,13 +370,12 @@ export default function Products() {
 
   // Recalcula a descrição inteligente
   const recalcularDescricao = (data: typeof formData) => {
-    const printed = isGroupPrinted(data.grupo_id);
     const base = generateProductDescription({
       family: getLookupLabel(familias.items, data.family_id),
       group: getLookupLabel(grupos.items, data.grupo_id),
       subgroup: getLookupLabel(subgrupos.items, data.subgrupo_id),
       productClass: getLookupLabel(classes.items, data.class_id),
-      printedName: printed ? data.nome_impresso : undefined,
+      printedName: data.nome_impresso?.trim() || undefined,
     });
     return [base, data.erp_versao].filter(Boolean).join(' ');
   };
@@ -905,11 +904,7 @@ export default function Products() {
       return;
     }
 
-    // Validação de nome_impresso para grupos impressos
-    if (isGroupPrinted(formData.grupo_id) && !formData.nome_impresso?.trim()) {
-      toast.error('O campo "Nome do Impresso" é obrigatório para produtos impressos.', { duration: 6000 });
-      return;
-    }
+    // Nome Complementar é opcional — sem validação obrigatória
 
     // Validação dinâmica por perfil de dimensão do grupo
     const profile = getGroupProfile(formData.grupo_id);
@@ -1454,9 +1449,7 @@ export default function Products() {
                                 grupo_id: newGrupoId,
                                 ...(!isEditing && autoNcm && canApplyAutoNcm ? { ncm_code: autoNcm, ncm_id: undefined } : {}),
                               };
-                              if (!isGroupPrinted(newGrupoId)) {
-                                updated.nome_impresso = '';
-                              }
+                              // Nome Complementar é preservado ao trocar de grupo
                               // Limpa subgrupo se não pertencer aos vínculos do novo grupo
                               if (newGrupoId && updated.subgrupo_id) {
                                 const allowed = linksByGroup[newGrupoId] || [];
@@ -1545,28 +1538,24 @@ export default function Products() {
                       </div>
                     </div>
 
-                    {/* Nome do Impresso (condicional) */}
-                    {currentGroupIsPrinted && (
-                      <div className="col-span-2 pt-2">
-                        <Label htmlFor="nome_impresso" className="flex items-center gap-1">
-                          Nome do Impresso <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="nome_impresso"
-                          value={formData.nome_impresso}
-                          onChange={(e) => {
-                            const updated = { ...formData, nome_impresso: e.target.value };
-                            if (isAutoDescription) updated.name = recalcularDescricao(updated);
-                            setFormData(updated);
-                          }}
-                          placeholder="Ex: BONGOS BIFINHO CARNE 65G"
-                          className="uppercase"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Nome do cliente/produto impresso que compõe a descrição final
-                        </p>
-                      </div>
-                    )}
+                    {/* Nome Complementar (sempre visível, opcional) */}
+                    <div className="col-span-2 pt-2">
+                      <Label htmlFor="nome_impresso">Nome Complementar</Label>
+                      <Input
+                        id="nome_impresso"
+                        value={formData.nome_impresso}
+                        onChange={(e) => {
+                          const updated = { ...formData, nome_impresso: e.target.value };
+                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
+                        placeholder="Ex: BONGOS BIFINHO CARNE 65G"
+                        className="uppercase"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Informação adicional do cliente/produto que compõe a descrição final (opcional)
+                      </p>
+                    </div>
 
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">
