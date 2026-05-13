@@ -1,21 +1,34 @@
-## Ajustes no formulário de Pedido (`src/components/orders/OrderDialog.tsx`)
+## Objetivo
 
-### 1. Remover campo "Contato"
-Tirar o bloco do select de Contato (linhas ~974-982). A grid `grid-cols-2` que hoje contém Empresa + Contato passa a ter só Empresa, em largura cheia.
+Unificar a visibilidade de produtos entre todas as entidades jurídicas (CNPJs), igual ao que já acontece com Clientes. Assim, qualquer usuário enxerga todos os produtos do tenant, independentemente da entidade ativa selecionada no topo.
 
-### 2. "Vincular ao Negócio" e "Data de Entrega" lado a lado
-Mover os dois campos para uma única linha `grid grid-cols-2 gap-4`:
-- Coluna esquerda: Vincular ao Negócio (mantém o `{companyId && ...}` — quando não houver empresa selecionada, a coluna fica vazia e a Data de Entrega ocupa apenas a coluna direita).
-- Coluna direita: Data de Entrega.
-- O texto auxiliar "Vincular ao negócio permite que o pipeline controle..." continua abaixo do select de negócio.
+## Mudanças
 
-### 3. Calendário fecha ao selecionar a data
-Hoje o `Popover` da Data de Entrega fica aberto após escolher o dia. Ajuste:
-- Tornar o Popover controlado: novo state `const [deliveryDateOpen, setDeliveryDateOpen] = useState(false)`.
-- `<Popover open={deliveryDateOpen} onOpenChange={setDeliveryDateOpen}>`.
-- No `Calendar.onSelect`: `(date) => { setDeliveryDate(date); setDeliveryDateOpen(false); }`.
+### 1. Listagem de Produtos (`/products`)
+- Remover o filtro por `legal_entity_id` nas queries de contagem e listagem.
+- Manter apenas o filtro por tenant (já garantido pela RLS) e os filtros de tipo, status e busca textual.
+- Ampliar a busca textual para considerar também: `sku_unique`, `erp_product_code`, `erp_grupo`, `erp_subgrupo`, `erp_versao`, `nome_impresso` (além de `name` e `sku`).
+- Ajustar a coluna/indicador da entidade jurídica para apenas exibir a qual CNPJ o produto pertence (informativo), sem filtrar.
 
-### Arquivos afetados
-- `src/components/orders/OrderDialog.tsx` (apenas)
+### 2. Busca de produtos em Pedidos / Propostas / Documentos
+- Aplicar o mesmo princípio em `useProductSearch` (busca usada nos formulários de itens): remover o filtro por `activeLegalEntityId`, mantendo apenas tenant + ativo.
+- Garantir que o seletor de produtos nos pedidos liste itens de qualquer CNPJ.
 
-Sem mudanças de backend, validação ou submit — `contactId` permanece no estado interno (apenas deixa de ter UI; será enviado vazio/atual valor existente sem alterar lógica).
+### 3. Criação / Edição de Produto
+- O cadastro continua exigindo uma entidade jurídica (campo `legal_entity_id`), pois é exigido para a sincronização com o ERP correspondente.
+- Ao criar um novo produto, sugerir a entidade ativa como padrão, mas permitir trocar para qualquer entidade que o usuário tenha acesso.
+
+### 4. Sincronização ERP
+- Sem alterações na lógica de sync. Cada produto continua vinculado a uma entidade jurídica (CNPJ) e é sincronizado apenas para o ERP daquela entidade.
+- A unificação é apenas de **visibilidade/busca**, não de dados.
+
+### 5. Validação
+- Buscar `1-LM-IS-STANDUP- AB FACIL+ZIP LOCK-8-200-340-180` na lista de produtos com qualquer CNPJ ativo: deve aparecer.
+- Abrir um pedido em qualquer CNPJ e buscar o mesmo SKU no seletor de itens: deve aparecer.
+- Confirmar que ao editar/criar produto a entidade jurídica continua sendo gravada corretamente.
+
+## Pontos de atenção
+
+- **Pricing**: a tabela de preços/regras continua aplicada por entidade. Selecionar um produto de outra entidade em um pedido pode não ter regra de preço associada — nesse caso o sistema cai no preço base, comportamento já existente.
+- **Sync ERP**: produtos só sincronizam com o ERP da entidade dona. Isso permanece igual.
+- **Memória do projeto**: atualizar Core para refletir que produtos têm visibilidade global por tenant (igual a clientes), mas continuam vinculados a uma entidade jurídica para fins de ERP.
