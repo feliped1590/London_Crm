@@ -1153,7 +1153,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                     <TableHead className="w-28 text-right">IPI R$</TableHead>
                   </>
                 )}
-                <TableHead className="w-20 text-right">Com %</TableHead>
+                <TableHead className="w-24 text-right">Com %</TableHead>
                 <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
