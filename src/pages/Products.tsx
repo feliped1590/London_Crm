@@ -38,6 +38,7 @@ import { Product, calcularFatorMilheiro } from '@/types/products';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { tokenizeSearchTerm, escapePostgrestOrToken } from '@/utils/search/normalizeSearchTerm';
 import { useProductLookups } from '@/hooks/useProductLookups';
+import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
