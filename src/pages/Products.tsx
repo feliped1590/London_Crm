@@ -278,7 +278,7 @@ export default function Products() {
   const getGroupProfile = (grupoId?: string): DimensionProfile => {
     if (!grupoId) return 'none';
     const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
-    const normalized = (group?.name || '')
+    const normalized = (group?.label || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase();
