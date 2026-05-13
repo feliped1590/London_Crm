@@ -370,6 +370,16 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
 
+      const condErr = validatePaymentConditions(paymentConditions, orderTotal);
+      if (condErr) throw new Error(condErr);
+
+      // Sincroniza os campos legados com a 1ª condição (manter compat com fallback do mapper)
+      const firstCond = paymentConditions[0];
+      const legacyMethod = firstCond?.payment_method || paymentMethod || null;
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (paymentTerms || null);
+
       const { data: newOrder, error: orderError } = await supabase.from('orders').insert({
         number: '', company_id: companyId || null, contact_id: contactId || null,
         deal_id: dealId || null, // Vínculo opcional Fase 2
