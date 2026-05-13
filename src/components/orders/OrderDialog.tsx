@@ -269,6 +269,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             thickness,
             aliquota_ipi,
             fator_kg,
+            unit_measure,
             active
           )
         `)
