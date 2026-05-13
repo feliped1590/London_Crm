@@ -112,7 +112,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
   };
 
   const aplicarEntrada = () => {
-    const valor = Number(entradaValor.replace(',', '.'));
+    const valor = Number(entradaValor) || 0;
     const dias = entradaDias.split('/').map(s => Number(s.trim())).filter(d => !isNaN(d) && d >= 0);
     if (!valor || valor <= 0 || dias.length === 0 || !entradaFormaV || !entradaFormaP) return;
     const linhas: PaymentConditionDraft[] = [
@@ -121,7 +121,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
     ];
     onChange(linhas);
     setShortcutOpen(null);
-    setEntradaValor(''); setEntradaDias(''); setEntradaFormaV(''); setEntradaFormaP('');
+    setEntradaValor(null); setEntradaDias(''); setEntradaFormaV(''); setEntradaFormaP('');
   };
 
   return (
