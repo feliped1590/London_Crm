@@ -86,6 +86,15 @@ sequenceDiagram
 - Envia ao ERP no envelope ASDCOMANDO + JSON (ver memória `projedata-serialization`).
 - Parseia retorno com `_shared/erp/projedata-parser.ts` → `ErpIntegrationResult` (DTO unificado).
 
+### 4.3.1 Regras do `pagto[]` (parcelas)
+
+Cada parcela vai como `{ parcela, dias, forma_recebimento, tipo, fator? }`:
+
+- **`tipo='V'` (valor fixo):** enviar `fator` = valor em R$ da parcela. Validador exige `fator > 0`.
+- **`tipo='P'` (percentual / rateio automático):** **OMITIR** o campo `fator`. O ERP Projedata calcula o saldo sozinho. Enviar `fator=0` dispara `ORA-20270` no trigger `TGI_FINVENCTOS` (ele exige `0 < fator ≤ 100` quando recebe `tipo='P'`).
+
+Implementação: `_shared/projedata/order-mapper.ts` só adiciona `fator` ao objeto quando `tipo === 'V'`. O tipo TS `ProjedataOrderPayment.fator` é opcional.
+
 ### 4.4 Atualização de estado
 - ✅ Sucesso: `orders.erp_synced_at = now()`, `orders.origem_alteracao = 'SYNC'`, queue `status='success'`.
 - ❌ Erro de negócio: queue `status='error'` + mensagem do ERP. Não consome retry.
@@ -105,6 +114,7 @@ Calculado no frontend: se `updated_at - erp_synced_at > 5 segundos`, badge fica 
 | Loop de sync (CRM ↔ ERP) | `origem_alteracao` não setado corretamente no webhook | Trigger ignora `origem_alteracao IN ('ERP', 'SYNC')` |
 | Pedido marcado "Desatualizado" sem ter sido editado | Diferença <5s entre updated_at e erp_synced_at | Margem já tratada — investigar trigger que altera `updated_at` indevidamente |
 | Erro `erp_user_code não configurado` | Usuário criador sem mapping em `profiles.erp_user_code` | Configurações → Usuários |
+| `ORA-20270` em `TGI_FINVENCTOS` no `pagto[]` | Parcela com `tipo='P'` enviada com `fator=0` (ERP exige `0 < fator ≤ 100` para P) | Mapper omite `fator` quando `tipo='P'` — ERP rateia o saldo automaticamente. Ver seção 4.3.1 |
 
 ---
 

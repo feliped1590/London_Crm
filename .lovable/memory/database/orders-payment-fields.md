@@ -34,8 +34,8 @@ Pedidos antigos NÃO foram migrados (decisão do usuário). Eles seguem usando a
 - `tipo='P'` sem `percentual` → rateio igual automático do saldo restante.
 - `payment_method` por linha permite mix (ex.: parcela 1 = Antecipado, parcelas 2-3 = Boleto).
 
-## Pendente (próxima rodada)
+## Envio ao ERP (`pagto[]` em `IMP_PEDIDO_V3`)
 
-- `order-loader.ts` ler de `order_payment_conditions` (hoje só usa fallback legado).
-- `order-mapper.ts` enviar `valor` em `pagto[]` quando `tipo='V'`.
-- `proposal-approve` copiar `proposal_payment_conditions` → `order_payment_conditions` ao gerar pedido.
+- `tipo='V'` → enviar `fator` = valor em R$ (ex.: `1000` = R$ 1.000,00). Validador exige `fator > 0`.
+- `tipo='P'` → **OMITIR o campo `fator`** do JSON. O ERP Projedata calcula o saldo automaticamente (rateio). Enviar `fator=0` dispara `ORA-20270` no trigger `TGI_FINVENCTOS` ("fator deve ser > 0 e ≤ 100" para tipo P).
+- Implementação: `_shared/projedata/order-mapper.ts` só inclui `fator` quando `tipo === 'V'`. Tipo em `ProjedataOrderPayment.fator` é opcional (`fator?: number`).
