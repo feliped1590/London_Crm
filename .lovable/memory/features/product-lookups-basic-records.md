@@ -21,6 +21,8 @@ A coluna `dimension_profile` em `product_groups` define o perfil de dimensão:
 
 O perfil é lido diretamente do banco — zero hardcode de labels no frontend. A função `getProductDimensionProfile` foi removida em favor de leitura direta via `GroupLookupItem.dimension_profile`.
 
+**Override por nome no formulário de produto:** em `src/pages/Products.tsx`, `getGroupProfile` aplica regra automática — grupos cujo `label` contém "bobina" (case/acento-insensível) forçam perfil `partial` (Largura × Espessura), sobrepondo `dimension_profile`. Demais grupos usam `dimension_profile` do banco com fallback para `'full'` (3 dimensões). Não altera banco nem ERP sync.
+
 A função `compute_product_erp_hash` inclui `tipo_id`, `grupo_id`, `subgrupo_id`, `family_id` e `class_id` para detecção precisa de mudanças na sincronização ERP.
 
 Administradores e desenvolvedores gerenciam esses dados na aba "Cadastro Básico" de Produtos.
