@@ -229,6 +229,13 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     },
   });
 
+  const { data: existingPaymentConditions } = useQuery({
+    queryKey: ['proposal_payment_conditions', proposal?.id],
+    queryFn: async () => proposal?.id ? loadPaymentConditions('proposal', proposal.id) : [],
+    enabled: !!proposal?.id && open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
   const { data: existingItems } = useQuery({
     queryKey: ['proposal_items', proposal?.id],
     queryFn: async () => {
