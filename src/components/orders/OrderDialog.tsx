@@ -470,6 +470,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
 
+      const condErr = validatePaymentConditions(paymentConditions, orderTotal);
+      if (condErr) throw new Error(condErr);
+
+      const firstCond = paymentConditions[0];
+      const legacyMethod = firstCond?.payment_method || paymentMethod || null;
+      const legacyTerms = paymentConditions.length > 0
+        ? paymentConditions.map(c => c.dias).join('/')
+        : (paymentTerms || null);
+
       const { error: orderError } = await supabase.from('orders').update({
         company_id: companyId || null, contact_id: contactId || null,
         deal_id: dealId || null, // Vínculo opcional Fase 2
@@ -477,11 +486,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, legal_entity_id: legalEntityId || null,
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
-        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        
+        payment_method: legacyMethod, payment_terms: legacyTerms,
         ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).eq('id', order.id);
       if (orderError) throw orderError;
+
+      await persistPaymentConditions('order', order.id, paymentConditions);
 
       await logItemChanges(order.id);
       await supabase.from('order_items').delete().eq('order_id', order.id);
