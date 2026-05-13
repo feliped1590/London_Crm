@@ -44,14 +44,13 @@ export function useGroupSubgroupLinks() {
     const uid = userData.user?.id;
     if (!uid) throw new Error('Não autenticado');
     const { data, error } = await supabase
-      .from('user_tenant_memberships')
-      .select('tenant_id')
+      .from('profiles')
+      .select('active_tenant_id')
       .eq('user_id', uid)
-      .limit(1)
-      .maybeSingle();
+      .single();
     if (error) throw error;
-    if (!data?.tenant_id) throw new Error('Tenant não encontrado para o usuário');
-    return data.tenant_id;
+    if (!data?.active_tenant_id) throw new Error('Tenant ativo não encontrado');
+    return data.active_tenant_id;
   }
 
   const setGroupLinks = useMutation({
