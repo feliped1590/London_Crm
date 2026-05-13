@@ -254,26 +254,27 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
                     </td>
                     <td className="p-2">
                       {row.tipo === 'V' ? (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <NumberInput
+                          value={row.valor ?? null}
+                          onChange={(v) => updateRow(idx, { valor: v })}
+                          decimals={2}
                           min={0}
-                          value={row.valor ?? ''}
-                          onChange={e => updateRow(idx, { valor: e.target.value === '' ? null : Number(e.target.value) })}
-                          placeholder="R$"
+                          placeholder="R$ 0,00"
                           disabled={disabled}
                           className="h-8"
                         />
                       ) : (
-                        <Input
-                          type="number"
-                          step="0.01"
+                        <NumberInput
+                          value={row.percentual ?? null}
+                          onChange={(v) => updateRow(idx, { percentual: v })}
+                          decimals={2}
                           min={0}
                           max={100}
-                          value={row.percentual ?? ''}
-                          onChange={e => updateRow(idx, { percentual: e.target.value === '' ? null : Number(e.target.value) })}
+                          suffix=" %"
                           placeholder="auto"
                           disabled={disabled}
+                          className="h-8"
+                        />
                           className="h-8"
                         />
                       )}
