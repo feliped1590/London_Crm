@@ -31,6 +31,8 @@ import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { getWonStageForPipeline } from '@/lib/stageStatus';
+import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from '@/components/orders/PaymentConditionsEditor';
+import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
 
 interface ProposalDialogProps {
   open: boolean;
