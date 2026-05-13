@@ -609,7 +609,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                             <Input type="number" placeholder="E" value={item.thickness || ''} onChange={(e) => updateItem(index, 'thickness', parseFloat(e.target.value) || 0)} className="h-8 w-14 px-1 text-xs" />
                           </div>
                         </TableCell>
-                        <TableCell><Input type="number" step="0.001" min="0" value={item.quantity || 1} onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 1)} className="h-8" /></TableCell>
+                        <TableCell><NumberInput value={item.quantity || 1} onChange={(val) => updateItem(index, 'quantity', val ?? 1)} decimals={3} min={0} className="h-8" /></TableCell>
                         <TableCell>
                           <div className="relative">
                             <CurrencyInput value={item.unit_price || 0} onChange={(val) => updateItem(index, 'unit_price', val)} onBlur={() => handlePriceBlurWithAudit(index, 'unit_price')} className={`h-8 ${hasPricingTable && !isAdmin ? 'bg-muted' : ''}`} disabled={hasPricingTable && !isAdmin} />
