@@ -35,6 +35,7 @@ export interface OrderItemDraft {
   ipi_rate: number;
   commission_pct: number;
   fator_kg?: number;
+  unit_measure?: string;
   width?: number;
   length?: number;
   thickness?: number;
