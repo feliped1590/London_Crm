@@ -275,8 +275,6 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
                           disabled={disabled}
                           className="h-8"
                         />
-                          className="h-8"
-                        />
                       )}
                     </td>
                     <td className="p-2">
