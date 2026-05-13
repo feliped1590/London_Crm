@@ -23,6 +23,7 @@ export function ClassificacaoCascade({
   disabled = false,
   required = false,
   compact = false,
+  hideAtividade = false,
 }: ClassificacaoCascadeProps) {
   const { setores, getSegmentosBySetor, getAtividadesBySegmento } = useClassificacao();
 
