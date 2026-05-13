@@ -364,6 +364,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     refetchOnMount: 'always',
   });
 
+  const { data: existingPaymentConditions } = useQuery({
+    queryKey: ['order_payment_conditions', order?.id],
+    queryFn: async () => order?.id ? loadPaymentConditions('order', order.id) : [],
+    enabled: !!order?.id && open,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
   // --- Mutations ---
   const createOrderMutation = useMutation({
     mutationFn: async () => {
