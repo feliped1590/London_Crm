@@ -86,11 +86,6 @@ sequenceDiagram
 - Envia ao ERP no envelope ASDCOMANDO + JSON (ver memória `projedata-serialization`).
 - Parseia retorno com `_shared/erp/projedata-parser.ts` → `ErpIntegrationResult` (DTO unificado).
 
-### 4.4 Atualização de estado
-- ✅ Sucesso: `orders.erp_synced_at = now()`, `orders.origem_alteracao = 'SYNC'`, queue `status='success'`.
-- ❌ Erro de negócio: queue `status='error'` + mensagem do ERP. Não consome retry.
-- ❌ Erro de validação tardia: queue `status='blocked_validation'`, `next_retry_at=null`. UI vira `Wrench`.
-
 ### 4.3.1 Regras do `pagto[]` (parcelas)
 
 Cada parcela vai como `{ parcela, dias, forma_recebimento, tipo, fator? }`:
@@ -100,7 +95,12 @@ Cada parcela vai como `{ parcela, dias, forma_recebimento, tipo, fator? }`:
 
 Implementação: `_shared/projedata/order-mapper.ts` só adiciona `fator` ao objeto quando `tipo === 'V'`. O tipo TS `ProjedataOrderPayment.fator` é opcional.
 
-### 4.4 Status "Desatualizado"
+### 4.4 Atualização de estado
+- ✅ Sucesso: `orders.erp_synced_at = now()`, `orders.origem_alteracao = 'SYNC'`, queue `status='success'`.
+- ❌ Erro de negócio: queue `status='error'` + mensagem do ERP. Não consome retry.
+- ❌ Erro de validação tardia: queue `status='blocked_validation'`, `next_retry_at=null`. UI vira `Wrench`.
+
+### 4.5 Status "Desatualizado"
 Calculado no frontend: se `updated_at - erp_synced_at > 5 segundos`, badge fica amarela. Margem de 5s evita falso-positivo de timestamps de sync.
 
 ---
