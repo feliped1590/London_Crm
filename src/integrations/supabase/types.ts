@@ -6215,6 +6215,45 @@ export type Database = {
           },
         ]
       }
+      product_group_subgroups: {
+        Row: {
+          created_at: string
+          group_id: string
+          id: string
+          subgroup_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          group_id: string
+          id?: string
+          subgroup_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string
+          id?: string
+          subgroup_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_group_subgroups_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "product_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_group_subgroups_subgroup_id_fkey"
+            columns: ["subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "product_subgroups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_groups: {
         Row: {
           created_at: string | null

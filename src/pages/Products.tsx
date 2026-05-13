@@ -38,6 +38,7 @@ import { Product, calcularFatorMilheiro } from '@/types/products';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { tokenizeSearchTerm, escapePostgrestOrToken } from '@/utils/search/normalizeSearchTerm';
 import { useProductLookups } from '@/hooks/useProductLookups';
+import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
@@ -74,6 +75,7 @@ export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { getTableForProduct, calculatePrice, pricingTables, pricingRules } = usePricingTables();
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { linksByGroup } = useGroupSubgroupLinks();
   const { isAdmin, can } = useModulePermissions();
   const canCreateProducts = can('products', PermissionAction.Create);
   const canEditProducts = can('products', PermissionAction.Edit);
@@ -1455,6 +1457,13 @@ export default function Products() {
                               if (!isGroupPrinted(newGrupoId)) {
                                 updated.nome_impresso = '';
                               }
+                              // Limpa subgrupo se não pertencer aos vínculos do novo grupo
+                              if (newGrupoId && updated.subgrupo_id) {
+                                const allowed = linksByGroup[newGrupoId] || [];
+                                if (allowed.length > 0 && !allowed.includes(updated.subgrupo_id)) {
+                                  updated.subgrupo_id = undefined;
+                                }
+                              }
                               updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
@@ -1473,26 +1482,42 @@ export default function Products() {
                         </div>
                         <div>
                           <Label htmlFor="subgrupo">Subgrupo</Label>
-                          <Select
-                            value={formData.subgrupo_id || 'none'}
-                            disabled={isEditing}
-                            onValueChange={(v) => {
-                              const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
-                              updated.sku = recalcularSku(updated);
-                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
-                              setFormData(updated);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {subgrupos.items.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          {(() => {
+                            const allowedIds = formData.grupo_id ? (linksByGroup[formData.grupo_id] || []) : [];
+                            const useFilter = !!formData.grupo_id && allowedIds.length > 0;
+                            const visibleSubgrupos = useFilter
+                              ? subgrupos.items.filter(s => allowedIds.includes(s.id))
+                              : subgrupos.items;
+                            return (
+                              <>
+                                <Select
+                                  value={formData.subgrupo_id || 'none'}
+                                  disabled={isEditing}
+                                  onValueChange={(v) => {
+                                    const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
+                                    updated.sku = recalcularSku(updated);
+                                    if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                                    setFormData(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Nenhum</SelectItem>
+                                    {visibleSubgrupos.map((c) => (
+                                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                {formData.grupo_id && allowedIds.length === 0 && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Nenhum subgrupo vinculado a este grupo — exibindo todos.
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         <div>
                           <Label htmlFor="classe">Classe</Label>

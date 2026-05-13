@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductLookups, type LookupItem } from '@/hooks/useProductLookups';
+import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
+import GroupSubgroupLinkDialog from './GroupSubgroupLinkDialog';
 
 interface LookupSectionProps {
   title: string;
@@ -20,11 +22,14 @@ interface LookupSectionProps {
   onCreate: (item: { value: string; label: string; sort_order?: number }) => Promise<void>;
   onUpdate: (item: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onLink?: (item: LookupItem) => void;
+  linkCounts?: Record<string, number>;
+  linkColumnLabel?: string;
 }
 
 const ITEMS_PER_PAGE = 5;
 
-function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, onDelete }: LookupSectionProps) {
+function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, onDelete, onLink, linkCounts, linkColumnLabel }: LookupSectionProps) {
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LookupItem | null>(null);
@@ -112,7 +117,8 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
                   <TableHead>Rótulo</TableHead>
                   <TableHead className="w-20">Ordem</TableHead>
                   <TableHead className="w-20">Ativo</TableHead>
-                  <TableHead className="w-24 text-right">Ações</TableHead>
+                  {onLink && <TableHead className="w-24">{linkColumnLabel || 'Vínculos'}</TableHead>}
+                  <TableHead className="w-28 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -124,8 +130,20 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
                     <TableCell>
                       <Switch checked={item.is_active} onCheckedChange={() => handleToggleActive(item)} />
                     </TableCell>
+                    {onLink && (
+                      <TableCell>
+                        <Badge variant={(linkCounts?.[item.id] ?? 0) > 0 ? 'default' : 'secondary'}>
+                          {linkCounts?.[item.id] ?? 0}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {onLink && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Vínculos" onClick={() => onLink(item)}>
+                            <Link2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
@@ -201,6 +219,20 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
 
 export default function ProductLookupManager() {
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { linksByGroup, linksBySubgroup, setGroupLinks, setSubgroupLinks } = useGroupSubgroupLinks();
+
+  const [linkDialog, setLinkDialog] = useState<
+    | { mode: 'group'; anchor: LookupItem }
+    | { mode: 'subgroup'; anchor: LookupItem }
+    | null
+  >(null);
+
+  const groupLinkCounts: Record<string, number> = Object.fromEntries(
+    Object.entries(linksByGroup).map(([k, v]) => [k, v.length])
+  );
+  const subgroupLinkCounts: Record<string, number> = Object.fromEntries(
+    Object.entries(linksBySubgroup).map(([k, v]) => [k, v.length])
+  );
 
   return (
     <div className="space-y-6">
@@ -233,6 +265,9 @@ export default function ProductLookupManager() {
             onCreate={(item) => grupos.create.mutateAsync(item)}
             onUpdate={(item) => grupos.update.mutateAsync(item)}
             onDelete={(id) => grupos.remove.mutateAsync(id)}
+            onLink={(item) => setLinkDialog({ mode: 'group', anchor: item })}
+            linkCounts={groupLinkCounts}
+            linkColumnLabel="Subgrupos"
           />
           <LookupSection
             title="Subgrupos"
@@ -243,6 +278,9 @@ export default function ProductLookupManager() {
             onCreate={(item) => subgrupos.create.mutateAsync(item)}
             onUpdate={(item) => subgrupos.update.mutateAsync(item)}
             onDelete={(id) => subgrupos.remove.mutateAsync(id)}
+            onLink={(item) => setLinkDialog({ mode: 'subgroup', anchor: item })}
+            linkCounts={subgroupLinkCounts}
+            linkColumnLabel="Grupos"
           />
           <LookupSection
             title="Famílias"
@@ -282,6 +320,33 @@ export default function ProductLookupManager() {
           />
         </div>
       </div>
+
+      <GroupSubgroupLinkDialog
+        open={!!linkDialog}
+        onOpenChange={(o) => { if (!o) setLinkDialog(null); }}
+        mode={linkDialog?.mode || 'group'}
+        anchor={linkDialog?.anchor || null}
+        options={
+          linkDialog?.mode === 'group'
+            ? subgrupos.allItems.filter(s => s.is_active)
+            : grupos.allItems.filter(g => g.is_active)
+        }
+        initialSelected={
+          linkDialog?.mode === 'group'
+            ? (linksByGroup[linkDialog.anchor.id] || [])
+            : linkDialog?.mode === 'subgroup'
+              ? (linksBySubgroup[linkDialog.anchor.id] || [])
+              : []
+        }
+        onSave={async (selectedIds) => {
+          if (!linkDialog) return;
+          if (linkDialog.mode === 'group') {
+            await setGroupLinks.mutateAsync({ groupId: linkDialog.anchor.id, subgroupIds: selectedIds });
+          } else {
+            await setSubgroupLinks.mutateAsync({ subgroupId: linkDialog.anchor.id, groupIds: selectedIds });
+          }
+        }}
+      />
     </div>
   );
 }
