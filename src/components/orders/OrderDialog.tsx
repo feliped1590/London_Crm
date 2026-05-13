@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { NumberInput } from '@/components/ui/NumberInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -1152,7 +1153,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                     <TableHead className="w-28 text-right">IPI R$</TableHead>
                   </>
                 )}
-                <TableHead className="w-20 text-right">Com %</TableHead>
+                <TableHead className="w-24 text-right">Com %</TableHead>
                 <TableHead className="w-32 text-right">Total</TableHead>
                 {canEdit && <TableHead className="w-12"></TableHead>}
               </TableRow>
@@ -1181,7 +1182,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', e.target.value)} className="w-20" disabled={!canEdit} />
+                      <NumberInput
+                        value={item.quantity}
+                        onChange={(val) => updateItem(index, 'quantity', val ?? 0)}
+                        decimals={3}
+                        min={0}
+                        className="w-24"
+                        disabled={!canEdit}
+                      />
                     </TableCell>
                     <TableCell>
                       <div className="relative">
@@ -1190,34 +1198,31 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Input
-                        type="number"
+                      <NumberInput
+                        value={item.fator_kg ?? 0}
+                        onChange={(val) => updateItem(index, 'fator_kg', val ?? 0)}
+                        decimals={2}
                         min={0}
-                        step={0.0001}
-                        value={item.fator_kg ?? ''}
-                        onChange={(e) => updateItem(index, 'fator_kg', e.target.value)}
-                        className="w-24 text-right text-sm"
-                        placeholder="0"
+                        className="w-28"
                         disabled={!canEdit}
                       />
                     </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
                       <>
-                        <TableCell className="text-right text-sm">{ipiRate.toFixed(2)}%</TableCell>
+                        <TableCell className="text-right text-sm">{new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(ipiRate)} %</TableCell>
                         <TableCell className="text-right text-sm">{formatCurrency(ipiVal)}</TableCell>
                       </>
                     )}
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
+                      <NumberInput
+                        value={item.commission_pct ?? 0}
+                        onChange={(val) => updateItem(index, 'commission_pct', val ?? 0)}
+                        decimals={2}
                         min={0}
                         max={100}
-                        step={0.01}
-                        value={item.commission_pct || ''}
-                        onChange={(e) => updateItem(index, 'commission_pct', Number(e.target.value) || 0)}
-                        className="w-16 text-right text-sm"
-                        placeholder="0"
+                        suffix=" %"
+                        className="w-24"
                         disabled={!canEdit}
                       />
                     </TableCell>

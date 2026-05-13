@@ -1,91 +1,47 @@
-# Múltiplas formas de pagamento por pedido
+# Formatação profissional dos campos da tabela de itens
 
-Suportar mistura de formas/parcelas (ex.: R$ 5.000 antecipado + saldo em boleto 28/35) em Pedidos, Propostas e Documentos, com sync correto para o ERP.
+Aplicar formatação numérica padrão pt-BR nos três campos editáveis da tabela de itens do pedido (e replicar na proposta).
 
-## Banco
+## Campos afetados
 
-Nova tabela `order_payment_conditions`:
-- `id`, `tenant_id`, `order_id` (FK), `parcela` (int), `dias` (int, ≥0)
-- `forma_recebimento_id` (FK para tabela de formas de recebimento, com `erp_code`)
-- `tipo` (`'V'` | `'P'`)
-- `valor` (numeric, nullable — usado quando `tipo='V'`)
-- `percentual` (numeric, nullable — usado quando `tipo='P'`)
-- `created_at`, `updated_at`
-- Unique `(order_id, parcela)`
-- RLS por `tenant_id` + acesso herdado do pedido
+| Campo     | Formato exibido     | Decimais | Notas |
+|-----------|---------------------|----------|-------|
+| Qtd       | `1.234,000`         | 3        | Separador de milhar + 3 casas |
+| Fator KG  | `1.234,56` (contábil)| 2       | Separador de milhar + alinhado à direita |
+| Com %     | `5,00 %`            | 2        | Sufixo `%`, alinhado à direita |
+| IPI %     | `5,00 %`            | 2        | Célula somente leitura, mesma formatação |
 
-Tabelas espelho: `proposal_payment_conditions` e `document_payment_conditions` com mesma estrutura, FK para `proposals.id` e `documents.id`.
+Subtotal / Total / IPI R$ continuam usando `formatCurrency`.
 
-Pedidos antigos: **não** mexer. Continuam lendo `orders.payment_method` + `payment_terms` (fallback no mapper).
+## Comportamento dos inputs
 
-## Backend / Sync ERP
+Padrão "exibir formatado / editar limpo":
+- **Sem foco:** valor formatado em pt-BR.
+- **Com foco:** entrada com vírgula como separador decimal, sem separador de milhar.
+- **No blur:** normaliza, faz parse, atualiza estado, re-renderiza formatado.
+- Mantém `disabled={!canEdit}` e largura atual das colunas.
 
-`supabase/functions/_shared/projedata/order-types.ts`:
-- Adicionar `valor?: number` em `ProjedataOrderPayment`.
+## Implementação
 
-`supabase/functions/_shared/projedata/order-mapper.ts`:
-- Se houver linhas em `order_payment_conditions` → mapeia 1:1 (incluindo `valor` quando `tipo='V'`).
-- Se não houver (pedido legado) → mantém `parsePaymentTerms` atual.
+1. **Novo `src/components/ui/NumberInput.tsx`**
+   - Props: `value: number | null`, `onChange(value)`, `decimals`, `suffix?`, `min`, `max`, `disabled`, `className`, `placeholder`.
+   - Formata com `Intl.NumberFormat('pt-BR', { minimumFractionDigits, maximumFractionDigits })`.
+   - Estado interno `displayValue`; sincroniza com `value` externo quando não focado.
+   - Parse no blur: remove `suffix`, remove `.` (milhar), troca `,` por `.`, `Number(...)`.
 
-`supabase/functions/validate-order-sync/index.ts`:
-- Validar que toda parcela tem `forma_recebimento` mapeada (`erp_code`).
-- Validar que soma de `V` ≤ total do pedido.
-- Validar que percentuais somam exatamente 100% do saldo restante (após subtrair os `V`).
-- Bloqueia sync com `blocked_validation` se inválido.
+2. **`src/components/orders/OrderDialog.tsx`** — substituir os três `<Input type="number">` (Qtd, Fator KG, Com %) por `<NumberInput>` com decimais 3 / 2 / 2 e `suffix=" %"` em Com %. Atualizar a célula `IPI %` para usar `Intl.NumberFormat` pt-BR com 2 casas + ` %`.
 
-## Frontend — Editor de Parcelas
+3. **`src/components/proposals/ProposalDialog.tsx`** — mesma troca nos campos equivalentes para manter paridade visual.
 
-Componente novo `src/components/orders/PaymentConditionsEditor.tsx`, reutilizado em Pedidos, Propostas e Documentos.
+4. Nenhuma mudança em hooks, persistência, validação, cálculos ou schema. `quantity`, `fator_kg`, `commission_pct` e `ipi_rate` continuam armazenados como `number`.
 
-Layout (tabela editável):
+## Arquivos
 
-```text
-| # | Dias | Tipo | Valor / %        | Forma de Recebimento | [x] |
-| 1 |   0  |  R$  | R$ 5.000,00      | Antecipado           |  x  |
-| 2 |  28  |  %   | 50%              | Boleto               |  x  |
-| 3 |  35  |  %   | 50%              | Boleto               |  x  |
-[+ Adicionar parcela]
+- criar `src/components/ui/NumberInput.tsx`
+- editar `src/components/orders/OrderDialog.tsx`
+- editar `src/components/proposals/ProposalDialog.tsx`
 
-Total alocado: R$ 12.500,00 de R$ 12.500,00 ✓
-```
+## Fora de escopo
 
-Comportamento:
-- Toggle **R$ / %** por linha define o `tipo` (`V` / `P`). Default = `%`.
-- Digitar no campo de R$ marca automaticamente `tipo='V'`; digitar no de % marca `tipo='P'`.
-- Rateio automático: se houver linhas `V` e demais em branco/`P`, distribui igualmente o saldo restante em % entre as `P`.
-- Resumo ao vivo do total alocado vs total do pedido. Bloqueia salvar se não fechar 100%.
-- Atalhos no topo:
-  - **À vista** → 1 parcela, 0 dias, 100%
-  - **Parcelado simples** → input `28/35/42` + 1 forma → gera N parcelas iguais em `P` (mantém o fluxo atual rápido)
-  - **Entrada + parcelas** → input do valor da entrada + dias das demais → gera 1 linha `V` (0 dias) + N linhas `P`
-
-Substitui os 2 campos atuais (`Forma de Pagamento` + `Condições (dias)`) em:
-- `OrderForm` (Pedidos)
-- `ProposalDialog` (Propostas)
-- `DocumentLogisticsSection` ou equivalente (Documentos)
-
-Aprovação pública de proposta (`proposal-approve`) já gera Pedido herdando dados — vai herdar também as parcelas (copia `proposal_payment_conditions` → `order_payment_conditions`).
-
-## Arquivos previstos
-
-**Banco (migration):**
-- `order_payment_conditions`, `proposal_payment_conditions`, `document_payment_conditions` + RLS + índices
-
-**Backend:**
-- `supabase/functions/_shared/projedata/order-types.ts` — `valor?` em `ProjedataOrderPayment`
-- `supabase/functions/_shared/projedata/order-mapper.ts` — leitura das condições novas + fallback legado
-- `supabase/functions/_shared/projedata/order-loader.ts` — JOIN com `order_payment_conditions`
-- `supabase/functions/validate-order-sync/index.ts` — novas validações
-- `supabase/functions/proposal-approve/index.ts` — copiar parcelas da proposta para o pedido
-
-**Frontend:**
-- `src/components/orders/PaymentConditionsEditor.tsx` (novo, compartilhado)
-- `src/components/orders/OrderForm.tsx` — substituir campos
-- `src/components/proposals/ProposalDialog.tsx` — substituir campos
-- `src/components/documents/DocumentLogisticsSection.tsx` — substituir campos
-- `src/types/orders.ts` (e equivalentes) — tipo `PaymentCondition`
-- Hooks de leitura/persistência das parcelas
-
-## Memória do projeto
-
-Atualizar `mem://database/orders-payment-fields` para refletir o novo modelo (tabela própria com mix V/P) e marcar `orders.payment_method` / `payment_terms` como legado/fallback.
+- Outras telas (documentos, relatórios) não são alteradas.
+- Regras de negócio e validações permanecem idênticas.
