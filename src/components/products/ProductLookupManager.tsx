@@ -320,6 +320,33 @@ export default function ProductLookupManager() {
           />
         </div>
       </div>
+
+      <GroupSubgroupLinkDialog
+        open={!!linkDialog}
+        onOpenChange={(o) => { if (!o) setLinkDialog(null); }}
+        mode={linkDialog?.mode || 'group'}
+        anchor={linkDialog?.anchor || null}
+        options={
+          linkDialog?.mode === 'group'
+            ? subgrupos.allItems.filter(s => s.is_active)
+            : grupos.allItems.filter(g => g.is_active)
+        }
+        initialSelected={
+          linkDialog?.mode === 'group'
+            ? (linksByGroup[linkDialog.anchor.id] || [])
+            : linkDialog?.mode === 'subgroup'
+              ? (linksBySubgroup[linkDialog.anchor.id] || [])
+              : []
+        }
+        onSave={async (selectedIds) => {
+          if (!linkDialog) return;
+          if (linkDialog.mode === 'group') {
+            await setGroupLinks.mutateAsync({ groupId: linkDialog.anchor.id, subgroupIds: selectedIds });
+          } else {
+            await setSubgroupLinks.mutateAsync({ subgroupId: linkDialog.anchor.id, groupIds: selectedIds });
+          }
+        }}
+      />
     </div>
   );
 }
