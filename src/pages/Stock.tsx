@@ -328,17 +328,7 @@ export default function Stock() {
         </div>
       </div>
 
-      <Tabs defaultValue="atual" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-lg">
-          <TabsTrigger value="atual">Estoque Atual</TabsTrigger>
-          <TabsTrigger value="movimentar">Movimentar</TabsTrigger>
-          <TabsTrigger value="historico">Histórico</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="atual"><StockCurrentTab /></TabsContent>
-        <TabsContent value="movimentar"><StockMoveTab /></TabsContent>
-        <TabsContent value="historico"><StockHistoryTab /></TabsContent>
-      </Tabs>
+      <StockCurrentTab />
     </div>
   );
 }
