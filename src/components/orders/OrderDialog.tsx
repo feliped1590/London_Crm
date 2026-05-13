@@ -821,6 +821,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setOriginalItems(existingOrderItems ?? []);
   }, [open, order?.id, existingOrderItems]);
 
+  useEffect(() => {
+    if (!open || !order?.id) return;
+    if (existingPaymentConditions === undefined) return;
+    setPaymentConditions(existingPaymentConditions);
+    setOriginalPaymentConditions(existingPaymentConditions);
+  }, [open, order?.id, existingPaymentConditions]);
+
   // Captura snapshot do estado original assim que o pedido carrega (após hidratação dos campos).
   useEffect(() => {
     if (!open || !order?.id) return;
