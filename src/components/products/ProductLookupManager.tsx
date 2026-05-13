@@ -22,6 +22,9 @@ interface LookupSectionProps {
   onCreate: (item: { value: string; label: string; sort_order?: number }) => Promise<void>;
   onUpdate: (item: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onLink?: (item: LookupItem) => void;
+  linkCounts?: Record<string, number>;
+  linkColumnLabel?: string;
 }
 
 const ITEMS_PER_PAGE = 5;
