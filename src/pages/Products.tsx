@@ -1565,7 +1565,7 @@ export default function Products() {
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">
                       <h3 className="text-sm font-medium text-muted-foreground mb-3">Dimensões</h3>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className={`grid gap-4 ${currentDimensionProfile === 'partial' ? 'grid-cols-2' : 'grid-cols-3'}`}>
                         <div>
                           <Label htmlFor="width">Largura (mm)</Label>
                           <Input
