@@ -236,6 +236,7 @@ export function CustomerOverviewTab({
                   }}
                   onSegmentoChange={(v) => setCompanyForm((prev: any) => ({ ...prev, segmento_id: v, atividade_id: null }))}
                   onAtividadeChange={(v) => setCompanyForm((prev: any) => ({ ...prev, atividade_id: v }))}
+                  hideAtividade
                   disabled={!isEditing}
                 />
               )}
