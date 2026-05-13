@@ -15,6 +15,7 @@ export interface ProductLookup {
   thickness?: number | null;
   aliquota_ipi?: number | null;
   fator_kg?: number | null;
+  unit_measure?: string | null;
 }
 
 /**
@@ -34,6 +35,7 @@ export interface OrderItemDraft {
   ipi_rate: number;
   commission_pct: number;
   fator_kg?: number;
+  unit_measure?: string;
   width?: number;
   length?: number;
   thickness?: number;

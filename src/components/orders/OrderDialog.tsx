@@ -269,6 +269,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             thickness,
             aliquota_ipi,
             fator_kg,
+            unit_measure,
             active
           )
         `)
@@ -343,7 +344,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (!order) return [];
       const { data, error } = await supabase
         .from('order_items')
-        .select('*, product:products(sku, erp_product_code, fator_kg)')
+        .select('*, product:products(sku, erp_product_code, fator_kg, unit_measure)')
         .eq('order_id', order.id)
         .order('sort_order');
       if (error) throw error;
@@ -356,6 +357,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
         fator_kg: item.fator_kg ?? item.product?.fator_kg ?? 0,
+        unit_measure: item.unit_measure ?? item.product?.unit_measure ?? '',
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
         is_locked: item.is_locked || false,
       }));
@@ -883,7 +885,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       observations: '', observations_pcp: '',
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, width: product.width || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, unit_measure: product.unit_measure || '', width: product.width || undefined,
       length: product.length || undefined, thickness: product.thickness || undefined,
       calculated_price_source: priceSource, is_locked: false,
     });
@@ -1143,7 +1145,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             <TableHeader>
               <TableRow>
                 <TableHead>Produto</TableHead>
-                <TableHead className="w-24">Qtd</TableHead>
+                <TableHead className="w-32">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-28">Fator KG</TableHead>
                 <TableHead className="w-28 text-right">Subtotal</TableHead>
@@ -1182,14 +1184,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                       </div>
                     </TableCell>
                     <TableCell>
-                      <NumberInput
-                        value={item.quantity}
-                        onChange={(val) => updateItem(index, 'quantity', val ?? 0)}
-                        decimals={3}
-                        min={0}
-                        className="w-24"
-                        disabled={!canEdit}
-                      />
+                      <div className="flex items-center gap-1">
+                        <NumberInput
+                          value={item.quantity}
+                          onChange={(val) => updateItem(index, 'quantity', val ?? 0)}
+                          decimals={3}
+                          min={0}
+                          className="w-24"
+                          disabled={!canEdit}
+                        />
+                        <span className="text-xs text-muted-foreground uppercase whitespace-nowrap">
+                          {(item.unit_measure || product?.unit_measure || '').toString()}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="relative">
