@@ -31,6 +31,8 @@ export interface OrderToValidate {
     dias?: number | null;
     forma_recebimento?: number | null;
     parcela?: number | null;
+    tipo?: string | null;
+    fator?: number | null;
   }>;
   payment_terms_raw?: string | null;
 }
@@ -199,21 +201,16 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
   }
 
   // 11. Condições de pagamento
-  if (!order.payment_terms_raw) {
+  if (!order.payment_conditions || order.payment_conditions.length === 0) {
     errors.push({
       field: 'payment_terms',
       message: 'Condições de pagamento não definidas',
-      fixHint: 'Defina as condições de pagamento no pedido (ex.: 30/60/90).',
-    });
-    fields.add('payment_terms');
-  } else if (!order.payment_conditions || order.payment_conditions.length === 0) {
-    errors.push({
-      field: 'payment_terms',
-      message: 'Não foi possível interpretar as condições de pagamento informadas',
-      fixHint: 'Use o formato de dias separado por barras (ex.: 30/60/90).',
+      fixHint: 'Defina as condições de pagamento (parcelas) no pedido.',
     });
     fields.add('payment_terms');
   } else {
+    let percentSum = 0;
+    let hasPercent = false;
     order.payment_conditions.forEach((p, idx) => {
       if (!p.forma_recebimento || isNaN(p.forma_recebimento)) {
         errors.push({
@@ -224,7 +221,7 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
         });
         fields.add('payment_method');
       }
-      if (!p.dias || p.dias <= 0) {
+      if (p.dias == null || isNaN(p.dias) || p.dias < 0) {
         errors.push({
           field: `payment_conditions[${idx}].dias`,
           message: `Parcela ${idx + 1}: prazo (dias) inválido`,
@@ -232,7 +229,33 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
         });
         fields.add('payment_terms');
       }
+      const tipo = p.tipo === 'V' ? 'V' : 'P';
+      const fator = Number(p.fator ?? 0);
+      if (!fator || fator <= 0) {
+        errors.push({
+          field: `payment_conditions[${idx}].fator`,
+          message: `Parcela ${idx + 1}: ${tipo === 'V' ? 'valor' : 'percentual'} deve ser maior que zero`,
+          fixHint: 'Preencha o valor ou percentual da parcela no pedido.',
+        });
+        fields.add('payment_terms');
+      }
+      if (tipo === 'P') {
+        hasPercent = true;
+        percentSum += fator;
+      }
     });
+    if (hasPercent && Math.abs(percentSum - 100) > 0.01) {
+      // Só exige soma=100 quando TODAS as parcelas são percentuais
+      const allPercent = order.payment_conditions.every(p => (p.tipo === 'V' ? false : true));
+      if (allPercent) {
+        errors.push({
+          field: 'payment_conditions.percentual_sum',
+          message: `Soma dos percentuais das parcelas deve ser 100% (atual: ${percentSum.toFixed(2)}%)`,
+          fixHint: 'Ajuste os percentuais das parcelas para totalizar 100%.',
+        });
+        fields.add('payment_terms');
+      }
+    }
   }
 
   return { valid: errors.length === 0, errors, fields: Array.from(fields) };

@@ -46,7 +46,8 @@ export interface CRMPaymentCondition {
   parcela: number;
   dias: number;
   forma_recebimento: number;    // obrigatório
-  tipo?: string;
+  tipo?: string;                // 'V' ou 'P'
+  fator?: number;               // valor (R$) ou percentual
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -120,6 +121,7 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     forma_recebimento: p.forma_recebimento,
     parcela: p.parcela,
     tipo: p.tipo ?? 'P',
+    fator: p.fator ?? 0,
   }));
 
   return {
