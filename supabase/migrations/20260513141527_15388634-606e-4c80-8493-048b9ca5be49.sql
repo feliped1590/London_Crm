@@ -1,0 +1,1 @@
+ALTER TABLE public.products ALTER COLUMN legal_entity_id DROP NOT NULL;
