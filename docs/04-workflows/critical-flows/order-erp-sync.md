@@ -91,7 +91,16 @@ sequenceDiagram
 - ❌ Erro de negócio: queue `status='error'` + mensagem do ERP. Não consome retry.
 - ❌ Erro de validação tardia: queue `status='blocked_validation'`, `next_retry_at=null`. UI vira `Wrench`.
 
-### 4.5 Status "Desatualizado"
+### 4.3.1 Regras do `pagto[]` (parcelas)
+
+Cada parcela vai como `{ parcela, dias, forma_recebimento, tipo, fator? }`:
+
+- **`tipo='V'` (valor fixo):** enviar `fator` = valor em R$ da parcela. Validador exige `fator > 0`.
+- **`tipo='P'` (percentual / rateio automático):** **OMITIR** o campo `fator`. O ERP Projedata calcula o saldo sozinho. Enviar `fator=0` dispara `ORA-20270` no trigger `TGI_FINVENCTOS` (ele exige `0 < fator ≤ 100` quando recebe `tipo='P'`).
+
+Implementação: `_shared/projedata/order-mapper.ts` só adiciona `fator` ao objeto quando `tipo === 'V'`. O tipo TS `ProjedataOrderPayment.fator` é opcional.
+
+### 4.4 Status "Desatualizado"
 Calculado no frontend: se `updated_at - erp_synced_at > 5 segundos`, badge fica amarela. Margem de 5s evita falso-positivo de timestamps de sync.
 
 ---
