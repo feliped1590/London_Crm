@@ -904,11 +904,7 @@ export default function Products() {
       return;
     }
 
-    // Validação de nome_impresso para grupos impressos
-    if (isGroupPrinted(formData.grupo_id) && !formData.nome_impresso?.trim()) {
-      toast.error('O campo "Nome do Impresso" é obrigatório para produtos impressos.', { duration: 6000 });
-      return;
-    }
+    // Nome Complementar é opcional — sem validação obrigatória
 
     // Validação dinâmica por perfil de dimensão do grupo
     const profile = getGroupProfile(formData.grupo_id);
