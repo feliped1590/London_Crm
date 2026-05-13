@@ -373,7 +373,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
 
@@ -459,7 +459,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
         
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).eq('id', order.id);
       if (orderError) throw orderError;
 
@@ -613,7 +613,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null,
         payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
+        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
 
@@ -933,10 +933,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   } = usePortfolioProtection(companyId || undefined);
 
   const handleSubmit = () => {
-    if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
-      toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
-      return;
-    }
     // Check portfolio protection before submitting
     if (!checkAccess()) return;
     if (!priceValidation.validateBeforeSubmit()) return;
@@ -1219,13 +1215,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
 
-      <DocumentLogisticsSection
-        carrierId={carrierId} setCarrierId={setCarrierId}
-        freightType={freightType} setFreightType={setFreightType}
-        deliverySameAsCompany={deliverySameAsCompany} setDeliverySameAsCompany={setDeliverySameAsCompany}
-        deliveryFields={deliveryFields} setDeliveryFields={setDeliveryFields}
-        disabled={!canEdit}
-      />
+      <div className="space-y-2">
+        <Label>Tipo de Frete</Label>
+        <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
+          <SelectTrigger className="max-w-md">
+            <SelectValue placeholder="Selecione o tipo de frete" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+            <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+            <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="space-y-2">
         <Label>Observações</Label>
@@ -1330,7 +1332,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleDialogClose(true)}>
+          <Button variant="outline" onClick={() => handleDialogClose(false)}>
             {canEdit ? 'Cancelar' : 'Fechar'}
           </Button>
           {isEditMode && canClone && (
