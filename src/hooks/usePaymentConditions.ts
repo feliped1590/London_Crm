@@ -27,9 +27,21 @@ export async function loadPaymentConditions(scope: Scope, parentId: string): Pro
 export async function persistPaymentConditions(
   scope: Scope,
   parentId: string,
-  tenantId: string,
-  rows: PaymentConditionDraft[]
+  rows: PaymentConditionDraft[],
+  tenantIdOverride?: string
 ) {
+  // Resolve tenant a partir do registro pai quando não vier
+  let tenantId = tenantIdOverride;
+  if (!tenantId) {
+    const parentTable = scope === 'order' ? 'orders' : 'proposals';
+    const { data: parent } = await supabase
+      .from(parentTable as any)
+      .select('tenant_id')
+      .eq('id', parentId)
+      .maybeSingle();
+    tenantId = (parent as any)?.tenant_id;
+    if (!tenantId) throw new Error(`Não foi possível resolver tenant do ${scope} ${parentId}`);
+  }
   const table = tableFor(scope) as any;
   const fk = fkFor(scope);
   // Estratégia simples: apaga e reinsere (mesmo padrão usado em order_items).
