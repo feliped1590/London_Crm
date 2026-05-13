@@ -502,8 +502,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="payment_terms">Cond. Pagamento</Label>
-                  <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} placeholder="Ex: 30/60/90" />
+                <div className="hidden">
+                  <Input id="payment_terms" value={formData.payment_terms} onChange={(e) => setFormData({ ...formData, payment_terms: e.target.value })} />
+                </div>
                 </div>
                 <div>
                   <Label htmlFor="delivery_terms">Prazo Entrega</Label>
