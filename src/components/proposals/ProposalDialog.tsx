@@ -617,7 +617,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Input type="number" step="0.01" min="0" max="100" value={item.discount_percent || 0} onChange={(e) => updateItem(index, 'discount_percent', parseFloat(e.target.value) || 0)} onBlur={() => handlePriceBlurWithAudit(index, 'discount_percent')} className={`h-8 ${hasPricingTable && !isAdmin ? 'bg-muted' : ''}`} disabled={hasPricingTable && !isAdmin} />
+                          <NumberInput value={item.discount_percent || 0} onChange={(val) => updateItem(index, 'discount_percent', val ?? 0)} onBlur={() => handlePriceBlurWithAudit(index, 'discount_percent')} decimals={2} min={0} max={100} suffix=" %" className={`h-8 ${hasPricingTable && !isAdmin ? 'bg-muted' : ''}`} disabled={hasPricingTable && !isAdmin} />
                         </TableCell>
                         <TableCell className="text-right font-medium text-xs">{formatCurrency(proposalItemSubtotal(item))}</TableCell>
                         {formData.ipi_mode !== 'isento' && (<>
