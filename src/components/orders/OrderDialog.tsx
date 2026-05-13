@@ -387,7 +387,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         observations, total_value: orderTotal, status: 'pendente', created_by: user?.id,
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
-        payment_method: paymentMethod || null, payment_terms: paymentTerms || null,
+        payment_method: legacyMethod, payment_terms: legacyTerms,
         ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
       }).select().single();
       if (orderError) throw orderError;
