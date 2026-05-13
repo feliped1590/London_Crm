@@ -41,7 +41,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
   const [shortcutOpen, setShortcutOpen] = useState<null | 'simples' | 'entrada'>(null);
   const [simplesDias, setSimplesDias] = useState('');
   const [simplesForma, setSimplesForma] = useState('');
-  const [entradaValor, setEntradaValor] = useState('');
+  const [entradaValor, setEntradaValor] = useState<number | null>(null);
   const [entradaFormaV, setEntradaFormaV] = useState('');
   const [entradaDias, setEntradaDias] = useState('');
   const [entradaFormaP, setEntradaFormaP] = useState('');
