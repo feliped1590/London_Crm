@@ -621,7 +621,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                         </TableCell>
                         <TableCell className="text-right font-medium text-xs">{formatCurrency(proposalItemSubtotal(item))}</TableCell>
                         {formData.ipi_mode !== 'isento' && (<>
-                          <TableCell className="text-right text-xs">{(item.ipi_rate || 0).toFixed(2)}%</TableCell>
+                          <TableCell className="text-right text-xs">{new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.ipi_rate || 0)} %</TableCell>
                           <TableCell className="text-right text-xs">{formatCurrency(calculateIpiValue(proposalItemSubtotal(item), item.ipi_rate || 0, formData.ipi_mode))}</TableCell>
                         </>)}
                         <TableCell className="text-right font-bold text-xs">{formatCurrency(getItemTotal(item))}</TableCell>
