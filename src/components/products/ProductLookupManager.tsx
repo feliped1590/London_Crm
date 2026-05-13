@@ -7,9 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductLookups, type LookupItem } from '@/hooks/useProductLookups';
+import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
+import GroupSubgroupLinkDialog from './GroupSubgroupLinkDialog';
 
 interface LookupSectionProps {
   title: string;
