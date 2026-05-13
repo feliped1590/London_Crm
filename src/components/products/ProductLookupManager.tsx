@@ -219,6 +219,20 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
 
 export default function ProductLookupManager() {
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { linksByGroup, linksBySubgroup, setGroupLinks, setSubgroupLinks } = useGroupSubgroupLinks();
+
+  const [linkDialog, setLinkDialog] = useState<
+    | { mode: 'group'; anchor: LookupItem }
+    | { mode: 'subgroup'; anchor: LookupItem }
+    | null
+  >(null);
+
+  const groupLinkCounts: Record<string, number> = Object.fromEntries(
+    Object.entries(linksByGroup).map(([k, v]) => [k, v.length])
+  );
+  const subgroupLinkCounts: Record<string, number> = Object.fromEntries(
+    Object.entries(linksBySubgroup).map(([k, v]) => [k, v.length])
+  );
 
   return (
     <div className="space-y-6">
