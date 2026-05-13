@@ -105,6 +105,7 @@ Calculado no frontend: se `updated_at - erp_synced_at > 5 segundos`, badge fica 
 | Loop de sync (CRM ↔ ERP) | `origem_alteracao` não setado corretamente no webhook | Trigger ignora `origem_alteracao IN ('ERP', 'SYNC')` |
 | Pedido marcado "Desatualizado" sem ter sido editado | Diferença <5s entre updated_at e erp_synced_at | Margem já tratada — investigar trigger que altera `updated_at` indevidamente |
 | Erro `erp_user_code não configurado` | Usuário criador sem mapping em `profiles.erp_user_code` | Configurações → Usuários |
+| `ORA-20270` em `TGI_FINVENCTOS` no `pagto[]` | Parcela com `tipo='P'` enviada com `fator=0` (ERP exige `0 < fator ≤ 100` para P) | Mapper omite `fator` quando `tipo='P'` — ERP rateia o saldo automaticamente. Ver seção 4.3.1 |
 
 ---
 
