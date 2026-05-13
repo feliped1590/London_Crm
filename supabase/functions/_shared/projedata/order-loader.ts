@@ -26,7 +26,7 @@ export interface LoadedOrderContext {
   crmPaymentMethod: string | null;
   paymentMapping: { erp_payment_code: number; erp_payment_description: string } | null;
   paymentTermsStr: string | null;
-  paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo?: string }>;
+  paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo?: string; fator?: number }>;
   saleTypeMap: Map<string, number>;
   pedidoTerceiro: number;
   toValidate: OrderToValidate;
@@ -114,7 +114,7 @@ export async function loadOrderForValidation(
     freightMapping = data;
   }
 
-  // Forma de pagamento
+  // Forma de pagamento (cabeçalho — usado como fallback e no campo payment_method legado)
   const crmPaymentMethod = order.payment_method ?? null;
   let paymentMapping: any = null;
   if (crmPaymentMethod) {
@@ -128,9 +128,56 @@ export async function loadOrderForValidation(
   }
 
   const paymentTermsStr = order.payment_terms ?? null;
-  const paymentConditions = paymentTermsStr && paymentMapping?.erp_payment_code
-    ? parsePaymentTerms(paymentTermsStr, paymentMapping.erp_payment_code)
-    : [];
+
+  // Carrega parcelas detalhadas (fonte sovereign quando existir)
+  const { data: detailedConditions } = await supabase
+    .from('order_payment_conditions')
+    .select('parcela, dias, payment_method, tipo, valor, percentual')
+    .eq('order_id', orderId)
+    .order('parcela', { ascending: true });
+
+  // Resolve mapeamentos ERP de todos os métodos usados (cache em Map)
+  const methodsInUse = new Set<string>();
+  if (crmPaymentMethod) methodsInUse.add(crmPaymentMethod);
+  (detailedConditions || []).forEach((c: any) => {
+    if (c.payment_method) methodsInUse.add(c.payment_method);
+  });
+
+  const methodCodeMap = new Map<string, number>();
+  if (methodsInUse.size > 0) {
+    const { data: mappings } = await supabase
+      .from('payment_method_erp_mapping')
+      .select('crm_payment_method, erp_payment_code')
+      .in('crm_payment_method', Array.from(methodsInUse))
+      .eq('is_active', true);
+    (mappings || []).forEach((m: any) => methodCodeMap.set(m.crm_payment_method, m.erp_payment_code));
+  }
+
+  let paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo?: string; fator?: number }> = [];
+  let allMethodsMapped = true;
+
+  if (detailedConditions && detailedConditions.length > 0) {
+    paymentConditions = detailedConditions.map((c: any, idx: number) => {
+      const method = c.payment_method || crmPaymentMethod;
+      const formaCode = method ? methodCodeMap.get(method) : undefined;
+      if (!formaCode) allMethodsMapped = false;
+      const tipo = c.tipo === 'V' ? 'V' : 'P';
+      const fator = tipo === 'V' ? Number(c.valor ?? 0) : Number(c.percentual ?? 0);
+      return {
+        parcela: idx + 1,
+        dias: Number(c.dias ?? 0),
+        forma_recebimento: formaCode ?? 0,
+        tipo,
+        fator,
+      };
+    });
+  } else if (paymentTermsStr && paymentMapping?.erp_payment_code) {
+    // Fallback legado: usa string "30/60/90"
+    paymentConditions = parsePaymentTerms(paymentTermsStr, paymentMapping.erp_payment_code)
+      .map(p => ({ ...p, fator: 0 }));
+  } else if (crmPaymentMethod && !paymentMapping) {
+    allMethodsMapped = false;
+  }
 
   // Itens
   const { data: items, error: itemsError } = await supabase
