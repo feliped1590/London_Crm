@@ -974,27 +974,23 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       {/* Vínculo opcional ao negócio (Fase 2) + Data de Entrega lado a lado */}
       <div className="grid grid-cols-2 gap-4">
-        {companyId ? (
-          <div className="space-y-2">
-            <Label>Vincular ao Negócio (opcional)</Label>
-            <SearchableSelect
-              options={[
-                { value: '__NONE__', label: 'Sem vínculo' },
-                ...companyDeals.map(d => ({ value: d.id, label: d.name })),
-              ]}
-              value={dealId || '__NONE__'}
-              onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
-              placeholder="Selecione um negócio"
-              searchPlaceholder="Buscar negócio..."
-              disabled={!canEdit}
-            />
-            <p className="text-xs text-muted-foreground">
-              Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
-            </p>
-          </div>
-        ) : (
-          <div />
-        )}
+        <div className="space-y-2">
+          <Label>Vincular ao Negócio (opcional)</Label>
+          <SearchableSelect
+            options={[
+              { value: '__NONE__', label: 'Sem vínculo' },
+              ...companyDeals.map(d => ({ value: d.id, label: d.name })),
+            ]}
+            value={dealId || '__NONE__'}
+            onChange={(v) => setDealId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder={companyId ? 'Selecione um negócio' : 'Selecione uma empresa primeiro'}
+            searchPlaceholder="Buscar negócio..."
+            disabled={!canEdit || !companyId}
+          />
+          <p className="text-xs text-muted-foreground">
+            Vincular ao negócio permite que o pipeline controle o status deste pedido (quando configurado).
+          </p>
+        </div>
 
         <div className="space-y-2">
           <Label>Data de Entrega</Label>
