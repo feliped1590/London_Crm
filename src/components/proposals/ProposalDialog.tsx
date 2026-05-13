@@ -136,6 +136,9 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
         const { error: itemsError } = await supabase.from('proposal_items').insert(itemsToInsert);
         if (itemsError) throw itemsError;
       }
+      if (paymentConditions.length > 0) {
+        await persistPaymentConditions('proposal', newProposal.id, paymentConditions);
+      }
       if (formData.status === 'aprovada') await createOrderFromProposal(newProposal.id);
       return newProposal;
     },
