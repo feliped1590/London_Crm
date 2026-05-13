@@ -1,66 +1,31 @@
 ## Objetivo
 
-Permitir vincular subgrupos a grupos (N:N) em "Cadastros Básicos" e, no formulário de produtos, filtrar a lista de subgrupos pelos vínculos do grupo selecionado — reduzindo poluição visual.
+No cadastro de produto, quando o grupo selecionado tiver "bobina" no nome, exibir apenas **Largura** e **Espessura**. Para qualquer outro grupo, exibir as três dimensões (Largura, Comprimento, Espessura).
 
-**Escopo: apenas organização visual/estrutural do cadastro dentro do CRM. Nenhuma alteração em sincronização ERP.**
+## Como hoje
 
-## Modelo de dados
+Existe a coluna `dimension_profile` em `product_groups` com valores `full` / `partial` / `none`, lida via `getGroupProfile(grupoId)` em `src/pages/Products.tsx` (linha 278). O perfil já controla quais campos aparecem e a geração de SKU/versão. Hoje ele depende exclusivamente do que está cadastrado no banco — se o admin não marcou o grupo como `partial`, a tela mostra os 3 campos mesmo para "Bobina".
 
-Nova tabela de junção `product_group_subgroups`:
+## Mudança proposta (somente frontend)
 
-```text
-product_group_subgroups
-- id uuid PK
-- group_id uuid FK -> product_groups(id) ON DELETE CASCADE
-- subgroup_id uuid FK -> product_subgroups(id) ON DELETE CASCADE
-- tenant_id uuid
-- created_at timestamptz
-- UNIQUE (group_id, subgroup_id)
-```
+Ajustar `getGroupProfile` em `src/pages/Products.tsx` para aplicar uma regra automática por nome, **sem alterar banco, sem alterar sincronização ERP, sem alterar `dimension_profile` do grupo**:
 
-Regras:
-- N:N — um subgrupo pode estar em vários grupos e vice-versa.
-- RLS por `tenant_id` (mesmo padrão das demais lookups).
-- Sem alteração nos campos `grupo_id`/`subgrupo_id` em `products` (continuam UUIDs independentes).
-- Compatibilidade: enquanto não houver vínculos para um grupo, o seletor cai no fallback (mostra todos os subgrupos ativos), evitando travar cadastros existentes.
+1. Buscar o grupo pelo `grupoId` na lista `grupos.items` (como já faz).
+2. Se o `name` do grupo, normalizado (lowercase, sem acentos), contiver a palavra `bobina` → retornar `'partial'`.
+3. Caso contrário → retornar `group?.dimension_profile || 'full'` (fallback passa de `'none'` para `'full'` para garantir as 3 dimensões em grupos não-bobina, conforme pedido: "o restante, aparecem todas as dimensões").
 
-## UI — Cadastros Básicos (`ProductLookupManager.tsx`)
-
-Adicionar ação em **Grupos** e em **Subgrupos**:
-- Botão "Vínculos" (ícone link) abre modal com checklist multiselect.
-  - Ao abrir pelo Grupo: lista todos os subgrupos ativos com checkbox (marca os já vinculados).
-  - Ao abrir pelo Subgrupo: lista todos os grupos ativos com checkbox.
-- Salvar faz diff (insere novos / remove desmarcados) em `product_group_subgroups`.
-- Badge com contador de vínculos ao lado do nome (ex.: "3 vínculos").
-
-## UI — Formulário de Produto (`src/pages/Products.tsx`)
-
-- Quando `formData.grupo_id` muda:
-  - Buscar `subgroup_id`s vinculados a esse grupo.
-  - Filtrar `subgrupos.items` exibidos no Select por essa lista.
-  - Se o `subgrupo_id` atual não pertence ao novo grupo, limpar o campo.
-- Se o grupo não tem vínculos cadastrados → mostrar todos os subgrupos ativos (fallback), com aviso discreto: "Nenhum subgrupo vinculado — exibindo todos".
-
-## Hook
-
-Estender `useProductLookups.ts` com `useGroupSubgroupLinks()`:
-- `linksByGroup: Record<groupId, subgroupId[]>`
-- `linksBySubgroup: Record<subgroupId, groupId[]>`
-- `setGroupLinks(groupId, subgroupIds[])` — diff insert/delete
-- `setSubgroupLinks(subgroupId, groupIds[])` — diff insert/delete
-- Invalidação de query após mutação.
+Como toda a renderização condicional dos inputs de dimensão, validação e geração de SKU/versão já consomem `currentDimensionProfile = getGroupProfile(...)`, a mudança propaga automaticamente para:
+- Renderização dos campos Largura / Comprimento / Espessura
+- Validação de submit
+- `recalcularDescricao` / `generateStructuralSku` / geração de `erp_versao`
 
 ## Fora de escopo
 
-- **Sincronização ERP**: nenhuma função/edge/payload de sync será tocada. Vínculo é puramente CRM.
-- Migração de dados históricos (vínculos começam vazios; usuário cadastra conforme necessidade).
-- Aplicar o mesmo filtro fora do formulário de produto (estendível depois sob demanda).
+- Schema do banco (`dimension_profile` permanece como está)
+- Sincronização ERP / hashes / triggers
+- Tabela de grupos em "Cadastro Básico" (continua permitindo configurar `dimension_profile` manualmente; a regra por nome só é um override no formulário de produto)
+- Qualquer outro campo do formulário
 
-## Entregáveis
+## Memória
 
-1. Migração SQL: tabela `product_group_subgroups` + RLS + índices.
-2. Hook `useGroupSubgroupLinks`.
-3. Modal reutilizável `GroupSubgroupLinkDialog`.
-4. Botões "Vínculos" nas seções Grupos e Subgrupos do `ProductLookupManager`.
-5. Filtro do Select de Subgrupo no formulário de produto + reset quando inválido.
-6. Atualizar memória `mem://features/product-lookups-basic-records` com a regra N:N (somente CRM).
+Atualizar `mem://features/product-lookups-basic-records` adicionando: "No formulário de produto, grupos cujo nome contém 'bobina' (case/acento-insensível) forçam perfil `partial` (Largura × Espessura), sobrepondo `dimension_profile`. Demais grupos exibem as 3 dimensões."

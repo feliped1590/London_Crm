@@ -278,7 +278,12 @@ export default function Products() {
   const getGroupProfile = (grupoId?: string): DimensionProfile => {
     if (!grupoId) return 'none';
     const group = (grupos.items as GroupLookupItem[]).find((g) => g.id === grupoId);
-    return group?.dimension_profile || 'none';
+    const normalized = (group?.label || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    if (normalized.includes('bobina')) return 'partial';
+    return group?.dimension_profile || 'full';
   };
 
   const isGroupPrinted = (grupoId?: string): boolean => {
