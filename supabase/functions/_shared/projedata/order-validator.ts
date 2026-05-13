@@ -231,8 +231,8 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
       }
       const tipo = p.tipo === 'V' ? 'V' : 'P';
       const fator = Number(p.fator ?? 0);
-      // Para tipo 'V' (valor fixo), fator é obrigatório > 0.
-      // Para tipo 'P' (percentual), fator = 0/null significa rateio automático do saldo pelo ERP — válido.
+      // Tipo 'V' (valor fixo): fator obrigatório > 0.
+      // Tipo 'P' (percentual): fator é IGNORADO — ERP faz rateio automático do saldo.
       if (tipo === 'V' && (!fator || fator <= 0)) {
         errors.push({
           field: `payment_conditions[${idx}].fator`,
@@ -241,27 +241,10 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
         });
         fields.add('payment_terms');
       }
-      if (tipo === 'P' && fator > 0) {
-        hasPercent = true;
-        percentSum += fator;
-      }
     });
-    if (hasPercent && Math.abs(percentSum - 100) > 0.01) {
-      // Só exige soma=100 quando TODAS as parcelas são percentuais COM percentual explícito (>0).
-      // Se alguma parcela P tem fator=0, está em modo rateio automático — ERP distribui o saldo.
-      const allPercentExplicit = order.payment_conditions.every(
-        p => p.tipo !== 'V' && Number(p.fator ?? 0) > 0
-      );
-      if (allPercentExplicit) {
-        errors.push({
-          field: 'payment_conditions.percentual_sum',
-          message: `Soma dos percentuais das parcelas deve ser 100% (atual: ${percentSum.toFixed(2)}%)`,
-          fixHint: 'Ajuste os percentuais das parcelas para totalizar 100%.',
-        });
-        fields.add('payment_terms');
-      }
-    }
   }
+  // Variáveis preservadas para futura expansão (não usadas após mudança para rateio automático).
+  void percentSum; void hasPercent;
 
   return { valid: errors.length === 0, errors, fields: Array.from(fields) };
 }

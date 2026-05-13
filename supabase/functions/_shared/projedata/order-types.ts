@@ -33,8 +33,8 @@ export interface ProjedataOrderPayment {
   dias: number;
   forma_recebimento: number;
   parcela: number;
-  tipo: string;       // 'V' = valor, 'P' = percentual
-  fator: number;      // valor (R$) quando tipo='V'; percentual quando tipo='P'
+  tipo: string;       // 'V' = valor, 'P' = percentual (rateio automático pelo ERP)
+  fator?: number;     // valor (R$) quando tipo='V'; OMITIDO quando tipo='P' (ERP calcula saldo)
 }
 
 // ─── Pedido completo ────────────────────────────────────────────

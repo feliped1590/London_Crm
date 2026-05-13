@@ -116,13 +116,20 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     };
   });
 
-  const pagto: ProjedataOrderPayment[] = order.payment_conditions.map(p => ({
-    dias: p.dias,
-    forma_recebimento: p.forma_recebimento,
-    parcela: p.parcela,
-    tipo: p.tipo ?? 'P',
-    fator: p.fator ?? 0,
-  }));
+  const pagto: ProjedataOrderPayment[] = order.payment_conditions.map(p => {
+    const tipo = p.tipo ?? 'P';
+    const base: ProjedataOrderPayment = {
+      dias: p.dias,
+      forma_recebimento: p.forma_recebimento,
+      parcela: p.parcela,
+      tipo,
+    };
+    // Apenas tipo 'V' (valor fixo) envia fator. Tipo 'P' = rateio automático do ERP.
+    if (tipo === 'V') {
+      base.fator = p.fator ?? 0;
+    }
+    return base;
+  });
 
   return {
     cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
