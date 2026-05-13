@@ -1219,13 +1219,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
 
-      <DocumentLogisticsSection
-        carrierId={carrierId} setCarrierId={setCarrierId}
-        freightType={freightType} setFreightType={setFreightType}
-        deliverySameAsCompany={deliverySameAsCompany} setDeliverySameAsCompany={setDeliverySameAsCompany}
-        deliveryFields={deliveryFields} setDeliveryFields={setDeliveryFields}
-        disabled={!canEdit}
-      />
+      <div className="space-y-2">
+        <Label>Tipo de Frete</Label>
+        <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
+          <SelectTrigger className="max-w-md">
+            <SelectValue placeholder="Selecione o tipo de frete" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+            <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+            <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="space-y-2">
         <Label>Observações</Label>
