@@ -356,6 +356,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
         fator_kg: item.fator_kg ?? item.product?.fator_kg ?? 0,
+        unit_measure: item.unit_measure ?? item.product?.unit_measure ?? '',
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
         is_locked: item.is_locked || false,
       }));
