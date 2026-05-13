@@ -169,7 +169,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
           <div className="border rounded-md p-3 bg-muted/30 grid grid-cols-1 md:grid-cols-2 gap-2">
             <div>
               <Label className="text-xs">Valor da entrada (R$)</Label>
-              <Input value={entradaValor} onChange={e => setEntradaValor(e.target.value)} placeholder="5000" />
+              <NumberInput value={entradaValor} onChange={setEntradaValor} decimals={2} min={0} placeholder="0,00" />
             </div>
             <div>
               <Label className="text-xs">Forma da entrada</Label>
