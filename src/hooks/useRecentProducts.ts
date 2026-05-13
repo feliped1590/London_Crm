@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
 import type { ProductSearchResult } from './useProductSearch';
 
 const STORAGE_KEY = 'recent-product-ids';
@@ -19,10 +18,9 @@ function loadRecentIds(): string[] {
 /**
  * Tracks and fetches recently selected products.
  * Stores up to 10 product IDs in localStorage, preserving usage order.
+ * Produtos têm visibilidade global por tenant — não filtra por entidade jurídica.
  */
-export function useRecentProducts(legalEntityIdOverride?: string | null) {
-  const { activeLegalEntityId } = useLegalEntities();
-  const legalEntityId = legalEntityIdOverride ?? activeLegalEntityId;
+export function useRecentProducts(_legalEntityIdOverride?: string | null) {
   const [recentIds, setRecentIds] = useState<string[]>(loadRecentIds);
 
   useEffect(() => {
@@ -37,13 +35,12 @@ export function useRecentProducts(legalEntityIdOverride?: string | null) {
   }, []);
 
   const { data: recentProducts = [] } = useQuery({
-    queryKey: ['recent-products', legalEntityId, recentIds],
+    queryKey: ['recent-products', recentIds],
     queryFn: async () => {
-      if (recentIds.length === 0 || !legalEntityId) return [];
+      if (recentIds.length === 0) return [];
       const { data, error } = await supabase
         .from('products')
         .select('id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg')
-        .eq('legal_entity_id', legalEntityId)
         .in('id', recentIds);
       if (error) throw error;
       const map = new Map((data ?? []).map(p => [p.id, p]));
@@ -51,7 +48,7 @@ export function useRecentProducts(legalEntityIdOverride?: string | null) {
         .map(id => map.get(id))
         .filter(Boolean) as unknown as ProductSearchResult[];
     },
-    enabled: recentIds.length > 0 && !!legalEntityId,
+    enabled: recentIds.length > 0,
     staleTime: 60_000,
   });
 
