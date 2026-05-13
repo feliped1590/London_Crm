@@ -130,8 +130,20 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
                     <TableCell>
                       <Switch checked={item.is_active} onCheckedChange={() => handleToggleActive(item)} />
                     </TableCell>
+                    {onLink && (
+                      <TableCell>
+                        <Badge variant={(linkCounts?.[item.id] ?? 0) > 0 ? 'default' : 'secondary'}>
+                          {linkCounts?.[item.id] ?? 0}
+                        </Badge>
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        {onLink && (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Vínculos" onClick={() => onLink(item)}>
+                            <Link2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(item)}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
