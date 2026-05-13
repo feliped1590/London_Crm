@@ -933,10 +933,6 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   } = usePortfolioProtection(companyId || undefined);
 
   const handleSubmit = () => {
-    if ((freightType === 'CIF' || freightType === 'FOB') && !carrierId) {
-      toast.error('Transportadora é obrigatória quando o tipo de frete é CIF ou FOB');
-      return;
-    }
     // Check portfolio protection before submitting
     if (!checkAccess()) return;
     if (!priceValidation.validateBeforeSubmit()) return;
