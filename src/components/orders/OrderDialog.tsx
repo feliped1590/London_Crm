@@ -855,6 +855,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setCarrierId(''); setFreightType('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
+      setPaymentConditions([]); setOriginalPaymentConditions([]);
       setDealId('');
       setOriginalSnapshot(null);
       setDetailModalOpen(false); setDetailItemIndex(-1);
