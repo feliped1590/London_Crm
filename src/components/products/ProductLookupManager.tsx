@@ -265,6 +265,9 @@ export default function ProductLookupManager() {
             onCreate={(item) => grupos.create.mutateAsync(item)}
             onUpdate={(item) => grupos.update.mutateAsync(item)}
             onDelete={(id) => grupos.remove.mutateAsync(id)}
+            onLink={(item) => setLinkDialog({ mode: 'group', anchor: item })}
+            linkCounts={groupLinkCounts}
+            linkColumnLabel="Subgrupos"
           />
           <LookupSection
             title="Subgrupos"
@@ -275,6 +278,9 @@ export default function ProductLookupManager() {
             onCreate={(item) => subgrupos.create.mutateAsync(item)}
             onUpdate={(item) => subgrupos.update.mutateAsync(item)}
             onDelete={(id) => subgrupos.remove.mutateAsync(id)}
+            onLink={(item) => setLinkDialog({ mode: 'subgroup', anchor: item })}
+            linkCounts={subgroupLinkCounts}
+            linkColumnLabel="Grupos"
           />
           <LookupSection
             title="Famílias"
