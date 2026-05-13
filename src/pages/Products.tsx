@@ -1538,28 +1538,24 @@ export default function Products() {
                       </div>
                     </div>
 
-                    {/* Nome do Impresso (condicional) */}
-                    {currentGroupIsPrinted && (
-                      <div className="col-span-2 pt-2">
-                        <Label htmlFor="nome_impresso" className="flex items-center gap-1">
-                          Nome do Impresso <span className="text-destructive">*</span>
-                        </Label>
-                        <Input
-                          id="nome_impresso"
-                          value={formData.nome_impresso}
-                          onChange={(e) => {
-                            const updated = { ...formData, nome_impresso: e.target.value };
-                            if (isAutoDescription) updated.name = recalcularDescricao(updated);
-                            setFormData(updated);
-                          }}
-                          placeholder="Ex: BONGOS BIFINHO CARNE 65G"
-                          className="uppercase"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Nome do cliente/produto impresso que compõe a descrição final
-                        </p>
-                      </div>
-                    )}
+                    {/* Nome Complementar (sempre visível, opcional) */}
+                    <div className="col-span-2 pt-2">
+                      <Label htmlFor="nome_impresso">Nome Complementar</Label>
+                      <Input
+                        id="nome_impresso"
+                        value={formData.nome_impresso}
+                        onChange={(e) => {
+                          const updated = { ...formData, nome_impresso: e.target.value };
+                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          setFormData(updated);
+                        }}
+                        placeholder="Ex: BONGOS BIFINHO CARNE 65G"
+                        className="uppercase"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Informação adicional do cliente/produto que compõe a descrição final (opcional)
+                      </p>
+                    </div>
 
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">
