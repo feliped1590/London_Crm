@@ -291,6 +291,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
   }, [proposal, open]);
 
   useEffect(() => { if (existingItems) setItems(existingItems); }, [existingItems]);
+  useEffect(() => { if (existingPaymentConditions !== undefined) setPaymentConditions(existingPaymentConditions); }, [existingPaymentConditions]);
 
   useEffect(() => {
     if (!companyFiscalData || items.length === 0) return;
