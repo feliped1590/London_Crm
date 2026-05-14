@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
+import { useEffectiveCustomerAccess } from '@/hooks/useEffectiveCustomerAccess';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import { useCustomerDetail } from '@/hooks/useCustomerDetail';
@@ -231,6 +232,10 @@ export default function CustomerDetail() {
     );
   };
 
+  // Access control - resolve before early returns to satisfy Rules of Hooks
+  const customerSalesRepId = customer && customer.source === 'crm' ? (customer as any).sales_rep_id : null;
+  const effectiveAccess = useEffectiveCustomerAccess(customerSalesRepId);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -248,10 +253,8 @@ export default function CustomerDetail() {
     );
   }
 
-  // Access control - all can view, only owner/admin can edit
-  const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
-  const canEdit = isSalesRepAdmin || hasDirectAccess(customerSalesRepId) || !customerSalesRepId;
+  const canEdit = effectiveAccess.canEditCompany;
   const isOtherSellerCustomer = !canEdit && !!customerSalesRepId;
 
   // Find owner name from sales reps

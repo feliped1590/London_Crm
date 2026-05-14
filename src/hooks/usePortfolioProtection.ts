@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { usePortfolioDelegations } from '@/hooks/usePortfolioDelegations';
 
 /** Number of days without activity to consider a client inactive */
 export const INACTIVITY_TRANSFER_DAYS = 60;
@@ -45,6 +46,7 @@ export interface PortfolioProtectionInfo {
 export function usePortfolioProtection(companyId: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { myDelegations } = usePortfolioDelegations();
   const [showProtectionModal, setShowProtectionModal] = useState(false);
   const { data: crmGoLiveDate } = useCrmGoLiveDate();
 
@@ -177,6 +179,29 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const companySalesRepName = (companyInfo as any)?.sales_reps?.name || null;
   const companyDisplayName = (companyInfo as any)?.fantasia || (companyInfo as any)?.name || '';
 
+  // Resolve owner user_id from sales_rep_id to check delegations
+  const { data: ownerUserId } = useQuery({
+    queryKey: ['resolve_user_for_sales_rep', companySalesRepId],
+    queryFn: async () => {
+      if (!companySalesRepId) return null;
+      const { data } = await supabase
+        .from('user_sales_reps')
+        .select('user_id, is_default, created_at')
+        .eq('sales_rep_id', companySalesRepId)
+        .order('is_default', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return data?.user_id || null;
+    },
+    enabled: !!companySalesRepId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const hasActiveDelegation = !!ownerUserId && myDelegations.some(
+    d => d.portfolio_owner_id === ownerUserId && d.active,
+  );
+
   // Calculate inactivity
   const daysSinceLastActivity = lastActivity?.date
     ? Math.floor((Date.now() - new Date(lastActivity.date).getTime()) / (1000 * 60 * 60 * 24))
@@ -184,14 +209,11 @@ export function usePortfolioProtection(companyId: string | undefined) {
 
   // Respect CRM go-live date: clients without activity created after go-live are NOT inactive
   const isInactive = (() => {
-    // Has activity and it's recent enough → active
     if (daysSinceLastActivity !== null && daysSinceLastActivity <= INACTIVITY_TRANSFER_DAYS) {
       return false;
     }
-    // No activity or old activity — check if CRM is still in initial phase
     if (crmGoLiveDate) {
       const daysSinceGoLive = Math.floor((Date.now() - crmGoLiveDate.getTime()) / (1000 * 60 * 60 * 24));
-      // If CRM has been live for less than the inactivity threshold, don't mark as inactive
       if (daysSinceGoLive <= INACTIVITY_TRANSFER_DAYS && daysSinceLastActivity === null) {
         return false;
       }
@@ -203,6 +225,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const isBlocked = (() => {
     if (isAdmin) return false;
     if (!companySalesRepId) return false;
+    if (hasActiveDelegation) return false;
     if (!mySalesRepIds || mySalesRepIds.length === 0) return true;
     return !mySalesRepIds.includes(companySalesRepId);
   })();
