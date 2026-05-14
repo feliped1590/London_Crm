@@ -249,10 +249,11 @@ export default function CustomerDetail() {
     );
   }
 
-  // Access control - all can view, only owner/admin can edit
+  // Access control - all can view, only owner/admin/delegated can edit
   const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
-  const canEdit = isSalesRepAdmin || hasDirectAccess(customerSalesRepId) || !customerSalesRepId;
+  const effectiveAccess = useEffectiveCustomerAccess(customerSalesRepId);
+  const canEdit = effectiveAccess.canEditCompany;
   const isOtherSellerCustomer = !canEdit && !!customerSalesRepId;
 
   // Find owner name from sales reps
