@@ -9,9 +9,10 @@ interface CustomerDealsTabProps {
   customerId: string;
   deals: any[];
   isErpCustomer: boolean;
+  canManageDeals?: boolean;
 }
 
-export function CustomerDealsTab({ customerId, deals, isErpCustomer }: CustomerDealsTabProps) {
+export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDeals = true }: CustomerDealsTabProps) {
   const navigate = useNavigate();
 
   return (
@@ -26,7 +27,7 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer }: CustomerD
                 : 'Oportunidades e negociações com este cliente'}
             </CardDescription>
           </div>
-          {!isErpCustomer && (
+          {!isErpCustomer && canManageDeals && (
             <Button size="sm" className="gap-2" onClick={() => navigate(`/pipeline?newDeal=${customerId}`)}>
               <Plus className="h-4 w-4" />
               Novo Negócio

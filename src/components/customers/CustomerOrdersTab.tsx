@@ -15,6 +15,7 @@ interface CustomerOrdersTabProps {
   companyId: string;
   source: 'crm' | 'erp';
   cnpj?: string | null;
+  canManageOrders?: boolean;
 }
 
 interface CRMOrder {
@@ -45,7 +46,7 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
   cancelled: { label: 'Cancelado', variant: 'destructive' },
 };
 
-export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTabProps) {
+export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = true }: CustomerOrdersTabProps) {
   const queryClient = useQueryClient();
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   // Buscar pedidos CRM (tabela orders)
@@ -186,7 +187,7 @@ export function CustomerOrdersTab({ companyId, source, cnpj }: CustomerOrdersTab
                 }
               </CardDescription>
             </div>
-            {source === 'crm' && (
+            {source === 'crm' && canManageOrders && (
               <Button size="sm" className="gap-2" onClick={() => setIsCreateOrderOpen(true)}>
                 <Plus className="h-4 w-4" />
                 Novo Pedido
