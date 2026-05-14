@@ -232,6 +232,10 @@ export default function CustomerDetail() {
     );
   };
 
+  // Access control - resolve before early returns to satisfy Rules of Hooks
+  const customerSalesRepId = customer && customer.source === 'crm' ? (customer as any).sales_rep_id : null;
+  const effectiveAccess = useEffectiveCustomerAccess(customerSalesRepId);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -249,10 +253,7 @@ export default function CustomerDetail() {
     );
   }
 
-  // Access control - all can view, only owner/admin/delegated can edit
-  const customerSalesRepId = customer.source === 'crm' ? (customer as any).sales_rep_id : null;
   const salesRepUserLink = allUserSalesReps?.find(link => link.sales_rep_id === customerSalesRepId);
-  const effectiveAccess = useEffectiveCustomerAccess(customerSalesRepId);
   const canEdit = effectiveAccess.canEditCompany;
   const isOtherSellerCustomer = !canEdit && !!customerSalesRepId;
 
