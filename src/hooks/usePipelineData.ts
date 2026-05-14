@@ -542,8 +542,9 @@ export function usePipelineData(selectedPipelineId: string | null) {
       const participantUserIds = participantUserIdsByDeal.get(deal.id);
       const isCurrentUserParticipant = user?.id ? participantUserIds?.has(user.id) ?? false : false;
       const hasHistoricalAccess = deal.owner_id === user?.id || deal.created_by === user?.id || isCurrentUserParticipant;
+      const hasDelegatedPortfolioAccess = !!companySalesRepId && delegatedDealSalesRepSet.has(companySalesRepId);
       const hasPortfolioAccess = companySalesRepId
-        ? canAccessBySalesRep(companySalesRepId)
+        ? canAccessBySalesRep(companySalesRepId) || hasDelegatedPortfolioAccess
         : hasHistoricalAccess;
       const isCommercialView = ownershipViewMode === 'commercial';
       const hasAccessForCurrentView = isCommercialView ? hasPortfolioAccess : hasHistoricalAccess;
@@ -564,7 +565,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       if (filterOwner === 'mine') {
         const matchesMine = isCommercialView
-          ? (companySalesRepId ? hasDirectAccess(companySalesRepId) : false)
+          ? (companySalesRepId ? hasDirectAccess(companySalesRepId) || hasDelegatedPortfolioAccess : false)
           : hasHistoricalAccess;
         if (!matchesMine) return false;
       }
@@ -600,7 +601,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
       return true;
     }) || [];
-  }, [deals, user?.id, isAdmin, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, salesRepIdsByUserFilter, participantUserIdsByDeal, resolveDealStageId]);
+  }, [deals, user?.id, isAdmin, currentPipelineId, defaultPipeline?.id, canAccessBySalesRep, hasDirectAccess, delegatedDealSalesRepSet, salesRepIdsByUserFilter, participantUserIdsByDeal, resolveDealStageId]);
 
   // ── Drag & Drop core handler ──────────────────────────────────────
   /**
