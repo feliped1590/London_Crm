@@ -1690,6 +1690,14 @@ export default function Products() {
                   </div>
                 </TabsContent>
 
+                <TabsContent value="ficha" className="space-y-4 mt-4">
+                  <FichaTecnicaSection
+                    profile={(grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none'}
+                    value={formData.ficha_tecnica}
+                    onChange={(next) => setFormData({ ...formData, ficha_tecnica: next })}
+                  />
+                </TabsContent>
+
                 <TabsContent value="clientes" className="space-y-4 mt-4">
                   <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
                 </TabsContent>
