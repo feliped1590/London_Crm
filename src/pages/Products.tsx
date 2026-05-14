@@ -56,8 +56,7 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
-import { type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
-import { FichaTecnicaTab } from '@/components/products/FichaTecnicaTab';
+import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList } from 'lucide-react';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
@@ -1692,7 +1691,7 @@ export default function Products() {
                 </TabsContent>
 
                 <TabsContent value="ficha" className="space-y-4 mt-4">
-                  <FichaTecnicaTab
+                  <FichaTecnicaSection
                     profile={(grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none'}
                     value={formData.ficha_tecnica}
                     onChange={(next) => setFormData({ ...formData, ficha_tecnica: next })}

@@ -3501,54 +3501,6 @@ export type Database = {
         }
         Relationships: []
       }
-      ficha_schemas: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          definition: Json
-          description: string | null
-          id: string
-          is_active: boolean
-          key: string
-          published_at: string | null
-          published_by: string | null
-          tenant_id: string
-          title: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          definition?: Json
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          key: string
-          published_at?: string | null
-          published_by?: string | null
-          tenant_id: string
-          title: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          definition?: Json
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          key?: string
-          published_at?: string | null
-          published_by?: string | null
-          tenant_id?: string
-          title?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: []
-      }
       freight_type_erp_mapping: {
         Row: {
           created_at: string | null
@@ -6853,8 +6805,6 @@ export type Database = {
           family_id: string | null
           fator_kg: number | null
           fator_milheiro: number | null
-          ficha_schema_key: string | null
-          ficha_schema_version: number | null
           ficha_tecnica: Json
           grupo_id: string | null
           id: string
@@ -6928,8 +6878,6 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
-          ficha_schema_key?: string | null
-          ficha_schema_version?: number | null
           ficha_tecnica?: Json
           grupo_id?: string | null
           id?: string
@@ -7003,8 +6951,6 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
-          ficha_schema_key?: string | null
-          ficha_schema_version?: number | null
           ficha_tecnica?: Json
           grupo_id?: string | null
           id?: string
@@ -8676,7 +8622,6 @@ export type Database = {
         Row: {
           category: string
           created_at: string
-          ficha_renderer_version: string
           id: string
           settings: Json
           tenant_id: string
@@ -8685,7 +8630,6 @@ export type Database = {
         Insert: {
           category: string
           created_at?: string
-          ficha_renderer_version?: string
           id?: string
           settings?: Json
           tenant_id: string
@@ -8694,7 +8638,6 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
-          ficha_renderer_version?: string
           id?: string
           settings?: Json
           tenant_id?: string

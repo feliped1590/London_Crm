@@ -14,7 +14,6 @@ import { useFichaLookups } from '@/hooks/useFichaLookups';
 import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import GroupSubgroupLinkDialog from './GroupSubgroupLinkDialog';
 import GroupFichaProfileManager from './GroupFichaProfileManager';
-import FichaSchemaManager from './FichaSchemaManager';
 
 interface LookupSectionProps {
   title: string;
@@ -329,7 +328,6 @@ export default function ProductLookupManager() {
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">Ficha Técnica</h3>
         <div className="grid grid-cols-1 gap-6">
           <GroupFichaProfileManager />
-          <FichaSchemaManager />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <LookupSection
               title="Máquinas"
