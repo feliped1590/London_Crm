@@ -20,9 +20,10 @@ interface CustomerContactsTabProps {
   contacts: CustomerContact[];
   saveContactMutation: any;
   deleteContactMutation: any;
+  canManageContacts?: boolean;
 }
 
-export function CustomerContactsTab({ customer, contacts, saveContactMutation, deleteContactMutation }: CustomerContactsTabProps) {
+export function CustomerContactsTab({ customer, contacts, saveContactMutation, deleteContactMutation, canManageContacts = true }: CustomerContactsTabProps) {
   const navigate = useNavigate();
   const isErpCustomer = customer.source === 'erp';
 
@@ -83,7 +84,7 @@ export function CustomerContactsTab({ customer, contacts, saveContactMutation, d
               {isErpCustomer ? 'Contatos não disponíveis para clientes sincronizados do ERP' : 'Pessoas de contato vinculadas a este cliente'}
             </CardDescription>
           </div>
-          {!isErpCustomer && (
+          {!isErpCustomer && canManageContacts && (
             <Dialog open={isContactDialogOpen} onOpenChange={(open) => { setIsContactDialogOpen(open); if (!open) resetContactForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-2"><Plus className="h-4 w-4" />Novo Contato</Button>
@@ -165,8 +166,12 @@ export function CustomerContactsTab({ customer, contacts, saveContactMutation, d
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" size="icon" onClick={() => handleOpenWhatsApp(contact.mobile, `${contact.first_name} ${contact.last_name || ''}`)} disabled={!contact.mobile} title="WhatsApp"><MessageCircle className="h-4 w-4" /></Button>
                   {contact.linkedin_url && <Button variant="ghost" size="icon" onClick={() => window.open(contact.linkedin_url!, '_blank')} title="LinkedIn"><Linkedin className="h-4 w-4" /></Button>}
-                  <Button variant="ghost" size="icon" onClick={() => handleEditContact(contact)} title="Editar"><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este contato?')) deleteContactMutation.mutate(contact.id); }} title="Remover"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  {canManageContacts && (
+                    <>
+                      <Button variant="ghost" size="icon" onClick={() => handleEditContact(contact)} title="Editar"><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este contato?')) deleteContactMutation.mutate(contact.id); }} title="Remover"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
