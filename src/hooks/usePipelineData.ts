@@ -473,7 +473,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
     if (isAdmin) return true;
     if (companySalesRepId) {
-      const hasAccess = canAccessBySalesRep(companySalesRepId);
+      const hasAccess = canAccessBySalesRep(companySalesRepId) || delegatedDealSalesRepSet.has(companySalesRepId);
       if (!hasAccess && deal.owner_id === user?.id) {
         logOwnershipWarning('Acesso negado por vínculo inconsistente entre usuário e sales_rep', {
           dealId: deal.id,
@@ -487,7 +487,7 @@ export function usePipelineData(selectedPipelineId: string | null) {
 
     // LEGACY: owner_id será removido futuramente. Não usar como fonte de ownership.
     return deal.owner_id === user?.id;
-  }, [canAccessBySalesRep, isAdmin, user?.id]);
+  }, [canAccessBySalesRep, delegatedDealSalesRepSet, isAdmin, user?.id]);
 
   const getContactInfo = useCallback((contactId: string | null, selectedContactData?: any) => {
     if (!contactId) return null;
