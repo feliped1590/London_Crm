@@ -9,10 +9,20 @@ export interface LookupItem {
   is_active: boolean;
 }
 
+export type FichaProfile =
+  | 'none'
+  | 'stand_up_liso'
+  | 'stand_up_impresso'
+  | 'saco_liso'
+  | 'saco_impresso'
+  | 'bobina_lisa'
+  | 'bobina_impressa';
+
 export interface GroupLookupItem extends LookupItem {
   dimension_profile: 'full' | 'partial' | 'none';
   is_printed: boolean;
   default_ncm_code: string | null;
+  ficha_profile: FichaProfile;
 }
 
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
