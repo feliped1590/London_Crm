@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
+import { useEffectiveCustomerAccess } from '@/hooks/useEffectiveCustomerAccess';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import { useCustomerDetail } from '@/hooks/useCustomerDetail';
