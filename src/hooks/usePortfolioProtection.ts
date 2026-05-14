@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
-import { usePortfolioDelegations } from '@/hooks/usePortfolioDelegations';
 
 /** Number of days without activity to consider a client inactive */
 export const INACTIVITY_TRANSFER_DAYS = 60;
@@ -46,7 +45,6 @@ export interface PortfolioProtectionInfo {
 export function usePortfolioProtection(companyId: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
-  const { myDelegations } = usePortfolioDelegations();
   const [showProtectionModal, setShowProtectionModal] = useState(false);
   const { data: crmGoLiveDate } = useCrmGoLiveDate();
 
@@ -179,28 +177,24 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const companySalesRepName = (companyInfo as any)?.sales_reps?.name || null;
   const companyDisplayName = (companyInfo as any)?.fantasia || (companyInfo as any)?.name || '';
 
-  // Resolve owner user_id from sales_rep_id to check delegations
-  const { data: ownerUserId } = useQuery({
-    queryKey: ['resolve_user_for_sales_rep', companySalesRepId],
+  const { data: hasActiveDelegation = false } = useQuery({
+    queryKey: ['portfolio_protection_delegation', user?.id, companySalesRepId],
     queryFn: async () => {
-      if (!companySalesRepId) return null;
-      const { data } = await supabase
-        .from('user_sales_reps')
-        .select('user_id, is_default, created_at')
-        .eq('sales_rep_id', companySalesRepId)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return data?.user_id || null;
+      if (!user?.id || !companySalesRepId) return false;
+      const checks = await Promise.all(['company', 'contact', 'deal', 'order', 'pipeline'].map(async (entityType) => {
+        const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
+          p_user_id: user.id,
+          p_owner_id: companySalesRepId,
+          p_entity_type: entityType,
+        });
+        if (error) throw error;
+        return !!data;
+      }));
+      return checks.some(Boolean);
     },
-    enabled: !!companySalesRepId,
+    enabled: !!user?.id && !!companySalesRepId,
     staleTime: 5 * 60 * 1000,
   });
-
-  const hasActiveDelegation = !!ownerUserId && myDelegations.some(
-    d => d.portfolio_owner_id === ownerUserId && d.active,
-  );
 
   // Calculate inactivity
   const daysSinceLastActivity = lastActivity?.date
