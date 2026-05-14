@@ -1257,10 +1257,14 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="ficha" className="gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    Ficha Técnica
                   </TabsTrigger>
                   <TabsTrigger value="clientes" className="gap-2">
                     <User className="h-4 w-4" />
