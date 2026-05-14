@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
-import { usePortfolioDelegations, type DelegationPermissions } from '@/hooks/usePortfolioDelegations';
+import type { DelegationPermissions } from '@/hooks/usePortfolioDelegations';
 
 export interface EffectiveCustomerAccess {
   /** Pode editar dados cadastrais da empresa */
@@ -35,59 +36,69 @@ export interface EffectiveCustomerAccess {
 export function useEffectiveCustomerAccess(
   salesRepId: string | null | undefined,
 ): EffectiveCustomerAccess {
+  const { user } = useAuth();
   const { hasDirectAccess: directAccessFn, isAdmin, isLoaded: salesRepLoaded } = useSalesRepAccess();
-  const { myDelegations, isLoading: delegationsLoading } = usePortfolioDelegations();
 
-  // Resolve sales_rep_id -> user_id (dono da carteira) via user_sales_reps
-  const { data: ownerUserId, isLoading: ownerLoading } = useQuery({
-    queryKey: ['resolve_user_for_sales_rep', salesRepId],
+  // A UI não pode depender de ler user_sales_reps de outro usuário (RLS bloqueia isso).
+  // A função do backend resolve o sales_rep_id com SECURITY DEFINER e aplica a delegação real.
+  const { data: effectivePermissions, isLoading: permissionsLoading } = useQuery({
+    queryKey: ['effective_customer_access', user?.id, salesRepId],
     queryFn: async () => {
-      if (!salesRepId) return null;
-      const { data } = await supabase
-        .from('user_sales_reps')
-        .select('user_id, is_default, created_at')
-        .eq('sales_rep_id', salesRepId)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      return data?.user_id || null;
+      if (!user?.id || !salesRepId) {
+        return {
+          can_manage_companies: false,
+          can_manage_contacts: false,
+          can_manage_deals: false,
+          can_manage_orders: false,
+          can_manage_pipeline: false,
+        } satisfies DelegationPermissions;
+      }
+
+      const entityMap = [
+        ['company', 'can_manage_companies'],
+        ['contact', 'can_manage_contacts'],
+        ['deal', 'can_manage_deals'],
+        ['order', 'can_manage_orders'],
+        ['pipeline', 'can_manage_pipeline'],
+      ] as const;
+
+      const entries = await Promise.all(entityMap.map(async ([entityType, key]) => {
+        const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
+          p_user_id: user.id,
+          p_owner_id: salesRepId,
+          p_entity_type: entityType,
+        });
+        if (error) throw error;
+        return [key, !!data] as const;
+      }));
+
+      return Object.fromEntries(entries) as unknown as DelegationPermissions;
     },
-    enabled: !!salesRepId,
+    enabled: !!user?.id && !!salesRepId,
     staleTime: 5 * 60 * 1000,
   });
 
   return useMemo<EffectiveCustomerAccess>(() => {
     const hasDirect = !!salesRepId && directAccessFn(salesRepId);
-    const delegation = ownerUserId
-      ? myDelegations.find(d => d.portfolio_owner_id === ownerUserId && d.active)
-      : undefined;
-
-    const delegationPermissions: DelegationPermissions | null = delegation
-      ? {
-          can_manage_companies: delegation.can_manage_companies,
-          can_manage_contacts: delegation.can_manage_contacts,
-          can_manage_deals: delegation.can_manage_deals,
-          can_manage_orders: delegation.can_manage_orders,
-          can_manage_pipeline: delegation.can_manage_pipeline,
-        }
-      : null;
-
     const baseAllowed = isAdmin || hasDirect;
     const noOwner = !salesRepId;
+    const delegatedPermissions = !baseAllowed && effectivePermissions
+      ? effectivePermissions
+      : null;
+    const hasDelegation = !!delegatedPermissions && Object.values(delegatedPermissions).some(Boolean);
 
     return {
       isAdmin,
       hasDirectAccess: hasDirect,
-      hasDelegation: !!delegation,
-      delegationPermissions,
-      ownerUserId: ownerUserId ?? null,
-      canEditCompany: baseAllowed || noOwner || !!delegationPermissions?.can_manage_companies,
-      canManageContacts: baseAllowed || noOwner || !!delegationPermissions?.can_manage_contacts,
-      canManageDeals: baseAllowed || noOwner || !!delegationPermissions?.can_manage_deals,
-      canManageOrders: baseAllowed || noOwner || !!delegationPermissions?.can_manage_orders,
-      canManagePipeline: baseAllowed || noOwner || !!delegationPermissions?.can_manage_pipeline,
-      isLoaded: salesRepLoaded && !delegationsLoading && !ownerLoading,
+      hasDelegation,
+      delegationPermissions: delegatedPermissions,
+      ownerUserId: null,
+      canEditCompany: baseAllowed || noOwner || !!effectivePermissions?.can_manage_companies,
+      canManageContacts: baseAllowed || noOwner || !!effectivePermissions?.can_manage_contacts,
+      canManageDeals: baseAllowed || noOwner || !!effectivePermissions?.can_manage_deals,
+      canManageOrders: baseAllowed || noOwner || !!effectivePermissions?.can_manage_orders,
+      canManagePipeline: baseAllowed || noOwner || !!effectivePermissions?.can_manage_pipeline,
+      isLoaded: salesRepLoaded && !permissionsLoading,
     };
-  }, [salesRepId, directAccessFn, isAdmin, ownerUserId, myDelegations, salesRepLoaded, delegationsLoading, ownerLoading]);
+  }, [salesRepId, directAccessFn, isAdmin, effectivePermissions, salesRepLoaded, permissionsLoading]);
 }
