@@ -215,6 +215,39 @@ export function usePipelineData(selectedPipelineId: string | null) {
     refetchOnMount: 'always',
   });
 
+  const uniqueDealSalesRepIds = useMemo(() => {
+    return [...new Set((deals ?? [])
+      .map(deal => (deal as any).companies?.sales_rep_id as string | null | undefined)
+      .filter(Boolean) as string[])];
+  }, [deals]);
+
+  const { data: delegatedDealSalesRepIds = [] } = useQuery({
+    queryKey: ['delegated_deal_sales_rep_ids', user?.id, uniqueDealSalesRepIds],
+    queryFn: async () => {
+      if (!user?.id || uniqueDealSalesRepIds.length === 0) return [];
+      const entries = await Promise.all(uniqueDealSalesRepIds.map(async (salesRepId) => {
+        const checks = await Promise.all(['deal', 'pipeline'].map(async (entityType) => {
+          const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
+            p_user_id: user.id,
+            p_owner_id: salesRepId,
+            p_entity_type: entityType,
+          });
+          if (error) throw error;
+          return !!data;
+        }));
+        return checks.some(Boolean) ? salesRepId : null;
+      }));
+      return entries.filter(Boolean) as string[];
+    },
+    enabled: !!user?.id && uniqueDealSalesRepIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const delegatedDealSalesRepSet = useMemo(
+    () => new Set(delegatedDealSalesRepIds),
+    [delegatedDealSalesRepIds],
+  );
+
   const { data: dealParticipants } = useQuery({
     queryKey: ['deal-participants-for-pipeline'],
     queryFn: async () => {
