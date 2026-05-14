@@ -616,6 +616,7 @@ export default function Products() {
         erp_versao_situacao: data.erp_versao_situacao || 'A',
         erp_product_code: data.erp_product_code?.trim() || null,
         nome_impresso: data.nome_impresso?.trim().toUpperCase() || null,
+        ficha_tecnica: ((data as any).ficha_tecnica ?? {}) as any,
       }).select('*').single();
       if (error) throw error;
       if (createForCompanyId && createdProduct?.id && user?.id) {
