@@ -46,6 +46,7 @@ export interface PortfolioProtectionInfo {
 export function usePortfolioProtection(companyId: string | undefined) {
   const { user } = useAuth();
   const { isAdmin } = useModulePermissions();
+  const { myDelegations } = usePortfolioDelegations();
   const [showProtectionModal, setShowProtectionModal] = useState(false);
   const { data: crmGoLiveDate } = useCrmGoLiveDate();
 
