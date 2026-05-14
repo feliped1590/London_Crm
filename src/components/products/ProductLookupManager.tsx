@@ -324,6 +324,45 @@ export default function ProductLookupManager() {
         </div>
       </div>
 
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">Ficha Técnica</h3>
+        <div className="grid grid-cols-1 gap-6">
+          <GroupFichaProfileManager />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <LookupSection
+              title="Máquinas"
+              icon={<Cog className="h-4 w-4 text-primary" />}
+              items={machines.items}
+              allItems={machines.allItems}
+              isLoading={machines.isLoadingAll}
+              onCreate={(item) => machines.create.mutateAsync(item)}
+              onUpdate={(item) => machines.update.mutateAsync(item)}
+              onDelete={(id) => machines.remove.mutateAsync(id)}
+            />
+            <LookupSection
+              title="Diâmetros de Cilindro"
+              icon={<Disc3 className="h-4 w-4 text-primary" />}
+              items={cylinders.items}
+              allItems={cylinders.allItems}
+              isLoading={cylinders.isLoadingAll}
+              onCreate={(item) => cylinders.create.mutateAsync(item)}
+              onUpdate={(item) => cylinders.update.mutateAsync(item)}
+              onDelete={(id) => cylinders.remove.mutateAsync(id)}
+            />
+            <LookupSection
+              title="Acessórios"
+              icon={<Wrench className="h-4 w-4 text-primary" />}
+              items={accessories.items}
+              allItems={accessories.allItems}
+              isLoading={accessories.isLoadingAll}
+              onCreate={(item) => accessories.create.mutateAsync(item)}
+              onUpdate={(item) => accessories.update.mutateAsync(item)}
+              onDelete={(id) => accessories.remove.mutateAsync(id)}
+            />
+          </div>
+        </div>
+      </div>
+
       <GroupSubgroupLinkDialog
         open={!!linkDialog}
         onOpenChange={(o) => { if (!o) setLinkDialog(null); }}
