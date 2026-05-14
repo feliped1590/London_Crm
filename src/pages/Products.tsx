@@ -229,6 +229,7 @@ export default function Products() {
     erp_versao_detalhes: '',
     erp_versao_roteiro: undefined as number | undefined,
     erp_versao_situacao: 'A',
+    ficha_tecnica: {} as FichaTecnicaData,
   });
 
   const [formTab, setFormTab] = useState('geral');
