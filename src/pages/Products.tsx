@@ -734,6 +734,7 @@ export default function Products() {
       erp_versao_detalhes: '',
       erp_versao_roteiro: undefined,
       erp_versao_situacao: 'A',
+      ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
     setIsDialogOpen(false);
