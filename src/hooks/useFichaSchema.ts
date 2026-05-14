@@ -20,7 +20,7 @@ export function useFichaSchema(key: string | null | undefined) {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
-      const row = data as { id: string; key: string; version: number; definition: FichaSchema };
+      const row = data as unknown as { id: string; key: string; version: number; definition: FichaSchema };
       return { id: row.id, version: row.version, schema: row.definition };
     },
   });
