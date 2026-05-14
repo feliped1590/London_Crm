@@ -177,7 +177,7 @@ export function usePortfolioProtection(companyId: string | undefined) {
   const companySalesRepName = (companyInfo as any)?.sales_reps?.name || null;
   const companyDisplayName = (companyInfo as any)?.fantasia || (companyInfo as any)?.name || '';
 
-  const { data: hasActiveDelegation = false } = useQuery({
+  const { data: hasActiveDelegation = false, isLoading: delegationLoading } = useQuery({
     queryKey: ['portfolio_protection_delegation', user?.id, companySalesRepId],
     queryFn: async () => {
       if (!user?.id || !companySalesRepId) return false;
@@ -217,10 +217,11 @@ export function usePortfolioProtection(companyId: string | undefined) {
 
   // Determine if user is blocked
   const isBlocked = (() => {
+    if (companyInfo === undefined || mySalesRepIds === undefined || delegationLoading) return false;
     if (isAdmin) return false;
     if (!companySalesRepId) return false;
     if (hasActiveDelegation) return false;
-    if (!mySalesRepIds || mySalesRepIds.length === 0) return true;
+    if (mySalesRepIds.length === 0) return true;
     return !mySalesRepIds.includes(companySalesRepId);
   })();
 
@@ -247,6 +248,6 @@ export function usePortfolioProtection(companyId: string | undefined) {
     showProtectionModal,
     setShowProtectionModal,
     checkAccess,
-    isLoaded: mySalesRepIds !== undefined && companyInfo !== undefined,
+    isLoaded: mySalesRepIds !== undefined && companyInfo !== undefined && !delegationLoading,
   };
 }
