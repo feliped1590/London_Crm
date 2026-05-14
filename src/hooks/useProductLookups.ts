@@ -9,10 +9,20 @@ export interface LookupItem {
   is_active: boolean;
 }
 
+export type FichaProfile =
+  | 'none'
+  | 'stand_up_liso'
+  | 'stand_up_impresso'
+  | 'saco_liso'
+  | 'saco_impresso'
+  | 'bobina_lisa'
+  | 'bobina_impressa';
+
 export interface GroupLookupItem extends LookupItem {
   dimension_profile: 'full' | 'partial' | 'none';
   is_printed: boolean;
   default_ncm_code: string | null;
+  ficha_profile: FichaProfile;
 }
 
 type LookupTable = 'product_types' | 'product_groups' | 'product_subgroups' | 'product_families' | 'product_classes' | 'product_unit_measures';
@@ -94,7 +104,7 @@ function useGroupsTable() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_groups')
-        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed, default_ncm_code')
+        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed, default_ncm_code, ficha_profile')
         .eq('is_active', true)
         .order('sort_order');
       if (error) throw error;
@@ -103,6 +113,7 @@ function useGroupsTable() {
         dimension_profile: g.dimension_profile || 'none',
         is_printed: g.is_printed ?? false,
         default_ncm_code: g.default_ncm_code ?? null,
+        ficha_profile: g.ficha_profile || 'none',
       })) as GroupLookupItem[];
     },
   });
@@ -112,7 +123,7 @@ function useGroupsTable() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_groups')
-        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed, default_ncm_code')
+        .select('id, value, label, sort_order, is_active, dimension_profile, is_printed, default_ncm_code, ficha_profile')
         .order('sort_order');
       if (error) throw error;
       return (data || []).map((g: any) => ({
@@ -120,6 +131,7 @@ function useGroupsTable() {
         dimension_profile: g.dimension_profile || 'none',
         is_printed: g.is_printed ?? false,
         default_ncm_code: g.default_ncm_code ?? null,
+        ficha_profile: g.ficha_profile || 'none',
       })) as GroupLookupItem[];
     },
   });
@@ -135,7 +147,7 @@ function useGroupsTable() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, ...item }: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean; dimension_profile?: 'full' | 'partial' | 'none' }) => {
+    mutationFn: async ({ id, ...item }: { id: string; value?: string; label?: string; sort_order?: number; is_active?: boolean; dimension_profile?: 'full' | 'partial' | 'none'; ficha_profile?: FichaProfile }) => {
       const { error } = await supabase.from('product_groups').update(item).eq('id', id);
       if (error) throw error;
     },

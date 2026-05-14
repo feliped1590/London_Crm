@@ -6215,6 +6215,96 @@ export type Database = {
           },
         ]
       }
+      product_ficha_accessories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      product_ficha_cylinders: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      product_ficha_machines: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       product_group_subgroups: {
         Row: {
           created_at: string
@@ -6260,6 +6350,7 @@ export type Database = {
           created_by: string | null
           default_ncm_code: string | null
           dimension_profile: Database["public"]["Enums"]["dimension_profile"]
+          ficha_profile: string
           id: string
           is_active: boolean | null
           is_printed: boolean | null
@@ -6273,6 +6364,7 @@ export type Database = {
           created_by?: string | null
           default_ncm_code?: string | null
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
+          ficha_profile?: string
           id?: string
           is_active?: boolean | null
           is_printed?: boolean | null
@@ -6286,6 +6378,7 @@ export type Database = {
           created_by?: string | null
           default_ncm_code?: string | null
           dimension_profile?: Database["public"]["Enums"]["dimension_profile"]
+          ficha_profile?: string
           id?: string
           is_active?: boolean | null
           is_printed?: boolean | null
@@ -6712,6 +6805,7 @@ export type Database = {
           family_id: string | null
           fator_kg: number | null
           fator_milheiro: number | null
+          ficha_tecnica: Json
           grupo_id: string | null
           id: string
           is_acabado: boolean | null
@@ -6784,6 +6878,7 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
+          ficha_tecnica?: Json
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null
@@ -6856,6 +6951,7 @@ export type Database = {
           family_id?: string | null
           fator_kg?: number | null
           fator_milheiro?: number | null
+          ficha_tecnica?: Json
           grupo_id?: string | null
           id?: string
           is_acabado?: boolean | null

@@ -7,11 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Layers, Box, Grid3X3, Users, Tag, Ruler, ChevronLeft, ChevronRight, Link2, Cog, Disc3, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductLookups, type LookupItem } from '@/hooks/useProductLookups';
+import { useFichaLookups } from '@/hooks/useFichaLookups';
 import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import GroupSubgroupLinkDialog from './GroupSubgroupLinkDialog';
+import GroupFichaProfileManager from './GroupFichaProfileManager';
 
 interface LookupSectionProps {
   title: string;
@@ -219,6 +221,7 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
 
 export default function ProductLookupManager() {
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { machines, cylinders, accessories } = useFichaLookups();
   const { linksByGroup, linksBySubgroup, setGroupLinks, setSubgroupLinks } = useGroupSubgroupLinks();
 
   const [linkDialog, setLinkDialog] = useState<
@@ -318,6 +321,45 @@ export default function ProductLookupManager() {
             onUpdate={(item) => unitMeasures.update.mutateAsync(item)}
             onDelete={(id) => unitMeasures.remove.mutateAsync(id)}
           />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">Ficha Técnica</h3>
+        <div className="grid grid-cols-1 gap-6">
+          <GroupFichaProfileManager />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <LookupSection
+              title="Máquinas"
+              icon={<Cog className="h-4 w-4 text-primary" />}
+              items={machines.items}
+              allItems={machines.allItems}
+              isLoading={machines.isLoadingAll}
+              onCreate={(item) => machines.create.mutateAsync(item)}
+              onUpdate={(item) => machines.update.mutateAsync(item)}
+              onDelete={(id) => machines.remove.mutateAsync(id)}
+            />
+            <LookupSection
+              title="Diâmetros de Cilindro"
+              icon={<Disc3 className="h-4 w-4 text-primary" />}
+              items={cylinders.items}
+              allItems={cylinders.allItems}
+              isLoading={cylinders.isLoadingAll}
+              onCreate={(item) => cylinders.create.mutateAsync(item)}
+              onUpdate={(item) => cylinders.update.mutateAsync(item)}
+              onDelete={(id) => cylinders.remove.mutateAsync(id)}
+            />
+            <LookupSection
+              title="Acessórios"
+              icon={<Wrench className="h-4 w-4 text-primary" />}
+              items={accessories.items}
+              allItems={accessories.allItems}
+              isLoading={accessories.isLoadingAll}
+              onCreate={(item) => accessories.create.mutateAsync(item)}
+              onUpdate={(item) => accessories.update.mutateAsync(item)}
+              onDelete={(id) => accessories.remove.mutateAsync(id)}
+            />
+          </div>
         </div>
       </div>
 

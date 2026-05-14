@@ -56,6 +56,8 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
+import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
+import { ClipboardList } from 'lucide-react';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
 type SortDirection = 'asc' | 'desc';
@@ -227,6 +229,7 @@ export default function Products() {
     erp_versao_detalhes: '',
     erp_versao_roteiro: undefined as number | undefined,
     erp_versao_situacao: 'A',
+    ficha_tecnica: {} as FichaTecnicaData,
   });
 
   const [formTab, setFormTab] = useState('geral');
@@ -613,6 +616,7 @@ export default function Products() {
         erp_versao_situacao: data.erp_versao_situacao || 'A',
         erp_product_code: data.erp_product_code?.trim() || null,
         nome_impresso: data.nome_impresso?.trim().toUpperCase() || null,
+        ficha_tecnica: ((data as any).ficha_tecnica ?? {}) as any,
       }).select('*').single();
       if (error) throw error;
       if (createForCompanyId && createdProduct?.id && user?.id) {
@@ -731,6 +735,7 @@ export default function Products() {
       erp_versao_detalhes: '',
       erp_versao_roteiro: undefined,
       erp_versao_situacao: 'A',
+      ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
     setIsDialogOpen(false);
@@ -1041,6 +1046,7 @@ export default function Products() {
       erp_versao_detalhes: product.erp_versao_detalhes || '',
       erp_versao_roteiro: product.erp_versao_roteiro,
       erp_versao_situacao: product.erp_versao_situacao || 'A',
+      ficha_tecnica: ((product as any).ficha_tecnica || {}) as FichaTecnicaData,
     });
     setIsDialogOpen(true);
     setFormTab('geral');
@@ -1097,6 +1103,7 @@ export default function Products() {
       erp_versao_detalhes: product.erp_versao_detalhes || '',
       erp_versao_roteiro: product.erp_versao_roteiro,
       erp_versao_situacao: product.erp_versao_situacao || 'A',
+      ficha_tecnica: ((product as any).ficha_tecnica || {}) as FichaTecnicaData,
     };
     // Regenerar SKU
     duplicatedData.sku = recalcularSku(duplicatedData);
@@ -1250,10 +1257,14 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
+                  </TabsTrigger>
+                  <TabsTrigger value="ficha" className="gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    Ficha Técnica
                   </TabsTrigger>
                   <TabsTrigger value="clientes" className="gap-2">
                     <User className="h-4 w-4" />
@@ -1677,6 +1688,14 @@ export default function Products() {
                       <Label htmlFor="active">Produto Ativo</Label>
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="ficha" className="space-y-4 mt-4">
+                  <FichaTecnicaSection
+                    profile={(grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none'}
+                    value={formData.ficha_tecnica}
+                    onChange={(next) => setFormData({ ...formData, ficha_tecnica: next })}
+                  />
                 </TabsContent>
 
                 <TabsContent value="clientes" className="space-y-4 mt-4">
