@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { usePortfolioDelegations } from '@/hooks/usePortfolioDelegations';
 
 /** Number of days without activity to consider a client inactive */
 export const INACTIVITY_TRANSFER_DAYS = 60;
