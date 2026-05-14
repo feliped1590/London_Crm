@@ -452,11 +452,12 @@ export default function CustomerDetail() {
             contacts={contacts}
             saveContactMutation={saveContactMutation}
             deleteContactMutation={deleteContactMutation}
+            canManageContacts={!isErpCustomer && effectiveAccess.canManageContacts}
           />
         </TabsContent>
 
         <TabsContent value="negocios">
-          <CustomerDealsTab customerId={id!} deals={deals} isErpCustomer={isErpCustomer} />
+          <CustomerDealsTab customerId={id!} deals={deals} isErpCustomer={isErpCustomer} canManageDeals={effectiveAccess.canManageDeals} />
         </TabsContent>
 
         <TabsContent value="itens">
@@ -464,7 +465,7 @@ export default function CustomerDetail() {
         </TabsContent>
 
         <TabsContent value="pedidos">
-          <CustomerOrdersTab companyId={id!} source={customer?.source || 'crm'} cnpj={customer?.cnpj || null} />
+          <CustomerOrdersTab companyId={id!} source={customer?.source || 'crm'} cnpj={customer?.cnpj || null} canManageOrders={effectiveAccess.canManageOrders} />
         </TabsContent>
 
         <TabsContent value="credito">
