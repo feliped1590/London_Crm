@@ -1102,6 +1102,7 @@ export default function Products() {
       erp_versao_detalhes: product.erp_versao_detalhes || '',
       erp_versao_roteiro: product.erp_versao_roteiro,
       erp_versao_situacao: product.erp_versao_situacao || 'A',
+      ficha_tecnica: ((product as any).ficha_tecnica || {}) as FichaTecnicaData,
     };
     // Regenerar SKU
     duplicatedData.sku = recalcularSku(duplicatedData);
