@@ -221,6 +221,7 @@ function LookupSection({ title, icon, allItems, isLoading, onCreate, onUpdate, o
 
 export default function ProductLookupManager() {
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
+  const { machines, cylinders, accessories } = useFichaLookups();
   const { linksByGroup, linksBySubgroup, setGroupLinks, setSubgroupLinks } = useGroupSubgroupLinks();
 
   const [linkDialog, setLinkDialog] = useState<
