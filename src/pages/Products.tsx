@@ -1888,6 +1888,9 @@ export default function Products() {
                       <TableCell className="text-sm">{product.width ? `${product.width}` : '—'}</TableCell>
                       <TableCell className="text-sm">{product.length ? `${product.length}` : '—'}</TableCell>
                       <TableCell className="text-sm">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={product.active ? 'default' : 'outline'}>
                           {product.active ? 'Ativo' : 'Inativo'}
