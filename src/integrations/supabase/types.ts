@@ -6870,6 +6870,7 @@ export type Database = {
           origem_mercadoria:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          parent_product_id: string | null
           pendente_envio: boolean | null
           price_cash: number | null
           price_term: number | null
@@ -6892,6 +6893,7 @@ export type Database = {
           unit_price: number | null
           unit_sale: string | null
           updated_at: string
+          versao_numero: number
           warranty_months: number | null
           weight: number | null
           width: number | null
@@ -6945,6 +6947,7 @@ export type Database = {
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          parent_product_id?: string | null
           pendente_envio?: boolean | null
           price_cash?: number | null
           price_term?: number | null
@@ -6967,6 +6970,7 @@ export type Database = {
           unit_price?: number | null
           unit_sale?: string | null
           updated_at?: string
+          versao_numero?: number
           warranty_months?: number | null
           weight?: number | null
           width?: number | null
@@ -7020,6 +7024,7 @@ export type Database = {
           origem_mercadoria?:
             | Database["public"]["Enums"]["origem_mercadoria"]
             | null
+          parent_product_id?: string | null
           pendente_envio?: boolean | null
           price_cash?: number | null
           price_term?: number | null
@@ -7042,6 +7047,7 @@ export type Database = {
           unit_price?: number | null
           unit_sale?: string | null
           updated_at?: string
+          versao_numero?: number
           warranty_months?: number | null
           weight?: number | null
           width?: number | null
@@ -7094,6 +7100,13 @@ export type Database = {
             columns: ["ncm_id"]
             isOneToOne: false
             referencedRelation: "ncm_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_product_id_fkey"
+            columns: ["parent_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
