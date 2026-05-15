@@ -138,6 +138,7 @@ export async function loadProductForSync(
       tipo_ficha: product.tipo_ficha,
       unit_measure: product.unit_measure,
       ncm_code: product.ncm_code,
+      versao_numero: product.versao_numero,
     },
     ctx: { erp_usuario },
     tenantId: product.tenant_id ?? null,
