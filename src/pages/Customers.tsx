@@ -180,7 +180,7 @@ export default function Customers() {
       case 'contact': return 'contact';
       case 'phone': return 'phone';
       case 'last_activity': return 'last_activity';
-      case 'last_interaction_entity': return 'last_interaction_entity';
+      
       case 'deals': return 'deals';
       case 'owner': return 'owner';
       case 'created_at': return 'created_at';
