@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
 const sanitizeItemObservation = (value: string) =>
-  value.replace(/[<>]/g, '').replace(/\s+$/g, '').slice(0, MAX_ITEM_OBSERVATION_LENGTH);
+  value.replace(/[<>]/g, '').slice(0, MAX_ITEM_OBSERVATION_LENGTH);
 
 interface OrderItemDetailModalProps {
   open: boolean;
