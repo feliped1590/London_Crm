@@ -323,10 +323,12 @@ export default function Products() {
 
     if (
       errorText.includes('products_erp_product_code_unique') ||
+      errorText.includes('products_tenant_erp_code_unique') ||
+      errorText.includes('idx_products_tenant_erp_code') ||
       errorText.includes('(erp_product_code)') ||
       errorText.includes('erp_product_code')
     ) {
-      return 'Já existe um produto com este Código ERP';
+      return 'Já existe outro produto com este Código ERP neste tenant.';
     }
 
     if (error?.code === '23505') {
@@ -933,6 +935,9 @@ export default function Products() {
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
+    // Normaliza erp_product_code: vazio → null (evita conflito de unicidade entre vazios)
+    const erpCodeTrim = (submitData.erp_product_code ?? '').trim();
+    submitData.erp_product_code = (erpCodeTrim || null) as any;
 
     // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
     // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
@@ -1322,9 +1327,13 @@ export default function Products() {
                         value={formData.erp_product_code || ''}
                         onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
                         placeholder="Opcional — preencher só se já existir no ERP"
+                        readOnly={!!(editingProduct as any)?.erp_product_code}
+                        className={(editingProduct as any)?.erp_product_code ? 'bg-muted cursor-not-allowed' : ''}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.
+                        {(editingProduct as any)?.erp_product_code
+                          ? 'Código já vinculado ao ERP — não pode ser alterado.'
+                          : 'Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.'}
                       </p>
                     </div>
 
