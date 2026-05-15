@@ -27,7 +27,6 @@ export function getProductGrupoComando(): string {
 // ─── Constantes fixas do payload ──────────────────────────────────
 export const PRODUCT_FIXED = {
   conta_contabil: 142,
-  versoes: [{ versao: '1', roteiro: 1, situacao: 'A' as const }],
   depositos: [
     {
       sequencia: 1,
