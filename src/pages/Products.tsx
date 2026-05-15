@@ -1531,26 +1531,20 @@ export default function Products() {
                         </div>
                         <div>
                           <Label htmlFor="classe">Classe</Label>
-                          <Select
-                            value={formData.class_id || 'none'}
+                          <SearchableSelect
+                            options={classes.items.map((c) => ({ value: c.id, label: c.label }))}
+                            value={formData.class_id || null}
                             disabled={isEditing}
-                            onValueChange={(v) => {
-                              const updated = { ...formData, class_id: v === 'none' ? undefined : v };
+                            placeholder="Selecione"
+                            searchPlaceholder="Buscar classe..."
+                            emptyMessage="Nenhuma classe encontrada."
+                            onChange={(v) => {
+                              const updated = { ...formData, class_id: v || undefined };
                               updated.sku = recalcularSku(updated);
                               if (isAutoDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhuma</SelectItem>
-                              {classes.items.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </div>
                     </div>
