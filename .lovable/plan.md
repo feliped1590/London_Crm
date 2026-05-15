@@ -1,50 +1,39 @@
-## Causa raiz identificada
+## Auto-cálculo do preço unitário (sacos / embalagens)
 
-Olhando o log do Postgres no exato momento do erro:
+Quando o item é vendido por **MIL** (milheiro) e tem dimensões + Fator KG, o preço unitário passa a ser recalculado automaticamente sempre que o usuário alterar **largura, comprimento, espessura ou Fator KG** — tanto em Pedidos quanto em Propostas. O valor digitado manualmente é sobrescrito.
+
+### Fórmula aplicada
+A função `calculatePackagingPrice` já existe em `src/utils/pricing/packagingPricing.ts` e implementa exatamente o cálculo do milheiro:
 
 ```
-ERROR 23505: duplicate key value violates unique constraint "idx_products_tenant_erp_code"
-UPDATE "public"."products" SET ... "erp_product_code" = $... WHERE id = $2
+preço unitário (R$/MIL) = (largura_mm × comprimento_mm × espessura_µm × Fator KG) / 1.000.000
 ```
 
-O conflito é em `(tenant_id, erp_product_code)`. Investiguei o banco:
+Validação com o item da tela: 200 × 270 × 0,12 × 29,30 / 1.000.000 × 1.000 = **R$ 189,86** ✓
 
-- O produto `PA-2-LS-S-100-200-270-120` (id `6f1598…`) tem `erp_product_code = '813391'` no banco.
-- **Existe 1 outro produto no mesmo tenant com `erp_product_code = ''`** (string vazia, não NULL).
-- O `UPDATE` enviado pelo formulário gravou `erp_product_code = ''` (string vazia) — ou porque o usuário apagou o valor, ou porque o campo perdeu o valor original ao abrir a edição.
+(Para `unit_measure = 'KG'` o preço continua sendo o próprio Fator KG; outras unidades não recalculam.)
 
-Existem **3 índices únicos** sobrepostos para esse mesmo par de colunas:
+### Onde aplicar
 
-| Índice | Predicado |
-|---|---|
-| `products_tenant_erp_code_unique` | `WHERE erp_product_code IS NOT NULL AND erp_product_code <> ''` |
-| `products_erp_product_code_unique` | `WHERE erp_product_code IS NOT NULL AND erp_product_code <> ''` |
-| `idx_products_tenant_erp_code` | **`WHERE erp_product_code IS NOT NULL`** ← inclui string vazia |
+1. **`src/components/orders/OrderItemDetailModal.tsx`** — modal "Detalhes do Item"
+   - Em `updateDraftField`, quando o campo alterado for `width`, `length`, `thickness` ou `fator_kg`, recalcular `unit_price` via `calculatePackagingPrice` usando o `unit_measure` do draft, e recalcular `subtotal = qty × unit_price`.
+   - Manter o campo "Preço Unitário" editável, mas marcado como auto-calculado (badge "auto" + tooltip explicando a fórmula). Edição manual continua possível, mas será sobrescrita na próxima alteração de dimensão/fator.
 
-Os dois primeiros excluem corretamente string vazia, mas o terceiro (`idx_products_tenant_erp_code`) **não** — então duas linhas com `''` colidem. É um bug de modelagem deixado pra trás em alguma migração.
+2. **`src/components/orders/OrderDialog.tsx`** — linha inline da tabela de itens
+   - Em `updateItem`, quando `width`/`length`/`thickness`/`fator_kg` mudar, recalcular `unit_price` e `subtotal` com `calculatePackagingPrice`.
+   - As dimensões hoje só são editáveis pelo modal; o `fator_kg` é editável inline (linha 1209-1210) — esse caso passa a recalcular o preço.
 
-## Plano
+3. **`src/components/proposals/ProposalDialog.tsx`** — espelhar o mesmo comportamento das duas alterações acima nas linhas/handlers equivalentes da proposta.
 
-1. **Migration — corrigir os índices duplicados**
-   - Dropar `idx_products_tenant_erp_code` (o único que está inconsistente).
-   - Dropar também `products_erp_product_code_unique` (é literal idêntico ao `products_tenant_erp_code_unique`, redundante e custa escrita).
-   - Manter apenas `products_tenant_erp_code_unique` como a fonte única de verdade.
+### Detalhes técnicos
 
-2. **`src/pages/Products.tsx` — normalizar string vazia para NULL antes de salvar**
-   - No `executeSave` (ou no payload do `updateMutation` / `createMutation`), aplicar:
-     ```ts
-     submitData.erp_product_code = submitData.erp_product_code?.trim() || null;
-     ```
-   - Mesmo tratamento já existe pra `nome_impresso`. Isso evita gravar `''` e garante semântica "produto ainda não tem código ERP".
+- Reutilizar `calculatePackagingPrice({ unit_measure, unit_price, fator_kg, width, length, thickness })` — sem nova função.
+- Fallback: se faltar qualquer dimensão ou Fator KG, manter o `unit_price` atual (a função já retorna `unit_price` nesse caso, mas vamos preservar explicitamente o valor digitado para não zerar enquanto o usuário ainda está preenchendo).
+- Itens **bloqueados** (`is_locked` / pedido não-pendente) não recalculam — o guard `isEditable` já cobre isso.
+- `unit_measure` precisa estar disponível no draft do modal: ele já é carregado em `OrderDialog` (linha 888) e persistido no item, então basta usar `draft.unit_measure`.
+- Não altera nada no banco nem em edge functions; é puramente UI/cálculo no front.
 
-3. **`src/pages/Products.tsx` — preservar o valor ao abrir a edição**
-   - Confirmar no `handleEdit` (linha 1042) que `erp_product_code` é carregado corretamente. Se o campo estiver montado como `disabled` quando já existe valor, o usuário não consegue apagar acidentalmente. Adicionar `readOnly` quando já houver `erp_product_code` preenchido (não-vazio) no produto original — assim ninguém limpa um código ERP já vinculado.
+### Fora de escopo
 
-4. **Mensagem de erro mais clara** (opcional, baixo custo)
-   - Em `getDuplicateErrorMessage`, já existe um caso pra `products_erp_product_code_unique`. Adicionar também `idx_products_tenant_erp_code` e `products_tenant_erp_code_unique` à lista, com a mensagem: "Já existe outro produto com este Código ERP neste tenant."
-
-## Fora do escopo
-
-- Não vou mexer no fluxo de sincronização ERP nem nos triggers de `compute_structure_hash`, `protect_product_structure`, etc. — eles não estão envolvidos nesse erro.
-
-Aprova?
+- Não muda a hierarquia de preços (Tabela do Cliente > Regra > Tabela Padrão > Base) — o auto-cálculo só roda quando o usuário edita dimensões/fator no documento, refletindo a intenção explícita de mudar a especificação.
+- Não toca em produtos cadastrados, SKU ou `erp_versao`.
