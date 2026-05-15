@@ -323,10 +323,12 @@ export default function Products() {
 
     if (
       errorText.includes('products_erp_product_code_unique') ||
+      errorText.includes('products_tenant_erp_code_unique') ||
+      errorText.includes('idx_products_tenant_erp_code') ||
       errorText.includes('(erp_product_code)') ||
       errorText.includes('erp_product_code')
     ) {
-      return 'Já existe um produto com este Código ERP';
+      return 'Já existe outro produto com este Código ERP neste tenant.';
     }
 
     if (error?.code === '23505') {
