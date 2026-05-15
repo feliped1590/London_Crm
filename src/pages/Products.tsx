@@ -28,6 +28,8 @@ import {
 import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
@@ -60,7 +62,7 @@ import { ProductSyncBadge, ProductSyncButton } from '@/components/products/Produ
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList } from 'lucide-react';
 
-type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
+type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at';
 type SortDirection = 'asc' | 'desc';
 
 type ProductHistoryEntry = {
@@ -107,8 +109,8 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('updated_at');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -1842,6 +1844,7 @@ export default function Products() {
                     <TableHead>Largura</TableHead>
                     <TableHead>Comprimento</TableHead>
                     <TableHead>Espessura</TableHead>
+                    <SortableHeader field="updated_at">Última Atualização</SortableHeader>
                     <TableHead>Status</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -1885,6 +1888,9 @@ export default function Products() {
                       <TableCell className="text-sm">{product.width ? `${product.width}` : '—'}</TableCell>
                       <TableCell className="text-sm">{product.length ? `${product.length}` : '—'}</TableCell>
                       <TableCell className="text-sm">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={product.active ? 'default' : 'outline'}>
                           {product.active ? 'Ativo' : 'Inativo'}
