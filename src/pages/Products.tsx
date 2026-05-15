@@ -1060,6 +1060,7 @@ export default function Products() {
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
+    setUnlockErpCode(false);
   };
 
   useEffect(() => {
