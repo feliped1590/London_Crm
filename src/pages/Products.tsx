@@ -1253,7 +1253,7 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-5' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
@@ -1266,6 +1266,12 @@ export default function Products() {
                     <User className="h-4 w-4" />
                     Clientes vinculados
                   </TabsTrigger>
+                  {editingProduct && (
+                    <TabsTrigger value="versoes" className="gap-2">
+                      <Layers className="h-4 w-4" />
+                      Versões
+                    </TabsTrigger>
+                  )}
                   {editingProduct && (
                     <TabsTrigger value="historico" className="gap-2">
                       <Clock className="h-4 w-4" />
