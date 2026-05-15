@@ -1727,6 +1727,12 @@ export default function Products() {
                 </TabsContent>
 
                 {editingProduct && (
+                  <TabsContent value="versoes" className="space-y-4 mt-4">
+                    <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                  </TabsContent>
+                )}
+
+                {editingProduct && (
                   <TabsContent value="historico" className="space-y-4 mt-4">
                     {isProductHistoryLoading ? (
                       <div className="flex items-center justify-center py-8">
