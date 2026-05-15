@@ -28,6 +28,7 @@ import { PriceOverrideModal } from './PriceOverrideModal';
 import { DocumentTotals } from '@/components/documents/DocumentTotals';
 import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload, extractLogisticsFromRecord } from '@/components/documents/DocumentLogisticsSection';
 import { useProductAdd } from '@/components/documents/ProductSelector';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
