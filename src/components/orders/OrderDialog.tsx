@@ -24,6 +24,7 @@ import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -948,6 +949,18 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     } else if (field === 'fator_kg') {
       hookUpdateItem(index, field, value, (item: OrderItemDraft): OrderItemDraft => {
         item.fator_kg = Math.max(0, Number(value) || 0);
+        const calc = calculatePackagingPrice({
+          unit_measure: item.unit_measure,
+          unit_price: item.unit_price,
+          fator_kg: item.fator_kg,
+          width: item.width,
+          length: item.length,
+          thickness: item.thickness,
+        });
+        if (calc > 0) {
+          item.unit_price = calc;
+          item.subtotal = item.quantity * item.unit_price;
+        }
         return item;
       });
     } else {

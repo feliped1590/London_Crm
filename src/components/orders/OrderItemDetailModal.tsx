@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Lock, LockOpen, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 
@@ -58,12 +59,24 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
     if (!isEditable) return;
     setDraft(prev => {
       if (!prev) return prev;
-      const updated = { ...prev, [field]: value };
-      if (field === 'quantity' || field === 'unit_price') {
-        const qty = field === 'quantity' ? (Number(value) || 1) : prev.quantity;
-        const price = field === 'unit_price' ? (Number(value) || 0) : prev.unit_price;
-        updated.subtotal = qty * price;
+      const updated: OrderItemDraft = { ...prev, [field]: value };
+
+      // Auto-recalcular preço unitário ao mudar dimensões/Fator KG (fórmula do milheiro)
+      if (field === 'width' || field === 'length' || field === 'thickness' || field === 'fator_kg') {
+        const calc = calculatePackagingPrice({
+          unit_measure: updated.unit_measure,
+          unit_price: updated.unit_price,
+          fator_kg: updated.fator_kg,
+          width: updated.width,
+          length: updated.length,
+          thickness: updated.thickness,
+        });
+        if (calc > 0) updated.unit_price = calc;
       }
+
+      const qty = Number(updated.quantity) || 1;
+      const price = Number(updated.unit_price) || 0;
+      updated.subtotal = qty * price;
       return updated;
     });
   };
