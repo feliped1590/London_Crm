@@ -658,12 +658,6 @@ export default function Customers() {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader field="name">Cliente</SortableHeader>
-                      <SortableHeader field="last_interaction_entity">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          Última interação com
-                        </div>
-                      </SortableHeader>
                       <SortableHeader field="last_activity">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
