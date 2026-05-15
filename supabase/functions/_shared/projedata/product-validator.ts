@@ -125,6 +125,8 @@ export async function loadProductForSync(
     product: {
       id: product.id,
       name: product.name,
+      nome_impresso: product.nome_impresso,
+      erp_versao: product.erp_versao,
       erp_product_code: product.erp_product_code,
       erp_empresa: product.erp_empresa,
       erp_grupo: product.erp_grupo,
