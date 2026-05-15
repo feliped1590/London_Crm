@@ -1327,9 +1327,13 @@ export default function Products() {
                         value={formData.erp_product_code || ''}
                         onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
                         placeholder="Opcional — preencher só se já existir no ERP"
+                        readOnly={!!(editingProduct as any)?.erp_product_code}
+                        className={(editingProduct as any)?.erp_product_code ? 'bg-muted cursor-not-allowed' : ''}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.
+                        {(editingProduct as any)?.erp_product_code
+                          ? 'Código já vinculado ao ERP — não pode ser alterado.'
+                          : 'Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.'}
                       </p>
                     </div>
 
