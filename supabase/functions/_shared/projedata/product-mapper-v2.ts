@@ -84,7 +84,7 @@ export function mapProductToProjedata(p: ProductForSync, ctx: ProductSyncContext
     usuario: ctx.erp_usuario,
     versoes: [
       {
-        versao: '1',
+        versao: String(p.versao_numero ?? 1),
         roteiro: 1,
         situacao: 'A' as const,
         detalhes: (p.erp_versao ?? '').trim(),
