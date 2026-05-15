@@ -933,6 +933,9 @@ export default function Products() {
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
+    // Normaliza erp_product_code: vazio → null (evita conflito de unicidade entre vazios)
+    const erpCodeTrim = (submitData.erp_product_code ?? '').trim();
+    submitData.erp_product_code = (erpCodeTrim || null) as any;
 
     // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
     // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
