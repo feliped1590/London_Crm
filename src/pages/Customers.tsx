@@ -43,7 +43,7 @@ import {
 const DEFAULT_ITEMS_PER_PAGE = 25;
 
 type StatusFilter = 'active' | 'inactive' | 'all';
-type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'last_interaction_entity' | 'deals' | 'owner' | 'created_at';
+type SortField = 'name' | 'contact' | 'phone' | 'last_activity' | 'deals' | 'owner' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 interface CustomerRow {
@@ -180,7 +180,7 @@ export default function Customers() {
       case 'contact': return 'contact';
       case 'phone': return 'phone';
       case 'last_activity': return 'last_activity';
-      case 'last_interaction_entity': return 'last_interaction_entity';
+      
       case 'deals': return 'deals';
       case 'owner': return 'owner';
       case 'created_at': return 'created_at';
@@ -381,17 +381,6 @@ export default function Customers() {
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
   };
 
-  const getLastInteractionLabel = (customer: CustomerRow) => {
-    const interactionAt = customer.last_relevant_interaction_at;
-
-    if (!interactionAt) return 'Sem interação';
-
-    const legalEntityName = customer.last_relevant_legal_entity_name?.trim();
-
-    return legalEntityName
-      ? legalEntityName
-      : 'Interação sem entidade';
-  };
 
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
@@ -426,9 +415,9 @@ export default function Customers() {
     );
   };
 
-  // Determine last activity - use the canonical last relevant interaction from the backend
+  // Determine last activity - use the consolidated last interaction date from the backend
   const getLastActivity = (c: CustomerRow) => {
-    return c.last_relevant_interaction_at || null;
+    return c.last_interaction_at || null;
   };
 
   return (
@@ -658,12 +647,6 @@ export default function Customers() {
                   <TableHeader>
                     <TableRow>
                       <SortableHeader field="name">Cliente</SortableHeader>
-                      <SortableHeader field="last_interaction_entity">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5" />
-                          Última interação com
-                        </div>
-                      </SortableHeader>
                       <SortableHeader field="last_activity">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5" />
@@ -686,7 +669,6 @@ export default function Customers() {
                   {customers.map((customer) => {
                     const CustomerIcon = getCustomerIcon(customer.cnpj);
                     const phone = getContactPhone(customer);
-                    const lastInteractionLabel = getLastInteractionLabel(customer);
                     const lastActivityText = getLastActivityText(getLastActivity(customer));
                     const displayName = customer.fantasia || customer.name;
 
@@ -713,12 +695,7 @@ export default function Customers() {
                           </div>
                         </TableCell>
                         <TableCell className="align-middle">
-                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
-                            {lastInteractionLabel}
-                          </span>
-                        </TableCell>
-                        <TableCell className="align-middle">
-                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
+                          <span className={`block text-sm whitespace-nowrap ${!customer.last_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
                             {lastActivityText}
                           </span>
                         </TableCell>
