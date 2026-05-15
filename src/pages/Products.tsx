@@ -28,6 +28,8 @@ import {
 import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
