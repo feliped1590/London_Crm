@@ -22,14 +22,15 @@ export function calculatePackagingPrice(product: PackagingPricingInput): number 
   if (!product) return 0;
 
   const fatorKg = product.fator_kg || 0;
+  const unit = (product.unit_measure || '').toString().trim().toUpperCase();
 
   // Venda por KG: preço = fator KG direto
-  if (product.unit_measure === 'KG') {
+  if (unit === 'KG') {
     return fatorKg || product.unit_price || 0;
   }
 
   // Venda por MILHEIRO: preço = (fatorKg × largura × comprimento × espessura) / 1.000.000
-  if (product.unit_measure === 'MIL') {
+  if (unit === 'MIL') {
     const width = product.width || 0;
     const length = product.length || 0;
     const thickness = product.thickness || 0;
