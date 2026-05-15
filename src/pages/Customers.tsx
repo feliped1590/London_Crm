@@ -707,12 +707,7 @@ export default function Customers() {
                           </div>
                         </TableCell>
                         <TableCell className="align-middle">
-                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
-                            {lastInteractionLabel}
-                          </span>
-                        </TableCell>
-                        <TableCell className="align-middle">
-                          <span className={`block text-sm whitespace-nowrap ${!customer.last_relevant_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
+                          <span className={`block text-sm whitespace-nowrap ${!customer.last_interaction_at ? 'text-muted-foreground' : 'text-foreground'}`}>
                             {lastActivityText}
                           </span>
                         </TableCell>
