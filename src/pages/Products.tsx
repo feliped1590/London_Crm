@@ -1844,6 +1844,7 @@ export default function Products() {
                     <TableHead>Largura</TableHead>
                     <TableHead>Comprimento</TableHead>
                     <TableHead>Espessura</TableHead>
+                    <SortableHeader field="updated_at">Última Atualização</SortableHeader>
                     <TableHead>Status</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
