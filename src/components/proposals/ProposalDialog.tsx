@@ -351,6 +351,20 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
         }
       }
     }
+    // Auto-recalcular preço unitário ao mudar dimensões (fórmula do milheiro)
+    if (field === 'width' || field === 'length' || field === 'thickness') {
+      const it = updatedItems[index];
+      const product = products?.find(p => p.id === it.product_id);
+      const calc = calculatePackagingPrice({
+        unit_measure: product?.unit_measure,
+        unit_price: it.unit_price,
+        fator_kg: product?.fator_kg,
+        width: it.width,
+        length: it.length,
+        thickness: it.thickness,
+      });
+      if (calc > 0) updatedItems[index].unit_price = calc;
+    }
     updatedItems[index].subtotal = proposalItemSubtotal(updatedItems[index]);
     setItems(updatedItems);
   };
