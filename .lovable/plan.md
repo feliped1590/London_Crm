@@ -1,39 +1,50 @@
-## Auto-cálculo do preço unitário (sacos / embalagens)
+# Múltiplas Versões de Produto
 
-Quando o item é vendido por **MIL** (milheiro) e tem dimensões + Fator KG, o preço unitário passa a ser recalculado automaticamente sempre que o usuário alterar **largura, comprimento, espessura ou Fator KG** — tanto em Pedidos quanto em Propostas. O valor digitado manualmente é sobrescrito.
+Hoje cada produto = 1 versão fixa. Vamos permitir que um mesmo item tenha N versões, cada uma com **suas próprias dimensões (L × C × E)**, mantendo o restante (nome, NCM, família, fiscal, fator KG, preço base) compartilhado.
 
-### Fórmula aplicada
-A função `calculatePackagingPrice` já existe em `src/utils/pricing/packagingPricing.ts` e implementa exatamente o cálculo do milheiro:
+## Modelo de dados
 
-```
-preço unitário (R$/MIL) = (largura_mm × comprimento_mm × espessura_µm × Fator KG) / 1.000.000
-```
+Adicionar à tabela `products`:
+- `parent_product_id uuid` — referência ao produto-pai (NULL = é o próprio pai/v1)
+- `versao_numero int` — número sequencial da versão (1, 2, 3…), gerado por trigger
 
-Validação com o item da tela: 200 × 270 × 0,12 × 29,30 / 1.000.000 × 1.000 = **R$ 189,86** ✓
+Regras:
+- O produto-pai (`parent_product_id IS NULL`) tem `versao_numero = 1` e guarda os atributos compartilhados (nome, NCM, família, classe, fiscal, fator KG, preço base, `erp_product_code`).
+- Versões filhas herdam logicamente os atributos do pai mas têm próprias: `width`, `length`, `thickness`, `sku` (auto), `erp_versao` (auto via trigger existente), `versao_numero`.
+- Constraint: `UNIQUE (parent_product_id, versao_numero)` quando filho; SKU continua único globalmente.
+- Trigger atribui `versao_numero = MAX(versao_numero)+1` do mesmo pai ao inserir filho.
+- Ao editar campos compartilhados no pai, propagar para filhos (ou bloquear edição nos filhos via UI).
 
-(Para `unit_measure = 'KG'` o preço continua sendo o próprio Fator KG; outras unidades não recalculam.)
+## Backend
 
-### Onde aplicar
+- `erp_product_code` é compartilhado entre pai e filhos (mesma `codigo` no ERP).
+- `process-product-sync`: ao sincronizar o pai, agrupar todas as versões (pai + filhos) e enviar `versoes[]` com 1 entrada por versão (`versao: versao_numero`, `detalhes: erp_versao`, `situacao: 'A'`). O mapper `product-mapper-v2.ts` já aceita array — basta alimentar dinamicamente.
+- Sequência ERP (`erp_sequences`) continua apenas para o pai; filhos não consomem código novo.
 
-1. **`src/components/orders/OrderItemDetailModal.tsx`** — modal "Detalhes do Item"
-   - Em `updateDraftField`, quando o campo alterado for `width`, `length`, `thickness` ou `fator_kg`, recalcular `unit_price` via `calculatePackagingPrice` usando o `unit_measure` do draft, e recalcular `subtotal = qty × unit_price`.
-   - Manter o campo "Preço Unitário" editável, mas marcado como auto-calculado (badge "auto" + tooltip explicando a fórmula). Edição manual continua possível, mas será sobrescrita na próxima alteração de dimensão/fator.
+## Frontend — Cadastro (`/products`)
 
-2. **`src/components/orders/OrderDialog.tsx`** — linha inline da tabela de itens
-   - Em `updateItem`, quando `width`/`length`/`thickness`/`fator_kg` mudar, recalcular `unit_price` e `subtotal` com `calculatePackagingPrice`.
-   - As dimensões hoje só são editáveis pelo modal; o `fator_kg` é editável inline (linha 1209-1210) — esse caso passa a recalcular o preço.
+- Em `ProductDialog`, adicionar aba/seção **"Versões"** listando todas as versões do item (incluindo a v1).
+- Botão **"Nova versão"** abre formulário compacto pedindo apenas L × C × E. Cria registro filho com `parent_product_id` = produto atual.
+- Cada linha mostra: nº versão, dimensões, SKU, `erp_versao`, status ERP, ações (editar dimensões / inativar).
+- Lista principal de produtos: opção de toggle "Agrupar versões" (mostra só o pai e expande) ou "Listar todas" (cada versão como linha — padrão para busca em pedidos).
 
-3. **`src/components/proposals/ProposalDialog.tsx`** — espelhar o mesmo comportamento das duas alterações acima nas linhas/handlers equivalentes da proposta.
+## Frontend — Pedidos & Propostas
 
-### Detalhes técnicos
+- `ProductSelector` / busca: cada versão aparece como linha separada, ex.: `IMPRESSO BOBINA – CHARQUE 500GR – v2 (15×30×0,09 NY)`.
+- Snapshot do item de pedido já copia dimensões → nada muda no fluxo de pricing, IPI e auto-cálculo do saco.
 
-- Reutilizar `calculatePackagingPrice({ unit_measure, unit_price, fator_kg, width, length, thickness })` — sem nova função.
-- Fallback: se faltar qualquer dimensão ou Fator KG, manter o `unit_price` atual (a função já retorna `unit_price` nesse caso, mas vamos preservar explicitamente o valor digitado para não zerar enquanto o usuário ainda está preenchendo).
-- Itens **bloqueados** (`is_locked` / pedido não-pendente) não recalculam — o guard `isEditable` já cobre isso.
-- `unit_measure` precisa estar disponível no draft do modal: ele já é carregado em `OrderDialog` (linha 888) e persistido no item, então basta usar `draft.unit_measure`.
-- Não altera nada no banco nem em edge functions; é puramente UI/cálculo no front.
+## Fora de escopo
+- Preço/Fator KG por versão (continuam vindo do pai).
+- Estoque por versão.
+- SKU manual (continua auto-gerado conforme regra atual).
+- Importação retroativa de versões já existentes no ERP (pode ser feita em etapa seguinte de import).
 
-### Fora de escopo
+## Migração
 
-- Não muda a hierarquia de preços (Tabela do Cliente > Regra > Tabela Padrão > Base) — o auto-cálculo só roda quando o usuário edita dimensões/fator no documento, refletindo a intenção explícita de mudar a especificação.
-- Não toca em produtos cadastrados, SKU ou `erp_versao`.
+1. Migration: adicionar colunas + índice + trigger de numeração + constraint.
+2. Backfill: todos os produtos atuais ficam `parent_product_id = NULL`, `versao_numero = 1`.
+3. Ajustar trigger de `erp_versao` para considerar dimensões da própria versão (já considera).
+4. UI de Versões + ajuste do `ProductSelector`.
+5. Ajuste do `process-product-sync` para montar `versoes[]` dinâmico.
+
+Após sua aprovação, implemento na ordem acima.

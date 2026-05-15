@@ -55,7 +55,8 @@ export async function loadProductForSync(
     .select(`
       id, tenant_id, name, nome_impresso, erp_versao, erp_product_code, erp_empresa,
       erp_grupo, erp_subgrupo, tipo_item, tipo_ficha,
-      unit_measure, ncm_code, family_id, class_id, tipo_id, created_by
+      unit_measure, ncm_code, family_id, class_id, tipo_id, created_by,
+      versao_numero, parent_product_id
     `)
     .eq('id', productId)
     .single();
@@ -137,6 +138,7 @@ export async function loadProductForSync(
       tipo_ficha: product.tipo_ficha,
       unit_measure: product.unit_measure,
       ncm_code: product.ncm_code,
+      versao_numero: product.versao_numero,
     },
     ctx: { erp_usuario },
     tenantId: product.tenant_id ?? null,

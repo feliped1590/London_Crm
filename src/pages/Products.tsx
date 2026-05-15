@@ -45,6 +45,8 @@ import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
+import { ProductVersionsTab } from '@/components/products/ProductVersionsTab';
+import { Layers } from 'lucide-react';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
 import {
@@ -1251,7 +1253,7 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-5' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
@@ -1264,6 +1266,12 @@ export default function Products() {
                     <User className="h-4 w-4" />
                     Clientes vinculados
                   </TabsTrigger>
+                  {editingProduct && (
+                    <TabsTrigger value="versoes" className="gap-2">
+                      <Layers className="h-4 w-4" />
+                      Versões
+                    </TabsTrigger>
+                  )}
                   {editingProduct && (
                     <TabsTrigger value="historico" className="gap-2">
                       <Clock className="h-4 w-4" />
@@ -1717,6 +1725,12 @@ export default function Products() {
                 <TabsContent value="clientes" className="space-y-4 mt-4">
                   <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
                 </TabsContent>
+
+                {editingProduct && (
+                  <TabsContent value="versoes" className="space-y-4 mt-4">
+                    <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                  </TabsContent>
+                )}
 
                 {editingProduct && (
                   <TabsContent value="historico" className="space-y-4 mt-4">

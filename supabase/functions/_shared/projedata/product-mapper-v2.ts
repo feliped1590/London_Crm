@@ -57,6 +57,8 @@ export interface ProductForSync {
   tipo_ficha?: number | null;
   unit_measure?: string | null;
   ncm_code?: string | null;
+  /** Número da versão (1 para produto principal, 2,3... para variações) */
+  versao_numero?: number | null;
 }
 
 export interface ProductSyncContext {
@@ -82,7 +84,7 @@ export function mapProductToProjedata(p: ProductForSync, ctx: ProductSyncContext
     usuario: ctx.erp_usuario,
     versoes: [
       {
-        versao: '1',
+        versao: String(p.versao_numero ?? 1),
         roteiro: 1,
         situacao: 'A' as const,
         detalhes: (p.erp_versao ?? '').trim(),
