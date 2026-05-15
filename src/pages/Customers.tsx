@@ -426,9 +426,9 @@ export default function Customers() {
     );
   };
 
-  // Determine last activity - use the canonical last relevant interaction from the backend
+  // Determine last activity - use the consolidated last interaction date from the backend
   const getLastActivity = (c: CustomerRow) => {
-    return c.last_relevant_interaction_at || null;
+    return c.last_interaction_at || null;
   };
 
   return (
