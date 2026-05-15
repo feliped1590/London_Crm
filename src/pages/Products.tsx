@@ -106,6 +106,7 @@ export default function Products() {
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [unlockErpCode, setUnlockErpCode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
@@ -1059,6 +1060,7 @@ export default function Products() {
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
+    setUnlockErpCode(false);
   };
 
   useEffect(() => {
@@ -1321,19 +1323,43 @@ export default function Products() {
                     </div>
                     {/* Código ERP */}
                     <div className="col-span-2">
-                      <Label htmlFor="erp_product_code">Código ERP</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="erp_product_code">Código ERP</Label>
+                        {isAdmin && !!(editingProduct as any)?.erp_product_code && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => {
+                              if (unlockErpCode) {
+                                setUnlockErpCode(false);
+                                return;
+                              }
+                              const ok = window.confirm(
+                                'Atenção: alterar o Código ERP pode quebrar o vínculo com o ERP. Use apenas para corrigir um código enviado errado pelo ERP. Deseja continuar?'
+                              );
+                              if (ok) setUnlockErpCode(true);
+                            }}
+                          >
+                            {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
+                          </Button>
+                        )}
+                      </div>
                       <Input
                         id="erp_product_code"
                         value={formData.erp_product_code || ''}
                         onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
                         placeholder="Opcional — preencher só se já existir no ERP"
-                        readOnly={!!(editingProduct as any)?.erp_product_code}
-                        className={(editingProduct as any)?.erp_product_code ? 'bg-muted cursor-not-allowed' : ''}
+                        readOnly={!!(editingProduct as any)?.erp_product_code && !unlockErpCode}
+                        className={(editingProduct as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {(editingProduct as any)?.erp_product_code
-                          ? 'Código já vinculado ao ERP — não pode ser alterado.'
-                          : 'Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.'}
+                        {(editingProduct as any)?.erp_product_code && !unlockErpCode
+                          ? 'Código já vinculado ao ERP — não pode ser alterado. Admins podem desbloquear para corrigir.'
+                          : unlockErpCode
+                            ? 'Edição liberada. Limpe o campo para forçar nova geração no ERP, ou informe o código correto.'
+                            : 'Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.'}
                       </p>
                     </div>
 
