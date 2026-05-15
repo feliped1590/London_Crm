@@ -62,7 +62,7 @@ import { ProductSyncBadge, ProductSyncButton } from '@/components/products/Produ
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList } from 'lucide-react';
 
-type SortField = 'sku' | 'name' | 'tipo' | 'unit_price';
+type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at';
 type SortDirection = 'asc' | 'desc';
 
 type ProductHistoryEntry = {
