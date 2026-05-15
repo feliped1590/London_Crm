@@ -27,7 +27,6 @@ export function getProductGrupoComando(): string {
 // ─── Constantes fixas do payload ──────────────────────────────────
 export const PRODUCT_FIXED = {
   conta_contabil: 142,
-  versoes: [{ versao: '1', roteiro: 1, situacao: 'A' as const }],
   depositos: [
     {
       sequencia: 1,
@@ -44,6 +43,8 @@ export const PRODUCT_FIXED = {
 export interface ProductForSync {
   id: string;
   name: string;
+  nome_impresso?: string | null;
+  erp_versao?: string | null;
   erp_product_code?: string | null;
   erp_empresa?: number | null;
   erp_grupo?: string | null;
@@ -69,7 +70,7 @@ export function mapProductToProjedata(p: ProductForSync, ctx: ProductSyncContext
     classe: (p.classe_label ?? '').trim(),
     codigo: (p.erp_product_code ?? '').trim(), // vazio = create
     conta_contabil: PRODUCT_FIXED.conta_contabil,
-    descricao: (p.name ?? '').trim(),
+    descricao: (p.nome_impresso ?? '').trim(),
     empresa: p.erp_empresa ?? 1,
     familia: (p.familia_label ?? '').trim(),
     grupo: (p.erp_grupo ?? '').trim(),
@@ -79,7 +80,14 @@ export function mapProductToProjedata(p: ProductForSync, ctx: ProductSyncContext
     tipo_item: (p.tipo_item ?? '').trim(),
     unidade: (p.unit_measure ?? '').trim().toUpperCase(),
     usuario: ctx.erp_usuario,
-    versoes: PRODUCT_FIXED.versoes,
+    versoes: [
+      {
+        versao: '1',
+        roteiro: 1,
+        situacao: 'A' as const,
+        detalhes: (p.erp_versao ?? '').trim(),
+      },
+    ],
     depositos: PRODUCT_FIXED.depositos,
   };
 }

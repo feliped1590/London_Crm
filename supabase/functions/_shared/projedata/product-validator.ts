@@ -25,6 +25,8 @@ export function validateProductForSync(
   };
 
   req(!!p.name?.trim(), 'name', 'Descrição do produto obrigatória');
+  req(!!(p.nome_impresso ?? '').trim(), 'nome_impresso', 'Nome Complementar obrigatório (enviado como descrição ao ERP)');
+  req(!!(p.erp_versao ?? '').trim(), 'erp_versao', 'Versão do Produto obrigatória (gerada a partir das dimensões; enviada em versoes[].detalhes)');
   req(!!(p.erp_grupo ?? '').trim(), 'erp_grupo', 'Grupo ERP obrigatório');
   req(!!(p.erp_subgrupo ?? '').trim(), 'erp_subgrupo', 'Subgrupo ERP obrigatório');
   req(!!(p.familia_label ?? '').trim(), 'familia', 'Família obrigatória');
@@ -51,7 +53,7 @@ export async function loadProductForSync(
   const { data: product, error } = await supabase
     .from('products')
     .select(`
-      id, tenant_id, name, erp_product_code, erp_empresa,
+      id, tenant_id, name, nome_impresso, erp_versao, erp_product_code, erp_empresa,
       erp_grupo, erp_subgrupo, tipo_item, tipo_ficha,
       unit_measure, ncm_code, family_id, class_id, tipo_id, created_by
     `)
@@ -123,6 +125,8 @@ export async function loadProductForSync(
     product: {
       id: product.id,
       name: product.name,
+      nome_impresso: product.nome_impresso,
+      erp_versao: product.erp_versao,
       erp_product_code: product.erp_product_code,
       erp_empresa: product.erp_empresa,
       erp_grupo: product.erp_grupo,
