@@ -680,7 +680,6 @@ export default function Customers() {
                   {customers.map((customer) => {
                     const CustomerIcon = getCustomerIcon(customer.cnpj);
                     const phone = getContactPhone(customer);
-                    const lastInteractionLabel = getLastInteractionLabel(customer);
                     const lastActivityText = getLastActivityText(getLastActivity(customer));
                     const displayName = customer.fantasia || customer.name;
 
