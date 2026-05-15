@@ -381,17 +381,6 @@ export default function Customers() {
     return formatDistanceToNow(new Date(date), { addSuffix: true, locale: ptBR });
   };
 
-  const getLastInteractionLabel = (customer: CustomerRow) => {
-    const interactionAt = customer.last_relevant_interaction_at;
-
-    if (!interactionAt) return 'Sem interação';
-
-    const legalEntityName = customer.last_relevant_legal_entity_name?.trim();
-
-    return legalEntityName
-      ? legalEntityName
-      : 'Interação sem entidade';
-  };
 
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = [];
