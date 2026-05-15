@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Lock, LockOpen, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
+import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 
