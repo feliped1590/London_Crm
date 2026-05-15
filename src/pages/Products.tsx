@@ -1200,22 +1200,6 @@ export default function Products() {
           setIsDialogOpen(true);
         }}>
            <div className="flex items-center gap-2 flex-wrap">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className="gap-2 opacity-60"
-                >
-                  <Upload className="h-4 w-4" />
-                  <span className="hidden sm:inline">Enviar ao ERP</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Integração ERP em desenvolvimento</p>
-              </TooltipContent>
-            </Tooltip>
             <Button
               variant="outline"
               size="sm"
