@@ -101,8 +101,8 @@ export default function Customers() {
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const ITEMS_PER_PAGE = itemsPerPage;
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('last_activity');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRow | null>(null);
   const { recentItems: recentCustomers, recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
