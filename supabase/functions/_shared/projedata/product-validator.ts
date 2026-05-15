@@ -25,6 +25,8 @@ export function validateProductForSync(
   };
 
   req(!!p.name?.trim(), 'name', 'Descrição do produto obrigatória');
+  req(!!(p.nome_impresso ?? '').trim(), 'nome_impresso', 'Nome Complementar obrigatório (enviado como descrição ao ERP)');
+  req(!!(p.erp_versao ?? '').trim(), 'erp_versao', 'Versão do Produto obrigatória (gerada a partir das dimensões; enviada em versoes[].detalhes)');
   req(!!(p.erp_grupo ?? '').trim(), 'erp_grupo', 'Grupo ERP obrigatório');
   req(!!(p.erp_subgrupo ?? '').trim(), 'erp_subgrupo', 'Subgrupo ERP obrigatório');
   req(!!(p.familia_label ?? '').trim(), 'familia', 'Família obrigatória');
