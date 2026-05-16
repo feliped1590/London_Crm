@@ -35,6 +35,7 @@ import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { getWonStageForPipeline } from '@/lib/stageStatus';
 import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from '@/components/orders/PaymentConditionsEditor';
 import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
+import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 
 interface ProposalDialogProps {
   open: boolean;
