@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { storage, validateFile, slugifyFileName } from '@/lib/storage';
 import {
   Dialog,
   DialogContent,
@@ -87,12 +88,19 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
-      const filePath = `${companyId}/${Date.now()}_${file.name}`;
-      
-      const { error: storageError } = await supabase.storage
-        .from('credit-documents')
-        .upload(filePath, file);
-      if (storageError) throw storageError;
+      // Validação centralizada (50MB + whitelist do módulo 'documentos')
+      const check = validateFile(file, 'documentos');
+      if (check.ok === false) throw new Error(check.error);
+
+      const filePath = `${companyId}/${Date.now()}_${slugifyFileName(file.name)}`;
+
+      // Upload via storage provider (abstrato — pronto para S3/R2 no futuro)
+      await storage.upload({
+        bucket: 'credit-documents',
+        path: filePath,
+        file,
+        contentType: file.type,
+      });
 
       // Get user name from profiles
       const { data: profile } = await supabase
@@ -112,7 +120,11 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
           uploaded_by: user.id,
           uploaded_by_name: profile?.full_name || user.email || null,
         });
-      if (dbError) throw dbError;
+      if (dbError) {
+        // rollback do objeto se metadados falharem
+        await storage.remove('credit-documents', [filePath]).catch(() => undefined);
+        throw dbError;
+      }
 
       // Audit log - upload
       await supabase.from('audit_logs').insert({
@@ -136,9 +148,9 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
   const deleteMutation = useMutation({
     mutationFn: async (doc: CreditDocument) => {
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.storage.from('credit-documents').remove([doc.file_path]);
       const { error } = await supabase.from('credit_documents').delete().eq('id', doc.id);
       if (error) throw error;
+      await storage.remove('credit-documents', [doc.file_path]).catch(() => undefined);
 
       // Audit log - delete
       if (user) {
@@ -169,10 +181,10 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
   };
 
   const handleDownload = async (doc: CreditDocument) => {
-    const { data, error } = await supabase.storage
-      .from('credit-documents')
-      .createSignedUrl(doc.file_path, 300);
-    if (error || !data?.signedUrl) {
+    let signedUrl: string;
+    try {
+      signedUrl = await storage.getSignedUrl('credit-documents', doc.file_path, 300);
+    } catch {
       toast.error('Erro ao gerar link de download');
       return;
     }
@@ -189,7 +201,7 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
       }).then(() => {}, () => {});
     }
 
-    window.open(data.signedUrl, '_blank');
+    window.open(signedUrl, '_blank');
   };
 
   const docToDelete = documents?.find(d => d.id === deleteId);
