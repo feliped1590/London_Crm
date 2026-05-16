@@ -16,7 +16,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search, Copy } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, CalendarIcon, DollarSign, Edit, Lock, LockOpen, CheckCircle2, History, Search, Copy, Paperclip } from 'lucide-react';
+import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderItemDetailModal } from './OrderItemDetailModal';
@@ -1315,10 +1316,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
         {isEditMode ? (
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Detalhes</TabsTrigger>
               <TabsTrigger value="approvals" className="flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4" />Liberações
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="flex items-center gap-1">
+                <Paperclip className="h-4 w-4" />Anexos
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-1">
                 <History className="h-4 w-4" />Histórico
@@ -1377,6 +1381,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 </h4>
                 <OrderApprovalTimeline orderId={order!.id} orderStatus={order!.status} />
               </div>
+            </TabsContent>
+
+            <TabsContent value="attachments" className="mt-4">
+              <AttachmentManager module="pedidos" entityType="order" entityId={order!.id} />
             </TabsContent>
 
             <TabsContent value="history" className="mt-4">

@@ -35,6 +35,7 @@ import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { getWonStageForPipeline } from '@/lib/stageStatus';
 import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from '@/components/orders/PaymentConditionsEditor';
 import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
+import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 
 interface ProposalDialogProps {
   open: boolean;
@@ -663,6 +664,13 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                 <Label htmlFor="observations">Observações</Label>
                 <Textarea id="observations" value={formData.observations} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} rows={3} placeholder="Condições especiais, informações adicionais..." />
               </div>
+
+              {/* Attachments — só após salvar */}
+              {isEditing && proposal?.id && (
+                <div className="border-t pt-4">
+                  <AttachmentManager module="propostas" entityType="proposal" entityId={proposal.id} title="Anexos da proposta" />
+                </div>
+              )}
             </div>
           </ScrollArea>
 
