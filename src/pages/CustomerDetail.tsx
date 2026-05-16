@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowLeft, Building2, User, Save, Pencil, Wand2,
   TrendingUp, Clock, FileText, Users, Database,
-  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X,
+  AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X, Paperclip, FileSignature,
 } from 'lucide-react';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
@@ -28,6 +28,7 @@ import { CompanyAuditHistory } from '@/components/customers/CompanyAuditHistory'
 import { CreditAnalysisTab } from '@/components/customers/CreditAnalysisTab';
 import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/CompanySyncStatus';
 import { CustomerOrdersTab } from '@/components/customers/CustomerOrdersTab';
+import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
@@ -406,7 +407,7 @@ export default function CustomerDetail() {
 
       {/* Tabs */}
       <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8 lg:grid-cols-8 xl:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-10">
           <TabsTrigger value="dados">Dados</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />Contatos
@@ -421,6 +422,8 @@ export default function CustomerDetail() {
           </TabsTrigger>
           <TabsTrigger value="pedidos" className="flex items-center gap-2"><Package className="h-4 w-4" />Pedidos</TabsTrigger>
           <TabsTrigger value="credito" className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Crédito</TabsTrigger>
+          <TabsTrigger value="anexos" className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Anexos</TabsTrigger>
+          <TabsTrigger value="contratos" className="flex items-center gap-2"><FileSignature className="h-4 w-4" />Contratos</TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2"><Clock className="h-4 w-4" />Histórico</TabsTrigger>
           <TabsTrigger value="notas" className="flex items-center gap-2"><FileText className="h-4 w-4" />Notas</TabsTrigger>
         </TabsList>
@@ -470,6 +473,14 @@ export default function CustomerDetail() {
 
         <TabsContent value="credito">
           <CreditAnalysisTab companyId={id!} companyName={customer?.fantasia || customer?.name || 'Cliente'} cnpj={customer?.cnpj || null} />
+        </TabsContent>
+
+        <TabsContent value="anexos">
+          <AttachmentManager module="crm" entityType="company" entityId={id!} title="Anexos do cliente" />
+        </TabsContent>
+
+        <TabsContent value="contratos">
+          <AttachmentManager module="contratos" entityType="contract" entityId={id!} title="Contratos vinculados" />
         </TabsContent>
 
         <TabsContent value="historico">
