@@ -46,6 +46,7 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
 import { ProductVersionsTab } from '@/components/products/ProductVersionsTab';
+import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 import { Layers } from 'lucide-react';
 import { generateProductDescription } from '@/utils/products/generateProductDescription';
 import { generateStructuralSku } from '@/utils/products/generateStructuralSku';
