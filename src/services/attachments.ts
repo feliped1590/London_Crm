@@ -50,7 +50,7 @@ export async function uploadAttachment(input: UploadAttachmentInput): Promise<At
   const { module, entityType, entityId, file, tenantId } = input;
 
   const validation = validateFile(file, module);
-  if (!validation.ok) throw new Error(validation.error);
+  if (validation.ok === false) throw new Error(validation.error);
 
   const bucket = MODULE_BUCKET[module];
   const objectPath = buildObjectPath(tenantId, entityType, entityId, file.name);

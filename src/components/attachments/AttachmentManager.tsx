@@ -58,7 +58,7 @@ export function AttachmentManager({ module, entityType, entityId, readOnly, titl
       }
       for (const file of Array.from(files)) {
         const check = validateFile(file, module);
-        if (!check.ok) {
+        if (check.ok === false) {
           toast({ title: 'Arquivo inválido', description: check.error, variant: 'destructive' });
           continue;
         }
