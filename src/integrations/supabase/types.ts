@@ -3549,6 +3549,57 @@ export type Database = {
         }
         Relationships: []
       }
+      file_attachments: {
+        Row: {
+          bucket: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          is_public: boolean
+          mime_type: string
+          module: string
+          object_path: string
+          original_name: string
+          size_bytes: number
+          tenant_id: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          is_public?: boolean
+          mime_type: string
+          module: string
+          object_path: string
+          original_name: string
+          size_bytes: number
+          tenant_id: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          is_public?: boolean
+          mime_type?: string
+          module?: string
+          object_path?: string
+          original_name?: string
+          size_bytes?: number
+          tenant_id?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: []
+      }
       freight_type_erp_mapping: {
         Row: {
           created_at: string | null
@@ -9617,6 +9668,15 @@ export type Database = {
         Args: { _to_stage_id: string; _user_id: string }
         Returns: boolean
       }
+      can_mutate_attachment: {
+        Args: {
+          _entity_id: string
+          _entity_type: string
+          _tenant_id: string
+          _uploaded_by: string
+        }
+        Returns: boolean
+      }
       can_update_credit_score: { Args: { _user_id: string }; Returns: boolean }
       can_view_company_audit_log: {
         Args: { _company_id: string }
@@ -10099,6 +10159,7 @@ export type Database = {
         Args: { p_tenant_id: string }
         Returns: boolean
       }
+      is_user_tenant: { Args: { _tenant_id: string }; Returns: boolean }
       is_within_access_window: { Args: { p_user_id: string }; Returns: boolean }
       is_within_access_window_for_rls: { Args: never; Returns: boolean }
       lock_order: { Args: { p_order_id: string }; Returns: Json }
