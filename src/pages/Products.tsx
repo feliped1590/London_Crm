@@ -63,7 +63,7 @@ import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Paperclip } from 'lucide-react';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at';
 type SortDirection = 'asc' | 'desc';
@@ -1254,7 +1254,7 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-5' : 'grid-cols-3'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-6' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
@@ -1271,6 +1271,12 @@ export default function Products() {
                     <TabsTrigger value="versoes" className="gap-2">
                       <Layers className="h-4 w-4" />
                       Versões
+                    </TabsTrigger>
+                  )}
+                  {editingProduct && (
+                    <TabsTrigger value="anexos" className="gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Anexos
                     </TabsTrigger>
                   )}
                   {editingProduct && (
@@ -1730,6 +1736,12 @@ export default function Products() {
                 {editingProduct && (
                   <TabsContent value="versoes" className="space-y-4 mt-4">
                     <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                  </TabsContent>
+                )}
+
+                {editingProduct && (
+                  <TabsContent value="anexos" className="space-y-4 mt-4">
+                    <AttachmentManager module="produtos" entityType="product" entityId={editingProduct.id} title="Fotos e documentos do produto" />
                   </TabsContent>
                 )}
 
