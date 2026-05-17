@@ -5,47 +5,63 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { isInitialValidationDone } from '@/components/AppInitializer';
 import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { publishAuthEvent } from '@/lib/auth/broadcast';
 
 const SESSION_KEY = 'app_session_id';
-const VALIDATE_INTERVAL = 60_000; // 60s
-const HEARTBEAT_INTERVAL = 300_000; // 5min
+const VALIDATE_INTERVAL = 60_000;            // 60s — backend session check
+const HEARTBEAT_INTERVAL = 300_000;          // 5min — touch app_session
+const IDLE_TIMEOUT_MS = 30 * 60_000;         // 30min — client-side idle logout
 
 export function getSessionId(): string | null {
-  return localStorage.getItem(SESSION_KEY);
+  try { return localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY); }
+  catch { return null; }
 }
 
 export function setSessionId(id: string) {
-  localStorage.setItem(SESSION_KEY, id);
+  // Mirror to both stores so the existing hybrid auth strategy works
+  // regardless of "remember me".
+  try { sessionStorage.setItem(SESSION_KEY, id); } catch { /* ignore */ }
+  try { localStorage.setItem(SESSION_KEY, id); } catch { /* ignore */ }
 }
 
 export function clearSessionId() {
-  localStorage.removeItem(SESSION_KEY);
+  try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
 }
 
+/**
+ * Single consolidated session guard. One effect per concern but ALL
+ * driven by a stable user.id (not by `signOut`/`navigate` identity),
+ * so timers and Realtime channels are created exactly once per session.
+ */
 export function useSessionGuard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const validateTimer = useRef<ReturnType<typeof setInterval>>();
-  const heartbeatTimer = useRef<ReturnType<typeof setInterval>>();
-  const lastActivity = useRef(Date.now());
+
+  // Keep callbacks in refs so we never need them in deps arrays.
+  const signOutRef = useRef(signOut);
+  const navigateRef = useRef(navigate);
+  const userRef = useRef(user);
+  useEffect(() => { signOutRef.current = signOut; }, [signOut]);
+  useEffect(() => { navigateRef.current = navigate; }, [navigate]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  const lastActivityRef = useRef(Date.now());
 
   const forceLogout = useCallback(async (reason: string) => {
     clearSessionId();
 
-    // Caso especial: fora do horário permitido → tela /access-blocked
     if (reason === 'outside_allowed_hours') {
-      const userId = user?.id;
+      const userId = userRef.current?.id;
       let info = null;
       if (userId) {
-        try {
-          info = await fetchAccessBlockedInfo(userId);
-        } catch (err) {
-          console.warn('Falha ao buscar info de janela de acesso:', err);
-        }
+        try { info = await fetchAccessBlockedInfo(userId); }
+        catch (err) { console.warn('fetchAccessBlockedInfo falhou:', err); }
       }
       toast.error('Sua sessão foi encerrada: fora do horário permitido.');
-      await signOut();
-      navigate('/access-blocked', { replace: true, state: { info } });
+      await signOutRef.current({ broadcast: true });
+      navigateRef.current('/access-blocked', { replace: true, state: { info } });
       return;
     }
 
@@ -57,104 +73,103 @@ export function useSessionGuard() {
     };
 
     toast.error(messages[reason] || 'Sessão encerrada. Faça login novamente.');
-    await signOut();
-    navigate('/auth', { replace: true });
-  }, [signOut, navigate, user?.id]);
+    publishAuthEvent({ type: 'logout', reason });
+    await signOutRef.current({ broadcast: false }); // broadcast already sent above
+    navigateRef.current('/auth', { replace: true });
+  }, []);
 
-  // Validate session periodically
+  // ── 1. Periodic backend validation + heartbeat (consolidated) ──
   useEffect(() => {
     if (!user) return;
-
     const sessionId = getSessionId();
     if (!sessionId) return;
 
+    let cancelled = false;
+    let validateInFlight = false;
+
     const validate = async () => {
+      if (cancelled || validateInFlight) return;
       const sid = getSessionId();
       if (!sid) return;
-
-      const { data, error } = await supabase.rpc('validate_app_session', { p_session_id: sid });
-      if (error) {
-        console.warn('Session validation error:', error);
-        return;
-      }
-
-      const result = data as any;
-      if (result && !result.valid) {
-        forceLogout(result.reason);
+      validateInFlight = true;
+      try {
+        const { data, error } = await supabase.rpc('validate_app_session', { p_session_id: sid });
+        if (cancelled) return;
+        if (error) { console.warn('Session validation error:', error); return; }
+        const result = data as any;
+        if (result && !result.valid) {
+          forceLogout(result.reason);
+        }
+      } finally {
+        validateInFlight = false;
       }
     };
 
-    // Skip first validation if AppInitializer already did it
+    const heartbeat = async () => {
+      if (cancelled) return;
+      const sid = getSessionId();
+      if (!sid) return;
+      // Only touch backend if the user actually moved in the last interval.
+      if (Date.now() - lastActivityRef.current > HEARTBEAT_INTERVAL) return;
+      try {
+        const { data } = await supabase.rpc('touch_app_session', { p_session_id: sid });
+        if (!cancelled && data === false) {
+          forceLogout('idle_timeout');
+        }
+      } catch (e) {
+        console.warn('touch_app_session falhou:', e);
+      }
+    };
+
+    // Skip first validation if AppInitializer already did it.
     if (!isInitialValidationDone()) {
       validate();
     }
-    validateTimer.current = setInterval(validate, VALIDATE_INTERVAL);
+    const validateTimer = setInterval(validate, VALIDATE_INTERVAL);
+    const heartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL);
 
     return () => {
-      if (validateTimer.current) clearInterval(validateTimer.current);
+      cancelled = true;
+      clearInterval(validateTimer);
+      clearInterval(heartbeatTimer);
     };
-  }, [user, forceLogout]);
+  }, [user?.id, forceLogout]);
 
-  // Heartbeat
+  // ── 2. Local activity tracker (feeds heartbeat decision) ──
   useEffect(() => {
-    if (!user) return;
-
-    const touch = async () => {
-      const sid = getSessionId();
-      if (!sid) return;
-
-      // Only touch if there was activity
-      if (Date.now() - lastActivity.current > HEARTBEAT_INTERVAL) return;
-
-      const { data } = await supabase.rpc('touch_app_session', { p_session_id: sid });
-      if (data === false) {
-        forceLogout('idle_timeout');
-      }
-    };
-
-    heartbeatTimer.current = setInterval(touch, HEARTBEAT_INTERVAL);
-
-    return () => {
-      if (heartbeatTimer.current) clearInterval(heartbeatTimer.current);
-    };
-  }, [user, forceLogout]);
-
-  // Track activity
-  useEffect(() => {
-    const onActivity = () => { lastActivity.current = Date.now(); };
+    const onActivity = () => { lastActivityRef.current = Date.now(); };
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
     events.forEach(e => window.addEventListener(e, onActivity, { passive: true }));
-    return () => { events.forEach(e => window.removeEventListener(e, onActivity)); };
+    return () => events.forEach(e => window.removeEventListener(e, onActivity));
   }, []);
 
-  // Realtime: listen for session invalidation
+  // ── 3. Client-side idle logout (independent of backend) ──
+  useIdleTimeout({
+    enabled: !!user,
+    idleMs: IDLE_TIMEOUT_MS,
+    onTimeout: () => { void forceLogout('idle_timeout'); },
+  });
+
+  // ── 4. Realtime: react to remote session invalidation ──
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel(`session-guard-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'app_sessions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newRow = payload.new as any;
-          const sessionId = getSessionId();
-          
-          // Only react if it's OUR session that was invalidated
-          if (newRow.id === sessionId && newRow.is_valid === false) {
-            forceLogout(newRow.invalidated_reason || 'invalidated');
-          }
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'app_sessions',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const newRow = payload.new as any;
+        const sessionId = getSessionId();
+        if (newRow.id === sessionId && newRow.is_valid === false) {
+          forceLogout(newRow.invalidated_reason || 'invalidated');
         }
-      )
+      })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, forceLogout]);
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, forceLogout]);
 }
