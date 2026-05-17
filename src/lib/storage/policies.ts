@@ -1,6 +1,6 @@
 import type { AttachmentModule } from './types';
 
-export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 const IMAGES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 const DOC_MIME = [
@@ -44,7 +44,7 @@ export function validateFile(
 ): { ok: true } | { ok: false; error: string } {
   if (file.size <= 0) return { ok: false, error: 'Arquivo vazio.' };
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return { ok: false, error: `Arquivo excede 50 MB (atual: ${(file.size / 1024 / 1024).toFixed(1)} MB).` };
+    return { ok: false, error: `Arquivo excede 5 MB (atual: ${(file.size / 1024 / 1024).toFixed(1)} MB).` };
   }
   const allowed = MODULE_ALLOWED_MIME[module];
   if (!allowed.includes(file.type)) {
