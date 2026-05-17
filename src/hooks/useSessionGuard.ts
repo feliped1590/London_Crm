@@ -6,12 +6,13 @@ import { toast } from 'sonner';
 import { isInitialValidationDone } from '@/components/AppInitializer';
 import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { useSessionIdleTimeout } from '@/hooks/useSessionIdleTimeout';
 import { publishAuthEvent } from '@/lib/auth/broadcast';
 
 const SESSION_KEY = 'app_session_id';
 const VALIDATE_INTERVAL = 60_000;            // 60s — backend session check
-const HEARTBEAT_INTERVAL = 300_000;          // 5min — touch app_session
-const IDLE_TIMEOUT_MS = 30 * 60_000;         // 30min — client-side idle logout
+const MIN_HEARTBEAT_INTERVAL = 60_000;       // never touch backend more than 1×/min
+const MAX_HEARTBEAT_INTERVAL = 300_000;      // …and at least once every 5 min
 
 export function getSessionId(): string | null {
   try { return localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY); }
@@ -38,6 +39,14 @@ export function clearSessionId() {
 export function useSessionGuard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { ms: idleTimeoutMs } = useSessionIdleTimeout();
+
+  // Heartbeat cadence derived from configured idle timeout: at least every
+  // 5 min, but never longer than idle/3 (so backend never expires before us).
+  const heartbeatInterval = Math.min(
+    MAX_HEARTBEAT_INTERVAL,
+    Math.max(MIN_HEARTBEAT_INTERVAL, Math.floor(idleTimeoutMs / 3)),
+  );
 
   // Keep callbacks in refs so we never need them in deps arrays.
   const signOutRef = useRef(signOut);
@@ -110,7 +119,7 @@ export function useSessionGuard() {
       const sid = getSessionId();
       if (!sid) return;
       // Only touch backend if the user actually moved in the last interval.
-      if (Date.now() - lastActivityRef.current > HEARTBEAT_INTERVAL) return;
+      if (Date.now() - lastActivityRef.current > heartbeatInterval) return;
       try {
         const { data } = await supabase.rpc('touch_app_session', { p_session_id: sid });
         if (!cancelled && data === false) {
@@ -126,14 +135,14 @@ export function useSessionGuard() {
       validate();
     }
     const validateTimer = setInterval(validate, VALIDATE_INTERVAL);
-    const heartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL);
+    const heartbeatTimer = setInterval(heartbeat, heartbeatInterval);
 
     return () => {
       cancelled = true;
       clearInterval(validateTimer);
       clearInterval(heartbeatTimer);
     };
-  }, [user?.id, forceLogout]);
+  }, [user?.id, forceLogout, heartbeatInterval]);
 
   // ── 2. Local activity tracker (feeds heartbeat decision) ──
   useEffect(() => {
@@ -146,7 +155,7 @@ export function useSessionGuard() {
   // ── 3. Client-side idle logout (independent of backend) ──
   useIdleTimeout({
     enabled: !!user,
-    idleMs: IDLE_TIMEOUT_MS,
+    idleMs: idleTimeoutMs,
     onTimeout: () => { void forceLogout('idle_timeout'); },
   });
 

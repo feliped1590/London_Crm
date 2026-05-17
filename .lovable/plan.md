@@ -1,50 +1,51 @@
-# Múltiplas Versões de Produto
 
-Hoje cada produto = 1 versão fixa. Vamos permitir que um mesmo item tenha N versões, cada uma com **suas próprias dimensões (L × C × E)**, mantendo o restante (nome, NCM, família, fiscal, fator KG, preço base) compartilhado.
+# Configuração "Timeout de Inatividade" — diagnóstico e correção
 
-## Modelo de dados
+## Serve? Sim, mas só **parcialmente**.
 
-Adicionar à tabela `products`:
-- `parent_product_id uuid` — referência ao produto-pai (NULL = é o próprio pai/v1)
-- `versao_numero int` — número sequencial da versão (1, 2, 3…), gerado por trigger
+### Onde JÁ funciona (backend)
+O valor salvo em `tenant_settings.session_idle_timeout_minutes` é lido pela função `get_session_idle_timeout_minutes()` e usada por:
+- `validate_app_session` — invalida `app_sessions` quando `expires_at < now()`.
+- `touch_app_session` — estende `expires_at = now() + timeout`.
+- Job de limpeza periódica.
 
-Regras:
-- O produto-pai (`parent_product_id IS NULL`) tem `versao_numero = 1` e guarda os atributos compartilhados (nome, NCM, família, classe, fiscal, fator KG, preço base, `erp_product_code`).
-- Versões filhas herdam logicamente os atributos do pai mas têm próprias: `width`, `length`, `thickness`, `sku` (auto), `erp_versao` (auto via trigger existente), `versao_numero`.
-- Constraint: `UNIQUE (parent_product_id, versao_numero)` quando filho; SKU continua único globalmente.
-- Trigger atribui `versao_numero = MAX(versao_numero)+1` do mesmo pai ao inserir filho.
-- Ao editar campos compartilhados no pai, propagar para filhos (ou bloquear edição nos filhos via UI).
+Ou seja: o **servidor** respeita os 90 min configurados. Quando expira, a próxima validação client-side (a cada 60 s) detecta `valid=false reason=idle_timeout` e desloga.
 
-## Backend
+### Onde NÃO funciona (cliente)
+No `useSessionGuard.ts` que acabei de entregar nas Fases 1-2 o idle timer client-side está **hardcoded em 30 min**:
 
-- `erp_product_code` é compartilhado entre pai e filhos (mesma `codigo` no ERP).
-- `process-product-sync`: ao sincronizar o pai, agrupar todas as versões (pai + filhos) e enviar `versoes[]` com 1 entrada por versão (`versao: versao_numero`, `detalhes: erp_versao`, `situacao: 'A'`). O mapper `product-mapper-v2.ts` já aceita array — basta alimentar dinamicamente.
-- Sequência ERP (`erp_sequences`) continua apenas para o pai; filhos não consomem código novo.
+```ts
+const IDLE_TIMEOUT_MS = 30 * 60_000; // 30min — client-side idle logout
+```
 
-## Frontend — Cadastro (`/products`)
+Resultado: independentemente de o admin configurar 90, 120 ou 1440 min, o cliente derruba a sessão em 30 min. **A configuração da tela está sendo silenciosamente ignorada pelo watchdog client-side.**
 
-- Em `ProductDialog`, adicionar aba/seção **"Versões"** listando todas as versões do item (incluindo a v1).
-- Botão **"Nova versão"** abre formulário compacto pedindo apenas L × C × E. Cria registro filho com `parent_product_id` = produto atual.
-- Cada linha mostra: nº versão, dimensões, SKU, `erp_versao`, status ERP, ações (editar dimensões / inativar).
-- Lista principal de produtos: opção de toggle "Agrupar versões" (mostra só o pai e expande) ou "Listar todas" (cada versão como linha — padrão para busca em pedidos).
+Também há um efeito colateral: o heartbeat só "toca" o backend a cada 5 min E só se houve atividade recente. Com timeout backend de 90 min isso é folgado. Mas se alguém configurar < 5 min, o backend pode expirar antes do primeiro touch.
 
-## Frontend — Pedidos & Propostas
+---
 
-- `ProductSelector` / busca: cada versão aparece como linha separada, ex.: `IMPRESSO BOBINA – CHARQUE 500GR – v2 (15×30×0,09 NY)`.
-- Snapshot do item de pedido já copia dimensões → nada muda no fluxo de pricing, IPI e auto-cálculo do saco.
+## Plano de correção
 
-## Fora de escopo
-- Preço/Fator KG por versão (continuam vindo do pai).
-- Estoque por versão.
-- SKU manual (continua auto-gerado conforme regra atual).
-- Importação retroativa de versões já existentes no ERP (pode ser feita em etapa seguinte de import).
+1. **Buscar o timeout configurado** uma vez, via React Query (`queryKey: ['session_idle_timeout']`, `staleTime: 5min`) — já existe esse hook em `ActiveSessionsManager`, vamos extrair para `src/hooks/useSessionIdleTimeout.ts` reutilizável.
+2. **Wire no `useSessionGuard`**:
+   - Substituir constante `IDLE_TIMEOUT_MS` pelo valor do hook (`* 60_000`).
+   - Fallback para 30 min se a query ainda não resolveu.
+   - Passar para `useIdleTimeout({ idleMs: configuredMs, ... })`.
+3. **Ajustar heartbeat dinâmico**: `HEARTBEAT_INTERVAL = max(60s, timeout/3)` para garantir que o `touch_app_session` rode antes do backend expirar, mesmo em configurações curtas (5–15 min).
+4. **Refetch ao alterar a configuração**: quando admin salva novo timeout, o `invalidateQueries(['session_idle_timeout'])` já existente vai disparar refetch — o `useIdleTimeout` reinicia com novo valor automaticamente (deps mudam).
+5. **Texto da UI**: ajustar copy para deixar claro que vale para todos os usuários do tenant (já está, mas confirmar).
 
-## Migração
+### Arquivos alterados
+- `src/hooks/useSessionIdleTimeout.ts` — **novo** (hook compartilhado).
+- `src/hooks/useSessionGuard.ts` — usa o hook; constante `IDLE_TIMEOUT_MS` removida; `HEARTBEAT_INTERVAL` derivado.
+- `src/components/settings/ActiveSessionsManager.tsx` — passa a consumir o mesmo hook (single source of truth).
 
-1. Migration: adicionar colunas + índice + trigger de numeração + constraint.
-2. Backfill: todos os produtos atuais ficam `parent_product_id = NULL`, `versao_numero = 1`.
-3. Ajustar trigger de `erp_versao` para considerar dimensões da própria versão (já considera).
-4. UI de Versões + ajuste do `ProductSelector`.
-5. Ajuste do `process-product-sync` para montar `versoes[]` dinâmico.
+### Validação
+- Salvar 5 min → ficar parado → confirmar logout local em ~5 min com toast.
+- Salvar 90 min → confirmar que cliente não desloga em 30 min.
+- Trocar valor com aba aberta → próximo tick respeita o novo valor (sem reload).
 
-Após sua aprovação, implemento na ordem acima.
+### Sem mudanças no banco
+A função RPC já existe e está correta. Apenas o client estava ignorando.
+
+Posso seguir e implementar?
