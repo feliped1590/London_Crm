@@ -39,6 +39,14 @@ export function clearSessionId() {
 export function useSessionGuard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { ms: idleTimeoutMs } = useSessionIdleTimeout();
+
+  // Heartbeat cadence derived from configured idle timeout: at least every
+  // 5 min, but never longer than idle/3 (so backend never expires before us).
+  const heartbeatInterval = Math.min(
+    MAX_HEARTBEAT_INTERVAL,
+    Math.max(MIN_HEARTBEAT_INTERVAL, Math.floor(idleTimeoutMs / 3)),
+  );
 
   // Keep callbacks in refs so we never need them in deps arrays.
   const signOutRef = useRef(signOut);
