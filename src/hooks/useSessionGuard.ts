@@ -6,12 +6,13 @@ import { toast } from 'sonner';
 import { isInitialValidationDone } from '@/components/AppInitializer';
 import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { useSessionIdleTimeout } from '@/hooks/useSessionIdleTimeout';
 import { publishAuthEvent } from '@/lib/auth/broadcast';
 
 const SESSION_KEY = 'app_session_id';
 const VALIDATE_INTERVAL = 60_000;            // 60s — backend session check
-const HEARTBEAT_INTERVAL = 300_000;          // 5min — touch app_session
-const IDLE_TIMEOUT_MS = 30 * 60_000;         // 30min — client-side idle logout
+const MIN_HEARTBEAT_INTERVAL = 60_000;       // never touch backend more than 1×/min
+const MAX_HEARTBEAT_INTERVAL = 300_000;      // …and at least once every 5 min
 
 export function getSessionId(): string | null {
   try { return localStorage.getItem(SESSION_KEY) ?? sessionStorage.getItem(SESSION_KEY); }
