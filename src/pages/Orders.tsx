@@ -269,10 +269,10 @@ export default function Orders() {
                <Table className="min-w-[900px]">
                  <TableHeader>
                    <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Logística</TableHead>
+                     <TableHead>Número</TableHead>
+                     <TableHead>Tipo</TableHead>
+                     <TableHead>Empresa</TableHead>
+                     <TableHead>Logística</TableHead>
                      <TableHead>Status</TableHead>
                      <TableHead>Pedido ERP</TableHead>
                      <TableHead>Sinc. ERP</TableHead>
@@ -302,28 +302,6 @@ export default function Orders() {
                              )}
                              {order.number}
                            </div>
-                         </TableCell>
-                         <TableCell>
-                           {order.company && (
-                             <div className="flex flex-col gap-1">
-                               <div className="flex items-center gap-2">
-                                 <Building2 className="h-4 w-4 text-muted-foreground" />
-                                 {order.company.name}
-                               </div>
-                               {(order as any).deal && (
-                                 <div className="flex items-center gap-1 text-xs text-muted-foreground pl-6">
-                                   <span className="truncate max-w-[180px]" title={(order as any).deal.name}>
-                                     Negócio: {(order as any).deal.name}
-                                   </span>
-                                   {(order as any).deal.pipeline_stage?.name && (
-                                     <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
-                                       {(order as any).deal.pipeline_stage.name}
-                                     </Badge>
-                                   )}
-                                 </div>
-                               )}
-                             </div>
-                           )}
                           </TableCell>
                           <TableCell>
                             {(() => {
@@ -331,6 +309,28 @@ export default function Orders() {
                               const cfg = orderTypeConfig[ot] || orderTypeConfig['Novo/Alteração'];
                               return <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>;
                             })()}
+                          </TableCell>
+                          <TableCell>
+                            {order.company && (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  {order.company.name}
+                                </div>
+                                {(order as any).deal && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground pl-6">
+                                    <span className="truncate max-w-[180px]" title={(order as any).deal.name}>
+                                      Negócio: {(order as any).deal.name}
+                                    </span>
+                                    {(order as any).deal.pipeline_stage?.name && (
+                                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4">
+                                        {(order as any).deal.pipeline_stage.name}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             {(carrierName || freightType) ? (
