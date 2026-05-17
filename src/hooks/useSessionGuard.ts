@@ -119,7 +119,7 @@ export function useSessionGuard() {
       const sid = getSessionId();
       if (!sid) return;
       // Only touch backend if the user actually moved in the last interval.
-      if (Date.now() - lastActivityRef.current > HEARTBEAT_INTERVAL) return;
+      if (Date.now() - lastActivityRef.current > heartbeatInterval) return;
       try {
         const { data } = await supabase.rpc('touch_app_session', { p_session_id: sid });
         if (!cancelled && data === false) {
@@ -135,14 +135,14 @@ export function useSessionGuard() {
       validate();
     }
     const validateTimer = setInterval(validate, VALIDATE_INTERVAL);
-    const heartbeatTimer = setInterval(heartbeat, HEARTBEAT_INTERVAL);
+    const heartbeatTimer = setInterval(heartbeat, heartbeatInterval);
 
     return () => {
       cancelled = true;
       clearInterval(validateTimer);
       clearInterval(heartbeatTimer);
     };
-  }, [user?.id, forceLogout]);
+  }, [user?.id, forceLogout, heartbeatInterval]);
 
   // ── 2. Local activity tracker (feeds heartbeat decision) ──
   useEffect(() => {
@@ -155,7 +155,7 @@ export function useSessionGuard() {
   // ── 3. Client-side idle logout (independent of backend) ──
   useIdleTimeout({
     enabled: !!user,
-    idleMs: IDLE_TIMEOUT_MS,
+    idleMs: idleTimeoutMs,
     onTimeout: () => { void forceLogout('idle_timeout'); },
   });
 
