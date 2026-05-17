@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { logOwnershipWarning, resolveUserForSalesRep } from '@/lib/ownership';
@@ -160,7 +161,7 @@ export function usePortfolioReallocation() {
   // Mutation para transferir empresas
   const transferMutation = useMutation({
     mutationFn: async (request: ReallocationTransferRequest) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       if (!user) throw new Error('Usuário não autenticado');
 
       const transferRecords: any[] = [];

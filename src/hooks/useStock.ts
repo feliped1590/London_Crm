@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -62,7 +63,7 @@ export interface MoveStockPayload {
 
 // ── Helper: get tenant_id ──────────────────────────────────────────────
 async function getActiveTenantId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
   if (!user) throw new Error('Usuário não autenticado');
 
   const { data: profile } = await supabase

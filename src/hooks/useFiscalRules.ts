@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import type { RegraTributacao, ContextoFiscal, ResultadoCalculoFiscal } from '@/types/fiscal-extended';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
@@ -51,7 +52,7 @@ export function useCreateRegraTributacao() {
   
   return useMutation({
     mutationFn: async (regra: RegraInsert) => {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       
       const insertData: RegraInsert = {
         ...regra,
