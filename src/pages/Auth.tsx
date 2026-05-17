@@ -293,6 +293,21 @@ export default function Auth() {
                   required
                 />
               </div>
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setRememberMeState(v === true)}
+                />
+                <div className="grid gap-0.5 leading-tight">
+                  <Label htmlFor="remember-me" className="cursor-pointer text-sm font-normal">
+                    Manter conectado neste computador
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Desmarcado, sua sessão será encerrada ao fechar o navegador.
+                  </p>
+                </div>
+              </div>
             </CardContent>
             <CardFooter>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
