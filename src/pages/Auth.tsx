@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Building2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ActiveSessionModal } from '@/components/auth/ActiveSessionModal';
 import { setSessionId, clearSessionId } from '@/hooks/useSessionGuard';
 import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
+import { setRememberMe, getRememberMe } from '@/lib/auth/storageAdapter';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
@@ -49,6 +51,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMeState] = useState<boolean>(() => getRememberMe());
 
   // Active session modal state
   const [showSessionModal, setShowSessionModal] = useState(false);
@@ -129,8 +132,12 @@ export default function Auth() {
       }
     }
 
+    // Persist "remember me" BEFORE signIn so the storage adapter
+    // mirrors the freshly-issued token to localStorage when requested.
+    setRememberMe(rememberMe);
+
     setIsSubmitting(true);
-    const { error } = await signIn(loginEmail, loginPassword);
+    const { error, user: currentUser } = await signIn(loginEmail, loginPassword);
 
     if (error) {
       setIsSubmitting(false);
@@ -142,15 +149,11 @@ export default function Auth() {
       return;
     }
 
-    // Auth succeeded — get current user
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) {
       setIsSubmitting(false);
       toast.error('Erro ao obter dados do usuário');
       return;
     }
-    // Janela de acesso é validada dentro de create_app_session/force_replace_session
-    // (single source of truth no banco — sem dupla checagem aqui)
 
     // Check for existing session
     const { data: checkData, error: checkError } = await supabase.rpc('check_existing_session', {
@@ -159,7 +162,6 @@ export default function Auth() {
 
     if (checkError) {
       console.error('Error checking session:', checkError);
-      // Proceed to create session anyway
       await createSessionAndNavigate(currentUser.id);
       setIsSubmitting(false);
       return;
@@ -168,13 +170,11 @@ export default function Auth() {
     const check = checkData as any;
 
     if (check?.has_active) {
-      // Show modal
       setPendingUserId(currentUser.id);
       setActiveSessionInfo(check.session);
       setShowSessionModal(true);
       setIsSubmitting(false);
     } else {
-      // No active session — create one
       await createSessionAndNavigate(currentUser.id);
       setIsSubmitting(false);
     }
@@ -292,6 +292,21 @@ export default function Auth() {
                   onChange={(e) => setLoginPassword(e.target.value)}
                   required
                 />
+              </div>
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="remember-me"
+                  checked={rememberMe}
+                  onCheckedChange={(v) => setRememberMeState(v === true)}
+                />
+                <div className="grid gap-0.5 leading-tight">
+                  <Label htmlFor="remember-me" className="cursor-pointer text-sm font-normal">
+                    Manter conectado neste computador
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Desmarcado, sua sessão será encerrada ao fechar o navegador.
+                  </p>
+                </div>
               </div>
             </CardContent>
             <CardFooter>
