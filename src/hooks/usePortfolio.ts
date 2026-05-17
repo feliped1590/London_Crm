@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { toast } from 'sonner';
 import { logOwnershipWarning, resolveUserForSalesRep } from '@/lib/ownership';
 
@@ -92,7 +93,7 @@ export function usePortfolio() {
   // Mutation para transferir itens
   const transferMutation = useMutation({
     mutationFn: async (request: TransferRequest) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       if (!user) throw new Error('Usuário não autenticado');
 
       // Resolver user_id do vendedor destino (para manter RLS)

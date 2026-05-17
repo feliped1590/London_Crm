@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import type { BeneficioFiscal, ClienteBeneficioFiscal } from '@/types/fiscal-extended';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
@@ -51,7 +52,7 @@ export function useCreateBeneficioFiscal() {
   
   return useMutation({
     mutationFn: async (beneficio: BeneficioInsert) => {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       
       const insertData: BeneficioInsert = {
         ...beneficio,
@@ -159,7 +160,7 @@ export function useVincularBeneficioCliente() {
   
   return useMutation({
     mutationFn: async (vinculo: ClienteBeneficioInsert) => {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       
       const insertData: ClienteBeneficioInsert = {
         ...vinculo,

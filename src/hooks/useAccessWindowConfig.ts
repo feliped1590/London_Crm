@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { toast } from 'sonner';
 
 export interface AccessSchedule {
@@ -261,7 +262,7 @@ export function useAccessWindowStatus() {
     queryKey: ['access_window_status'],
     refetchInterval: 30_000,
     queryFn: async () => {
-      const { data: userResp } = await supabase.auth.getUser();
+      const { data: userResp } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       const uid = userResp.user?.id;
       if (!uid) return null;
       const { data, error } = await supabase.rpc('is_within_access_window', { p_user_id: uid });

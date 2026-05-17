@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 
 interface TaskAlertData {
   overdue_count: number;
@@ -76,7 +77,7 @@ export function useLoginTaskAlert() {
 
         if (!config.enable_task_login_alert || cancelled) return;
 
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
         if (!user || cancelled) return;
 
         const { data, error } = await supabase.rpc('check_pending_tasks', {

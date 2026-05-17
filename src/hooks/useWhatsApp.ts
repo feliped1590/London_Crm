@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -195,7 +196,7 @@ export function useAddInstance() {
 
   return useMutation({
     mutationFn: async (data: { name: string; instance_id: string; instance_token: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
       if (!user) throw new Error('Not authenticated');
 
       const { data: instance, error } = await supabase
