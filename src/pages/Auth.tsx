@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { Building2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ActiveSessionModal } from '@/components/auth/ActiveSessionModal';
 import { setSessionId, clearSessionId } from '@/hooks/useSessionGuard';
 import { fetchAccessBlockedInfo } from '@/lib/accessWindowInfo';
+import { setRememberMe, getRememberMe } from '@/lib/auth/storageAdapter';
 
 const emailSchema = z.string().email('Email inválido');
 const passwordSchema = z.string().min(6, 'Senha deve ter pelo menos 6 caracteres');
