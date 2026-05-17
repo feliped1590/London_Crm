@@ -1,0 +1,2 @@
+ALTER TABLE public.file_attachments DROP CONSTRAINT IF EXISTS file_attachments_size_chk;
+ALTER TABLE public.file_attachments ADD CONSTRAINT file_attachments_size_chk CHECK (size_bytes > 0 AND size_bytes <= 5242880);
