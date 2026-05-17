@@ -51,6 +51,7 @@ export default function Auth() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [rememberMe, setRememberMeState] = useState<boolean>(() => getRememberMe());
 
   // Active session modal state
   const [showSessionModal, setShowSessionModal] = useState(false);
