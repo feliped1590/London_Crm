@@ -11,7 +11,6 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useSessionIdleTimeout, DEFAULT_IDLE_TIMEOUT_MINUTES } from '@/hooks/useSessionIdleTimeout';
 
 export function ActiveSessionsManager() {
   const { user } = useAuth();
@@ -28,13 +27,20 @@ export function ActiveSessionsManager() {
     enabled: !!user?.id,
   });
 
-  // Get idle timeout config (shared hook = single source of truth)
-  const { minutes: idleTimeout, isLoading: timeoutLoading } = useSessionIdleTimeout();
+  // Get idle timeout config
+  const { data: idleTimeout, isLoading: timeoutLoading } = useQuery({
+    queryKey: ['session_idle_timeout'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_session_idle_timeout_minutes');
+      if (error) throw error;
+      return (data as number) || 60;
+    },
+  });
 
   const [timeoutValue, setTimeoutValue] = useState<string>('');
 
   // Sync timeout value when data loads
-  const displayTimeout = timeoutValue || String(idleTimeout || DEFAULT_IDLE_TIMEOUT_MINUTES);
+  const displayTimeout = timeoutValue || String(idleTimeout || 60);
 
   const { data: sessions = [], isLoading, refetch } = useQuery({
     queryKey: ['active_sessions_admin'],

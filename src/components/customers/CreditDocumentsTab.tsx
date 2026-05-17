@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser } from '@/lib/auth/currentUser';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,7 +85,7 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
 
   const uploadMutation = useMutation({
     mutationFn: async ({ file, desc }: { file: File; desc: string }) => {
-      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
 
       // Validação centralizada (50MB + whitelist do módulo 'documentos')
@@ -148,7 +147,7 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (doc: CreditDocument) => {
-      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('credit_documents').delete().eq('id', doc.id);
       if (error) throw error;
       await storage.remove('credit-documents', [doc.file_path]).catch(() => undefined);
@@ -191,7 +190,7 @@ export function CreditDocumentsTab({ companyId }: CreditDocumentsTabProps) {
     }
 
     // Audit log - download (best-effort)
-    const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
+    const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       supabase.from('audit_logs').insert({
         user_id: user.id,

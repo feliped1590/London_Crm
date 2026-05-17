@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser } from '@/lib/auth/currentUser';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -87,7 +86,7 @@ export function TransferApprovalsManager() {
         .from('customer_transfer_requests' as any)
         .update({
           status: 'rejected',
-          reviewed_by: (await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } })).data.user?.id,
+          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
           review_note: note || null,
           reviewed_at: new Date().toISOString(),
         })

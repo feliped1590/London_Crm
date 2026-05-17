@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser } from '@/lib/auth/currentUser';
 import { toast } from 'sonner';
 
 export interface CreditAnalysis {
@@ -102,7 +101,7 @@ export function useCanUpdateCreditScore() {
   return useQuery({
     queryKey: ['can-update-credit-score'],
     queryFn: async () => {
-      const { data: { user } } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
       
       const { data, error } = await supabase.rpc('can_update_credit_score', {

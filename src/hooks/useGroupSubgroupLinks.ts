@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { getCurrentUser } from '@/lib/auth/currentUser';
 
 export interface GroupSubgroupLink {
   id: string;
@@ -41,7 +40,7 @@ export function useGroupSubgroupLinks() {
   }, [links]);
 
   async function resolveTenantId(): Promise<string> {
-    const { data: userData } = await ({ data: { user: await getCurrentUser() } } as { data: { user: Awaited<ReturnType<typeof getCurrentUser>> } });
+    const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
     if (!uid) throw new Error('Não autenticado');
     const { data, error } = await supabase
