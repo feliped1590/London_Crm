@@ -44,6 +44,7 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
+import { ConfirmStructuralChangeDialog, type StructuralFieldChange } from '@/components/products/ConfirmStructuralChangeDialog';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
 import { ProductVersionsTab } from '@/components/products/ProductVersionsTab';
 import { AttachmentManager } from '@/components/attachments/AttachmentManager';
@@ -768,6 +769,13 @@ export default function Products() {
   const [similarProducts, setSimilarProducts] = useState<{id: string; sku: string; name: string; nome_impresso: string | null}[]>([]);
   const [showSimilarAlert, setShowSimilarAlert] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<typeof formData | null>(null);
+  const [showStructuralChange, setShowStructuralChange] = useState(false);
+  const [structuralChangePayload, setStructuralChangePayload] = useState<{
+    submitData: typeof formData;
+    changes: StructuralFieldChange[];
+    currentSku: string;
+    currentName: string;
+  } | null>(null);
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
