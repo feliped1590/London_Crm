@@ -1002,6 +1002,13 @@ export default function Products() {
     const erpCodeTrim = (submitData.erp_product_code ?? '').trim();
     submitData.erp_product_code = (erpCodeTrim || null) as any;
 
+    // Deriva tipo_item a partir do Tipo selecionado (product_types.value)
+    // Mantém consistência com o ERP (ex.: PRODUTO ACABADO = '1').
+    const tipoValue = tipos.items.find((t) => t.id === submitData.tipo_id)?.value;
+    if (tipoValue) {
+      submitData.tipo_item = tipoValue;
+    }
+
     // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
     // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
     // não um código separado.
