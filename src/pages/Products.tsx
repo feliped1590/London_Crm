@@ -2156,6 +2156,28 @@ export default function Products() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmação de mudança estrutural (SKU será regenerado) */}
+      {structuralChangePayload && (
+        <ConfirmStructuralChangeDialog
+          open={showStructuralChange}
+          onOpenChange={(o) => {
+            setShowStructuralChange(o);
+            if (!o) setStructuralChangePayload(null);
+          }}
+          currentSku={structuralChangePayload.currentSku}
+          newSku={structuralChangePayload.submitData.sku}
+          currentName={structuralChangePayload.currentName}
+          newName={structuralChangePayload.submitData.name}
+          changes={structuralChangePayload.changes}
+          onConfirm={() => {
+            const data = structuralChangePayload.submitData;
+            setStructuralChangePayload(null);
+            persistSave(data);
+          }}
+          onDuplicate={handleDuplicateFromStructuralChange}
+        />
+      )}
     </div>
   );
 }
