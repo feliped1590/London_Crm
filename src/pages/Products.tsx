@@ -228,7 +228,7 @@ export default function Products() {
     ncm_validated_at: null as string | null,
     // Campos ERP Projedata
     erp_product_code: '',
-    tipo_item: 'PA',
+    tipo_item: '',
     tipo_ficha: undefined as number | undefined,
     erp_grupo: '',
     erp_subgrupo: '',
@@ -738,7 +738,7 @@ export default function Products() {
       tipo_produto_fiscal: undefined,
       ncm_validated_at: null,
       erp_product_code: '',
-      tipo_item: 'PA',
+      tipo_item: '',
       tipo_ficha: undefined,
       erp_grupo: '',
       erp_subgrupo: '',
@@ -968,7 +968,7 @@ export default function Products() {
     if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
     if (!formData.family_id) erpRequiredErrors.push('Família');
     if (!formData.class_id) erpRequiredErrors.push('Classe');
-    if (!formData.tipo_item?.trim()) erpRequiredErrors.push('Tipo de item');
+    if (!formData.tipo_id) erpRequiredErrors.push('Tipo de item');
     if (!formData.tipo_ficha) erpRequiredErrors.push('Tipo de ficha');
     if (!formData.unit_measure?.trim()) erpRequiredErrors.push('Unidade de medida');
     const ncmDigits = (formData.ncm_code ?? '').replace(/\D/g, '');
@@ -1001,6 +1001,13 @@ export default function Products() {
     // Normaliza erp_product_code: vazio → null (evita conflito de unicidade entre vazios)
     const erpCodeTrim = (submitData.erp_product_code ?? '').trim();
     submitData.erp_product_code = (erpCodeTrim || null) as any;
+
+    // Deriva tipo_item a partir do Tipo selecionado (product_types.value)
+    // Mantém consistência com o ERP (ex.: PRODUTO ACABADO = '1').
+    const tipoValue = tipos.items.find((t) => t.id === submitData.tipo_id)?.value;
+    if (tipoValue) {
+      submitData.tipo_item = tipoValue;
+    }
 
     // Deriva erp_grupo / erp_subgrupo a partir da DESCRIÇÃO (label) do Grupo/Subgrupo
     // selecionado pelo usuário no CRM. O ERP espera receber a descrição cadastrada,
