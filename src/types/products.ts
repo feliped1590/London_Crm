@@ -84,9 +84,9 @@ export function calcularFatorMilheiro(
   comprimento: number, // em mm
   espessura: number // em micras
 ): number {
-  // Fórmula: Fator KG × Largura(mm) × Comprimento(mm) × Espessura(micras) / 1.000.000
-  // A divisão por 1.000.000 converte para valor adequado
-  return fatorKg * largura * comprimento * espessura / 1000000;
+  // Fórmula: Fator KG × Largura(mm) × Comprimento(mm) × Espessura(micras) / 1.000
+  // A divisão por 1.000 converte para o valor do milheiro
+  return fatorKg * largura * comprimento * espessura / 1000;
 }
 
 export interface Proposal {

@@ -1,52 +1,29 @@
-## Causa raiz
+## Correção da fórmula do Fator Milheiro
 
-O pedido **PED-2026-0074** sincronizou corretamente no ERP (retorno `PEDIDO#22045#20260074`, código ERP = `22045`), mas a coluna `erp_order_code`/`erp_order_id` ficou vazia.
+### Problema
+A função `calcularFatorMilheiro` em `src/types/products.ts` divide por **1.000.000**, retornando `R$ 0,108` para o exemplo (50 × 120 × 150 × 0,120). O valor correto é **R$ 108,00**, ou seja, o divisor deve ser **1.000**.
 
-Log da edge function `process-order-sync` mostra exatamente:
-
-```
-[process-order-sync] Atualizando orders ... com:
-{"erp_sync_status":"success","erp_order_id":22045,"erp_order_code":"22045",...}
-
-ERROR ERRO ao atualizar orders: Pedido bloqueado: apenas o campo status
-pode ser alterado. Desbloqueie primeiro para editar outros campos.
-(code 23514)
+```text
+Atual:    fator_kg × largura × comprimento × espessura / 1.000.000
+Correto:  fator_kg × largura × comprimento × espessura / 1.000
 ```
 
-O trigger `enforce_order_lock` na tabela `orders` rejeita qualquer UPDATE em pedido com `is_locked = true` que toque em qualquer coluna fora da whitelist (`status`, `is_locked`, `locked_at`, `locked_by`, `updated_at`).
+### Escopo da mudança
+Alteração pontual em **1 linha**, com efeito em cascata em todos os pontos que já consomem a função (cálculo de preço unitário em pedidos/propostas e exibição/edição do `fator_milheiro` no cadastro de produtos).
 
-A função `process-order-sync` atualiza a fila ANTES do `orders` (linhas 360-367 da edge function), por isso `order_sync_queue.status = 'completed'` e a UI mostra "Sincronizado", mas o `erp_order_code` no pedido nunca é gravado. Esse mesmo bug afeta:
-- `PED-2026-0074` (atual, locked)
-- Qualquer pedido locked que for sincronizado depois (todos pedidos aprovados ficam locked).
-- Os pedidos `0072` e `0070` funcionaram porque foram sincronizados ANTES do lock.
+### Arquivos afetados
+- `src/types/products.ts` (linha 89) — trocar `/ 1000000` por `/ 1000` e atualizar comentário da fórmula (linhas 87-88).
 
-## Correção
+### Pontos que passam a calcular corretamente (sem alterações adicionais)
+- `src/utils/pricing/packagingPricing.ts` — preço de produtos vendidos por MIL quando não há tabela de preço aplicável.
+- `src/pages/Products.tsx` — campo `fator_milheiro` no formulário de produto (cadastro, edição inline e import).
 
-Ampliar a whitelist do trigger `enforce_order_lock` para incluir os campos técnicos de sync ERP, que são gravados exclusivamente pelo backend (service role) e não pelo usuário:
+### Validação pós-correção
+1. Conferir no preview o produto do exemplo: largura 120, comprimento 150, espessura 0,120, fator KG 50 → deve exibir **108,00**.
+2. Adicionar o produto a um pedido sem tabela de preço vinculada → `unit_price` resolvido deve ser **108,00** (priceSource = `FACTOR_KG`).
+3. Rodar query rápida em produtos com `unit_measure='MIL'` e `fator_milheiro` salvo para checar se os valores históricos no banco estão coerentes com a fórmula nova (se estiverem com base na fórmula antiga, sinalizar para recálculo em massa).
 
-- `erp_sync_status`
-- `erp_order_id`
-- `erp_order_code`
-- `erp_synced_at`
-- `erp_last_sync_at`
-- `erp_last_update_date`
-- `pedido_terceiro` (gravado durante o enfileiramento)
-
-Esses campos são read-only do ponto de vista do usuário (vêm do ERP), portanto liberá-los no trigger não enfraquece o lock comercial.
-
-## Passos
-
-1. Migração SQL substituindo `enforce_order_lock` com a whitelist ampliada (mesma lógica, apenas mais campos no `to_jsonb() - ...`).
-2. Backfill do pedido **PED-2026-0074**: gravar manualmente `erp_order_code='22045'`, `erp_order_id=22045`, `erp_sync_status='success'`, `erp_synced_at`/`erp_last_sync_at` com timestamp do último log (`2026-05-18 11:14:46`).
-3. (Opcional, fase 2) Adicionar fallback na edge function: se o UPDATE falhar com `23514`, fazer log estruturado em `erp_sync_logs` com severidade `warning` ao invés de só `console.error`, para alarmar via telemetria.
-
-## Validação
-
-- Rodar `process-order-sync` novamente em um pedido locked de teste e confirmar que `erp_order_code` é preenchido.
-- Conferir UI da listagem mostrando o número do pedido ERP ao lado do número do pedido CRM.
-- Verificar que o trigger continua bloqueando mudanças em campos sensíveis (ex.: `total`, `company_id`) em pedido locked.
-
-## Fora de escopo
-
-- Mudar a ordem de updates na edge function (queue → orders) — desnecessário após corrigir o trigger.
-- Refatorar o sistema de lock — funciona corretamente, só precisa abrir exceção para campos do ERP.
+### Fora de escopo
+- Recálculo retroativo de `fator_milheiro` salvo no banco — só será proposto após a validação visual confirmar a fórmula e o usuário decidir se quer backfill.
+- Recálculo de preços de pedidos/propostas já emitidos (itens travados via snapshot não devem mudar).
+- Alteração da lógica de pedidos travados ou de tabelas de preço.
