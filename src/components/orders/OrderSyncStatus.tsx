@@ -1,12 +1,32 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+
+function useOrderSyncRealtime(orderId: string) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!orderId) return;
+    const channel = supabase
+      .channel(`order-sync-ui-${orderId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status', orderId] });
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', orderId] });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_sync_queue', filter: `order_id=eq.${orderId}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status', orderId] });
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', orderId] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [orderId, queryClient]);
+}
 
 interface OrderSyncStatusProps {
   orderId: string;
@@ -64,6 +84,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
+  useOrderSyncRealtime(orderId);
   const { data: queueEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
     queryFn: async () => {
