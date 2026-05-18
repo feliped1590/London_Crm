@@ -738,7 +738,7 @@ export default function Products() {
       tipo_produto_fiscal: undefined,
       ncm_validated_at: null,
       erp_product_code: '',
-      tipo_item: 'PA',
+      tipo_item: '',
       tipo_ficha: undefined,
       erp_grupo: '',
       erp_subgrupo: '',
