@@ -557,8 +557,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
 
-      // Auto re-sync if order was previously synced to ERP
-      if (order && (order as any).erp_order_id) {
+      // Auto re-sync em TODA atualização (igual produtos)
+      if (order) {
         try {
           const { data: existing } = await supabase
             .from('order_sync_queue')
@@ -568,11 +568,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
           if (existing) {
             await supabase.from('order_sync_queue')
-              .update({ status: 'pending' as any, attempt_count: 0, error_message: null, next_retry_at: null })
+              .update({ status: 'pending' as any, attempt_count: 0, error_message: null, next_retry_at: null, validation_errors: null, validation_fields: null })
               .eq('id', existing.id);
+          } else {
+            await (supabase as any).from('order_sync_queue').insert({
+              order_id: order.id,
+              status: 'pending',
+              attempt_count: 0,
+              error_message: null,
+              next_retry_at: null,
+            });
           }
 
           queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+          queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
 
           // Fire-and-forget
           supabase.functions.invoke('process-order-sync', {
@@ -585,7 +594,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOriginalSnapshot(buildCurrentSnapshot());
       setOriginalItems([...items]);
 
-      if (!opts.silent) toast.success('Pedido atualizado com sucesso!');
+      if (!opts.silent) toast.success('Pedido salvo — enviando ao ERP em segundo plano');
       if (!opts.keepOpen) {
         onOpenChange(false);
         onSuccess?.();
