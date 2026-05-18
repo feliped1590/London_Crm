@@ -968,7 +968,7 @@ export default function Products() {
     if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
     if (!formData.family_id) erpRequiredErrors.push('Família');
     if (!formData.class_id) erpRequiredErrors.push('Classe');
-    if (!formData.tipo_item?.trim()) erpRequiredErrors.push('Tipo de item');
+    if (!formData.tipo_id) erpRequiredErrors.push('Tipo de item');
     if (!formData.tipo_ficha) erpRequiredErrors.push('Tipo de ficha');
     if (!formData.unit_measure?.trim()) erpRequiredErrors.push('Unidade de medida');
     const ncmDigits = (formData.ncm_code ?? '').replace(/\D/g, '');
