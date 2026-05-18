@@ -1347,15 +1347,23 @@ export default function Products() {
                 </TabsList>
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
-                  {isEditing && (
+                  {structuralLocked ? (
                     <Alert>
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        Este produto já foi criado e sua estrutura não pode ser alterada.
+                        Este produto já foi sincronizado com o ERP e sua estrutura não pode ser alterada.
                         Para mudanças estruturais, utilize a opção <strong>"Duplicar Produto"</strong>.
                       </AlertDescription>
                     </Alert>
-                  )}
+                  ) : isEditing ? (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Alterações em campos estruturais (tipo, classificação ou dimensões) irão{' '}
+                        <strong>regenerar o SKU</strong> do produto. Uma confirmação será solicitada ao salvar.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                   <div className="grid grid-cols-2 gap-4">
                     {/* NCM */}
                     <div className="col-span-2">
