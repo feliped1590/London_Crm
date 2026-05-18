@@ -1454,7 +1454,7 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         onValueChange={(v) => {
                           const newTipoId = v === 'none' ? undefined : v;
                           const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
@@ -1483,7 +1483,7 @@ export default function Products() {
                         id="sku"
                         value={formData.sku}
                         readOnly
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         className="bg-muted/50 font-mono cursor-not-allowed"
                         placeholder="Gerado automaticamente"
                       />
@@ -1494,7 +1494,7 @@ export default function Products() {
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         onValueChange={(v) => {
                           const updated = { ...formData, family_id: v === 'none' ? undefined : v };
                           updated.sku = recalcularSku(updated);
@@ -1559,7 +1559,7 @@ export default function Products() {
                           <Label htmlFor="grupo">Grupo</Label>
                           <Select
                             value={formData.grupo_id || 'none'}
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
                               const autoNcm = !isEditing ? getAutoNcmByGroup(newGrupoId) : null;
@@ -1605,7 +1605,7 @@ export default function Products() {
                               <>
                                 <Select
                                   value={formData.subgrupo_id || 'none'}
-                                  disabled={isEditing}
+                                  disabled={structuralLocked}
                                   onValueChange={(v) => {
                                     const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
                                     updated.sku = recalcularSku(updated);
@@ -1637,7 +1637,7 @@ export default function Products() {
                           <SearchableSelect
                             options={classes.items.map((c) => ({ value: c.id, label: c.label }))}
                             value={formData.class_id || null}
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             placeholder="Selecione"
                             searchPlaceholder="Buscar classe..."
                             emptyMessage="Nenhuma classe encontrada."
@@ -1682,7 +1682,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             value={formData.width || ''}
                             onChange={(e) => {
                               const newWidth = parseFloat(e.target.value) || 0;
@@ -1707,7 +1707,7 @@ export default function Products() {
                               type="number"
                               step="0.01"
                               min="0"
-                              disabled={isEditing}
+                              disabled={structuralLocked}
                               value={formData.length || ''}
                               onChange={(e) => {
                                 const newLength = parseFloat(e.target.value) || 0;
@@ -1732,7 +1732,7 @@ export default function Products() {
                             type="number"
                             step="0.001"
                             min="0"
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             value={formData.thickness || ''}
                             onChange={(e) => {
                               const newThickness = parseFloat(e.target.value) || 0;
