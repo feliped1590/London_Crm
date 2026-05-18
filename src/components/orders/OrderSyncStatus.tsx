@@ -84,6 +84,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
+  useOrderSyncRealtime(orderId);
   const { data: queueEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
     queryFn: async () => {
