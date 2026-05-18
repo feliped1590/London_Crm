@@ -228,7 +228,7 @@ export default function Products() {
     ncm_validated_at: null as string | null,
     // Campos ERP Projedata
     erp_product_code: '',
-    tipo_item: 'PA',
+    tipo_item: '',
     tipo_ficha: undefined as number | undefined,
     erp_grupo: '',
     erp_subgrupo: '',
