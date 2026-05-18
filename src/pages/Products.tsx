@@ -340,8 +340,8 @@ export default function Products() {
       return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
     }
 
-    if (errorText.includes('campos estruturais')) {
-      return 'Campos estruturais não podem ser alterados após criação. Utilize a opção de duplicar produto.';
+    if (errorText.includes('sincronizado com o ERP') || errorText.includes('campos estruturais')) {
+      return 'Produto já sincronizado com o ERP — campos estruturais não podem ser alterados. Utilize "Duplicar Produto".';
     }
 
     return null;
@@ -351,6 +351,8 @@ export default function Products() {
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
   const isEditing = !!editingProduct;
+  const hasErpCode = !!(editingProduct as any)?.erp_product_code;
+  const structuralLocked = isEditing && hasErpCode;
 
   useEffect(() => {
     if (defaultsApplied || editingProduct || tipos.items.length === 0 || unitMeasures.items.length === 0) return;
