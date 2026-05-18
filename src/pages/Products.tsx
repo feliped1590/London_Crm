@@ -44,6 +44,7 @@ import { useProductLookups } from '@/hooks/useProductLookups';
 import { useGroupSubgroupLinks } from '@/hooks/useGroupSubgroupLinks';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import ProductLookupManager from '@/components/products/ProductLookupManager';
+import { ConfirmStructuralChangeDialog, type StructuralFieldChange } from '@/components/products/ConfirmStructuralChangeDialog';
 import { ProductCompaniesTab } from '@/components/products/ProductCompaniesTab';
 import { ProductVersionsTab } from '@/components/products/ProductVersionsTab';
 import { AttachmentManager } from '@/components/attachments/AttachmentManager';
@@ -339,8 +340,8 @@ export default function Products() {
       return 'Já existe um produto com dados únicos já cadastrados. Verifique o código e a estrutura técnica.';
     }
 
-    if (errorText.includes('campos estruturais')) {
-      return 'Campos estruturais não podem ser alterados após criação. Utilize a opção de duplicar produto.';
+    if (errorText.includes('sincronizado com o ERP') || errorText.includes('campos estruturais')) {
+      return 'Produto já sincronizado com o ERP — campos estruturais não podem ser alterados. Utilize "Duplicar Produto".';
     }
 
     return null;
@@ -350,6 +351,8 @@ export default function Products() {
   const isAutoVersion = hasAutoDimensions(currentDimensionProfile);
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
   const isEditing = !!editingProduct;
+  const hasErpCode = !!(editingProduct as any)?.erp_product_code;
+  const structuralLocked = isEditing && hasErpCode;
 
   useEffect(() => {
     if (defaultsApplied || editingProduct || tipos.items.length === 0 || unitMeasures.items.length === 0) return;
@@ -768,6 +771,13 @@ export default function Products() {
   const [similarProducts, setSimilarProducts] = useState<{id: string; sku: string; name: string; nome_impresso: string | null}[]>([]);
   const [showSimilarAlert, setShowSimilarAlert] = useState(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<typeof formData | null>(null);
+  const [showStructuralChange, setShowStructuralChange] = useState(false);
+  const [structuralChangePayload, setStructuralChangePayload] = useState<{
+    submitData: typeof formData;
+    changes: StructuralFieldChange[];
+    currentSku: string;
+    currentName: string;
+  } | null>(null);
 
   const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
 
@@ -879,12 +889,61 @@ export default function Products() {
     return (rows || []) as {id: string; sku: string; name: string; nome_impresso: string | null}[];
   };
 
-  const executeSave = (submitData: typeof formData) => {
+  const persistSave = (submitData: typeof formData) => {
     if (editingProduct) {
       updateMutation.mutate({ id: editingProduct.id, ...submitData });
     } else {
       createMutation.mutate(submitData);
     }
+  };
+
+  const computeStructuralChanges = (submitData: typeof formData): StructuralFieldChange[] => {
+    if (!editingProduct) return [];
+    const orig = editingProduct as any;
+    const lookupLabel = (items: any[], id?: string | null) =>
+      items.find((i) => i.id === id)?.label || '';
+    const diffs: StructuralFieldChange[] = [];
+    const push = (label: string, from: any, to: any) => {
+      const f = from == null || from === '' ? '' : String(from);
+      const t = to == null || to === '' ? '' : String(to);
+      if (f !== t) diffs.push({ label, from: f, to: t });
+    };
+    push('Tipo', lookupLabel(tipos.items, orig.tipo_id), lookupLabel(tipos.items, submitData.tipo_id));
+    push('Família', lookupLabel(familias.items, orig.family_id), lookupLabel(familias.items, submitData.family_id));
+    push('Grupo', lookupLabel(grupos.items, orig.grupo_id), lookupLabel(grupos.items, submitData.grupo_id));
+    push('Subgrupo', lookupLabel(subgrupos.items, orig.subgrupo_id), lookupLabel(subgrupos.items, submitData.subgrupo_id));
+    push('Classe', lookupLabel(classes.items, orig.class_id), lookupLabel(classes.items, submitData.class_id));
+    push('Largura', orig.width, submitData.width);
+    push('Comprimento', orig.length, submitData.length);
+    push('Espessura', orig.thickness, submitData.thickness);
+    return diffs;
+  };
+
+  const executeSave = (submitData: typeof formData) => {
+    // Edição de produto sem ERP: se o SKU mudou, pedir confirmação.
+    if (editingProduct && !hasErpCode && submitData.sku !== editingProduct.sku) {
+      const changes = computeStructuralChanges(submitData);
+      setStructuralChangePayload({
+        submitData,
+        changes,
+        currentSku: editingProduct.sku,
+        currentName: editingProduct.name,
+      });
+      setShowStructuralChange(true);
+      return;
+    }
+    persistSave(submitData);
+  };
+
+  const handleDuplicateFromStructuralChange = () => {
+    if (!structuralChangePayload) return;
+    const data = structuralChangePayload.submitData;
+    // Reaproveita o fluxo de duplicação: zera editingProduct, limpa SKU,
+    // mantém os novos valores já editados pelo usuário.
+    setEditingProduct(null);
+    setFormData({ ...data, sku: '' });
+    setStructuralChangePayload(null);
+    toast.info('Modo duplicação ativado — revise os campos e salve para criar um novo produto.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1288,15 +1347,23 @@ export default function Products() {
                 </TabsList>
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
-                  {isEditing && (
+                  {structuralLocked ? (
                     <Alert>
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
-                        Este produto já foi criado e sua estrutura não pode ser alterada.
+                        Este produto já foi sincronizado com o ERP e sua estrutura não pode ser alterada.
                         Para mudanças estruturais, utilize a opção <strong>"Duplicar Produto"</strong>.
                       </AlertDescription>
                     </Alert>
-                  )}
+                  ) : isEditing ? (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Alterações em campos estruturais (tipo, classificação ou dimensões) irão{' '}
+                        <strong>regenerar o SKU</strong> do produto. Uma confirmação será solicitada ao salvar.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                   <div className="grid grid-cols-2 gap-4">
                     {/* NCM */}
                     <div className="col-span-2">
@@ -1387,7 +1454,7 @@ export default function Products() {
                       <Label htmlFor="tipo">Tipo *</Label>
                       <Select
                         value={formData.tipo_id || 'none'}
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         onValueChange={(v) => {
                           const newTipoId = v === 'none' ? undefined : v;
                           const shouldAuto = checkAutoDescriptionByTipo(newTipoId);
@@ -1416,7 +1483,7 @@ export default function Products() {
                         id="sku"
                         value={formData.sku}
                         readOnly
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         className="bg-muted/50 font-mono cursor-not-allowed"
                         placeholder="Gerado automaticamente"
                       />
@@ -1427,7 +1494,7 @@ export default function Products() {
                       <Label htmlFor="familia">Família</Label>
                       <Select
                         value={formData.family_id || 'none'}
-                        disabled={isEditing}
+                        disabled={structuralLocked}
                         onValueChange={(v) => {
                           const updated = { ...formData, family_id: v === 'none' ? undefined : v };
                           updated.sku = recalcularSku(updated);
@@ -1492,7 +1559,7 @@ export default function Products() {
                           <Label htmlFor="grupo">Grupo</Label>
                           <Select
                             value={formData.grupo_id || 'none'}
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             onValueChange={(v) => {
                               const newGrupoId = v === 'none' ? undefined : v;
                               const autoNcm = !isEditing ? getAutoNcmByGroup(newGrupoId) : null;
@@ -1538,7 +1605,7 @@ export default function Products() {
                               <>
                                 <Select
                                   value={formData.subgrupo_id || 'none'}
-                                  disabled={isEditing}
+                                  disabled={structuralLocked}
                                   onValueChange={(v) => {
                                     const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
                                     updated.sku = recalcularSku(updated);
@@ -1570,7 +1637,7 @@ export default function Products() {
                           <SearchableSelect
                             options={classes.items.map((c) => ({ value: c.id, label: c.label }))}
                             value={formData.class_id || null}
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             placeholder="Selecione"
                             searchPlaceholder="Buscar classe..."
                             emptyMessage="Nenhuma classe encontrada."
@@ -1615,7 +1682,7 @@ export default function Products() {
                             type="number"
                             step="0.01"
                             min="0"
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             value={formData.width || ''}
                             onChange={(e) => {
                               const newWidth = parseFloat(e.target.value) || 0;
@@ -1640,7 +1707,7 @@ export default function Products() {
                               type="number"
                               step="0.01"
                               min="0"
-                              disabled={isEditing}
+                              disabled={structuralLocked}
                               value={formData.length || ''}
                               onChange={(e) => {
                                 const newLength = parseFloat(e.target.value) || 0;
@@ -1665,7 +1732,7 @@ export default function Products() {
                             type="number"
                             step="0.001"
                             min="0"
-                            disabled={isEditing}
+                            disabled={structuralLocked}
                             value={formData.thickness || ''}
                             onChange={(e) => {
                               const newThickness = parseFloat(e.target.value) || 0;
@@ -2089,6 +2156,28 @@ export default function Products() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Confirmação de mudança estrutural (SKU será regenerado) */}
+      {structuralChangePayload && (
+        <ConfirmStructuralChangeDialog
+          open={showStructuralChange}
+          onOpenChange={(o) => {
+            setShowStructuralChange(o);
+            if (!o) setStructuralChangePayload(null);
+          }}
+          currentSku={structuralChangePayload.currentSku}
+          newSku={structuralChangePayload.submitData.sku}
+          currentName={structuralChangePayload.currentName}
+          newName={structuralChangePayload.submitData.name}
+          changes={structuralChangePayload.changes}
+          onConfirm={() => {
+            const data = structuralChangePayload.submitData;
+            setStructuralChangePayload(null);
+            persistSave(data);
+          }}
+          onDuplicate={handleDuplicateFromStructuralChange}
+        />
+      )}
     </div>
   );
 }
