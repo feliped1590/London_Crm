@@ -440,9 +440,25 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       });
       return newOrder;
     },
-    onSuccess: () => {
+    onSuccess: async (newOrder: any) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Pedido criado com sucesso!');
+      toast.success('Pedido criado — enviando ao ERP em segundo plano');
+
+      // Auto-disparo de sincronização (igual aos produtos)
+      try {
+        await (supabase as any).from('order_sync_queue').insert({
+          order_id: newOrder.id,
+          status: 'pending',
+          attempt_count: 0,
+          error_message: null,
+          next_retry_at: null,
+          validation_errors: null,
+          validation_fields: null,
+        });
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status', newOrder.id] });
+        supabase.functions.invoke('process-order-sync', { body: { order_id: newOrder.id } }).catch(() => {});
+      } catch {}
+
       onOpenChange(false);
       onSuccess?.();
     },
