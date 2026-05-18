@@ -889,12 +889,61 @@ export default function Products() {
     return (rows || []) as {id: string; sku: string; name: string; nome_impresso: string | null}[];
   };
 
-  const executeSave = (submitData: typeof formData) => {
+  const persistSave = (submitData: typeof formData) => {
     if (editingProduct) {
       updateMutation.mutate({ id: editingProduct.id, ...submitData });
     } else {
       createMutation.mutate(submitData);
     }
+  };
+
+  const computeStructuralChanges = (submitData: typeof formData): StructuralFieldChange[] => {
+    if (!editingProduct) return [];
+    const orig = editingProduct as any;
+    const lookupLabel = (items: any[], id?: string | null) =>
+      items.find((i) => i.id === id)?.label || '';
+    const diffs: StructuralFieldChange[] = [];
+    const push = (label: string, from: any, to: any) => {
+      const f = from == null || from === '' ? '' : String(from);
+      const t = to == null || to === '' ? '' : String(to);
+      if (f !== t) diffs.push({ label, from: f, to: t });
+    };
+    push('Tipo', lookupLabel(tipos.items, orig.tipo_id), lookupLabel(tipos.items, submitData.tipo_id));
+    push('Família', lookupLabel(familias.items, orig.family_id), lookupLabel(familias.items, submitData.family_id));
+    push('Grupo', lookupLabel(grupos.items, orig.grupo_id), lookupLabel(grupos.items, submitData.grupo_id));
+    push('Subgrupo', lookupLabel(subgrupos.items, orig.subgrupo_id), lookupLabel(subgrupos.items, submitData.subgrupo_id));
+    push('Classe', lookupLabel(classes.items, orig.class_id), lookupLabel(classes.items, submitData.class_id));
+    push('Largura', orig.width, submitData.width);
+    push('Comprimento', orig.length, submitData.length);
+    push('Espessura', orig.thickness, submitData.thickness);
+    return diffs;
+  };
+
+  const executeSave = (submitData: typeof formData) => {
+    // Edição de produto sem ERP: se o SKU mudou, pedir confirmação.
+    if (editingProduct && !hasErpCode && submitData.sku !== editingProduct.sku) {
+      const changes = computeStructuralChanges(submitData);
+      setStructuralChangePayload({
+        submitData,
+        changes,
+        currentSku: editingProduct.sku,
+        currentName: editingProduct.name,
+      });
+      setShowStructuralChange(true);
+      return;
+    }
+    persistSave(submitData);
+  };
+
+  const handleDuplicateFromStructuralChange = () => {
+    if (!structuralChangePayload) return;
+    const data = structuralChangePayload.submitData;
+    // Reaproveita o fluxo de duplicação: zera editingProduct, limpa SKU,
+    // mantém os novos valores já editados pelo usuário.
+    setEditingProduct(null);
+    setFormData({ ...data, sku: '' });
+    setStructuralChangePayload(null);
+    toast.info('Modo duplicação ativado — revise os campos e salve para criar um novo produto.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
