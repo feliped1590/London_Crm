@@ -1,50 +1,52 @@
-# Múltiplas Versões de Produto
+## Causa raiz
 
-Hoje cada produto = 1 versão fixa. Vamos permitir que um mesmo item tenha N versões, cada uma com **suas próprias dimensões (L × C × E)**, mantendo o restante (nome, NCM, família, fiscal, fator KG, preço base) compartilhado.
+O pedido **PED-2026-0074** sincronizou corretamente no ERP (retorno `PEDIDO#22045#20260074`, código ERP = `22045`), mas a coluna `erp_order_code`/`erp_order_id` ficou vazia.
 
-## Modelo de dados
+Log da edge function `process-order-sync` mostra exatamente:
 
-Adicionar à tabela `products`:
-- `parent_product_id uuid` — referência ao produto-pai (NULL = é o próprio pai/v1)
-- `versao_numero int` — número sequencial da versão (1, 2, 3…), gerado por trigger
+```
+[process-order-sync] Atualizando orders ... com:
+{"erp_sync_status":"success","erp_order_id":22045,"erp_order_code":"22045",...}
 
-Regras:
-- O produto-pai (`parent_product_id IS NULL`) tem `versao_numero = 1` e guarda os atributos compartilhados (nome, NCM, família, classe, fiscal, fator KG, preço base, `erp_product_code`).
-- Versões filhas herdam logicamente os atributos do pai mas têm próprias: `width`, `length`, `thickness`, `sku` (auto), `erp_versao` (auto via trigger existente), `versao_numero`.
-- Constraint: `UNIQUE (parent_product_id, versao_numero)` quando filho; SKU continua único globalmente.
-- Trigger atribui `versao_numero = MAX(versao_numero)+1` do mesmo pai ao inserir filho.
-- Ao editar campos compartilhados no pai, propagar para filhos (ou bloquear edição nos filhos via UI).
+ERROR ERRO ao atualizar orders: Pedido bloqueado: apenas o campo status
+pode ser alterado. Desbloqueie primeiro para editar outros campos.
+(code 23514)
+```
 
-## Backend
+O trigger `enforce_order_lock` na tabela `orders` rejeita qualquer UPDATE em pedido com `is_locked = true` que toque em qualquer coluna fora da whitelist (`status`, `is_locked`, `locked_at`, `locked_by`, `updated_at`).
 
-- `erp_product_code` é compartilhado entre pai e filhos (mesma `codigo` no ERP).
-- `process-product-sync`: ao sincronizar o pai, agrupar todas as versões (pai + filhos) e enviar `versoes[]` com 1 entrada por versão (`versao: versao_numero`, `detalhes: erp_versao`, `situacao: 'A'`). O mapper `product-mapper-v2.ts` já aceita array — basta alimentar dinamicamente.
-- Sequência ERP (`erp_sequences`) continua apenas para o pai; filhos não consomem código novo.
+A função `process-order-sync` atualiza a fila ANTES do `orders` (linhas 360-367 da edge function), por isso `order_sync_queue.status = 'completed'` e a UI mostra "Sincronizado", mas o `erp_order_code` no pedido nunca é gravado. Esse mesmo bug afeta:
+- `PED-2026-0074` (atual, locked)
+- Qualquer pedido locked que for sincronizado depois (todos pedidos aprovados ficam locked).
+- Os pedidos `0072` e `0070` funcionaram porque foram sincronizados ANTES do lock.
 
-## Frontend — Cadastro (`/products`)
+## Correção
 
-- Em `ProductDialog`, adicionar aba/seção **"Versões"** listando todas as versões do item (incluindo a v1).
-- Botão **"Nova versão"** abre formulário compacto pedindo apenas L × C × E. Cria registro filho com `parent_product_id` = produto atual.
-- Cada linha mostra: nº versão, dimensões, SKU, `erp_versao`, status ERP, ações (editar dimensões / inativar).
-- Lista principal de produtos: opção de toggle "Agrupar versões" (mostra só o pai e expande) ou "Listar todas" (cada versão como linha — padrão para busca em pedidos).
+Ampliar a whitelist do trigger `enforce_order_lock` para incluir os campos técnicos de sync ERP, que são gravados exclusivamente pelo backend (service role) e não pelo usuário:
 
-## Frontend — Pedidos & Propostas
+- `erp_sync_status`
+- `erp_order_id`
+- `erp_order_code`
+- `erp_synced_at`
+- `erp_last_sync_at`
+- `erp_last_update_date`
+- `pedido_terceiro` (gravado durante o enfileiramento)
 
-- `ProductSelector` / busca: cada versão aparece como linha separada, ex.: `IMPRESSO BOBINA – CHARQUE 500GR – v2 (15×30×0,09 NY)`.
-- Snapshot do item de pedido já copia dimensões → nada muda no fluxo de pricing, IPI e auto-cálculo do saco.
+Esses campos são read-only do ponto de vista do usuário (vêm do ERP), portanto liberá-los no trigger não enfraquece o lock comercial.
+
+## Passos
+
+1. Migração SQL substituindo `enforce_order_lock` com a whitelist ampliada (mesma lógica, apenas mais campos no `to_jsonb() - ...`).
+2. Backfill do pedido **PED-2026-0074**: gravar manualmente `erp_order_code='22045'`, `erp_order_id=22045`, `erp_sync_status='success'`, `erp_synced_at`/`erp_last_sync_at` com timestamp do último log (`2026-05-18 11:14:46`).
+3. (Opcional, fase 2) Adicionar fallback na edge function: se o UPDATE falhar com `23514`, fazer log estruturado em `erp_sync_logs` com severidade `warning` ao invés de só `console.error`, para alarmar via telemetria.
+
+## Validação
+
+- Rodar `process-order-sync` novamente em um pedido locked de teste e confirmar que `erp_order_code` é preenchido.
+- Conferir UI da listagem mostrando o número do pedido ERP ao lado do número do pedido CRM.
+- Verificar que o trigger continua bloqueando mudanças em campos sensíveis (ex.: `total`, `company_id`) em pedido locked.
 
 ## Fora de escopo
-- Preço/Fator KG por versão (continuam vindo do pai).
-- Estoque por versão.
-- SKU manual (continua auto-gerado conforme regra atual).
-- Importação retroativa de versões já existentes no ERP (pode ser feita em etapa seguinte de import).
 
-## Migração
-
-1. Migration: adicionar colunas + índice + trigger de numeração + constraint.
-2. Backfill: todos os produtos atuais ficam `parent_product_id = NULL`, `versao_numero = 1`.
-3. Ajustar trigger de `erp_versao` para considerar dimensões da própria versão (já considera).
-4. UI de Versões + ajuste do `ProductSelector`.
-5. Ajuste do `process-product-sync` para montar `versoes[]` dinâmico.
-
-Após sua aprovação, implemento na ordem acima.
+- Mudar a ordem de updates na edge function (queue → orders) — desnecessário após corrigir o trigger.
+- Refatorar o sistema de lock — funciona corretamente, só precisa abrir exceção para campos do ERP.
