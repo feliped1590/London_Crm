@@ -1240,30 +1240,6 @@ export type Database = {
           },
         ]
       }
-      companies_classification_backup: {
-        Row: {
-          created_at: string | null
-          id: string | null
-          industry: string | null
-          name: string | null
-          segmento_legado: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-          industry?: string | null
-          name?: string | null
-          segmento_legado?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-          industry?: string | null
-          name?: string | null
-          segmento_legado?: string | null
-        }
-        Relationships: []
-      }
       company_audit_log: {
         Row: {
           changed_at: string
@@ -2436,13 +2412,6 @@ export type Database = {
             referencedRelation: "crm_orders"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "crm_order_items_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "crm_products"
-            referencedColumns: ["id"]
-          },
         ]
       }
       crm_orders: {
@@ -2546,84 +2515,6 @@ export type Database = {
           target_score?: number
           updated_at?: string
           updated_by?: string | null
-        }
-        Relationships: []
-      }
-      crm_products: {
-        Row: {
-          ativo: boolean | null
-          created_at: string | null
-          custo_medio: number | null
-          data_alteracao_erp: string | null
-          descricao: string | null
-          descricao_completa: string | null
-          descricao_simples: string | null
-          external_id: string
-          gera_estoque: boolean | null
-          grupo: string | null
-          id: string
-          ncm: string | null
-          preco_venda: number | null
-          produto_codigo: string | null
-          raw_data: Json | null
-          sku: string | null
-          subgrupo: string | null
-          synced_at: string | null
-          tipo_item: string | null
-          unidade: string | null
-          updated_at: string | null
-          usuario_alteracao_erp: string | null
-          versao: string | null
-        }
-        Insert: {
-          ativo?: boolean | null
-          created_at?: string | null
-          custo_medio?: number | null
-          data_alteracao_erp?: string | null
-          descricao?: string | null
-          descricao_completa?: string | null
-          descricao_simples?: string | null
-          external_id: string
-          gera_estoque?: boolean | null
-          grupo?: string | null
-          id?: string
-          ncm?: string | null
-          preco_venda?: number | null
-          produto_codigo?: string | null
-          raw_data?: Json | null
-          sku?: string | null
-          subgrupo?: string | null
-          synced_at?: string | null
-          tipo_item?: string | null
-          unidade?: string | null
-          updated_at?: string | null
-          usuario_alteracao_erp?: string | null
-          versao?: string | null
-        }
-        Update: {
-          ativo?: boolean | null
-          created_at?: string | null
-          custo_medio?: number | null
-          data_alteracao_erp?: string | null
-          descricao?: string | null
-          descricao_completa?: string | null
-          descricao_simples?: string | null
-          external_id?: string
-          gera_estoque?: boolean | null
-          grupo?: string | null
-          id?: string
-          ncm?: string | null
-          preco_venda?: number | null
-          produto_codigo?: string | null
-          raw_data?: Json | null
-          sku?: string | null
-          subgrupo?: string | null
-          synced_at?: string | null
-          tipo_item?: string | null
-          unidade?: string | null
-          updated_at?: string | null
-          usuario_alteracao_erp?: string | null
-          versao?: string | null
         }
         Relationships: []
       }
@@ -7168,45 +7059,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      products_dedup_backup: {
-        Row: {
-          active: boolean | null
-          backed_up_at: string
-          backup_id: string
-          created_at: string | null
-          full_row: Json
-          name: string | null
-          original_id: string
-          sku: string | null
-          tenant_id: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          backed_up_at?: string
-          backup_id?: string
-          created_at?: string | null
-          full_row: Json
-          name?: string | null
-          original_id: string
-          sku?: string | null
-          tenant_id?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          backed_up_at?: string
-          backup_id?: string
-          created_at?: string | null
-          full_row?: Json
-          name?: string | null
-          original_id?: string
-          sku?: string | null
-          tenant_id?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
       }
       profiles: {
         Row: {
