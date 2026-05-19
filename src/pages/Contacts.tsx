@@ -248,12 +248,9 @@ export default function Contacts() {
     setFormData({ ...formData, cpf: formatted });
   };
 
-  const filteredContacts = contacts?.filter(contact =>
-    contact.first_name.toLowerCase().includes(search.toLowerCase()) ||
-    contact.last_name?.toLowerCase().includes(search.toLowerCase()) ||
-    contact.email?.toLowerCase().includes(search.toLowerCase()) ||
-    (contact as any).cpf?.includes(search)
-  );
+  // Server-side filtered + paginated; alias kept for minimal JSX churn.
+  const filteredContacts = contacts;
+
 
   const getInitials = (firstName: string, lastName?: string | null) => {
     return `${firstName[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
