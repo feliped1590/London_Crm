@@ -1517,43 +1517,43 @@ export default function Products() {
                         </SelectContent>
                       </Select>
                     </div>
-                    {/* Tipo de Ficha */}
-                    <div>
-                      <Label htmlFor="tipo_ficha" className="flex items-center gap-1">
-                        Tipo de Ficha <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={formData.tipo_ficha ? String(formData.tipo_ficha) : ''}
-                        onValueChange={(v) => setFormData({ ...formData, tipo_ficha: Number(v) })}
-                      >
-                        <SelectTrigger id="tipo_ficha">
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1</SelectItem>
-                          <SelectItem value="2">2</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Obrigatório para sincronização com o ERP.
-                      </p>
-                    </div>
-                    {/* Unidade */}
-                    <div>
-                      <Label htmlFor="unit_measure">Unidade</Label>
-                      <Select
-                        value={formData.unit_measure}
-                        onValueChange={(v) => setFormData({ ...formData, unit_measure: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {unitMeasures.items.map((u) => (
-                            <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {/* Unidade + Tipo de Ficha lado a lado */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Unidade */}
+                      <div>
+                        <Label htmlFor="unit_measure">Unidade</Label>
+                        <Select
+                          value={formData.unit_measure}
+                          onValueChange={(v) => setFormData({ ...formData, unit_measure: v })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unitMeasures.items.map((u) => (
+                              <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {/* Tipo de Ficha */}
+                      <div>
+                        <Label htmlFor="tipo_ficha" className="flex items-center gap-1">
+                          Tipo de Ficha <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={formData.tipo_ficha ? String(formData.tipo_ficha) : ''}
+                          onValueChange={(v) => setFormData({ ...formData, tipo_ficha: Number(v) })}
+                        >
+                          <SelectTrigger id="tipo_ficha">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1</SelectItem>
+                            <SelectItem value="2">2</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                     {/* Classificação Complementar */}
                     <div className="col-span-2 pt-2">
