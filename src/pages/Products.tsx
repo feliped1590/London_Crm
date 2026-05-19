@@ -1786,6 +1786,16 @@ export default function Products() {
                       />
                       <Label htmlFor="active">Produto Ativo</Label>
                     </div>
+
+                    {editingProduct && (
+                      <div className="pt-4 border-t mt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Layers className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="text-sm font-semibold">Versões</h3>
+                        </div>
+                        <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -1801,11 +1811,6 @@ export default function Products() {
                   <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
                 </TabsContent>
 
-                {editingProduct && (
-                  <TabsContent value="versoes" className="space-y-4 mt-4">
-                    <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
-                  </TabsContent>
-                )}
 
                 {editingProduct && (
                   <TabsContent value="anexos" className="space-y-4 mt-4">
