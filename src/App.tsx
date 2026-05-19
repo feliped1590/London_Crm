@@ -161,7 +161,8 @@ const App = () => (
                 <Route path="/stock" element={<Stock />} />
                 <Route path="/carriers" element={<Carriers />} />
                 <Route path="/tasks" element={<Tasks />} />
-                <Route path="/whatsapp" element={<WhatsApp />} />
+                {/* WhatsApp desativado (auditoria perf 2026-05). Reativar trocando WHATSAPP_ENABLED em src/config/features.ts */}
+                <Route path="/whatsapp" element={<Navigate to="/today" replace />} />
                 
                 <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />

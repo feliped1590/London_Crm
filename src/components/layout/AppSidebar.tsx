@@ -55,7 +55,8 @@ const allNavItems: NavItem[] = [
   { to: '/stock', icon: Warehouse, label: 'Estoque', moduleKey: 'stock' },
   { to: '/carriers', icon: Truck, label: 'Transportadoras', moduleKey: 'carriers' },
   { to: '/tasks', icon: CheckSquare, label: 'Tarefas', moduleKey: 'tasks' },
-  { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
+  // WhatsApp desativado (auditoria perf 2026-05). Reativar via src/config/features.ts
+  // { to: '/whatsapp', icon: MessageCircle, label: 'WhatsApp', moduleKey: 'whatsapp' },
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/prospecting', icon: SearchCheck, label: 'Prospecção', moduleKey: 'prospecting' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },

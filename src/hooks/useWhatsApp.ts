@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { WHATSAPP_ENABLED } from '@/config/features';
 
 export interface WhatsAppInstance {
   id: string;
@@ -63,7 +64,8 @@ export function useWhatsAppInstances() {
 
       if (error) throw error;
       return data as WhatsAppInstance[];
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -148,7 +150,8 @@ export function useWhatsAppConversations(filterUserId?: string | null) {
       return Array.from(conversationMap.values()).sort(
         (a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
       );
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -168,7 +171,7 @@ export function useWhatsAppMessages(phone: string | null) {
       if (error) throw error;
       return data as WhatsAppMessage[];
     },
-    enabled: !!phone
+    enabled: WHATSAPP_ENABLED && !!phone,
   });
 }
 
@@ -185,7 +188,9 @@ export function useUnreadCount() {
 
       if (error) throw error;
       return count || 0;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -336,6 +341,7 @@ export function useWhatsAppRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!WHATSAPP_ENABLED) return;
     const channel = supabase
       .channel('whatsapp-messages-realtime')
       .on(
