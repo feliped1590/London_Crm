@@ -15,6 +15,7 @@ import { IntegrationValidationPanel } from '@/components/integrations/Integratio
 import { CustomerPayloadSimulator } from '@/components/integrations/CustomerPayloadSimulator';
 import { OrderPayloadSimulator } from '@/components/integrations/OrderPayloadSimulator';
 import { ErpMappingsManager } from '@/components/settings/ErpMappingsManager';
+import { ErpAttributeMappingManager } from '@/components/settings/ErpAttributeMappingManager';
 import { CustomerSyncMonitor } from '@/components/integrations/CustomerSyncMonitor';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -300,6 +301,8 @@ export default function Integrations() {
           {isDeveloper && <OrderPayloadSimulator />}
 
           {isDeveloper && <ErpMappingsManager />}
+
+          <ErpAttributeMappingManager />
         </TabsContent>
 
         <TabsContent value="prospecting-api" className="mt-6">
