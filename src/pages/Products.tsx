@@ -1088,6 +1088,7 @@ export default function Products() {
   const handleEdit = (product: Product) => {
     recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
     setEditingProduct(product);
+    setThicknessInput(formatDimensionInput(product.thickness));
     setFormData({
       sku: product.sku,
       name: product.name,
@@ -1190,6 +1191,7 @@ export default function Products() {
     };
     // Regenerar SKU
     duplicatedData.sku = recalcularSku(duplicatedData);
+    setThicknessInput(formatDimensionInput(product.thickness));
     setFormData(duplicatedData);
     setIsDialogOpen(true);
     setFormTab('geral');
