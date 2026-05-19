@@ -48,57 +48,94 @@ export default function Orders() {
   const canCreateOrders = can('orders', PermissionAction.Create);
   const canEditOrders = can('orders', PermissionAction.Edit);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm, 350);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCarrier, setFilterCarrier] = useState<string>('all');
+  const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
-  const [filterErpStatus, setFilterErpStatus] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
-  const { data: orders, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['orders', activeLegalEntityId, filterStatus],
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filterStatus, filterCarrier, filterErpStatus, activeLegalEntityId, pageSize]);
+
+  const { data: ordersPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['orders', activeLegalEntityId, filterStatus, filterCarrier, filterErpStatus, debouncedSearch, page, pageSize],
     queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let query = supabase
         .from('orders')
-        .select(`
-          *,
-          company:companies(id, name),
-          contact:contacts(id, first_name, last_name),
-          proposal:proposals(id, number),
-          carrier:carriers(id, name, trade_name),
-          deal:deals(id, name, pipeline_stage:pipeline_stages(id, name))
-        `)
+        .select(ORDER_LIST_COLUMNS, { count: 'exact' })
         .eq('legal_entity_id', activeLegalEntityId!)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .range(from, to);
 
-      if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus as any);
+      if (filterStatus !== 'all') query = query.eq('status', filterStatus as any);
+      if (filterCarrier !== 'all') query = query.eq('carrier_id', filterCarrier);
+      if (filterErpStatus === 'synced') query = query.not('erp_order_id', 'is', null);
+      if (filterErpStatus === 'not_synced') query = query.is('erp_order_id', null);
+
+      if (debouncedSearch) {
+        const term = debouncedSearch.trim();
+        query = query.or(`number.ilike.%${term}%,erp_order_id.ilike.%${term}%`);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as unknown as Order[];
+      return { rows: (data ?? []) as unknown as Order[], count: count ?? 0 };
     },
     enabled: isContextReady,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
-  // Distinct carriers from loaded orders for filter dropdown
-  const carrierFilterOptions = useMemo(() => {
-    if (!orders) return [];
-    const map = new Map<string, string>();
-    orders.forEach((o: any) => {
-      if (o.carrier) {
-        map.set(o.carrier.id, o.carrier.trade_name || o.carrier.name);
-      }
-    });
-    return Array.from(map.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [orders]);
+  const orders = ordersPage?.rows;
+  const totalOrders = ordersPage?.count ?? 0;
+
+  // Aggregated status stats (independent of pagination/page).
+  const { data: statusStats } = useQuery({
+    queryKey: ['orders_status_stats', activeLegalEntityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('status, total_value')
+        .eq('legal_entity_id', activeLegalEntityId!);
+      if (error) throw error;
+      const agg = new Map<string, { count: number; value: number }>();
+      (data ?? []).forEach((o: any) => {
+        const cur = agg.get(o.status) ?? { count: 0, value: 0 };
+        cur.count += 1;
+        cur.value += Number(o.total_value || 0);
+        agg.set(o.status, cur);
+      });
+      return agg;
+    },
+    enabled: isContextReady,
+    staleTime: 60_000,
+  });
+
+  // Carrier filter options come from a small dedicated query so the dropdown
+  // is stable across pagination changes.
+  const { data: carrierFilterOptions = [] } = useQuery({
+    queryKey: ['orders_carrier_options', activeLegalEntityId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('carriers')
+        .select('id, name, trade_name')
+        .order('name');
+      if (error) throw error;
+      return (data ?? []).map((c: any) => ({ id: c.id, name: c.trade_name || c.name }));
+    },
+    enabled: isContextReady,
+    staleTime: 10 * 60_000,
+  });
+
 
   const handleRefresh = async () => {
     await refetch();
