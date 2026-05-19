@@ -504,8 +504,8 @@ export default function Products() {
       return data as unknown as Product[];
     },
     enabled: isContextReady,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 
   const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({
