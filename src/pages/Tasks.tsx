@@ -330,10 +330,19 @@ export default function Tasks() {
       return { id, completed };
     },
     onSuccess: ({ id, completed }) => {
-      updateItemInList(queryClient, taskListKey, id, {
-        status: completed ? 'concluida' : 'pendente',
-        completed_at: completed ? new Date().toISOString() : null,
-      } as any, 'task');
+      // Optimistic patch across all paged task caches
+      queryClient.setQueriesData<{ rows: any[]; count: number } | undefined>(
+        { queryKey: ['tasks'] },
+        (old) => old ? {
+          ...old,
+          rows: old.rows.map((t: any) => t.id === id ? {
+            ...t,
+            status: completed ? 'concluida' : 'pendente',
+            completed_at: completed ? new Date().toISOString() : null,
+          } : t),
+        } : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
     },
   });
