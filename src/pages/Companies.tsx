@@ -74,11 +74,14 @@ export default function Companies() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  // Reset to first page whenever the search term changes
-  // (debounced value drives the query so this stays in sync).
-  if (page !== 1 && debouncedSearch !== '' && page > 1) {
-    // noop sentinel — handled below via effect-less pattern using key
+  // Reset to first page whenever the debounced search term changes.
+  const lastSearchRef = (Companies as any)._lastSearch ?? { value: debouncedSearch };
+  if (lastSearchRef.value !== debouncedSearch) {
+    lastSearchRef.value = debouncedSearch;
+    if (page !== 1) setPage(1);
   }
+  (Companies as any)._lastSearch = lastSearchRef;
+
 
   const { data: companiesPage, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['companies', debouncedSearch, page, pageSize],
