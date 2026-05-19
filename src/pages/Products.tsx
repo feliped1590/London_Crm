@@ -1744,12 +1744,14 @@ export default function Products() {
                             type="text"
                             inputMode="decimal"
                             disabled={structuralLocked}
-                            value={formData.thickness ?? ''}
+                            value={thicknessInput}
                             onChange={(e) => {
-                              const raw = e.target.value.replace(',', '.');
-                              // Permite vazio, dígitos, ponto/vírgula, mantém "0." durante digitação
-                              if (raw !== '' && !/^\d*\.?\d*$/.test(raw)) return;
-                              const newThickness = raw === '' || raw === '.' ? 0 : parseFloat(raw) || 0;
+                              const raw = e.target.value;
+                              // Permite digitação parcial com vírgula, incluindo "0," e "0,120".
+                              if (raw !== '' && !/^\d*(?:[,.]\d*)?$/.test(raw)) return;
+                              setThicknessInput(raw);
+                              const normalized = raw.replace(',', '.');
+                              const newThickness = normalized === '' || normalized === '.' ? 0 : parseFloat(normalized) || 0;
                               const newData: any = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
