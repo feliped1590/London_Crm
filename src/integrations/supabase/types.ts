@@ -5768,7 +5768,7 @@ export type Database = {
           reason: string | null
           requested_by: string | null
           to_sales_rep_id: string | null
-          to_user_id: string
+          to_user_id: string | null
           transfer_request_id: string | null
           transferred_at: string | null
           transferred_by: string
@@ -5788,7 +5788,7 @@ export type Database = {
           reason?: string | null
           requested_by?: string | null
           to_sales_rep_id?: string | null
-          to_user_id: string
+          to_user_id?: string | null
           transfer_request_id?: string | null
           transferred_at?: string | null
           transferred_by: string
@@ -5808,7 +5808,7 @@ export type Database = {
           reason?: string | null
           requested_by?: string | null
           to_sales_rep_id?: string | null
-          to_user_id?: string
+          to_user_id?: string | null
           transfer_request_id?: string | null
           transferred_at?: string | null
           transferred_by?: string
