@@ -494,8 +494,19 @@ export default function Orders() {
               <p className="text-sm">Os pedidos são gerados automaticamente quando uma proposta é aprovada ou criados manualmente</p>
             </div>
           )}
+          <div className="px-4">
+            <ServerPagination
+              page={page}
+              pageSize={pageSize}
+              total={totalOrders}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              isFetching={isFetching}
+            />
+          </div>
         </CardContent>
       </Card>
+
 
       {/* Create Order Dialog */}
       <OrderDialog
