@@ -706,7 +706,16 @@ export default function Tasks() {
                     })}
                   </div>
                 )}
+                <ServerPagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={totalTasks}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  isFetching={isFetching}
+                />
               </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>
