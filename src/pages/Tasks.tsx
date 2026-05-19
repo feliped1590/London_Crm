@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+const TASK_LIST_COLUMNS = `
+  id, title, description, status, priority, due_date, due_time, completed_at,
+  company_id, contact_id, deal_id, assigned_to, owner_id, created_by,
+  created_at, updated_at,
+  companies(name),
+  contacts(first_name, last_name),
+  deals(name)
+`;
 
 type Task = Tables<'tasks'>;
 type TaskStatus = Task['status'];
@@ -45,12 +55,15 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<string>('mine');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [formData, setFormData] = useState<Partial<TablesInsert<'tasks'>>>({
     title: '',
     description: '',
@@ -78,34 +91,86 @@ export default function Tasks() {
       return data;
     },
     enabled: isAdmin,
+    staleTime: 5 * 60_000,
   });
 
-  const { data: tasks, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['tasks', user?.id, isAdmin, ownerFilter],
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, activeTab, ownerFilter, pageSize]);
+
+  // Builds the base scoping filter shared by list + counts queries.
+  const applyOwnerScope = (q: any) => {
+    if (!isAdmin) return q.eq('assigned_to', user!.id);
+    if (ownerFilter === 'mine') return q.eq('assigned_to', user!.id);
+    if (ownerFilter !== 'all') return q.eq('assigned_to', ownerFilter);
+    return q;
+  };
+
+  const { data: tasksPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['tasks', user?.id, isAdmin, ownerFilter, activeTab, debouncedSearch, page, pageSize],
     queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let query = supabase
         .from('tasks')
-        .select('*, companies(name), contacts(first_name, last_name), deals(name)')
-        .order('due_date', { ascending: true, nullsFirst: false });
-      
-      if (!isAdmin) {
-        // Non-admin users always see only their own tasks
-        query = query.eq('assigned_to', user!.id);
-      } else if (ownerFilter === 'mine') {
-        query = query.eq('assigned_to', user!.id);
-      } else if (ownerFilter !== 'all') {
-        // Specific seller selected
-        query = query.eq('assigned_to', ownerFilter);
+        .select(TASK_LIST_COLUMNS, { count: 'exact' })
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .range(from, to);
+
+      query = applyOwnerScope(query);
+
+      if (activeTab === 'pending') {
+        query = query.in('status', ['pendente', 'em_andamento']);
+      } else if (activeTab === 'completed') {
+        query = query.eq('status', 'concluida');
+      } else if (activeTab === 'overdue') {
+        query = query.lt('due_date', new Date().toISOString()).neq('status', 'concluida');
       }
-      
-      const { data, error } = await query;
+
+      if (debouncedSearch) {
+        query = query.ilike('title', `%${debouncedSearch.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
     enabled: !!user?.id,
   });
+
+  const tasks = tasksPage?.rows;
+  const totalTasks = tasksPage?.count ?? 0;
+
+  // Aggregated counts (independent of pagination/tab) for the tab badges.
+  const { data: tabCounts } = useQuery({
+    queryKey: ['tasks_tab_counts', user?.id, isAdmin, ownerFilter],
+    queryFn: async () => {
+      const nowIso = new Date().toISOString();
+      const baseFilter = (q: any) => applyOwnerScope(q);
+
+      const [pending, overdue] = await Promise.all([
+        baseFilter(supabase.from('tasks').select('id', { count: 'exact', head: true }))
+          .in('status', ['pendente', 'em_andamento']),
+        baseFilter(supabase.from('tasks').select('id', { count: 'exact', head: true }))
+          .lt('due_date', nowIso)
+          .neq('status', 'concluida'),
+      ]);
+
+      return {
+        pending: pending.count ?? 0,
+        overdue: overdue.count ?? 0,
+      };
+    },
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  const pendingCount = tabCounts?.pending ?? 0;
+  const overdueCount = tabCounts?.overdue ?? 0;
+
 
   // Auto-open task detail when navigating with ?task=taskId
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(() => {
@@ -207,7 +272,7 @@ export default function Tasks() {
     (deals || []).map(d => ({ value: d.id, label: d.name })), [deals]
   );
 
-  const taskListKey = ['tasks', user?.id, isAdmin, ownerFilter];
+  // (taskListKey removed — list query now uses paginated key with search/tab/page)
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'tasks'>) => {
@@ -215,9 +280,9 @@ export default function Tasks() {
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, taskListKey, created);
-      // Also invalidate today-tasks (analytical)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa criada com sucesso!');
       resetForm();
@@ -238,8 +303,9 @@ export default function Tasks() {
       if (error) throw error;
       return { id, updated };
     },
-    onSuccess: ({ id, updated }) => {
-      updateItemInList(queryClient, taskListKey, id, updated, 'task');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa atualizada!');
       resetForm();
@@ -264,10 +330,19 @@ export default function Tasks() {
       return { id, completed };
     },
     onSuccess: ({ id, completed }) => {
-      updateItemInList(queryClient, taskListKey, id, {
-        status: completed ? 'concluida' : 'pendente',
-        completed_at: completed ? new Date().toISOString() : null,
-      } as any, 'task');
+      // Optimistic patch across all paged task caches
+      queryClient.setQueriesData<{ rows: any[]; count: number } | undefined>(
+        { queryKey: ['tasks'] },
+        (old) => old ? {
+          ...old,
+          rows: old.rows.map((t: any) => t.id === id ? {
+            ...t,
+            status: completed ? 'concluida' : 'pendente',
+            completed_at: completed ? new Date().toISOString() : null,
+          } : t),
+        } : old,
+      );
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
     },
   });
@@ -335,20 +410,9 @@ export default function Tasks() {
     setIsDialogOpen(true);
   };
 
-  const filteredTasks = tasks?.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'pending') return matchesSearch && (task.status === 'pendente' || task.status === 'em_andamento');
-    if (activeTab === 'completed') return matchesSearch && task.status === 'concluida';
-    if (activeTab === 'overdue') {
-      const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'concluida';
-      return matchesSearch && isOverdue;
-    }
-    return matchesSearch;
-  });
+  // Server-side filtered + paginated; alias kept for minimal JSX churn.
+  const filteredTasks = tasks;
 
-  const pendingCount = tasks?.filter(t => t.status === 'pendente' || t.status === 'em_andamento').length || 0;
-  const overdueCount = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'concluida').length || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -642,7 +706,16 @@ export default function Tasks() {
                     })}
                   </div>
                 )}
+                <ServerPagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={totalTasks}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  isFetching={isFetching}
+                />
               </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>

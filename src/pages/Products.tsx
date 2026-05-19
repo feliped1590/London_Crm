@@ -466,7 +466,7 @@ export default function Products() {
       return count || 0;
     },
     enabled: isContextReady,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 
   const totalItems = totalCount || 0;
@@ -504,8 +504,8 @@ export default function Products() {
       return data as unknown as Product[];
     },
     enabled: isContextReady,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 
   const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({

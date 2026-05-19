@@ -259,7 +259,7 @@ export function useAccessWindowConfig(legalEntityId: string | null) {
 export function useAccessWindowStatus() {
   return useQuery({
     queryKey: ['access_window_status'],
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60_000,
     queryFn: async () => {
       const { data: userResp } = await supabase.auth.getUser();
       const uid = userResp.user?.id;

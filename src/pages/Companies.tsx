@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,20 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
+// queryCacheManager helpers are no longer needed: server-side pagination uses
+// invalidateQueries / setQueriesData directly.
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+// Explicit column list used by the table + edit form. Avoids `select('*')`
+// pulling heavy JSON / unused payload from every row.
+const COMPANY_LIST_COLUMNS = `
+  id, name, fantasia, cnpj, inscricao_estadual, email, phone, website, domain,
+  employee_count, address, city, state, country, notes, setor_id, segmento_id,
+  atividade_id, custom_fields, iniflex_id, iniflex_synced_at, owner_id,
+  sales_rep_id, created_by, created_at, updated_at,
+  deals(id, name, stage, value)
+`;
 
 type Company = Tables<'companies'>;
 
@@ -36,6 +49,9 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>> & { cnpj?: string; inscricao_estadual?: string; fantasia?: string }>({
@@ -59,19 +75,50 @@ export default function Companies() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  const { data: companies, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['companies'],
+  // Reset to first page whenever the debounced search term changes.
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
+
+
+  const { data: companiesPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['companies', debouncedSearch, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
         .from('companies')
-        .select('*, deals(id, name, stage, value)')
-        .order('created_at', { ascending: false });
+        .select(COMPANY_LIST_COLUMNS, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (debouncedSearch) {
+        const term = debouncedSearch.trim();
+        const cnpjDigits = term.replace(/\D/g, '');
+        const ors: string[] = [
+          `name.ilike.%${term}%`,
+          `fantasia.ilike.%${term}%`,
+          `email.ilike.%${term}%`,
+        ];
+        if (cnpjDigits.length >= 3) ors.push(`cnpj.ilike.%${cnpjDigits}%`);
+        query = query.or(ors.join(','));
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[];
+      return {
+        rows: (data ?? []) as unknown as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[],
+        count: count ?? 0,
+      };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
+
+  const companies = companiesPage?.rows;
+  const totalCompanies = companiesPage?.count ?? 0;
 
   const handleRefresh = async () => {
     await refetch();
@@ -80,12 +127,12 @@ export default function Companies() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'companies'>) => {
-      const { data: created, error } = await supabase.from('companies').insert(data).select('*, deals(id, name, stage, value)').single();
+      const { data: created, error } = await supabase.from('companies').insert(data).select(COMPANY_LIST_COLUMNS).single();
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, ['companies'], created);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Empresa criada com sucesso!');
       resetForm();
     },
@@ -94,12 +141,16 @@ export default function Companies() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Company> & { id: string }) => {
-      const { data: updated, error } = await supabase.from('companies').update(data).eq('id', id).select('*, deals(id, name, stage, value)').single();
+      const { data: updated, error } = await supabase.from('companies').update(data).eq('id', id).select(COMPANY_LIST_COLUMNS).single();
       if (error) throw error;
       return { id, updated };
     },
     onSuccess: ({ id, updated }) => {
-      updateItemInList(queryClient, ['companies'], id, updated, 'company');
+      // Optimistic patch across all paged caches
+      queryClient.setQueriesData<{ rows: any[]; count: number } | undefined>(
+        { queryKey: ['companies'] },
+        (old) => old ? { ...old, rows: old.rows.map((c) => c.id === id ? updated : c) } : old,
+      );
       toast.success('Empresa atualizada com sucesso!');
       resetForm();
     },
@@ -123,8 +174,8 @@ export default function Companies() {
       
       return id;
     },
-    onSuccess: (id) => {
-      removeItemFromList(queryClient, ['companies'], id, 'company');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Empresa excluída com sucesso!');
     },
     onError: (error: Error) => toast.error(error.message || 'Erro ao excluir empresa'),
@@ -221,12 +272,10 @@ export default function Companies() {
     setFormData({ ...formData, cnpj: formatted });
   };
 
-  const filteredCompanies = companies?.filter(company => {
-    // All users can view all companies
-    return company.name.toLowerCase().includes(search.toLowerCase()) ||
-      company.email?.toLowerCase().includes(search.toLowerCase()) ||
-      (company as any).cnpj?.includes(search);
-  });
+  // Server-side filtered + paginated already; keep variable name for the
+  // rest of the JSX to remain a minimal-diff change.
+  const filteredCompanies = companies;
+
 
   const getSyncStatus = (company: any) => {
     if (company.iniflex_id) {
@@ -577,8 +626,17 @@ export default function Companies() {
               </TableBody>
             </Table>
           )}
+          <ServerPagination
+            page={page}
+            pageSize={pageSize}
+            total={totalCompanies}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            isFetching={isFetching}
+          />
         </CardContent>
       </Card>
+
     </div>
   );
 }
