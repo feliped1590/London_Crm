@@ -1320,7 +1320,7 @@ export default function Products() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Tabs value={formTab} onValueChange={setFormTab}>
-                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-6' : 'grid-cols-3'}`}>
+                <TabsList className={`grid w-full ${editingProduct ? 'grid-cols-5' : 'grid-cols-3'}`}>
                   <TabsTrigger value="geral" className="gap-2">
                     <Package className="h-4 w-4" />
                     Geral
@@ -1333,12 +1333,6 @@ export default function Products() {
                     <User className="h-4 w-4" />
                     Clientes vinculados
                   </TabsTrigger>
-                  {editingProduct && (
-                    <TabsTrigger value="versoes" className="gap-2">
-                      <Layers className="h-4 w-4" />
-                      Versões
-                    </TabsTrigger>
-                  )}
                   {editingProduct && (
                     <TabsTrigger value="anexos" className="gap-2">
                       <Paperclip className="h-4 w-4" />
@@ -1792,6 +1786,16 @@ export default function Products() {
                       />
                       <Label htmlFor="active">Produto Ativo</Label>
                     </div>
+
+                    {editingProduct && (
+                      <div className="pt-4 border-t mt-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Layers className="h-4 w-4 text-muted-foreground" />
+                          <h3 className="text-sm font-semibold">Versões</h3>
+                        </div>
+                        <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                      </div>
+                    )}
                   </div>
                 </TabsContent>
 
@@ -1807,11 +1811,6 @@ export default function Products() {
                   <ProductCompaniesTab productId={editingProduct?.id} canEdit={canEditProducts} />
                 </TabsContent>
 
-                {editingProduct && (
-                  <TabsContent value="versoes" className="space-y-4 mt-4">
-                    <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
-                  </TabsContent>
-                )}
 
                 {editingProduct && (
                   <TabsContent value="anexos" className="space-y-4 mt-4">
