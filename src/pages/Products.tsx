@@ -1538,7 +1538,7 @@ export default function Products() {
                       </div>
                       {/* Tipo de Ficha */}
                       <div>
-                        <Label htmlFor="tipo_ficha" className="flex items-center gap-1">
+                        <Label htmlFor="tipo_ficha">
                           Tipo de Ficha <span className="text-destructive">*</span>
                         </Label>
                         <Select
