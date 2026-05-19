@@ -22,7 +22,8 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
+// queryCacheManager helpers are no longer needed: server-side pagination uses
+// invalidateQueries / setQueriesData directly.
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ServerPagination } from '@/components/ui/server-pagination';
 
