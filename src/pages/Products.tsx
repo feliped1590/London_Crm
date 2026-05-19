@@ -1735,14 +1735,16 @@ export default function Products() {
                           <Label htmlFor="thickness">Espessura (micras)</Label>
                           <Input
                             id="thickness"
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             disabled={structuralLocked}
-                            value={formData.thickness || ''}
+                            value={formData.thickness ?? ''}
                             onChange={(e) => {
-                              const newThickness = parseFloat(e.target.value) || 0;
-                              const newData = { ...formData, thickness: newThickness };
+                              const raw = e.target.value.replace(',', '.');
+                              // Permite vazio, dígitos, ponto/vírgula, mantém "0." durante digitação
+                              if (raw !== '' && !/^\d*\.?\d*$/.test(raw)) return;
+                              const newThickness = raw === '' || raw === '.' ? 0 : parseFloat(raw) || 0;
+                              const newData: any = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
@@ -1752,7 +1754,7 @@ export default function Products() {
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
-                            placeholder="Em micras"
+                            placeholder="Ex.: 0,120"
                           />
                         </div>
                       </div>
