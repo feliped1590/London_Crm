@@ -625,8 +625,17 @@ export default function Companies() {
               </TableBody>
             </Table>
           )}
+          <ServerPagination
+            page={page}
+            pageSize={pageSize}
+            total={totalCompanies}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            isFetching={isFetching}
+          />
         </CardContent>
       </Card>
+
     </div>
   );
 }
