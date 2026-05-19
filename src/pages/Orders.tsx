@@ -23,11 +23,12 @@ import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit columns used by the list (avoids `select('*')` payload).
 const ORDER_LIST_COLUMNS = `
-  id, number, status, type, total_value, subtotal, discount_value,
+  id, number, status, order_type, total_value,
   payment_method, payment_terms, delivery_date, observations, freight_type,
-  freight_value, locked_at, locked_by, created_at, updated_at,
+  freight_value, is_locked, locked_at, locked_by, created_at, updated_at,
+  delivery_same_as_company, delivery_city, delivery_state,
   legal_entity_id, company_id, contact_id, proposal_id, carrier_id, deal_id,
-  sales_rep_id, owner_id, erp_order_id, erp_synced_at, erp_versao,
+  sales_rep_id, erp_order_id, erp_synced_at,
   company:companies(id, name),
   contact:contacts(id, first_name, last_name),
   proposal:proposals(id, number),
