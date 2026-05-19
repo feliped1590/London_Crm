@@ -301,6 +301,8 @@ export default function Integrations() {
           {isDeveloper && <OrderPayloadSimulator />}
 
           {isDeveloper && <ErpMappingsManager />}
+
+          <ErpAttributeMappingManager />
         </TabsContent>
 
         <TabsContent value="prospecting-api" className="mt-6">
