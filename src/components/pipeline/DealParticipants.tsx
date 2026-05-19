@@ -57,8 +57,7 @@ export function DealParticipants({ dealId, ownerId, createdBy }: DealParticipant
       return participantsWithProfiles;
     },
     enabled: !!dealId,
-    staleTime: 0, // Always fetch fresh data
-    refetchOnMount: 'always',
+    staleTime: 30_000,
   });
 
   // Fetch all users for adding
