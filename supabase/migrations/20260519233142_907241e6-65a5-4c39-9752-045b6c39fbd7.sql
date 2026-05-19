@@ -1,0 +1,1 @@
+UPDATE public.products SET thickness = 0.110 WHERE id = '0f716fa9-b2be-4e10-aecf-1f9721acd407';
