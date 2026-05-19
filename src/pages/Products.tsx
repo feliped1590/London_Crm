@@ -1392,7 +1392,9 @@ export default function Products() {
                     <div className="col-span-2 grid grid-cols-4 gap-4">
                       {/* Descrição */}
                       <div className="col-span-3">
-                        <Label htmlFor="name">Descrição *</Label>
+                        <div className="flex items-center justify-between h-7">
+                          <Label htmlFor="name">Descrição *</Label>
+                        </div>
                         <Input
                           id="name"
                           value={formData.name}
@@ -1413,7 +1415,7 @@ export default function Products() {
 
                       {/* Código ERP */}
                       <div className="col-span-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between h-7">
                           <Label htmlFor="erp_product_code">Código ERP</Label>
                           {isAdmin && !!(editingProduct as any)?.erp_product_code && (
                             <Button
