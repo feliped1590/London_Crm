@@ -343,6 +343,131 @@ export type Database = {
           },
         ]
       }
+      attribute_sync_log: {
+        Row: {
+          attribute_catalog_id: string | null
+          created_at: string
+          duration_ms: number | null
+          erp_codigo: number | null
+          error_message: string | null
+          id: string
+          product_id: string | null
+          queue_item_id: string | null
+          request_body: Json | null
+          response_body: string | null
+          response_status: number | null
+          success: boolean | null
+          tenant_id: string
+        }
+        Insert: {
+          attribute_catalog_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          erp_codigo?: number | null
+          error_message?: string | null
+          id?: string
+          product_id?: string | null
+          queue_item_id?: string | null
+          request_body?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          tenant_id: string
+        }
+        Update: {
+          attribute_catalog_id?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          erp_codigo?: number | null
+          error_message?: string | null
+          id?: string
+          product_id?: string | null
+          queue_item_id?: string | null
+          request_body?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          success?: boolean | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attribute_sync_log_queue_item_id_fkey"
+            columns: ["queue_item_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_sync_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attribute_sync_queue: {
+        Row: {
+          attempt_count: number
+          attribute_catalog_id: string
+          correlation_id: string | null
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          payload: Json | null
+          processed_at: string | null
+          product_id: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          attribute_catalog_id: string
+          correlation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          attribute_catalog_id?: string
+          correlation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          product_id?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attribute_sync_queue_attribute_catalog_id_fkey"
+            columns: ["attribute_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "erp_attribute_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attribute_sync_queue_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3163,6 +3288,63 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_attribute_catalog: {
+        Row: {
+          aceita_tolerancia: boolean
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          descricao: string
+          erp_codigo: number
+          grupo_tecnico: string | null
+          id: string
+          obrigatorio: boolean
+          observacoes: string | null
+          tenant_id: string
+          tipo: string
+          tolerancia_mais: number | null
+          tolerancia_menos: number | null
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          aceita_tolerancia?: boolean
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao: string
+          erp_codigo: number
+          grupo_tecnico?: string | null
+          id?: string
+          obrigatorio?: boolean
+          observacoes?: string | null
+          tenant_id: string
+          tipo?: string
+          tolerancia_mais?: number | null
+          tolerancia_menos?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aceita_tolerancia?: boolean
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          descricao?: string
+          erp_codigo?: number
+          grupo_tecnico?: string | null
+          id?: string
+          obrigatorio?: boolean
+          observacoes?: string | null
+          tenant_id?: string
+          tipo?: string
+          tolerancia_mais?: number | null
+          tolerancia_menos?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       erp_cities: {
         Row: {
           codigo_erp: number
@@ -5967,6 +6149,110 @@ export type Database = {
           valid_until?: string | null
         }
         Relationships: []
+      }
+      product_attribute_mapping: {
+        Row: {
+          ativo: boolean
+          attribute_catalog_id: string
+          created_at: string
+          crm_label: string | null
+          crm_path: string
+          crm_source: string
+          id: string
+          tenant_id: string
+          transform: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          attribute_catalog_id: string
+          created_at?: string
+          crm_label?: string | null
+          crm_path: string
+          crm_source?: string
+          id?: string
+          tenant_id: string
+          transform?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          attribute_catalog_id?: string
+          created_at?: string
+          crm_label?: string | null
+          crm_path?: string
+          crm_source?: string
+          id?: string
+          tenant_id?: string
+          transform?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_attribute_mapping_attribute_catalog_id_fkey"
+            columns: ["attribute_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "erp_attribute_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_attribute_values: {
+        Row: {
+          attribute_catalog_id: string
+          created_at: string
+          dirty: boolean
+          id: string
+          last_sync_error: string | null
+          last_synced_at: string | null
+          last_synced_value: string | null
+          product_id: string
+          tenant_id: string
+          updated_at: string
+          valor_padrao: string | null
+        }
+        Insert: {
+          attribute_catalog_id: string
+          created_at?: string
+          dirty?: boolean
+          id?: string
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_synced_value?: string | null
+          product_id: string
+          tenant_id: string
+          updated_at?: string
+          valor_padrao?: string | null
+        }
+        Update: {
+          attribute_catalog_id?: string
+          created_at?: string
+          dirty?: boolean
+          id?: string
+          last_sync_error?: string | null
+          last_synced_at?: string | null
+          last_synced_value?: string | null
+          product_id?: string
+          tenant_id?: string
+          updated_at?: string
+          valor_padrao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_attribute_values_attribute_catalog_id_fkey"
+            columns: ["attribute_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "erp_attribute_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_attribute_values_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_classes: {
         Row: {
@@ -9552,6 +9838,14 @@ export type Database = {
         Returns: Json
       }
       enqueue_bulk_company_sync: { Args: never; Returns: Json }
+      extract_attribute_value: {
+        Args: {
+          p_path: string
+          p_product: Database["public"]["Tables"]["products"]["Row"]
+          p_source: string
+        }
+        Returns: string
+      }
       force_replace_session: {
         Args: {
           p_device_info?: string
@@ -10032,6 +10326,10 @@ export type Database = {
       promote_staging_products_v2: {
         Args: { p_batch_size?: number; p_tenant_id: string }
         Returns: Json
+      }
+      release_blocked_attributes: {
+        Args: { p_product_id: string }
+        Returns: number
       }
       reset_orders: { Args: never; Returns: Json }
       resolve_user_for_sales_rep: {
