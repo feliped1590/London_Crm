@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,18 @@ import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCa
 import { useClassificacao } from '@/hooks/useClassificacao';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+// Explicit column list used by the table + edit form. Avoids `select('*')`
+// pulling heavy JSON / unused payload from every row.
+const COMPANY_LIST_COLUMNS = `
+  id, name, fantasia, cnpj, inscricao_estadual, email, phone, website, domain,
+  employee_count, address, city, state, country, notes, setor_id, segmento_id,
+  atividade_id, custom_fields, iniflex_id, iniflex_synced_at, owner_id,
+  sales_rep_id, created_by, created_at, updated_at,
+  deals(id, name, stage, value)
+`;
 
 type Company = Tables<'companies'>;
 
