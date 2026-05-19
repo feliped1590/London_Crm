@@ -242,6 +242,9 @@ export default function Products() {
 
   const [formTab, setFormTab] = useState('geral');
   const [isAutoDescription, setIsAutoDescription] = useState(true);
+  const [thicknessInput, setThicknessInput] = useState('');
+
+  const formatDimensionInput = (value?: number | null) => (value ? String(value).replace('.', ',') : '');
 
   // Resolve lookup label by id
   const getLookupLabel = (items: { id: string; label: string }[], id?: string) => {
@@ -750,6 +753,7 @@ export default function Products() {
       ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
+    setThicknessInput('');
     setIsDialogOpen(false);
     setFormTab('geral');
     setIsAutoDescription(shouldAutoDescription);
