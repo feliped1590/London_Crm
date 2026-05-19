@@ -42,6 +42,9 @@ export default function Contacts() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'contacts'>> & { cpf?: string; tipo_pessoa?: 'PF' | 'PJ' }>({
@@ -60,19 +63,44 @@ export default function Contacts() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  const { data: contacts, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['contacts'],
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
+  const { data: contactsPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['contacts', debouncedSearch, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
         .from('contacts')
-        .select('*, companies(name), deals(id, name, stage, value)')
-        .order('created_at', { ascending: false });
+        .select(CONTACT_LIST_COLUMNS, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (debouncedSearch) {
+        const term = debouncedSearch.trim();
+        const cpfDigits = term.replace(/\D/g, '');
+        const ors: string[] = [
+          `first_name.ilike.%${term}%`,
+          `last_name.ilike.%${term}%`,
+          `email.ilike.%${term}%`,
+        ];
+        if (cpfDigits.length >= 3) ors.push(`cpf.ilike.%${cpfDigits}%`);
+        query = query.or(ors.join(','));
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { rows: data ?? [], count: count ?? 0 };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
+
+  const contacts = contactsPage?.rows as any[] | undefined;
+  const totalContacts = contactsPage?.count ?? 0;
 
   const handleRefresh = async () => {
     await refetch();
@@ -91,16 +119,17 @@ export default function Contacts() {
       if (error) throw error;
       return data as Pick<Company, 'id' | 'name'>[];
     },
+    staleTime: 5 * 60_000,
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'contacts'>) => {
-      const { data: created, error } = await supabase.from('contacts').insert(data).select('*, companies(name), deals(id, name, stage, value)').single();
+      const { data: created, error } = await supabase.from('contacts').insert(data).select(CONTACT_LIST_COLUMNS).single();
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, ['contacts'], created);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contato criado com sucesso!');
       resetForm();
     },
@@ -109,12 +138,15 @@ export default function Contacts() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Contact> & { id: string }) => {
-      const { data: updated, error } = await supabase.from('contacts').update(data).eq('id', id).select('*, companies(name), deals(id, name, stage, value)').single();
+      const { data: updated, error } = await supabase.from('contacts').update(data).eq('id', id).select(CONTACT_LIST_COLUMNS).single();
       if (error) throw error;
       return { id, updated };
     },
     onSuccess: ({ id, updated }) => {
-      updateItemInList(queryClient, ['contacts'], id, updated, 'contact');
+      queryClient.setQueriesData<{ rows: any[]; count: number } | undefined>(
+        { queryKey: ['contacts'] },
+        (old) => old ? { ...old, rows: old.rows.map((c) => c.id === id ? updated : c) } : old,
+      );
       toast.success('Contato atualizado com sucesso!');
       resetForm();
     },
@@ -127,12 +159,13 @@ export default function Contacts() {
       if (error) throw error;
       return id;
     },
-    onSuccess: (id) => {
-      removeItemFromList(queryClient, ['contacts'], id, 'contact');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contato excluído com sucesso!');
     },
     onError: () => toast.error('Erro ao excluir contato'),
   });
+
 
   const syncInflexMutation = useMutation({
     mutationFn: async (contactId: string) => {
