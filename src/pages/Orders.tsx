@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,22 @@ import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { cn } from '@/lib/utils';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+// Explicit columns used by the list (avoids `select('*')` payload).
+const ORDER_LIST_COLUMNS = `
+  id, number, status, type, total_value, subtotal, discount_value,
+  payment_method, payment_terms, delivery_date, observations, freight_type,
+  freight_value, locked_at, locked_by, created_at, updated_at,
+  legal_entity_id, company_id, contact_id, proposal_id, carrier_id, deal_id,
+  sales_rep_id, owner_id, erp_order_id, erp_synced_at, erp_versao,
+  company:companies(id, name),
+  contact:contacts(id, first_name, last_name),
+  proposal:proposals(id, number),
+  carrier:carriers(id, name, trade_name),
+  deal:deals(id, name, pipeline_stage:pipeline_stages(id, name))
+`;
 
 const freightBadgeStyles: Record<string, string> = {
   CIF: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
