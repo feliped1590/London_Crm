@@ -466,7 +466,7 @@ export default function Products() {
       return count || 0;
     },
     enabled: isContextReady,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 
   const totalItems = totalCount || 0;
