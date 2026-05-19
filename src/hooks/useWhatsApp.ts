@@ -150,7 +150,8 @@ export function useWhatsAppConversations(filterUserId?: string | null) {
       return Array.from(conversationMap.values()).sort(
         (a, b) => new Date(b.lastMessage.created_at).getTime() - new Date(a.lastMessage.created_at).getTime()
       );
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -170,7 +171,7 @@ export function useWhatsAppMessages(phone: string | null) {
       if (error) throw error;
       return data as WhatsAppMessage[];
     },
-    enabled: !!phone
+    enabled: WHATSAPP_ENABLED && !!phone,
   });
 }
 
