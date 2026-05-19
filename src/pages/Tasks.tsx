@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,9 +18,19 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/formatters';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
 import TaskCalendar from '@/components/tasks/TaskCalendar';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+const TASK_LIST_COLUMNS = `
+  id, title, description, status, priority, due_date, due_time, completed_at,
+  company_id, contact_id, deal_id, assigned_to, owner_id, created_by,
+  created_at, updated_at,
+  companies(name),
+  contacts(first_name, last_name),
+  deals(name)
+`;
 
 type Task = Tables<'tasks'>;
 type TaskStatus = Task['status'];
