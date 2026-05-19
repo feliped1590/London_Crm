@@ -271,12 +271,10 @@ export default function Companies() {
     setFormData({ ...formData, cnpj: formatted });
   };
 
-  const filteredCompanies = companies?.filter(company => {
-    // All users can view all companies
-    return company.name.toLowerCase().includes(search.toLowerCase()) ||
-      company.email?.toLowerCase().includes(search.toLowerCase()) ||
-      (company as any).cnpj?.includes(search);
-  });
+  // Server-side filtered + paginated already; keep variable name for the
+  // rest of the JSX to remain a minimal-diff change.
+  const filteredCompanies = companies;
+
 
   const getSyncStatus = (company: any) => {
     if (company.iniflex_id) {
