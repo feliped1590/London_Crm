@@ -341,6 +341,7 @@ export function useWhatsAppRealtime() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    if (!WHATSAPP_ENABLED) return;
     const channel = supabase
       .channel('whatsapp-messages-realtime')
       .on(
