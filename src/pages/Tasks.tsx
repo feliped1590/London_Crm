@@ -272,7 +272,7 @@ export default function Tasks() {
     (deals || []).map(d => ({ value: d.id, label: d.name })), [deals]
   );
 
-  const taskListKey = ['tasks', user?.id, isAdmin, ownerFilter];
+  // (taskListKey removed — list query now uses paginated key with search/tab/page)
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'tasks'>) => {
