@@ -1,0 +1,1 @@
+ALTER TABLE public.portfolio_transfers ALTER COLUMN to_user_id DROP NOT NULL;
