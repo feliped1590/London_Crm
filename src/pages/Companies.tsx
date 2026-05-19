@@ -48,6 +48,9 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [formData, setFormData] = useState<Partial<TablesInsert<'companies'>> & { cnpj?: string; inscricao_estadual?: string; fantasia?: string }>({
@@ -71,19 +74,49 @@ export default function Companies() {
   });
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
-  const { data: companies, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['companies'],
+  // Reset to first page whenever the search term changes
+  // (debounced value drives the query so this stays in sync).
+  if (page !== 1 && debouncedSearch !== '' && page > 1) {
+    // noop sentinel — handled below via effect-less pattern using key
+  }
+
+  const { data: companiesPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['companies', debouncedSearch, page, pageSize],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
         .from('companies')
-        .select('*, deals(id, name, stage, value)')
-        .order('created_at', { ascending: false });
+        .select(COMPANY_LIST_COLUMNS, { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
+
+      if (debouncedSearch) {
+        const term = debouncedSearch.trim();
+        const cnpjDigits = term.replace(/\D/g, '');
+        const ors: string[] = [
+          `name.ilike.%${term}%`,
+          `fantasia.ilike.%${term}%`,
+          `email.ilike.%${term}%`,
+        ];
+        if (cnpjDigits.length >= 3) ors.push(`cnpj.ilike.%${cnpjDigits}%`);
+        query = query.or(ors.join(','));
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[];
+      return {
+        rows: (data ?? []) as unknown as (Company & { deals: { id: string; name: string; stage: any; value: number | null }[] })[],
+        count: count ?? 0,
+      };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
+
+  const companies = companiesPage?.rows;
+  const totalCompanies = companiesPage?.count ?? 0;
 
   const handleRefresh = async () => {
     await refetch();
@@ -92,12 +125,12 @@ export default function Companies() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TablesInsert<'companies'>) => {
-      const { data: created, error } = await supabase.from('companies').insert(data).select('*, deals(id, name, stage, value)').single();
+      const { data: created, error } = await supabase.from('companies').insert(data).select(COMPANY_LIST_COLUMNS).single();
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, ['companies'], created);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Empresa criada com sucesso!');
       resetForm();
     },
@@ -106,12 +139,16 @@ export default function Companies() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...data }: Partial<Company> & { id: string }) => {
-      const { data: updated, error } = await supabase.from('companies').update(data).eq('id', id).select('*, deals(id, name, stage, value)').single();
+      const { data: updated, error } = await supabase.from('companies').update(data).eq('id', id).select(COMPANY_LIST_COLUMNS).single();
       if (error) throw error;
       return { id, updated };
     },
     onSuccess: ({ id, updated }) => {
-      updateItemInList(queryClient, ['companies'], id, updated, 'company');
+      // Optimistic patch across all paged caches
+      queryClient.setQueriesData<{ rows: any[]; count: number } | undefined>(
+        { queryKey: ['companies'] },
+        (old) => old ? { ...old, rows: old.rows.map((c) => c.id === id ? updated : c) } : old,
+      );
       toast.success('Empresa atualizada com sucesso!');
       resetForm();
     },
@@ -135,8 +172,8 @@ export default function Companies() {
       
       return id;
     },
-    onSuccess: (id) => {
-      removeItemFromList(queryClient, ['companies'], id, 'company');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
       toast.success('Empresa excluída com sucesso!');
     },
     onError: (error: Error) => toast.error(error.message || 'Erro ao excluir empresa'),
