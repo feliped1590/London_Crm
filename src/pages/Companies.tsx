@@ -75,12 +75,10 @@ export default function Companies() {
   const [customFieldsData, setCustomFieldsData] = useState<Record<string, unknown>>({});
 
   // Reset to first page whenever the debounced search term changes.
-  const lastSearchRef = (Companies as any)._lastSearch ?? { value: debouncedSearch };
-  if (lastSearchRef.value !== debouncedSearch) {
-    lastSearchRef.value = debouncedSearch;
-    if (page !== 1) setPage(1);
-  }
-  (Companies as any)._lastSearch = lastSearchRef;
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, pageSize]);
+
 
 
   const { data: companiesPage, isLoading, refetch, isFetching } = useQuery({
