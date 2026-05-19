@@ -1392,7 +1392,9 @@ export default function Products() {
                     <div className="col-span-2 grid grid-cols-4 gap-4">
                       {/* Descrição */}
                       <div className="col-span-3">
-                        <Label htmlFor="name">Descrição *</Label>
+                        <div className="flex items-center justify-between h-7">
+                          <Label htmlFor="name">Descrição *</Label>
+                        </div>
                         <Input
                           id="name"
                           value={formData.name}
@@ -1413,7 +1415,7 @@ export default function Products() {
 
                       {/* Código ERP */}
                       <div className="col-span-1">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between h-7">
                           <Label htmlFor="erp_product_code">Código ERP</Label>
                           {isAdmin && !!(editingProduct as any)?.erp_product_code && (
                             <Button
@@ -1733,14 +1735,16 @@ export default function Products() {
                           <Label htmlFor="thickness">Espessura (micras)</Label>
                           <Input
                             id="thickness"
-                            type="number"
-                            step="0.001"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             disabled={structuralLocked}
-                            value={formData.thickness || ''}
+                            value={formData.thickness ?? ''}
                             onChange={(e) => {
-                              const newThickness = parseFloat(e.target.value) || 0;
-                              const newData = { ...formData, thickness: newThickness };
+                              const raw = e.target.value.replace(',', '.');
+                              // Permite vazio, dígitos, ponto/vírgula, mantém "0." durante digitação
+                              if (raw !== '' && !/^\d*\.?\d*$/.test(raw)) return;
+                              const newThickness = raw === '' || raw === '.' ? 0 : parseFloat(raw) || 0;
+                              const newData: any = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
@@ -1750,7 +1754,7 @@ export default function Products() {
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
                               setFormData(newData);
                             }}
-                            placeholder="Em micras"
+                            placeholder="Ex.: 0,120"
                           />
                         </div>
                       </div>
