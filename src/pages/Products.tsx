@@ -242,6 +242,9 @@ export default function Products() {
 
   const [formTab, setFormTab] = useState('geral');
   const [isAutoDescription, setIsAutoDescription] = useState(true);
+  const [thicknessInput, setThicknessInput] = useState('');
+
+  const formatDimensionInput = (value?: number | null) => (value ? String(value).replace('.', ',') : '');
 
   // Resolve lookup label by id
   const getLookupLabel = (items: { id: string; label: string }[], id?: string) => {
@@ -750,6 +753,7 @@ export default function Products() {
       ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
+    setThicknessInput('');
     setIsDialogOpen(false);
     setFormTab('geral');
     setIsAutoDescription(shouldAutoDescription);
@@ -1084,6 +1088,7 @@ export default function Products() {
   const handleEdit = (product: Product) => {
     recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
     setEditingProduct(product);
+    setThicknessInput(formatDimensionInput(product.thickness));
     setFormData({
       sku: product.sku,
       name: product.name,
@@ -1186,6 +1191,7 @@ export default function Products() {
     };
     // Regenerar SKU
     duplicatedData.sku = recalcularSku(duplicatedData);
+    setThicknessInput(formatDimensionInput(product.thickness));
     setFormData(duplicatedData);
     setIsDialogOpen(true);
     setFormTab('geral');
@@ -1738,12 +1744,14 @@ export default function Products() {
                             type="text"
                             inputMode="decimal"
                             disabled={structuralLocked}
-                            value={formData.thickness ?? ''}
+                            value={thicknessInput}
                             onChange={(e) => {
-                              const raw = e.target.value.replace(',', '.');
-                              // Permite vazio, dígitos, ponto/vírgula, mantém "0." durante digitação
-                              if (raw !== '' && !/^\d*\.?\d*$/.test(raw)) return;
-                              const newThickness = raw === '' || raw === '.' ? 0 : parseFloat(raw) || 0;
+                              const raw = e.target.value;
+                              // Permite digitação parcial com vírgula, incluindo "0," e "0,120".
+                              if (raw !== '' && !/^\d*(?:[,.]\d*)?$/.test(raw)) return;
+                              setThicknessInput(raw);
+                              const normalized = raw.replace(',', '.');
+                              const newThickness = normalized === '' || normalized === '.' ? 0 : parseFloat(normalized) || 0;
                               const newData: any = { ...formData, thickness: newThickness };
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
