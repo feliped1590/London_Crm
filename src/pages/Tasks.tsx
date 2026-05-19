@@ -303,8 +303,9 @@ export default function Tasks() {
       if (error) throw error;
       return { id, updated };
     },
-    onSuccess: ({ id, updated }) => {
-      updateItemInList(queryClient, taskListKey, id, updated, 'task');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa atualizada!');
       resetForm();
