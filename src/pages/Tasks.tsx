@@ -55,12 +55,15 @@ export default function Tasks() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<string>('mine');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [formData, setFormData] = useState<Partial<TablesInsert<'tasks'>>>({
     title: '',
     description: '',
@@ -88,34 +91,86 @@ export default function Tasks() {
       return data;
     },
     enabled: isAdmin,
+    staleTime: 5 * 60_000,
   });
 
-  const { data: tasks, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['tasks', user?.id, isAdmin, ownerFilter],
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, activeTab, ownerFilter, pageSize]);
+
+  // Builds the base scoping filter shared by list + counts queries.
+  const applyOwnerScope = (q: any) => {
+    if (!isAdmin) return q.eq('assigned_to', user!.id);
+    if (ownerFilter === 'mine') return q.eq('assigned_to', user!.id);
+    if (ownerFilter !== 'all') return q.eq('assigned_to', ownerFilter);
+    return q;
+  };
+
+  const { data: tasksPage, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['tasks', user?.id, isAdmin, ownerFilter, activeTab, debouncedSearch, page, pageSize],
     queryFn: async () => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let query = supabase
         .from('tasks')
-        .select('*, companies(name), contacts(first_name, last_name), deals(name)')
-        .order('due_date', { ascending: true, nullsFirst: false });
-      
-      if (!isAdmin) {
-        // Non-admin users always see only their own tasks
-        query = query.eq('assigned_to', user!.id);
-      } else if (ownerFilter === 'mine') {
-        query = query.eq('assigned_to', user!.id);
-      } else if (ownerFilter !== 'all') {
-        // Specific seller selected
-        query = query.eq('assigned_to', ownerFilter);
+        .select(TASK_LIST_COLUMNS, { count: 'exact' })
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .range(from, to);
+
+      query = applyOwnerScope(query);
+
+      if (activeTab === 'pending') {
+        query = query.in('status', ['pendente', 'em_andamento']);
+      } else if (activeTab === 'completed') {
+        query = query.eq('status', 'concluida');
+      } else if (activeTab === 'overdue') {
+        query = query.lt('due_date', new Date().toISOString()).neq('status', 'concluida');
       }
-      
-      const { data, error } = await query;
+
+      if (debouncedSearch) {
+        query = query.ilike('title', `%${debouncedSearch.trim()}%`);
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+      return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
     enabled: !!user?.id,
   });
+
+  const tasks = tasksPage?.rows;
+  const totalTasks = tasksPage?.count ?? 0;
+
+  // Aggregated counts (independent of pagination/tab) for the tab badges.
+  const { data: tabCounts } = useQuery({
+    queryKey: ['tasks_tab_counts', user?.id, isAdmin, ownerFilter],
+    queryFn: async () => {
+      const nowIso = new Date().toISOString();
+      const baseFilter = (q: any) => applyOwnerScope(q);
+
+      const [pending, overdue] = await Promise.all([
+        baseFilter(supabase.from('tasks').select('id', { count: 'exact', head: true }))
+          .in('status', ['pendente', 'em_andamento']),
+        baseFilter(supabase.from('tasks').select('id', { count: 'exact', head: true }))
+          .lt('due_date', nowIso)
+          .neq('status', 'concluida'),
+      ]);
+
+      return {
+        pending: pending.count ?? 0,
+        overdue: overdue.count ?? 0,
+      };
+    },
+    enabled: !!user?.id,
+    staleTime: 60_000,
+  });
+
+  const pendingCount = tabCounts?.pending ?? 0;
+  const overdueCount = tabCounts?.overdue ?? 0;
+
 
   // Auto-open task detail when navigating with ?task=taskId
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(() => {
