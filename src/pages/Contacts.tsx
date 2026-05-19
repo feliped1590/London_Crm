@@ -620,7 +620,16 @@ export default function Contacts() {
               </TableBody>
             </Table>
           )}
+          <ServerPagination
+            page={page}
+            pageSize={pageSize}
+            total={totalContacts}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            isFetching={isFetching}
+          />
         </CardContent>
+
       </Card>
     </div>
   );
