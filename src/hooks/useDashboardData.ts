@@ -177,16 +177,8 @@ export function useDashboardData(filterUserId?: string | null) {
     enabled: !!user?.id,
   });
 
-  const { data: whatsappMessages } = useQuery({
-    queryKey: ['dashboard-whatsapp-messages'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-  });
+  // WhatsApp desativado (auditoria perf 2026-05) — não consulta whatsapp_messages
+  const whatsappMessages = 0;
 
   const { data: productsCount } = useQuery({
     queryKey: ['dashboard-products-count'],

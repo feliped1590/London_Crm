@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { WHATSAPP_ENABLED } from '@/config/features';
 
 export interface WhatsAppInstance {
   id: string;
@@ -185,7 +186,9 @@ export function useUnreadCount() {
 
       if (error) throw error;
       return count || 0;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
