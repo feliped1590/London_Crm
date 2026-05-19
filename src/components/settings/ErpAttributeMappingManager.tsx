@@ -81,7 +81,7 @@ export function ErpAttributeMappingManager() {
         .select('*')
         .order('erp_codigo');
       if (error) throw error;
-      return (data ?? []) as Catalog[];
+      return ((data ?? []) as unknown) as Catalog[];
     },
   });
 
