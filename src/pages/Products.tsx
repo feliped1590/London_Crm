@@ -1388,67 +1388,70 @@ export default function Products() {
                         }}
                       />
                     </div>
-                    {/* Código ERP */}
-                    <div className="col-span-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="erp_product_code">Código ERP</Label>
-                        {isAdmin && !!(editingProduct as any)?.erp_product_code && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs"
-                            onClick={() => {
-                              if (unlockErpCode) {
-                                setUnlockErpCode(false);
-                                return;
-                              }
-                              const ok = window.confirm(
-                                'Atenção: alterar o Código ERP pode quebrar o vínculo com o ERP. Use apenas para corrigir um código enviado errado pelo ERP. Deseja continuar?'
-                              );
-                              if (ok) setUnlockErpCode(true);
-                            }}
-                          >
-                            {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
-                          </Button>
-                        )}
+                    {/* Descrição + Código ERP lado a lado (3/4 + 1/4) */}
+                    <div className="col-span-2 grid grid-cols-4 gap-4">
+                      {/* Descrição */}
+                      <div className="col-span-3">
+                        <Label htmlFor="name">Descrição *</Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => {
+                            setFormData({ ...formData, name: e.target.value });
+                            setIsAutoDescription(false);
+                          }}
+                          onBlur={() => {
+                            if (!formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
+                              setIsAutoDescription(true);
+                              setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
+                            }
+                          }}
+                          placeholder={isAutoDescription ? "Descrição do produto (gerada automaticamente)" : "Digite a descrição do produto"}
+                          required
+                        />
                       </div>
-                      <Input
-                        id="erp_product_code"
-                        value={formData.erp_product_code || ''}
-                        onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
-                        placeholder="Opcional — preencher só se já existir no ERP"
-                        readOnly={!!(editingProduct as any)?.erp_product_code && !unlockErpCode}
-                        className={(editingProduct as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {(editingProduct as any)?.erp_product_code && !unlockErpCode
-                          ? 'Código já vinculado ao ERP — não pode ser alterado. Admins podem desbloquear para corrigir.'
-                          : unlockErpCode
-                            ? 'Edição liberada. Limpe o campo para forçar nova geração no ERP, ou informe o código correto.'
-                            : 'Opcional. Deixe em branco para que o ERP gere o código no primeiro envio. Preencha apenas se o produto já existir no ERP.'}
-                      </p>
-                    </div>
 
-                    {/* Descrição */}
-                    <div className="col-span-2">
-                      <Label htmlFor="name">Descrição *</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => {
-                          setFormData({ ...formData, name: e.target.value });
-                          setIsAutoDescription(false);
-                        }}
-                        onBlur={() => {
-                          if (!formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
-                            setIsAutoDescription(true);
-                            setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
-                          }
-                        }}
-                        placeholder={isAutoDescription ? "Descrição do produto (gerada automaticamente)" : "Digite a descrição do produto"}
-                        required
-                      />
+                      {/* Código ERP */}
+                      <div className="col-span-1">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="erp_product_code">Código ERP</Label>
+                          {isAdmin && !!(editingProduct as any)?.erp_product_code && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                if (unlockErpCode) {
+                                  setUnlockErpCode(false);
+                                  return;
+                                }
+                                const ok = window.confirm(
+                                  'Atenção: alterar o Código ERP pode quebrar o vínculo com o ERP. Use apenas para corrigir um código enviado errado pelo ERP. Deseja continuar?'
+                                );
+                                if (ok) setUnlockErpCode(true);
+                              }}
+                            >
+                              {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
+                            </Button>
+                          )}
+                        </div>
+                        <Input
+                          id="erp_product_code"
+                          value={formData.erp_product_code || ''}
+                          onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
+                          placeholder="Opcional"
+                          readOnly={!!(editingProduct as any)?.erp_product_code && !unlockErpCode}
+                          className={(editingProduct as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {(editingProduct as any)?.erp_product_code && !unlockErpCode
+                            ? 'Vinculado ao ERP — bloqueado. Admins podem desbloquear.'
+                            : unlockErpCode
+                              ? 'Edição liberada. Limpe para forçar nova geração.'
+                              : 'Deixe em branco para o ERP gerar no 1º envio.'}
+                        </p>
+                      </div>
                     </div>
                     {/* Tipo */}
                     <div>
