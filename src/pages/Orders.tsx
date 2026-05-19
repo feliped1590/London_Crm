@@ -188,32 +188,25 @@ export default function Orders() {
     return isAdmin;
   };
 
-  const filteredOrders = orders?.filter((o) => {
-    const erpId = String((o as any).erp_order_id || '');
-    const matchesSearch =
-      o.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.company?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      erpId.includes(searchTerm);
-    const matchesCarrier =
-      filterCarrier === 'all' || (o as any).carrier?.id === filterCarrier;
-    const matchesErpStatus =
-      filterErpStatus === 'all' ||
-      (filterErpStatus === 'synced' && (o as any).erp_order_id) ||
-      (filterErpStatus === 'not_synced' && !(o as any).erp_order_id);
-    return matchesSearch && matchesCarrier && matchesErpStatus;
-  });
+  // Server-side filters + pagination already applied.
+  const filteredOrders = orders;
 
   const getStatusStats = () => {
-    if (!orders) return [];
-    const stats = Object.entries(orderStatusConfig).map(([status, config]) => ({
-      status,
-      label: config.label,
-      color: config.color,
-      count: orders.filter((o) => o.status === status).length,
-      value: orders.filter((o) => o.status === status).reduce((sum, o) => sum + (o.total_value || 0), 0),
-    }));
-    return stats.filter((s) => s.count > 0);
+    if (!statusStats) return [];
+    return Object.entries(orderStatusConfig)
+      .map(([status, config]) => {
+        const agg = statusStats.get(status);
+        return {
+          status,
+          label: config.label,
+          color: config.color,
+          count: agg?.count ?? 0,
+          value: agg?.value ?? 0,
+        };
+      })
+      .filter((s) => s.count > 0);
   };
+
 
   return (
     <div className="space-y-4 sm:space-y-6">
