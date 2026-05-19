@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
-import { insertItemInList, updateItemInList, removeItemFromList } from '@/lib/queryCacheManager';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { ServerPagination } from '@/components/ui/server-pagination';
+
+const CONTACT_LIST_COLUMNS = `
+  id, first_name, last_name, email, phone, mobile, job_title, department,
+  linkedin_url, company_id, notes, cpf, tipo_pessoa, iniflex_id,
+  iniflex_synced_at, custom_fields, owner_id, sales_rep_id, created_by,
+  created_at, updated_at,
+  companies(name),
+  deals(id, name, stage, value)
+`;
 
 type Contact = Tables<'contacts'>;
 type Company = Tables<'companies'>;
