@@ -410,20 +410,9 @@ export default function Tasks() {
     setIsDialogOpen(true);
   };
 
-  const filteredTasks = tasks?.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(search.toLowerCase());
-    if (activeTab === 'all') return matchesSearch;
-    if (activeTab === 'pending') return matchesSearch && (task.status === 'pendente' || task.status === 'em_andamento');
-    if (activeTab === 'completed') return matchesSearch && task.status === 'concluida';
-    if (activeTab === 'overdue') {
-      const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'concluida';
-      return matchesSearch && isOverdue;
-    }
-    return matchesSearch;
-  });
+  // Server-side filtered + paginated; alias kept for minimal JSX churn.
+  const filteredTasks = tasks;
 
-  const pendingCount = tasks?.filter(t => t.status === 'pendente' || t.status === 'em_andamento').length || 0;
-  const overdueCount = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'concluida').length || 0;
 
   return (
     <div className="space-y-4 sm:space-y-6">
