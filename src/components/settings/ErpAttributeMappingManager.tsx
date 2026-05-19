@@ -92,7 +92,7 @@ export function ErpAttributeMappingManager() {
         .from('product_attribute_mapping' as any)
         .select('*');
       if (error) throw error;
-      return (data ?? []) as Mapping[];
+      return ((data ?? []) as unknown) as Mapping[];
     },
   });
 
