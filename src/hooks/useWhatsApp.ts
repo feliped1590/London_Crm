@@ -64,7 +64,8 @@ export function useWhatsAppInstances() {
 
       if (error) throw error;
       return data as WhatsAppInstance[];
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
