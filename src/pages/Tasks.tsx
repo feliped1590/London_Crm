@@ -280,9 +280,9 @@ export default function Tasks() {
       if (error) throw error;
       return created;
     },
-    onSuccess: (created) => {
-      insertItemInList(queryClient, taskListKey, created);
-      // Also invalidate today-tasks (analytical)
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks_tab_counts'] });
       queryClient.invalidateQueries({ queryKey: ['today-tasks'] });
       toast.success('Tarefa criada com sucesso!');
       resetForm();
