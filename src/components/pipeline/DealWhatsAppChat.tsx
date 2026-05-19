@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { WHATSAPP_ENABLED } from '@/config/features';
 
 interface DealWhatsAppChatProps {
   contactId: string | null;
@@ -109,7 +110,7 @@ function useWhatsAppMessagesByContact(contactId: string | null, contactPhone: st
       
       return [];
     },
-    enabled: !!(contactId || contactPhone)
+    enabled: WHATSAPP_ENABLED && !!(contactId || contactPhone)
   });
 }
 
@@ -122,6 +123,19 @@ export function DealWhatsAppChat({ contactId, contactPhone, contactName }: DealW
   const { data: messages, isLoading } = useWhatsAppMessagesByContact(contactId, contactPhone);
   const { data: instances } = useWhatsAppInstances();
   const sendMessage = useSendMessage();
+
+  // WhatsApp desativado: render placeholder e zero IO
+  if (!WHATSAPP_ENABLED) {
+    return (
+      <Alert>
+        <MessageCircle className="h-4 w-4" />
+        <AlertDescription>
+          O módulo de WhatsApp está temporariamente desativado.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
 
   // Determine the phone to use for sending
   const phoneToUse = messages?.[0]?.phone || (contactPhone ? normalizePhone(contactPhone) : null);
