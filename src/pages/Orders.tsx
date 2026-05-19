@@ -23,7 +23,7 @@ import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit columns used by the list (avoids `select('*')` payload).
 const ORDER_LIST_COLUMNS = `
-  id, number, status, type, total_value, subtotal, discount_value,
+  id, number, status, order_type, total_value, subtotal, discount_value,
   payment_method, payment_terms, delivery_date, observations, freight_type,
   freight_value, locked_at, locked_by, created_at, updated_at,
   legal_entity_id, company_id, contact_id, proposal_id, carrier_id, deal_id,
