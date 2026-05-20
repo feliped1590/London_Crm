@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { DateSelectArg, EventClickArg, EventContentArg, EventDropArg } from '@fullcalendar/core';
-import { parseISO, isBefore, startOfToday, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
