@@ -574,7 +574,7 @@ export default function Tasks() {
 
       {/* Calendar View */}
       {viewMode === 'calendar' ? (
-        <TaskCalendar onCreateTask={handleCreateFromCalendar} />
+        <TaskCalendar onCreateTask={handleCreateFromCalendar} onEditTask={handleEdit} />
       ) : (
         /* List View */
         <Card>
