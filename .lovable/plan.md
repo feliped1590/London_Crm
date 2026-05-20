@@ -1,31 +1,53 @@
-# Liberar mudança de status do pedido para perfis com acesso total
+## Problemas e correções
 
-## Diagnóstico
+### 1. Tarefas não aparecem na lista (somente no calendário)
 
-O botão de avançar status (Liberações) é controlado pelo hook `src/hooks/useOrderApproval.ts`. Hoje as regras são **hardcoded por role**:
+**Diagnóstico**: o banco confirma que Maria Antonia tem 25 tarefas com `assigned_to = seu user_id` e os contadores das abas mostram corretamente "Pendentes 21 / Atrasadas 7". Ainda assim a lista renderiza vazia. As duas queries usam o mesmo `applyOwnerScope`, mas a query da lista faz `select` com joins embutidos (`companies(name), contacts(...), deals(...)`) enquanto a do contador não. Forte indício de que um erro silencioso (RLS num join ou parsing) está derrubando a query principal — porém `onError` apenas dispara o toast genérico, sem log.
 
-```ts
-allowedRoles: ['admin', 'vendedor']
-// canApproveNextTransition: só passa se isAdmin OU role === 'vendedor'
-// canCancelOrder: só passa se isAdmin
-```
+**Ação**:
+- Em `src/pages/Tasks.tsx`, expor o erro do `useQuery` da lista (logar no console e exibir mensagem específica em vez de "Nenhuma tarefa encontrada") para diagnosticar definitivamente na sessão da Maria.
+- Como mitigação, simplificar o select dos joins (usar a mesma forma usada no calendário: `companies(id, name), contacts(id, first_name, last_name), deals(id, name)`) — alinhar para evitar diferença entre as duas telas.
 
-Ou seja, mesmo liberando "acesso total" ao módulo **Pedidos** para o perfil Atendente no Gerenciador de Permissões, o hook ignora isso — ele só olha para a role do usuário. Por isso a ação de mudar status não aparece.
+> Se após o ajuste o erro for outro (ex.: RLS), seguimos com o fix específico em loop seguinte.
 
-## Mudança proposta (apenas frontend)
+### 2. Delegação não permite Maria criar tarefa para cliente da Fernanda
 
-Ajustar `src/hooks/useOrderApproval.ts` para considerar também a permissão do módulo `orders`:
+**Causa**: o trigger `check_task_owner_consistency` chama `user_has_sales_rep_access`, que só verifica `user_sales_reps` (vínculo direto). Não considera delegações ativas em `user_portfolio_delegations`.
 
-1. Importar e usar `useModulePermissions` (já é usado para `isAdmin`) para obter `hasFullAccess('orders')` e `can('orders', 'edit')`.
-2. **`canApproveNextTransition`**: além de `isAdmin` e da role `vendedor`, liberar quando o usuário tiver acesso **total** ao módulo `orders` (equivalente a admin do módulo, sem exigir ownership). Para acesso **restrito** com `edit`, manter o requisito de ownership (igual ao vendedor) — assim mantemos a lógica de portfólio.
-3. **`canCancelOrder` / `cancelMutation`**: liberar também para quem tem acesso total ao módulo `orders`, não apenas `isAdmin`.
-4. Manter as transições internas (em_producao → produzido → faturado → entregue) restritas — quem tem acesso total a Pedidos passa a poder executá-las também, já que é esse o significado de "acesso total" no gerenciador.
+**Ação (migração)**:
+- Atualizar `check_task_owner_consistency` para usar `can_manage_portfolio(auth.uid(), v_company_sales_rep_id, 'task')` no lugar de `user_has_sales_rep_access`.
+- Atualizar `can_manage_portfolio` para reconhecer `p_entity_type = 'task'` — mapeando para o flag `can_manage_companies` (mesma carteira lógica usada para criar atividades/contatos com o cliente delegado).
 
-## Fora de escopo
+### 3. Clique em tarefa no calendário deve abrir tela de edição
 
-- Não alterar RLS/policies do banco — a UPDATE em `orders` e INSERT em `order_approvals` já são governados pelas policies existentes; se houver bloqueio adicional no banco para atendente, trato em seguida após validação.
-- Não mexer em outros gates (edição de campos, desbloqueio de pedido travado) — só na exibição/execução das ações de mudança de status, que foi o reportado.
+**Estado atual**: `TaskCalendar` abre `TaskDetailDrawer` (apenas leitura + concluir/reabrir). O usuário quer editar.
 
-## Validação
+**Ação**:
+- Em `TaskCalendar.tsx`, expor uma prop `onEditTask?: (task) => void`.
+- Em `Tasks.tsx`, passar `onEditTask` para o calendário reaproveitando o `handleEdit` existente (que já popula `formData` e abre o `Dialog` de edição).
+- Manter `TaskDetailDrawer` apenas como fallback quando `onEditTask` não for fornecido (preserva compatibilidade).
 
-Logar como o usuário Atendente com acesso total a Pedidos e confirmar que o botão "Liberar para Produção / Faturamento / Faturar / Entregue" aparece na aba **Liberações** e executa a transição.
+### 4. Cadeado do pedido — permitir desbloqueio para perfis com acesso total + dono/delegado
+
+**Estado atual**:
+- Frontend: já libera o botão para `hasOrdersFullAccess` (admin OU acesso total ao módulo Pedidos).
+- Backend: a RPC `unlock_order` exige `has_role(admin)` — bloqueia o atendente.
+
+**Regra desejada**: pode desbloquear/alterar se tiver permissão de acesso (admin OU acesso total no módulo Pedidos) **E** o cliente do pedido for da carteira dele (via `user_sales_reps`) ou delegado (via `user_portfolio_delegations`).
+
+**Ações**:
+- **Migração**: alterar `unlock_order` para autorizar quando:
+  - `has_role(admin)` **OU**
+  - usuário tem acesso `total` ao módulo `orders` (via `get_user_module_permissions`) **E** `can_manage_portfolio(auth.uid(), <sales_rep_id do company do pedido>, 'order')` retorna true.
+  - Mensagem de erro atualizada para refletir as duas condições.
+- **Frontend** (`OrderDialog.tsx`): refinar `canUnlock` para também exigir ownership/delegação quando não-admin (consulta o `usePortfolioProtection` ou hook equivalente do pedido) — evita mostrar botão que o backend recusará.
+
+## Arquivos afetados
+
+- `src/pages/Tasks.tsx` — logs/select da lista; passar `onEditTask` para o calendário.
+- `src/components/tasks/TaskCalendar.tsx` — nova prop `onEditTask`, usar quando disponível.
+- `src/components/orders/OrderDialog.tsx` — checar ownership/delegação no `canUnlock`.
+- **Migração SQL** com:
+  - `CREATE OR REPLACE FUNCTION can_manage_portfolio` (add branch `'task'`).
+  - `CREATE OR REPLACE FUNCTION check_task_owner_consistency` (usar `can_manage_portfolio`).
+  - `CREATE OR REPLACE FUNCTION unlock_order` (nova regra de autorização).

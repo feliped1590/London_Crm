@@ -26,6 +26,7 @@ type Task = Tables<'tasks'> & {
 
 interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
+  onEditTask?: (task: Task) => void;
 }
 
 const FILTERS_STORAGE_KEY = 'task-calendar-filters';
@@ -55,7 +56,7 @@ const loadPersistedFilters = () => {
   };
 };
 
-export default function TaskCalendar({ onCreateTask }: TaskCalendarProps) {
+export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -152,12 +153,16 @@ export default function TaskCalendar({ onCreateTask }: TaskCalendarProps) {
     );
   }, [rescheduleTask]);
 
-  // Handle event click
+  // Handle event click — open editor when provided, otherwise fall back to detail drawer
   const handleEventClick = useCallback((info: EventClickArg) => {
     const task = info.event.extendedProps.task as Task;
+    if (onEditTask) {
+      onEditTask(task);
+      return;
+    }
     setSelectedTask(task);
     setDrawerOpen(true);
-  }, []);
+  }, [onEditTask]);
 
   // Handle date select (click on empty area to create)
   const handleDateSelect = useCallback((info: DateSelectArg) => {

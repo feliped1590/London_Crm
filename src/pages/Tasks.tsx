@@ -27,9 +27,9 @@ const TASK_LIST_COLUMNS = `
   id, title, description, status, priority, due_date, due_time, completed_at,
   company_id, contact_id, deal_id, assigned_to, owner_id, created_by,
   created_at, updated_at,
-  companies(name),
-  contacts(first_name, last_name),
-  deals(name)
+  companies(id, name),
+  contacts(id, first_name, last_name),
+  deals(id, name)
 `;
 
 type Task = Tables<'tasks'>;
@@ -106,7 +106,7 @@ export default function Tasks() {
     return q;
   };
 
-  const { data: tasksPage, isLoading, refetch, isFetching } = useQuery({
+  const { data: tasksPage, isLoading, refetch, isFetching, error: tasksError } = useQuery({
     queryKey: ['tasks', user?.id, isAdmin, ownerFilter, activeTab, debouncedSearch, page, pageSize],
     queryFn: async () => {
       const from = (page - 1) * pageSize;
@@ -133,7 +133,10 @@ export default function Tasks() {
       }
 
       const { data, error, count } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Tasks] list query error:', error);
+        throw error;
+      }
       return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
     staleTime: 30_000,
@@ -571,7 +574,7 @@ export default function Tasks() {
 
       {/* Calendar View */}
       {viewMode === 'calendar' ? (
-        <TaskCalendar onCreateTask={handleCreateFromCalendar} />
+        <TaskCalendar onCreateTask={handleCreateFromCalendar} onEditTask={handleEdit} />
       ) : (
         /* List View */
         <Card>
@@ -633,6 +636,17 @@ export default function Tasks() {
                 {isLoading ? (
                   <div className="flex items-center justify-center py-10">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  </div>
+                ) : tasksError ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <CheckSquare className="h-12 w-12 text-destructive/50" />
+                    <h3 className="mt-4 text-lg font-semibold text-destructive">Erro ao carregar tarefas</h3>
+                    <p className="text-muted-foreground text-sm max-w-md mt-2">
+                      {(tasksError as any)?.message || 'Ocorreu um erro inesperado.'}
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
+                      Tentar novamente
+                    </Button>
                   </div>
                 ) : filteredTasks?.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">

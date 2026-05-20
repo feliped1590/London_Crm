@@ -101,7 +101,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (order.status === 'pendente') return true;
     return hasOrdersFullAccess;
   }, [order, hasOrdersFullAccess, isOrderLocked]);
-  const canUnlock = hasOrdersFullAccess && isOrderLocked;
+  // canUnlock is computed later (depends on portfolio protection hook)
 
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
@@ -1024,7 +1024,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     setShowProtectionModal,
     checkAccess,
     isLoaded: protectionLoaded,
-  } = usePortfolioProtection(companyId || undefined);
+  } = usePortfolioProtection(order?.company_id || companyId || undefined);
+
+  // Pode desbloquear: admin OU (acesso total ao módulo Pedidos + cliente da carteira/delegado)
+  const canUnlock = isOrderLocked && hasOrdersFullAccess && (isAdmin || !isPortfolioBlocked);
 
   const handleSubmit = () => {
     // Check portfolio protection before submitting
