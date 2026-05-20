@@ -153,12 +153,16 @@ export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarP
     );
   }, [rescheduleTask]);
 
-  // Handle event click
+  // Handle event click — open editor when provided, otherwise fall back to detail drawer
   const handleEventClick = useCallback((info: EventClickArg) => {
     const task = info.event.extendedProps.task as Task;
+    if (onEditTask) {
+      onEditTask(task);
+      return;
+    }
     setSelectedTask(task);
     setDrawerOpen(true);
-  }, []);
+  }, [onEditTask]);
 
   // Handle date select (click on empty area to create)
   const handleDateSelect = useCallback((info: DateSelectArg) => {
