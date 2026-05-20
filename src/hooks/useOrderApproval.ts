@@ -150,6 +150,9 @@ export function useOrderApproval(
 
     if (isAdmin) return true;
 
+    // Acesso total ao módulo Pedidos equivale a admin para fins de transição de status
+    if (hasOrdersFullAccess) return true;
+
     if (rule.allowedRoles.includes('vendedor')) {
       if (rule.requiresOwnership) {
         return orderCreatedBy === user.id;
@@ -157,8 +160,14 @@ export function useOrderApproval(
       return true;
     }
 
+    // Acesso restrito com permissão de editar: aplica regra de ownership (igual vendedor)
+    if (canEditOrders && rule.requiresOwnership) {
+      return orderCreatedBy === user.id;
+    }
+
     return false;
   };
+
 
   const getNextTransition = (): { from: OrderStatus; to: OrderStatus; label: string; description: string } | null => {
     const rule = TRANSITION_RULES[orderStatus];
