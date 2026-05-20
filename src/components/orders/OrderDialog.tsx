@@ -86,7 +86,8 @@ interface OrderDialogProps {
 export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedCompanyId, canClone = false }: OrderDialogProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, hasFullAccess } = useModulePermissions();
+  const hasOrdersFullAccess = isAdmin || hasFullAccess('orders');
   const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
 
   const isEditMode = !!order;
@@ -98,9 +99,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!order) return true;
     if (isOrderLocked) return false; // Locked orders are read-only (status changes happen via approval actions)
     if (order.status === 'pendente') return true;
-    return isAdmin;
-  }, [order, isAdmin, isOrderLocked]);
-  const canUnlock = isAdmin && isOrderLocked;
+    return hasOrdersFullAccess;
+  }, [order, hasOrdersFullAccess, isOrderLocked]);
+  const canUnlock = hasOrdersFullAccess && isOrderLocked;
 
   const [companyId, setCompanyId] = useState('');
   const [contactId, setContactId] = useState('');
