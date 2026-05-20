@@ -56,7 +56,7 @@ const loadPersistedFilters = () => {
   };
 };
 
-export default function TaskCalendar({ onCreateTask }: TaskCalendarProps) {
+export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
