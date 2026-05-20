@@ -243,14 +243,15 @@ export function useOrderApproval(
 
   const canCancelOrder = (): boolean => {
     if (!user) return false;
-    if (!isAdmin) return false;
+    if (!isAdmin && !hasOrdersFullAccess) return false;
     return orderStatus !== 'cancelado' && orderStatus !== 'entregue' && orderStatus !== 'faturado';
   };
 
   const cancelMutation = useMutation({
     mutationFn: async ({ reason }: { reason: string }) => {
       if (!user) throw new Error('Usuário não autenticado');
-      if (!isAdmin) throw new Error('Apenas administradores podem cancelar pedidos');
+      if (!isAdmin && !hasOrdersFullAccess) throw new Error('Você não tem permissão para cancelar pedidos');
+
 
       const { error: approvalError } = await supabase
         .from('order_approvals')
