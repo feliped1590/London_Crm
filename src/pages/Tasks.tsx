@@ -27,9 +27,9 @@ const TASK_LIST_COLUMNS = `
   id, title, description, status, priority, due_date, due_time, completed_at,
   company_id, contact_id, deal_id, assigned_to, owner_id, created_by,
   created_at, updated_at,
-  companies(name),
-  contacts(first_name, last_name),
-  deals(name)
+  companies(id, name),
+  contacts(id, first_name, last_name),
+  deals(id, name)
 `;
 
 type Task = Tables<'tasks'>;
