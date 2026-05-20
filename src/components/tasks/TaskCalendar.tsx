@@ -26,6 +26,7 @@ type Task = Tables<'tasks'> & {
 
 interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
+  onEditTask?: (task: Task) => void;
 }
 
 const FILTERS_STORAGE_KEY = 'task-calendar-filters';
