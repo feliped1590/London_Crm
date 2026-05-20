@@ -637,6 +637,17 @@ export default function Tasks() {
                   <div className="flex items-center justify-center py-10">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                   </div>
+                ) : tasksError ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <CheckSquare className="h-12 w-12 text-destructive/50" />
+                    <h3 className="mt-4 text-lg font-semibold text-destructive">Erro ao carregar tarefas</h3>
+                    <p className="text-muted-foreground text-sm max-w-md mt-2">
+                      {(tasksError as any)?.message || 'Ocorreu um erro inesperado.'}
+                    </p>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={handleRefresh}>
+                      Tentar novamente
+                    </Button>
+                  </div>
                 ) : filteredTasks?.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <CheckSquare className="h-12 w-12 text-muted-foreground/50" />
