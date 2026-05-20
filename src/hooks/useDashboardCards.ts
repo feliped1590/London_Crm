@@ -56,6 +56,8 @@ export function useDashboardCards() {
   // Fetch metrics data via RPC for accurate counts
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['dashboard-cards-metrics'],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_dashboard_card_metrics');
       if (error) throw error;
