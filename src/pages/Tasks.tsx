@@ -106,7 +106,7 @@ export default function Tasks() {
     return q;
   };
 
-  const { data: tasksPage, isLoading, refetch, isFetching } = useQuery({
+  const { data: tasksPage, isLoading, refetch, isFetching, error: tasksError } = useQuery({
     queryKey: ['tasks', user?.id, isAdmin, ownerFilter, activeTab, debouncedSearch, page, pageSize],
     queryFn: async () => {
       const from = (page - 1) * pageSize;
@@ -133,7 +133,10 @@ export default function Tasks() {
       }
 
       const { data, error, count } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[Tasks] list query error:', error);
+        throw error;
+      }
       return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
     staleTime: 30_000,
