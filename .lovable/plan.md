@@ -1,47 +1,31 @@
+# Liberar mudança de status do pedido para perfis com acesso total
+
 ## Diagnóstico
 
-A Fernanda Graziela está recebendo o erro:
+O botão de avançar status (Liberações) é controlado pelo hook `src/hooks/useOrderApproval.ts`. Hoje as regras são **hardcoded por role**:
 
-> `null value in column "to_user_id" of relation "portfolio_transfers" violates not-null constraint`
-
-ao tentar aprovar solicitações de transferência (vistas no vídeo enviado).
-
-### Causa raiz
-
-A função `public.approve_transfer_request` insere um registro em `portfolio_transfers` usando `resolve_user_for_sales_rep(to_sales_rep_id)` para preencher `to_user_id`. Quando o **vendedor destino não tem usuário vinculado** em `user_sales_reps`, esse resolver retorna `NULL`, e o INSERT falha porque a coluna `portfolio_transfers.to_user_id` é `NOT NULL`.
-
-Confirmado no banco: há 6 solicitações pendentes cujo destino é **SHELI AKEMI MORITA**, que **não possui nenhum vínculo** em `user_sales_reps`. Qualquer admin tentando aprovar essas solicitações vê esse erro — incluindo a Fernanda.
-
-```text
-pending requests com to_user_id resolvendo NULL:
-- 6 solicitações -> SHELI AKEMI MORITA (sem user vinculado)
+```ts
+allowedRoles: ['admin', 'vendedor']
+// canApproveNextTransition: só passa se isAdmin OU role === 'vendedor'
+// canCancelOrder: só passa se isAdmin
 ```
 
-A coluna irmã `from_user_id` já é `NULL`-able. Manter `to_user_id NOT NULL` é incoerente com a regra de ownership do projeto (memória `ownership-standardization-strategy`): **`sales_rep_id` é a fonte verdadeira de ownership; `owner_id`/`*_user_id` são fallback/auditoria.** O destino real da transferência (`to_sales_rep_id`) já está gravado e não é nulo.
+Ou seja, mesmo liberando "acesso total" ao módulo **Pedidos** para o perfil Atendente no Gerenciador de Permissões, o hook ignora isso — ele só olha para a role do usuário. Por isso a ação de mudar status não aparece.
 
-## Correção proposta
+## Mudança proposta (apenas frontend)
 
-Migração única tornando `portfolio_transfers.to_user_id` nullable, espelhando o comportamento de `from_user_id`.
+Ajustar `src/hooks/useOrderApproval.ts` para considerar também a permissão do módulo `orders`:
 
-```sql
-ALTER TABLE public.portfolio_transfers
-  ALTER COLUMN to_user_id DROP NOT NULL;
-```
+1. Importar e usar `useModulePermissions` (já é usado para `isAdmin`) para obter `hasFullAccess('orders')` e `can('orders', 'edit')`.
+2. **`canApproveNextTransition`**: além de `isAdmin` e da role `vendedor`, liberar quando o usuário tiver acesso **total** ao módulo `orders` (equivalente a admin do módulo, sem exigir ownership). Para acesso **restrito** com `edit`, manter o requisito de ownership (igual ao vendedor) — assim mantemos a lógica de portfólio.
+3. **`canCancelOrder` / `cancelMutation`**: liberar também para quem tem acesso total ao módulo `orders`, não apenas `isAdmin`.
+4. Manter as transições internas (em_producao → produzido → faturado → entregue) restritas — quem tem acesso total a Pedidos passa a poder executá-las também, já que é esse o significado de "acesso total" no gerenciador.
 
-- Idempotente (DROP NOT NULL é seguro de reexecutar).
-- Não altera RLS, contratos de API ou comportamento funcional.
-- A função `approve_transfer_request` continua igual: grava `to_user_id` quando o vendedor destino tem usuário vinculado, e `NULL` quando não tem. O `sales_rep_id` da empresa é atualizado normalmente — a transferência funciona em ambos os casos.
-- Front-end (`TransferApprovalsManager`, `CompanyAuditHistory`, `PortfolioManager`) já trata `to_user_id` ausente exibindo `'—'`.
+## Fora de escopo
 
-## Validação pós-migração
+- Não alterar RLS/policies do banco — a UPDATE em `orders` e INSERT em `order_approvals` já são governados pelas policies existentes; se houver bloqueio adicional no banco para atendente, trato em seguida após validação.
+- Não mexer em outros gates (edição de campos, desbloqueio de pedido travado) — só na exibição/execução das ações de mudança de status, que foi o reportado.
 
-1. Aprovar uma das 6 solicitações destinadas a SHELI AKEMI MORITA e confirmar que:
-   - A `companies.sales_rep_id` muda para o destino.
-   - O registro em `portfolio_transfers` é criado com `to_user_id = NULL` e `to_sales_rep_id` preenchido.
-   - A solicitação aparece como **Aprovada** na lista.
-2. Conferir que aprovações com destino normal (com user vinculado) continuam gravando `to_user_id` corretamente.
+## Validação
 
-## Fora do escopo
-
-- Não vincular a SHELI a um usuário automaticamente — isso é decisão administrativa.
-- Não alterar regras de RLS, owner_id ou a função `approve_transfer_request`.
+Logar como o usuário Atendente com acesso total a Pedidos e confirmar que o botão "Liberar para Produção / Faturamento / Faturar / Entregue" aparece na aba **Liberações** e executa a transição.
