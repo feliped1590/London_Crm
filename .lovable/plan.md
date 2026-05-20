@@ -1,53 +1,31 @@
-## Problemas e correções
+## Problema
 
-### 1. Tarefas não aparecem na lista (somente no calendário)
+A coluna `tasks.due_date` é `timestamp with time zone`. Quando o usuário escolhe "25/05/2026" no input, o valor `2026-05-25` é gravado como `2026-05-25 00:00:00 UTC`. No fuso de Brasília (UTC-3) isso vira **24/05 às 21:00**, e o calendário (FullCalendar) renderiza no dia 24. O mesmo ocorre em qualquer leitura que use `new Date(due_date)` ou `parseISO`.
 
-**Diagnóstico**: o banco confirma que Maria Antonia tem 25 tarefas com `assigned_to = seu user_id` e os contadores das abas mostram corretamente "Pendentes 21 / Atrasadas 7". Ainda assim a lista renderiza vazia. As duas queries usam o mesmo `applyOwnerScope`, mas a query da lista faz `select` com joins embutidos (`companies(name), contacts(...), deals(...)`) enquanto a do contador não. Forte indício de que um erro silencioso (RLS num join ou parsing) está derrubando a query principal — porém `onError` apenas dispara o toast genérico, sem log.
+A correção precisa ser feita tanto na gravação (para não depender do fuso de quem grava) quanto na leitura (para não depender do fuso de quem lê). A ideia é tratar `due_date` como **data pura**, normalizando para o meio-dia UTC ao salvar e usando apenas a parte `YYYY-MM-DD` ao exibir.
 
-**Ação**:
-- Em `src/pages/Tasks.tsx`, expor o erro do `useQuery` da lista (logar no console e exibir mensagem específica em vez de "Nenhuma tarefa encontrada") para diagnosticar definitivamente na sessão da Maria.
-- Como mitigação, simplificar o select dos joins (usar a mesma forma usada no calendário: `companies(id, name), contacts(id, first_name, last_name), deals(id, name)`) — alinhar para evitar diferença entre as duas telas.
+## Mudanças
 
-> Se após o ajuste o erro for outro (ex.: RLS), seguimos com o fix específico em loop seguinte.
+### 1. `src/pages/Tasks.tsx`
+- **`handleSubmit`**: ao montar `sanitizedData.due_date`, se houver data, enviar `${formData.due_date}T12:00:00Z` (meio-dia UTC garante que o dia não muda em nenhum fuso entre -11 e +11).
+- **`handleCreateFromCalendar`**: substituir `date.toISOString().split('T')[0]` por `format(date, 'yyyy-MM-dd')` (date-fns) para usar a data local do clique, evitando shift quando o clique ocorre à noite.
+- **Cálculo de "atrasada" na lista** (linha ~660): comparar apenas as datas (`yyyy-MM-dd`) em vez de `new Date(task.due_date) < new Date()`.
 
-### 2. Delegação não permite Maria criar tarefa para cliente da Fernanda
+### 2. `src/components/tasks/TaskCalendar.tsx`
+- **Montagem do `startStr`** (linha 111): usar `task.due_date.split('T')[0]` como base, sempre. Quando houver `due_time`, concatenar; quando não, passar somente `YYYY-MM-DD` (FullCalendar trata como all-day local, sem shift).
+- **`isOverdue`** (linha 99): comparar `due_date.split('T')[0]` com `format(new Date(), 'yyyy-MM-dd')` em vez de `parseISO` + `isBefore(..., startOfToday())`.
+- **`handleEventDrop`**: enviar `format(event.start, 'yyyy-MM-dd')` como `newDate` (em vez de `event.start.toISOString()`), e a mutation `rescheduleTask` recebe a data pura.
 
-**Causa**: o trigger `check_task_owner_consistency` chama `user_has_sales_rep_access`, que só verifica `user_sales_reps` (vínculo direto). Não considera delegações ativas em `user_portfolio_delegations`.
+### 3. `src/hooks/useTaskCalendar.ts`
+- **`rescheduleTask.mutationFn`**: ao gravar `due_date`, aplicar a mesma normalização `${newDate}T12:00:00Z`.
+- **Range da query** (`gte/lte` em `due_date`): manter como está — `rangeStart`/`rangeEnd` já cobrem um mês antes/depois, então a margem de 3h não causa perda de eventos.
 
-**Ação (migração)**:
-- Atualizar `check_task_owner_consistency` para usar `can_manage_portfolio(auth.uid(), v_company_sales_rep_id, 'task')` no lugar de `user_has_sales_rep_access`.
-- Atualizar `can_manage_portfolio` para reconhecer `p_entity_type = 'task'` — mapeando para o flag `can_manage_companies` (mesma carteira lógica usada para criar atividades/contatos com o cliente delegado).
+## Por que meio-dia UTC
 
-### 3. Clique em tarefa no calendário deve abrir tela de edição
+Garante que, ao converter para qualquer fuso entre UTC-11 e UTC+11, o componente "dia" do timestamp continua sendo o mesmo escolhido pelo usuário. É o padrão usado quando se quer armazenar uma "data civil" em coluna `timestamptz` sem migrar o schema.
 
-**Estado atual**: `TaskCalendar` abre `TaskDetailDrawer` (apenas leitura + concluir/reabrir). O usuário quer editar.
+## Fora de escopo
 
-**Ação**:
-- Em `TaskCalendar.tsx`, expor uma prop `onEditTask?: (task) => void`.
-- Em `Tasks.tsx`, passar `onEditTask` para o calendário reaproveitando o `handleEdit` existente (que já popula `formData` e abre o `Dialog` de edição).
-- Manter `TaskDetailDrawer` apenas como fallback quando `onEditTask` não for fornecido (preserva compatibilidade).
-
-### 4. Cadeado do pedido — permitir desbloqueio para perfis com acesso total + dono/delegado
-
-**Estado atual**:
-- Frontend: já libera o botão para `hasOrdersFullAccess` (admin OU acesso total ao módulo Pedidos).
-- Backend: a RPC `unlock_order` exige `has_role(admin)` — bloqueia o atendente.
-
-**Regra desejada**: pode desbloquear/alterar se tiver permissão de acesso (admin OU acesso total no módulo Pedidos) **E** o cliente do pedido for da carteira dele (via `user_sales_reps`) ou delegado (via `user_portfolio_delegations`).
-
-**Ações**:
-- **Migração**: alterar `unlock_order` para autorizar quando:
-  - `has_role(admin)` **OU**
-  - usuário tem acesso `total` ao módulo `orders` (via `get_user_module_permissions`) **E** `can_manage_portfolio(auth.uid(), <sales_rep_id do company do pedido>, 'order')` retorna true.
-  - Mensagem de erro atualizada para refletir as duas condições.
-- **Frontend** (`OrderDialog.tsx`): refinar `canUnlock` para também exigir ownership/delegação quando não-admin (consulta o `usePortfolioProtection` ou hook equivalente do pedido) — evita mostrar botão que o backend recusará.
-
-## Arquivos afetados
-
-- `src/pages/Tasks.tsx` — logs/select da lista; passar `onEditTask` para o calendário.
-- `src/components/tasks/TaskCalendar.tsx` — nova prop `onEditTask`, usar quando disponível.
-- `src/components/orders/OrderDialog.tsx` — checar ownership/delegação no `canUnlock`.
-- **Migração SQL** com:
-  - `CREATE OR REPLACE FUNCTION can_manage_portfolio` (add branch `'task'`).
-  - `CREATE OR REPLACE FUNCTION check_task_owner_consistency` (usar `can_manage_portfolio`).
-  - `CREATE OR REPLACE FUNCTION unlock_order` (nova regra de autorização).
+- Não migrar a coluna para `date` (impactaria outras telas e relatórios).
+- Não alterar `due_time` (continua armazenado como `time` puro).
+- Não mexer em outras telas que leem `due_date` fora do módulo de Tarefas neste passo — se aparecer o mesmo sintoma em Today/Dashboard, tratamos em seguida.

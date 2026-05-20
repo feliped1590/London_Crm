@@ -64,8 +64,10 @@ export function useTaskCalendar(
 
   const rescheduleTask = useMutation({
     mutationFn: async ({ taskId, newDate, newTime }: { taskId: string; newDate: string; newTime?: string }) => {
+      // Normaliza data civil para meio-dia UTC para evitar shift de fuso
+      const dateOnly = newDate.split('T')[0];
       const updateData: Record<string, string | null> = {
-        due_date: newDate,
+        due_date: `${dateOnly}T12:00:00Z`,
       };
       
       if (newTime !== undefined) {

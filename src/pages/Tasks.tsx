@@ -22,6 +22,14 @@ import TaskCalendar from '@/components/tasks/TaskCalendar';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ServerPagination } from '@/components/ui/server-pagination';
+import { format } from 'date-fns';
+
+// Normaliza data civil (YYYY-MM-DD) para meio-dia UTC, evitando shift de fuso na coluna timestamptz
+const toCivilDateUTC = (dateStr: string | null | undefined): string | null => {
+  if (!dateStr) return null;
+  const dateOnly = dateStr.split('T')[0];
+  return `${dateOnly}T12:00:00Z`;
+};
 
 const TASK_LIST_COLUMNS = `
   id, title, description, status, priority, due_date, due_time, completed_at,
@@ -369,7 +377,7 @@ export default function Tasks() {
 
   // Handle creating task from calendar click
   const handleCreateFromCalendar = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = format(date, 'yyyy-MM-dd');
     setPrefilledDate(dateStr);
     setFormData({
       ...formData,
@@ -383,7 +391,7 @@ export default function Tasks() {
     const sanitizedData = {
       ...formData,
       due_time: formData.due_time || null,
-      due_date: formData.due_date || null,
+      due_date: toCivilDateUTC(formData.due_date),
     };
     if (editingTask) {
       updateMutation.mutate({ id: editingTask.id, ...sanitizedData });
@@ -657,7 +665,7 @@ export default function Tasks() {
                 ) : (
                   <div className="space-y-2">
                     {filteredTasks?.map((task) => {
-                      const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'concluida';
+                      const isOverdue = task.due_date && task.due_date.split('T')[0] < format(new Date(), 'yyyy-MM-dd') && task.status !== 'concluida';
                       return (
                         <div
                           key={task.id}

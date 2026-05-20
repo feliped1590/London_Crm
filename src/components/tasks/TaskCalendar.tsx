@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { DateSelectArg, EventClickArg, EventContentArg, EventDropArg } from '@fullcalendar/core';
-import { parseISO, isBefore, startOfToday, format } from 'date-fns';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -95,10 +95,10 @@ export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarP
 
   // Transform tasks into calendar events
   const events = useMemo(() => {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
     return tasks.map((task) => {
-      const isOverdue = task.due_date && 
-        isBefore(parseISO(task.due_date), startOfToday()) && 
-        task.status !== 'concluida';
+      const dateOnly = task.due_date ? task.due_date.split('T')[0] : todayStr;
+      const isOverdue = !!task.due_date && dateOnly < todayStr && task.status !== 'concluida';
 
       const hasDeal = !!task.deal_id;
       
@@ -107,12 +107,8 @@ export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarP
       if (isOverdue) backgroundColor = '#ef4444';
       if (task.status === 'concluida') backgroundColor = '#22c55e';
 
-      // Build start datetime
-      let startStr = task.due_date || new Date().toISOString();
-      if (task.due_time) {
-        const dateOnly = startStr.split('T')[0];
-        startStr = `${dateOnly}T${task.due_time}`;
-      }
+      // Build start datetime — keep as civil date to avoid TZ shift
+      const startStr = task.due_time ? `${dateOnly}T${task.due_time}` : dateOnly;
 
       return {
         id: task.id,
@@ -140,7 +136,7 @@ export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarP
       return;
     }
 
-    const newDate = event.start.toISOString();
+    const newDate = format(event.start, 'yyyy-MM-dd');
     const newTime = event.allDay ? undefined : format(event.start, 'HH:mm:ss');
 
     rescheduleTask.mutate(
