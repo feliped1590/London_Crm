@@ -109,10 +109,12 @@ export function useOrderApproval(
   orderType: OrderType = 'Novo/Alteração'
 ) {
   const { user } = useAuth();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, hasFullAccess, can } = useModulePermissions();
   const queryClient = useQueryClient();
 
   const TRANSITION_RULES = getTransitionRules(orderType);
+  const hasOrdersFullAccess = hasFullAccess('orders');
+  const canEditOrders = can('orders', 'edit' as any);
 
   // Fetch approval history for this order
   const { data: approvalHistory, isLoading: isLoadingHistory } = useQuery({
@@ -148,6 +150,9 @@ export function useOrderApproval(
 
     if (isAdmin) return true;
 
+    // Acesso total ao módulo Pedidos equivale a admin para fins de transição de status
+    if (hasOrdersFullAccess) return true;
+
     if (rule.allowedRoles.includes('vendedor')) {
       if (rule.requiresOwnership) {
         return orderCreatedBy === user.id;
@@ -155,8 +160,14 @@ export function useOrderApproval(
       return true;
     }
 
+    // Acesso restrito com permissão de editar: aplica regra de ownership (igual vendedor)
+    if (canEditOrders && rule.requiresOwnership) {
+      return orderCreatedBy === user.id;
+    }
+
     return false;
   };
+
 
   const getNextTransition = (): { from: OrderStatus; to: OrderStatus; label: string; description: string } | null => {
     const rule = TRANSITION_RULES[orderStatus];
@@ -232,14 +243,15 @@ export function useOrderApproval(
 
   const canCancelOrder = (): boolean => {
     if (!user) return false;
-    if (!isAdmin) return false;
+    if (!isAdmin && !hasOrdersFullAccess) return false;
     return orderStatus !== 'cancelado' && orderStatus !== 'entregue' && orderStatus !== 'faturado';
   };
 
   const cancelMutation = useMutation({
     mutationFn: async ({ reason }: { reason: string }) => {
       if (!user) throw new Error('Usuário não autenticado');
-      if (!isAdmin) throw new Error('Apenas administradores podem cancelar pedidos');
+      if (!isAdmin && !hasOrdersFullAccess) throw new Error('Você não tem permissão para cancelar pedidos');
+
 
       const { error: approvalError } = await supabase
         .from('order_approvals')
