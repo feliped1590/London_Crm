@@ -109,10 +109,12 @@ export function useOrderApproval(
   orderType: OrderType = 'Novo/Alteração'
 ) {
   const { user } = useAuth();
-  const { isAdmin } = useModulePermissions();
+  const { isAdmin, hasFullAccess, can } = useModulePermissions();
   const queryClient = useQueryClient();
 
   const TRANSITION_RULES = getTransitionRules(orderType);
+  const hasOrdersFullAccess = hasFullAccess('orders');
+  const canEditOrders = can('orders', 'edit' as any);
 
   // Fetch approval history for this order
   const { data: approvalHistory, isLoading: isLoadingHistory } = useQuery({
