@@ -11,6 +11,7 @@ export interface FichaTecnicaData {
   embalagem?: { tipo?: 'Fardo' | 'Caixa'; quantidade?: number };
   acessorios?: { accessory_id: string; valor?: string }[];
   stand_up?: { distancia_picote?: number; distancia_ziper?: number };
+  sanfona?: { ativa?: boolean; local?: 'Lateral' | 'Fundo'; valor?: number };
   impressao?: {
     tipo?: 'Interna' | 'Externa';
     local?: 'Frente' | 'Frente e Verso' | 'Verso';
@@ -40,6 +41,8 @@ interface Props {
   profile: FichaProfile;
   value: FichaTecnicaData;
   onChange: (next: FichaTecnicaData) => void;
+  /** Quando true, o bloco Sanfona é forçado ativo e seus campos viram obrigatórios. */
+  sanfonaRequired?: boolean;
 }
 
 const PROFILES_WITH_STAND_UP: FichaProfile[] = ['stand_up_liso', 'stand_up_impresso'];
