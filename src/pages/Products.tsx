@@ -58,6 +58,7 @@ import {
   tryGenerateErpVersion,
   hasAutoDimensions,
   VersionGenerationError,
+  extractGusset,
 } from '@/utils/products/generateVersion';
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
@@ -999,6 +1000,26 @@ export default function Products() {
       return;
     }
 
+    // Validação Sanfona — obrigatória quando grupo é Stand Up OU descrição contém "sanfona"
+    {
+      const fichaProfile = (grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none';
+      const isStandUpGroup = fichaProfile === 'stand_up_liso' || fichaProfile === 'stand_up_impresso';
+      const nameHasSanfona = /sanfona/i.test(`${formData.name || ''} ${formData.nome_impresso || ''}`);
+      const sanfonaRequired = isStandUpGroup || nameHasSanfona;
+      if (sanfonaRequired) {
+        const s = (formData.ficha_tecnica as any)?.sanfona;
+        const valor = Number(s?.valor);
+        if (!s?.ativa || !s?.local || !Number.isFinite(valor) || valor <= 0) {
+          toast.error(
+            'Sanfona obrigatória: informe a localização (Lateral/Fundo) e o valor em mm na aba Ficha Técnica.',
+            { duration: 7000 }
+          );
+          setFormTab('ficha');
+          return;
+        }
+      }
+    }
+
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
@@ -1022,7 +1043,7 @@ export default function Products() {
     submitData.erp_subgrupo = subgrupoLabel;
     if (hasAutoDimensions(profile)) {
       try {
-        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
+        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness, extractGusset(submitData.ficha_tecnica));
         if (version) {
           submitData.erp_versao = version;
         }
@@ -1702,7 +1723,7 @@ export default function Products() {
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
-                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                               }
                               newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
@@ -1727,7 +1748,7 @@ export default function Products() {
                                 newData.fator_milheiro = recalcularFatorMilheiro(newData);
                                 const prof = getGroupProfile(newData.grupo_id);
                                 if (hasAutoDimensions(prof)) {
-                                  newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                                  newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                                 }
                                 newData.sku = recalcularSku(newData);
                                 if (isAutoDescription) newData.name = recalcularDescricao(newData);
@@ -1756,7 +1777,7 @@ export default function Products() {
                               newData.fator_milheiro = recalcularFatorMilheiro(newData);
                               const prof = getGroupProfile(newData.grupo_id);
                               if (hasAutoDimensions(prof)) {
-                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                                newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                               }
                               newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
@@ -1815,11 +1836,28 @@ export default function Products() {
                 </TabsContent>
 
                 <TabsContent value="ficha" className="space-y-4 mt-4">
-                  <FichaTecnicaSection
-                    profile={(grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none'}
-                    value={formData.ficha_tecnica}
-                    onChange={(next) => setFormData({ ...formData, ficha_tecnica: next })}
-                  />
+                  {(() => {
+                    const fichaProfile = (grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none';
+                    const isStandUpGroup = fichaProfile === 'stand_up_liso' || fichaProfile === 'stand_up_impresso';
+                    const nameHasSanfona = /sanfona/i.test(`${formData.name || ''} ${formData.nome_impresso || ''}`);
+                    const sanfonaRequired = isStandUpGroup || nameHasSanfona;
+                    return (
+                      <FichaTecnicaSection
+                        profile={fichaProfile}
+                        sanfonaRequired={sanfonaRequired}
+                        value={formData.ficha_tecnica}
+                        onChange={(next) => {
+                          const newData: any = { ...formData, ficha_tecnica: next };
+                          const prof = getGroupProfile(newData.grupo_id);
+                          if (hasAutoDimensions(prof)) {
+                            newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(next));
+                          }
+                          if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                          setFormData(newData);
+                        }}
+                      />
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="clientes" className="space-y-4 mt-4">

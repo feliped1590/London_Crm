@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useFichaLookups } from '@/hooks/useFichaLookups';
 import type { FichaProfile } from '@/hooks/useProductLookups';
@@ -10,6 +11,7 @@ export interface FichaTecnicaData {
   embalagem?: { tipo?: 'Fardo' | 'Caixa'; quantidade?: number };
   acessorios?: { accessory_id: string; valor?: string }[];
   stand_up?: { distancia_picote?: number; distancia_ziper?: number };
+  sanfona?: { ativa?: boolean; local?: 'Lateral' | 'Fundo'; valor?: number };
   impressao?: {
     tipo?: 'Interna' | 'Externa';
     local?: 'Frente' | 'Frente e Verso' | 'Verso';
@@ -39,6 +41,8 @@ interface Props {
   profile: FichaProfile;
   value: FichaTecnicaData;
   onChange: (next: FichaTecnicaData) => void;
+  /** Quando true, o bloco Sanfona é forçado ativo e seus campos viram obrigatórios. */
+  sanfonaRequired?: boolean;
 }
 
 const PROFILES_WITH_STAND_UP: FichaProfile[] = ['stand_up_liso', 'stand_up_impresso'];
@@ -52,10 +56,12 @@ function num(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-export function FichaTecnicaSection({ profile, value, onChange }: Props) {
+export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired = false }: Props) {
   const { machines, cylinders } = useFichaLookups();
 
-  if (!profile || profile === 'none') {
+  const isNone = !profile || profile === 'none';
+
+  if (isNone && !sanfonaRequired) {
     return (
       <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
         Selecione um grupo com perfil de ficha técnica configurado para preencher os campos específicos.
@@ -72,13 +78,16 @@ export function FichaTecnicaSection({ profile, value, onChange }: Props) {
   const showBobina = PROFILES_WITH_BOBINA.includes(profile);
   const showSentido = profile === 'bobina_impressa';
   const showImpressao = PROFILES_WITH_PRINT.includes(profile);
-
+  // Sanfona: disponível para sacos/standup ou quando obrigatória (nome contém "sanfona")
+  const showSanfona = PROFILES_WITH_BAG_OR_STANDUP.includes(profile) || sanfonaRequired;
+  const sanfonaAtiva = sanfonaRequired ? true : !!value.sanfona?.ativa;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-medium text-muted-foreground">Ficha Técnica</h3>
-        <Badge variant="outline" className="text-xs">{profile.replace(/_/g, ' ')}</Badge>
+        {!isNone && <Badge variant="outline" className="text-xs">{profile.replace(/_/g, ' ')}</Badge>}
+        {sanfonaRequired && <Badge variant="destructive" className="text-xs">Sanfona obrigatória</Badge>}
       </div>
 
       {showStandUp && (
@@ -98,6 +107,63 @@ export function FichaTecnicaSection({ profile, value, onChange }: Props) {
           </div>
         </section>
       )}
+
+      {showSanfona && (
+        <section className="space-y-3 rounded-md border p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium">Sanfona</h4>
+              <p className="text-xs text-muted-foreground">
+                {sanfonaRequired
+                  ? 'Obrigatória — o produto é Stand Up ou contém "sanfona" na descrição.'
+                  : 'Ative se este produto possui sanfona (lateral ou fundo).'}
+              </p>
+            </div>
+            <Switch
+              checked={sanfonaAtiva}
+              disabled={sanfonaRequired}
+              onCheckedChange={(checked) => {
+                if (sanfonaRequired) return;
+                if (checked) {
+                  update('sanfona', { ativa: true });
+                } else {
+                  onChange({ ...value, sanfona: { ativa: false } });
+                }
+              }}
+            />
+          </div>
+          {sanfonaAtiva && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Localização *</Label>
+                <Select
+                  value={value.sanfona?.local || undefined}
+                  onValueChange={(v) => update('sanfona', { ativa: true, local: v as 'Lateral' | 'Fundo' })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Lateral">Lateral (compõe Largura)</SelectItem>
+                    <SelectItem value="Fundo">Fundo (compõe Comprimento)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Valor da sanfona (mm) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={value.sanfona?.valor ?? ''}
+                  onChange={(e) => update('sanfona', { ativa: true, valor: num(e.target.value) })}
+                  placeholder="Ex.: 30"
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+
 
 
       {showEmbalagem && (
