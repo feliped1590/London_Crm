@@ -108,6 +108,63 @@ export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired 
         </section>
       )}
 
+      {showSanfona && (
+        <section className="space-y-3 rounded-md border p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-medium">Sanfona</h4>
+              <p className="text-xs text-muted-foreground">
+                {sanfonaRequired
+                  ? 'Obrigatória — o produto é Stand Up ou contém "sanfona" na descrição.'
+                  : 'Ative se este produto possui sanfona (lateral ou fundo).'}
+              </p>
+            </div>
+            <Switch
+              checked={sanfonaAtiva}
+              disabled={sanfonaRequired}
+              onCheckedChange={(checked) => {
+                if (sanfonaRequired) return;
+                if (checked) {
+                  update('sanfona', { ativa: true });
+                } else {
+                  onChange({ ...value, sanfona: { ativa: false } });
+                }
+              }}
+            />
+          </div>
+          {sanfonaAtiva && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Localização *</Label>
+                <Select
+                  value={value.sanfona?.local || undefined}
+                  onValueChange={(v) => update('sanfona', { ativa: true, local: v as 'Lateral' | 'Fundo' })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Lateral">Lateral (compõe Largura)</SelectItem>
+                    <SelectItem value="Fundo">Fundo (compõe Comprimento)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Valor da sanfona (mm) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={value.sanfona?.valor ?? ''}
+                  onChange={(e) => update('sanfona', { ativa: true, valor: num(e.target.value) })}
+                  placeholder="Ex.: 30"
+                />
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+
+
 
       {showEmbalagem && (
         <section className="space-y-3">
