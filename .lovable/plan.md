@@ -1,77 +1,71 @@
-## Plano — Dimensões efetivas (com sanfona) em cálculos e atributos ERP
+## Reclassificação automática de clientes por atividade
 
-### Princípio
+### Regras de negócio
+- **Cliente Ativo** → última interação ≤ 6 meses
+- **Cliente Inativo** → última interação entre 6 e 12 meses
+- **Cliente Perdido** → última interação > 12 meses
+- **Leads e Prospects** → entram no recálculo normalmente. Como muitos ainda não têm interações registradas, no **kickoff** vamos assumir `last_interaction_at = hoje` para qualquer empresa sem nenhum sinal — assim ninguém começa como "Perdido" injustamente. A partir daí o relógio passa a correr de verdade conforme novas interações forem (ou não) acontecendo.
+- O estágio `lead` / `prospect` em si **não muda** automaticamente — só o eixo Ativo/Inativo/Perdido é recalculado. A promoção Lead→Prospect→Cliente continua manual / via primeira venda.
 
-| Camada | Valor exemplo | Origem |
-|---|---|---|
-| `products.width` / `length` / `thickness` | 100 / 250 / 0,24 | DB — limpo, imutável |
-| `ficha_tecnica.sanfona` | `{ativa:true, local:'Fundo', valor:30}` | DB — editável |
-| **Dimensões efetivas** (runtime) | 100 / 280 / 0,24 | computado via helper |
-| **Atributo ERP** (Largura/Comprimento) | 100 / **280** | soma efetiva |
-| **`erp_versao`** (string visual) | `100x250+30x0,240` | composição literal |
+> Observação: Ativo/Inativo/Perdido vira um **atributo independente** do estágio comercial (lead, prospect, cliente). Toda empresa passa a ter os dois: o estágio comercial e o status de atividade.
 
-DB intacto. Sanfona entra **só no momento do cálculo / envio**.
+### Fonte de dados (unificada)
+Vamos usar e estender a view `company_activity_summary`, que já consolida o "último contato". Hoje ela considera:
+- `activities` (timeline)
+- `tasks` concluídas
+- `email_logs` enviados
+- `whatsapp_messages` outbound
+- `deals` (criação)
+- `orders` (criação)
 
-### Implementação
+Vamos **adicionar** ao cálculo de `last_interaction_at`:
+- `entity_notes` (observações em empresa/contato/negócio)
+- `proposals` (`created_at` e `updated_at`)
+- `deal_stage_history` (mudança de etapa do funil)
+- `tasks.created_at` (não só conclusão — agendar tarefa já é interação)
+- `orders.updated_at`
 
-**1. Helper único — `getEffectiveDimensions`**
+Isso vira a fonte única de verdade para "última interação" em todo o sistema (badges, filtros, dashboard, transferência de carteira por 60 dias).
 
-`src/utils/products/effectiveDimensions.ts`:
-```ts
-export function getEffectiveDimensions(p) {
-  const s = p.ficha_tecnica?.sanfona;
-  const add = (s?.ativa && Number(s?.valor) > 0) ? Number(s.valor) : 0;
-  return {
-    width:     (p.width  || 0) + (s?.local === 'Lateral' ? add : 0),
-    length:    (p.length || 0) + (s?.local === 'Fundo'   ? add : 0),
-    thickness: p.thickness || 0,
-  };
-}
-```
+### Como será aplicado
+1. **Função SQL** `recompute_company_lifecycle(p_company_id uuid DEFAULT NULL)`:
+   - Percorre todas as empresas (ou uma específica)
+   - Lê `last_interaction_at` da view; se NULL, aplica fallback: `COALESCE(companies.updated_at, companies.created_at, now())`
+   - Classifica em Ativo / Inativo / Perdido pelas faixas 6m / 12m
+   - Atualiza apenas se mudou, com `origem_alteracao = 'SYSTEM_LIFECYCLE'`
+2. **Backfill de kickoff** (rodado uma vez no deploy):
+   - Para toda empresa **sem nenhuma interação registrada**, grava `lifecycle_baseline_at = now()` numa coluna nova
+   - A view passa a usar `GREATEST(last_interaction_real, lifecycle_baseline_at)` — assim leads/prospects sem histórico começam como Ativo e só envelhecem dali em diante
+3. **Job diário** via `pg_cron` (03:00 BRT) executando `recompute_company_lifecycle(NULL)`
+4. **Promoção imediata**: trigger `AFTER INSERT` em `orders`, `activities`, `entity_notes` chama `recompute_company_lifecycle(NEW.company_id)` para promover de volta para Ativo sem esperar o cron
+5. **Auditoria**: cada mudança automática registrada em `company_audit_log` com `action = 'lifecycle_auto_reclassify'`, valor antigo, novo e data da última interação considerada
+6. **Botão manual** "Reclassificar agora" em Configurações para forçar recálculo geral
 
-Espelho SQL: função `public.get_effective_dimensions(p_product products)` retornando `(width, length, thickness)` — reusada pelo `extract_attribute_value`.
+### Impacto na UI (sem mudar layout)
+- `/customers` e `LifecyclePanel` do dashboard refletem os novos contadores automaticamente
+- Tooltip nos badges Inativo/Perdido: "Última interação: <data> (<X meses atrás>)"
 
-**2. Cálculos comerciais usam efetivo**
+### Detalhes técnicos
+- Nova coluna `companies.lifecycle_baseline_at timestamptz` (preenchida no kickoff para registros sem interação)
+- Nova coluna `companies.lifecycle_updated_at timestamptz` (auditoria)
+- View `company_activity_summary` recriada incluindo `entity_notes`, `proposals`, `deal_stage_history`, `tasks.created_at`, `orders.updated_at`, e usando `GREATEST(..., lifecycle_baseline_at)` como piso
+- Função:
+  ```text
+  recompute_company_lifecycle(p_company_id uuid DEFAULT NULL)
+    → JOIN company_activity_summary
+    → CASE months_between(now, last) < 6  → active
+            < 12 → inactive
+            ELSE → lost
+    → UPDATE companies SET lifecycle_stage_atividade = ...,
+                           lifecycle_updated_at = now(),
+                           origem_alteracao = 'SYSTEM_LIFECYCLE'
+    → INSERT company_audit_log
+  ```
+- Cron agendado via `supabase--insert` (não migration) com `pg_cron` + `pg_net`
+- Backfill único após deploy: roda a função para todas as empresas e gera relatório (quantas Ativo→Inativo, etc.)
 
-- `src/utils/pricing/packagingPricing.ts` → no ramo `MIL`, trocar `product.width/length` por `getEffectiveDimensions(product).{width,length}` antes de `calcularFatorMilheiro`.
-- Auditar com `rg "product\.(width|length|thickness)"` em `src/utils/pricing/`, `src/modules/documents/`, `src/components/orders/`, `src/components/documents/` para identificar outros pontos que multiplicam dimensões em cálculo de preço/peso — aplicar o mesmo helper.
-- **Não tocar** em `unit_price` nem em qualquer input do usuário.
-
-**3. Atributos ERP — enviar soma numérica**
-
-Alterar SQL `extract_attribute_value`:
-- Hoje, paths `width`/`length` retornam string concatenada (ex.: `"100+30"`) quando há sanfona.
-- Novo: usar `get_effective_dimensions` e retornar **soma numérica** formatada (ex.: `"280"`).
-
-Trigger `detect_dirty_attributes` continua disparando quando `ficha_tecnica` muda (já marca width/length como `is_dirty`), então `process-attribute-sync` reenvia automaticamente.
-
-**4. `erp_versao` — sem mudança**
-
-`generateErpVersion` (TS) e `auto_generate_erp_versao` (SQL trigger) continuam gerando `100x250+30x0,240`. É o rótulo visual da versão no ERP.
-
-**5. Backfill**
-
-Para produtos com sanfona ativa:
-- Tocar `updated_at` em `products` (UPDATE no-op) → trigger regenera `erp_versao` automaticamente.
-- `UPDATE attribute_values SET is_dirty = true` para `attribute_path IN ('width','length')` desses produtos → fila de atributos reenvia.
-
-**6. Validação**
-
-Produto teste (`TESTE DE IMPRESSO`, Stand Up Impresso, 100×250×0,24, sanfona Fundo 30):
-
-| Verificação | Esperado |
-|---|---|
-| `products.length` no DB | `250` (intacto) |
-| `erp_versao` no DB | `100x250+30x0,240` |
-| Payload atributo Largura | `valor_padrao = "100"` |
-| Payload atributo Comprimento | `valor_padrao = "280"` |
-| Payload atributo Espessura | `valor_padrao = "0,240"` |
-| Payload produto `versoes[].detalhes` | `100x250+30x0,240` |
-| Preço milheiro em novo pedido | `fator × 100 × 280 × 0,24 / 1.000.000` |
-
-### Fora de escopo
-
-- Não tocar em `products.width/length/thickness` (continuam puros).
-- Não recalcular pedidos já criados (snapshot congelado, conforme decidido).
-- Não tocar em `fator_kg`/preço armazenado no produto (decidido: não há mais fator armazenado em item).
-- Suporte simultâneo a Lateral + Fundo (não existe).
+### Pontos a confirmar antes de implementar
+1. **Eixos separados ou substituição?** Hoje `lifecycle_stage` mistura `lead/prospect/customer_active/inactive/lost`. Posso:
+   - (a) Manter como está e sobrescrever — quando vira Inativo deixa de ser "lead"
+   - (b) Recomendado: criar coluna nova `activity_status` (ativo/inativo/perdido) separada de `lifecycle_stage` (lead/prospect/cliente), assim você enxerga "Lead Ativo", "Cliente Inativo", etc.
+2. **Mudar o gatilho dos 60 dias de transferência de carteira** para usar a mesma `last_interaction_at` unificada? (recomendado, evita duas verdades)
