@@ -1061,7 +1061,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       <div className="space-y-2">
         <Label>Empresa</Label>
         <SearchableSelect
-          options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+          options={(companies || []).map(c => ({ value: c.id, label: c.cnpj ? `${c.name} — ${formatCNPJ(c.cnpj)}` : c.name }))}
           value={companyId || null}
           onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v).then(data => { if (data?.default_carrier_id) setCarrierId(data.default_carrier_id); if (data?.default_freight_type) setFreightType(data.default_freight_type); }); }}
           placeholder="Selecione uma empresa" searchPlaceholder="Buscar empresa..."
