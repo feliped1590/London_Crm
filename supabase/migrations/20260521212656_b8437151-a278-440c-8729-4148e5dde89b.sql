@@ -1,0 +1,1 @@
+UPDATE public.product_groups SET dimension_profile = 'full' WHERE label IN ('STAND UP LISO', 'STAND UP IMPRESSO');
