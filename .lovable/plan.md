@@ -1,80 +1,79 @@
-## Diagnóstico
+# Sincronização de atributos ERP — diagnóstico e correção
 
-Análise das estatísticas reais do banco (pg_stat_statements + pg_size). Os principais consumidores de I/O hoje são:
+## O que está acontecendo
 
-| Origem | Sintoma | Impacto |
-|---|---|---|
-| `net._http_response` (pg_net) | **367 MB de bloat** com apenas 2.617 linhas vivas — INSERT+DELETE constantes do worker | Disk write/read pesado contínuo |
-| `get_dashboard_card_metrics()` | 2.084 chamadas, 1,85 s/chamada, **25 M block hits** — sem `staleTime` no React Query | Refetch a cada navegação |
-| `get_lifecycle_counts()` | 2.595 chamadas, 1,69 s/chamada, 4.383 s totais | Pesa em todo carregamento do dashboard |
-| `get_customer_filter_options()` | 2.171 chamadas, 1,4 s/chamada | Recarrega filtros toda hora |
-| Listagem `companies` (PostgREST) | 3.365 chamadas, 354 ms, 3,1 M hits, ordena por `name` sem índice tenant-aware | Scan/sort caro |
-| `search_customers_v2` (RPC) | 5.200 chamadas, 960 ms/chamada | Cada digitação dispara busca |
-| 8 cron jobs `* * * * *` | dispatch-company/order/product-sync × 2 offsets cada | Workers acordam a cada minuto |
-| Realtime em 8 tabelas grandes | 18 bi block hits no WAL reader | Reader gira em cima de `companies/products/orders` o tempo todo |
+O toast **"Failed to send a request to the Edge Function"** é causado por **um único motivo concreto**:
 
-A barra laranja de 79% vem principalmente do bloat de `net._http_response` + RPCs sem cache + realtime em tabelas grandes.
+> A função `process-attribute-sync` **existe no código mas nunca foi deployada** no Lovable Cloud.
 
-## Plano de otimização (3 fases, sem upgrade)
+Confirmado por:
+- `curl` direto na função → `404 NOT_FOUND` ("Requested function was not found").
+- Logs da função → vazios (nenhum boot, nenhum shutdown registrado).
+- Arquivo `supabase/functions/process-attribute-sync/index.ts` presente e íntegro.
 
-### Fase 1 — Ganhos imediatos e seguros
+Por isso o botão **"Processar fila agora"** falha imediatamente no `supabase.functions.invoke(...)`, antes de qualquer lógica de payload rodar. Nada chega ao ERP.
 
-**1.1 Limpar bloat do pg_net**
-- `VACUUM FULL net._http_response` (libera ~360 MB de disco imediatamente).
-- Reduzir retenção: hoje o cleanup mantém respostas antigas; encurtar para 1 hora.
-- Reduzir frequência do worker de cleanup se aplicável.
+## O payload já está correto?
 
-**1.2 Cache no React Query — adicionar `staleTime` e `gcTime`**
-Hooks afetados (todos sem `staleTime` hoje ou com valores baixos):
-- `src/hooks/useDashboardCards.ts` (metrics) → `staleTime: 5 min`, `gcTime: 30 min`
-- `src/components/dashboard/LifecyclePanel.tsx` → subir de 60 s para 5 min
-- `src/pages/Customers.tsx` (filter options) → subir de 30 s para 10 min
-- `src/hooks/useTodayData.ts`, `useDashboardData.ts`, `useSalesFunnelData.ts`, `useDashboardCards.ts` → revisar e padronizar `staleTime: 2–5 min`
+**Sim.** A construção está conforme o padrão `IMP_ATRIBFICHA_V1`:
 
-Apenas redução de refetch já corta facilmente 50–70 % das chamadas pesadas.
+```json
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "IMP_ATRIBFICHA_V1",
+  "#out#p_retorno": "T",
+  "json": "{\"empresa\":1,\"produto\":\"109839\",\"versao\":\"300x500x0,120\",\"atributo\":1,\"valor_padrao\":\"300\"}"
+}
+```
 
-**1.3 Throttle de cron jobs**
-- `dispatch-company-sync-30s` + `-offset` → manter, mas pular execução quando a fila estiver vazia (early-exit na função). Mesmo padrão para order e product.
-- Avaliar trocar `process-scheduled-emails` de `* * * * *` para `*/2 * * * *`.
+Regras já implementadas e corretas:
+- 1 atributo por request
+- `empresa`, `produto` (erp_product_code), `versao` (erp_versao), `atributo` (erp_codigo), `valor_padrao`
+- `tolerancia_mais` / `tolerancia_menos` só quando `aceita_tolerancia = true`
+- Bloqueio quando produto ainda não tem `erp_product_code`
+- Retry exponencial até 5 tentativas
+- Log append-only em `attribute_sync_log`
 
-### Fase 2 — Otimizações estruturais
+## Estado atual da fila
 
-**2.1 Índices faltantes em `companies`**
-- Índice composto para listagem padrão: `(tenant_id, name)` e/ou parcial por status.
-- Confirmar índice em `name COLLATE` para o `ORDER BY name`.
+| Status | Qtd |
+|---|---|
+| pending | 46 |
+| blocked_no_erp_code | 39 |
 
-**2.2 Refatorar RPCs pesados**
-- `get_dashboard_card_metrics()` e `get_lifecycle_counts()`: avaliar se podem virar **materialized view** atualizada a cada 5 min via cron, em vez de calcular on-the-fly.
-- `get_customer_filter_options()`: hoje devolve listas estáticas (setores, segmentos, atividades); ou cacheia mais agressivamente no client, ou vira view materializada.
+Os 39 bloqueados foram travados **antes** do produto receber o `erp_product_code`. Conferi alguns deles: o produto **já tem** `erp_product_code` agora (ex.: 110803), então estão presos por estado antigo da fila. Precisam ser re-enfileirados como `pending`.
 
-**2.3 Revisar Realtime publication**
-Tabelas atualmente publicadas: `companies, company_products, deals, order_sync_queue, orders, product_sync_queue, products, tasks`.
-- `companies` e `products` são as duas maiores e mais escritas — provavelmente não precisam de Realtime broadcast global. Avaliar remover do publication e usar invalidação por React Query manual após mutações.
-- Manter Realtime só em `tasks`, `deals`, filas de sync.
+## Plano de correção
 
-### Fase 3 — Só se ainda for necessário
+### Passo 1 — Deploy da função (resolve o 404)
+Fazer deploy de `process-attribute-sync`. Após isso, o botão "Processar fila agora" para de dar erro e começa a processar os 46 `pending`.
 
-- Upgrade da instância no painel **Cloud → Advanced settings**.
+### Passo 2 — Reabrir os 39 itens `blocked_no_erp_code` cujo produto já recebeu código ERP
+Migration única que faz:
 
-## Ordem de execução proposta
+```sql
+UPDATE attribute_sync_queue q
+SET status = 'pending',
+    attempt_count = 0,
+    error_message = NULL,
+    next_retry_at = NULL,
+    updated_at = now()
+FROM products p
+WHERE q.product_id = p.id
+  AND q.status = 'blocked_no_erp_code'
+  AND p.erp_product_code IS NOT NULL
+  AND btrim(p.erp_product_code::text) <> '';
+```
 
-1. `VACUUM FULL net._http_response` + ajuste de retenção (libera disco já).
-2. Padronizar `staleTime` nos hooks de dashboard/filtros.
-3. Reduzir cron jobs com early-exit em fila vazia.
-4. Criar índices em `companies`.
-5. Materializar `get_dashboard_card_metrics` e `get_lifecycle_counts`.
-6. Limpar Realtime publication.
-7. Reavaliar a barra de 79% — se ainda alta, aí sim upgrade.
+Itens cujo produto ainda não foi para o ERP permanecem `blocked_no_erp_code` (correto — eles destravam sozinhos quando o produto sincronizar via `process-product-sync`, conforme regra já existente).
 
-## Detalhes técnicos
+### Passo 3 — Rodar a fila e validar
+1. Disparar `process-attribute-sync` uma vez (botão da UI ou curl).
+2. Conferir no banco: `attribute_sync_queue` deve ter `status='sent'` para os bem-sucedidos e `attribute_sync_log` deve ter o `response_body` real do ERP.
+3. Se aparecer erro do ERP (`#ERRO#...`), a mensagem fica visível na coluna "Erro" da UI e no log — daí é tratamento caso a caso (atributo inexistente no ERP, versão errada, etc.).
 
-- VACUUM FULL trava a tabela; `net._http_response` é interna do pg_net, é seguro fazer fora de horário de pico.
-- React Query: definir defaults globais em `src/main.tsx` (`defaultOptions.queries.staleTime`) também ajuda — hoje provavelmente está em 0.
-- Para remover tabela da publication: `ALTER PUBLICATION supabase_realtime DROP TABLE public.companies;` (e `products`). Não impacta queries normais, só desativa eventos realtime.
-- Materialized views: refresh `CONCURRENTLY` via cron a cada 5 min mantém dashboard reativo o suficiente.
-
-## Fora do escopo
-
-- Não vou mexer em lógica de negócio, RLS, fluxos de sync, ou modelos de dados.
-- Não vou desligar nenhum cron crítico de sincronização ERP.
-- Não vou alterar tamanho de instância sem confirmar que as otimizações não bastaram.
+## Fora de escopo (não vou tocar agora)
+- Lógica de payload (já validada)
+- Serializer Projedata
+- RLS das tabelas `attribute_sync_*`
+- Cron automático para drenar a fila — hoje é manual via botão, e está OK até validarmos o fluxo end-to-end.
