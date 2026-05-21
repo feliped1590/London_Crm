@@ -1104,6 +1104,8 @@ export type Database = {
       companies: {
         Row: {
           active: boolean | null
+          activity_status: Database["public"]["Enums"]["activity_status"] | null
+          activity_status_updated_at: string | null
           address: string | null
           address_complement: string | null
           address_number: string | null
@@ -1139,8 +1141,10 @@ export type Database = {
           inscricao_municipal: string | null
           integration_status: string | null
           is_matriz: boolean | null
+          last_interaction_at: string | null
           last_reviewed_at: string | null
           legal_entity_id: string | null
+          lifecycle_baseline_at: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"] | null
           name: string
           neighborhood: string | null
@@ -1166,6 +1170,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          activity_status?:
+            | Database["public"]["Enums"]["activity_status"]
+            | null
+          activity_status_updated_at?: string | null
           address?: string | null
           address_complement?: string | null
           address_number?: string | null
@@ -1201,8 +1209,10 @@ export type Database = {
           inscricao_municipal?: string | null
           integration_status?: string | null
           is_matriz?: boolean | null
+          last_interaction_at?: string | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null
+          lifecycle_baseline_at?: string | null
           lifecycle_stage?:
             | Database["public"]["Enums"]["lifecycle_stage"]
             | null
@@ -1230,6 +1240,10 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          activity_status?:
+            | Database["public"]["Enums"]["activity_status"]
+            | null
+          activity_status_updated_at?: string | null
           address?: string | null
           address_complement?: string | null
           address_number?: string | null
@@ -1265,8 +1279,10 @@ export type Database = {
           inscricao_municipal?: string | null
           integration_status?: string | null
           is_matriz?: boolean | null
+          last_interaction_at?: string | null
           last_reviewed_at?: string | null
           legal_entity_id?: string | null
+          lifecycle_baseline_at?: string | null
           lifecycle_stage?:
             | Database["public"]["Enums"]["lifecycle_stage"]
             | null
@@ -9877,6 +9893,13 @@ export type Database = {
           user_name: string
         }[]
       }
+      get_activity_status_counts: {
+        Args: never
+        Returns: {
+          activity_status: string
+          total: number
+        }[]
+      }
       get_available_company_products: {
         Args: { p_company_id: string; p_limit?: number; p_search?: string }
         Returns: {
@@ -10327,6 +10350,15 @@ export type Database = {
         Args: { p_batch_size?: number; p_tenant_id: string }
         Returns: Json
       }
+      recompute_company_lifecycle: {
+        Args: { p_company_id?: string }
+        Returns: {
+          changed_to_ativo: number
+          changed_to_inativo: number
+          changed_to_perdido: number
+          total_processed: number
+        }[]
+      }
       release_blocked_attributes: {
         Args: { p_product_id: string }
         Returns: number
@@ -10458,6 +10490,7 @@ export type Database = {
     }
     Enums: {
       access_level: "restrito" | "total"
+      activity_status: "ativo" | "inativo" | "perdido"
       app_role:
         | "admin"
         | "vendedor"
@@ -10730,6 +10763,7 @@ export const Constants = {
   public: {
     Enums: {
       access_level: ["restrito", "total"],
+      activity_status: ["ativo", "inativo", "perdido"],
       app_role: [
         "admin",
         "vendedor",

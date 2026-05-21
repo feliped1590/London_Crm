@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 
 interface LifecycleStage {
   key: string;
+  source: 'lifecycle' | 'activity';
   label: string;
   icon: React.ElementType;
   colorClass: string;
@@ -15,24 +16,31 @@ interface LifecycleStage {
 }
 
 const STAGES: LifecycleStage[] = [
-  { key: 'lead', label: 'Leads', icon: UserPlus, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-500/10 border-blue-500/20' },
-  { key: 'prospect', label: 'Prospects', icon: Eye, colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-500/10 border-purple-500/20' },
-  { key: 'customer_active', label: 'Clientes Ativos', icon: UserCheck, colorClass: 'text-green-600 dark:text-green-400', bgClass: 'bg-green-500/10 border-green-500/20' },
-  { key: 'customer_inactive', label: 'Clientes Inativos', icon: UserMinus, colorClass: 'text-orange-600 dark:text-orange-400', bgClass: 'bg-orange-500/10 border-orange-500/20' },
-  { key: 'customer_lost', label: 'Clientes Perdidos', icon: UserX, colorClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-500/10 border-red-500/20' },
+  { key: 'lead', source: 'lifecycle', label: 'Leads', icon: UserPlus, colorClass: 'text-blue-600 dark:text-blue-400', bgClass: 'bg-blue-500/10 border-blue-500/20' },
+  { key: 'prospect', source: 'lifecycle', label: 'Prospects', icon: Eye, colorClass: 'text-purple-600 dark:text-purple-400', bgClass: 'bg-purple-500/10 border-purple-500/20' },
+  { key: 'ativo', source: 'activity', label: 'Clientes Ativos', icon: UserCheck, colorClass: 'text-green-600 dark:text-green-400', bgClass: 'bg-green-500/10 border-green-500/20' },
+  { key: 'inativo', source: 'activity', label: 'Clientes Inativos', icon: UserMinus, colorClass: 'text-orange-600 dark:text-orange-400', bgClass: 'bg-orange-500/10 border-orange-500/20' },
+  { key: 'perdido', source: 'activity', label: 'Clientes Perdidos', icon: UserX, colorClass: 'text-red-600 dark:text-red-400', bgClass: 'bg-red-500/10 border-red-500/20' },
 ];
 
 export function LifecyclePanel() {
   const navigate = useNavigate();
 
   const { data: counts, isLoading } = useQuery({
-    queryKey: ['lifecycle-counts'],
+    queryKey: ['lifecycle-counts-v2'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_lifecycle_counts');
-      if (error) throw error;
+      const [lifecycle, activity] = await Promise.all([
+        supabase.rpc('get_lifecycle_counts'),
+        supabase.rpc('get_activity_status_counts'),
+      ]);
+      if (lifecycle.error) throw lifecycle.error;
+      if (activity.error) throw activity.error;
       const map: Record<string, number> = {};
-      (data || []).forEach((row: any) => {
-        map[row.lifecycle_stage] = Number(row.total);
+      (lifecycle.data || []).forEach((row: any) => {
+        map[`lifecycle:${row.lifecycle_stage}`] = Number(row.total);
+      });
+      (activity.data || []).forEach((row: any) => {
+        map[`activity:${row.activity_status}`] = Number(row.total);
       });
       return map;
     },
@@ -41,11 +49,15 @@ export function LifecyclePanel() {
   });
 
   const totalCompanies = counts
-    ? Object.values(counts).reduce((sum, v) => sum + v, 0)
+    ? (counts['activity:ativo'] ?? 0)
+      + (counts['activity:inativo'] ?? 0)
+      + (counts['activity:perdido'] ?? 0)
+      + (counts['activity:unknown'] ?? 0)
     : 0;
 
-  const handleClick = (stage: string) => {
-    navigate(`/customers?lifecycle=${stage}`);
+  const handleClick = (stage: LifecycleStage) => {
+    const param = stage.source === 'activity' ? `activity=${stage.key}` : `lifecycle=${stage.key}`;
+    navigate(`/customers?${param}`);
   };
 
   if (isLoading) {
@@ -67,18 +79,18 @@ export function LifecyclePanel() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {STAGES.map((stage) => {
-        const count = counts?.[stage.key] ?? 0;
+        const count = counts?.[`${stage.source}:${stage.key}`] ?? 0;
         const percentage = totalCompanies > 0 ? ((count / totalCompanies) * 100).toFixed(1) : '0';
         const Icon = stage.icon;
 
         return (
           <Card
-            key={stage.key}
+            key={`${stage.source}:${stage.key}`}
             className={cn(
               'cursor-pointer hover:shadow-md transition-all border',
               stage.bgClass
             )}
-            onClick={() => handleClick(stage.key)}
+            onClick={() => handleClick(stage)}
           >
             <CardContent className="p-4 flex flex-col gap-1">
               <div className={cn('flex items-center gap-2', stage.colorClass)}>
