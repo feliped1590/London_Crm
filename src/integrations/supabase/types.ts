@@ -9893,6 +9893,13 @@ export type Database = {
           user_name: string
         }[]
       }
+      get_activity_status_counts: {
+        Args: never
+        Returns: {
+          activity_status: string
+          total: number
+        }[]
+      }
       get_available_company_products: {
         Args: { p_company_id: string; p_limit?: number; p_search?: string }
         Returns: {
