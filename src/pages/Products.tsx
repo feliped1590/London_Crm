@@ -1728,7 +1728,7 @@ export default function Products() {
                                 newData.fator_milheiro = recalcularFatorMilheiro(newData);
                                 const prof = getGroupProfile(newData.grupo_id);
                                 if (hasAutoDimensions(prof)) {
-                                  newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness);
+                                  newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                                 }
                                 newData.sku = recalcularSku(newData);
                                 if (isAutoDescription) newData.name = recalcularDescricao(newData);
