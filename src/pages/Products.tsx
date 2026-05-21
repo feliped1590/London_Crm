@@ -1704,6 +1704,101 @@ export default function Products() {
                       </p>
                     </div>
 
+                    {/* Sanfona (entre Nome Complementar e Dimensões) */}
+                    {(() => {
+                      const fichaProfile = (grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none';
+                      const isStandUpGroup = fichaProfile === 'stand_up_liso' || fichaProfile === 'stand_up_impresso';
+                      const isSacoGroup = fichaProfile === 'saco_liso' || fichaProfile === 'saco_impresso';
+                      const nameHasSanfona = /sanfona/i.test(`${formData.name || ''} ${formData.nome_impresso || ''}`);
+                      const sanfonaRequired = isStandUpGroup || nameHasSanfona;
+                      const showSanfona = isStandUpGroup || isSacoGroup || sanfonaRequired;
+                      if (!showSanfona) return null;
+                      const sanfona = (formData.ficha_tecnica as any)?.sanfona || {};
+                      const sanfonaAtiva = sanfonaRequired ? true : !!sanfona.ativa;
+                      const updateSanfona = (patch: { ativa?: boolean; local?: 'Lateral' | 'Fundo'; valor?: number | undefined }) => {
+                        const nextFicha = { ...(formData.ficha_tecnica || {}), sanfona: { ...sanfona, ...patch } };
+                        const newData: any = { ...formData, ficha_tecnica: nextFicha };
+                        const prof = getGroupProfile(newData.grupo_id);
+                        if (hasAutoDimensions(prof)) {
+                          newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(nextFicha));
+                        }
+                        newData.sku = recalcularSku(newData);
+                        if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                        setFormData(newData);
+                      };
+                      return (
+                        <div className="col-span-2 pt-2">
+                          <section className="space-y-3 rounded-md border p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-sm font-medium">Sanfona</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {sanfonaRequired
+                                    ? 'Obrigatória — o produto é Stand Up ou contém "sanfona" na descrição.'
+                                    : 'Ative se este produto possui sanfona (lateral ou fundo).'}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {sanfonaRequired && <Badge variant="destructive" className="text-xs">Obrigatória</Badge>}
+                                <Switch
+                                  checked={sanfonaAtiva}
+                                  disabled={sanfonaRequired}
+                                  onCheckedChange={(checked) => {
+                                    if (sanfonaRequired) return;
+                                    if (checked) {
+                                      updateSanfona({ ativa: true });
+                                    } else {
+                                      const nextFicha = { ...(formData.ficha_tecnica || {}), sanfona: { ativa: false } };
+                                      const newData: any = { ...formData, ficha_tecnica: nextFicha };
+                                      const prof = getGroupProfile(newData.grupo_id);
+                                      if (hasAutoDimensions(prof)) {
+                                        newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(nextFicha));
+                                      }
+                                      newData.sku = recalcularSku(newData);
+                                      if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                      setFormData(newData);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            {sanfonaAtiva && (
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <Label>Localização *</Label>
+                                  <Select
+                                    value={sanfona.local || undefined}
+                                    onValueChange={(v) => updateSanfona({ ativa: true, local: v as 'Lateral' | 'Fundo' })}
+                                  >
+                                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Lateral">Lateral (compõe Largura)</SelectItem>
+                                      <SelectItem value="Fundo">Fundo (compõe Comprimento)</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label>Valor da sanfona (mm) *</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={sanfona.valor ?? ''}
+                                    onChange={(e) => {
+                                      const raw = e.target.value;
+                                      const n = raw === '' ? undefined : parseFloat(raw.replace(',', '.'));
+                                      updateSanfona({ ativa: true, valor: Number.isFinite(n as number) ? (n as number) : undefined });
+                                    }}
+                                    placeholder="Ex.: 30"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </section>
+                        </div>
+                      );
+                    })()}
+
                     {/* Dimensões */}
                     <div className="col-span-2 pt-2">
                       <h3 className="text-sm font-medium text-muted-foreground mb-3">Dimensões</h3>
