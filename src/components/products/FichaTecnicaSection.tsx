@@ -56,7 +56,7 @@ function num(v: string): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-export function FichaTecnicaSection({ profile, value, onChange }: Props) {
+export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired = false }: Props) {
   const { machines, cylinders } = useFichaLookups();
 
   if (!profile || profile === 'none') {
