@@ -87,9 +87,11 @@ Deno.serve(async (req) => {
       // Carrega produto + atributo + valor
       const { data: product, error: prodErr } = await supabase
         .from('products')
-        .select('id, erp_product_code, erp_versao, erp_empresa')
+        .select('id, erp_product_code, erp_versao_codigo, versao_numero, erp_empresa')
         .eq('id', item.product_id)
         .single();
+
+
 
       if (prodErr || !product) throw new Error(`Produto não encontrado: ${prodErr?.message ?? ''}`);
 
@@ -129,14 +131,20 @@ Deno.serve(async (req) => {
         throw new Error('Valor do atributo está vazio no CRM');
       }
 
+      // ERP exige o NÚMERO da versão ativa (ex.: "1", "2"), não o descritivo dimensional
+      const versao = product.erp_versao_codigo
+        ?? (product.versao_numero != null ? String(product.versao_numero) : null);
+      if (!versao) throw new Error('Produto sem versão ERP ativa (erp_versao_codigo/versao_numero vazio)');
+
       // Monta payload interno
       const inner: Record<string, unknown> = {
         empresa: product.erp_empresa ?? 1,
         produto: String(product.erp_product_code),
-        versao: product.erp_versao ?? '1',
+        versao,
         atributo: attr.erp_codigo,
         valor_padrao: String(value.valor_padrao),
       };
+
 
       if (attr.aceita_tolerancia) {
         if (attr.tolerancia_mais !== null && attr.tolerancia_mais !== undefined) {
