@@ -1,7 +1,16 @@
 import { calcularFatorMilheiro } from '@/types/products';
+import { getEffectiveDimensions } from '@/utils/products/effectiveDimensions';
 
 /**
  * Dados mínimos do produto necessários para o cálculo de preço por fator KG.
+ *
+ * `ficha_tecnica` é opcional: quando presente, a sanfona (Lateral/Fundo) é
+ * somada às dimensões antes do cálculo do milheiro — espelhando o
+ * comportamento do ERP, que considera as dimensões EFETIVAS do produto
+ * acabado.
+ *
+ * Snapshots de itens (pedidos/propostas) já gravam as dimensões EFETIVAS
+ * no momento da inclusão, então podem chamar sem `ficha_tecnica`.
  */
 interface PackagingPricingInput {
   unit_measure?: string | null;
@@ -10,6 +19,7 @@ interface PackagingPricingInput {
   width?: number | null;
   length?: number | null;
   thickness?: number | null;
+  ficha_tecnica?: any | null;
 }
 
 /**
@@ -29,18 +39,15 @@ export function calculatePackagingPrice(product: PackagingPricingInput): number 
     return fatorKg || product.unit_price || 0;
   }
 
-  // Venda por MILHEIRO: preço = (fatorKg × largura × comprimento × espessura) / 1.000.000
+  // Venda por MILHEIRO: usa dimensões EFETIVAS (com sanfona, quando ficha_tecnica for fornecida)
   if (unit === 'MIL') {
-    const width = product.width || 0;
-    const length = product.length || 0;
-    const thickness = product.thickness || 0;
+    const { width, length, thickness } = getEffectiveDimensions(product);
 
     // Fallback de segurança: se faltar qualquer dimensão ou fator, usar unit_price
     if (!width || !length || !thickness || !fatorKg) {
       return product.unit_price || 0;
     }
 
-    // Reutiliza a função existente em types/products.ts
     return calcularFatorMilheiro(fatorKg, width, length, thickness);
   }
 
