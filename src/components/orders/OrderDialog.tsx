@@ -27,6 +27,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveDimensions } from '@/utils/products/effectiveDimensions';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
