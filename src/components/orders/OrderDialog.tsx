@@ -24,6 +24,7 @@ import { OrderItemDetailModal } from './OrderItemDetailModal';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
+import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
@@ -176,9 +177,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const { data: companiesRaw } = useQuery({
     queryKey: ['companies-search-orders', orderCompanySearch],
-    queryFn: async (): Promise<Array<{ id: string; name: string }>> => {
-      let query = supabase.from('companies').select('id, name').order('name').limit(50);
-      if (orderCompanySearch) query = query.or(`name.ilike.%${orderCompanySearch}%,fantasia.ilike.%${orderCompanySearch}%`);
+    queryFn: async (): Promise<Array<{ id: string; name: string; cnpj: string | null }>> => {
+      let query = supabase.from('companies').select('id, name, cnpj').order('name').limit(50);
+      if (orderCompanySearch) query = query.or(`name.ilike.%${orderCompanySearch}%,fantasia.ilike.%${orderCompanySearch}%,cnpj.ilike.%${orderCompanySearch}%`);
       const { data, error } = await query;
       if (error) throw error;
       return data ?? [];
@@ -189,7 +190,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     queryKey: ['order-company', order?.company_id],
     queryFn: async () => {
       if (!order?.company_id) return null;
-      const { data, error } = await supabase.from('companies').select('id, name').eq('id', order.company_id).maybeSingle();
+      const { data, error } = await supabase.from('companies').select('id, name, cnpj').eq('id', order.company_id).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -200,7 +201,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     queryKey: ['order-company-selected', companyId],
     queryFn: async () => {
       if (!companyId) return null;
-      const { data, error } = await supabase.from('companies').select('id, name').eq('id', companyId).maybeSingle();
+      const { data, error } = await supabase.from('companies').select('id, name, cnpj').eq('id', companyId).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -208,7 +209,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   const companies = useMemo(() => {
-    const map = new Map<string, { id: string; name: string }>();
+    const map = new Map<string, { id: string; name: string; cnpj: string | null }>();
     if (orderCompanyData) map.set(orderCompanyData.id, orderCompanyData);
     if (selectedOrderCompany) map.set(selectedOrderCompany.id, selectedOrderCompany);
     (companiesRaw ?? []).forEach(c => map.set(c.id, c));
@@ -1060,7 +1061,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       <div className="space-y-2">
         <Label>Empresa</Label>
         <SearchableSelect
-          options={(companies || []).map(c => ({ value: c.id, label: c.name }))}
+          options={(companies || []).map(c => ({ value: c.id, label: c.cnpj ? `${c.name} — ${formatCNPJ(c.cnpj)}` : c.name }))}
           value={companyId || null}
           onChange={(v) => { setCompanyId(v || ''); if (v && !order) autoFillFromCompany(v).then(data => { if (data?.default_carrier_id) setCarrierId(data.default_carrier_id); if (data?.default_freight_type) setFreightType(data.default_freight_type); }); }}
           placeholder="Selecione uma empresa" searchPlaceholder="Buscar empresa..."
