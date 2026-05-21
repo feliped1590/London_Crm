@@ -171,6 +171,8 @@ export default function Customers() {
       };
     },
     enabled: !!salesRepsFilter,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   // Map sort field to DB field
@@ -211,7 +213,7 @@ export default function Customers() {
       if (error) throw error;
       return data as unknown as CustomerRow[];
     },
-    staleTime: 30000,
+    staleTime: 2 * 60 * 1000,
   });
 
   const customers = queryResult || [];
