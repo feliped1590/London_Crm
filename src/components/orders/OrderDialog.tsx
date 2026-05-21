@@ -27,6 +27,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveDimensions } from '@/utils/products/effectiveDimensions';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -910,12 +911,17 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     const product = productData || linkedCompanyProducts.find(p => p.id === productId) || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, ipiMode);
+    // Snapshot armazena as dimensões EFETIVAS (base + sanfona) para que cálculos
+    // posteriores no item permaneçam coerentes mesmo sem a ficha técnica disponível.
+    const eff = getEffectiveDimensions(product);
     addItem({
       product_id: product.id, product_code: product.sku || product.erp_code || '', description: product.name, quantity: 1,
       observations: '', observations_pcp: '',
       unit_price: unitPrice, subtotal: unitPrice, discount_percent: discountPercent,
-      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, unit_measure: product.unit_measure || '', width: product.width || undefined,
-      length: product.length || undefined, thickness: product.thickness || undefined,
+      ipi_rate: ipiRate, commission_pct: 0, fator_kg: product.fator_kg || 0, unit_measure: product.unit_measure || '',
+      width: eff.width || undefined,
+      length: eff.length || undefined,
+      thickness: eff.thickness || undefined,
       calculated_price_source: priceSource, is_locked: false,
     });
     addRecent(product.id);

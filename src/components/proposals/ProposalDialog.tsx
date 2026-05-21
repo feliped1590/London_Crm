@@ -29,6 +29,7 @@ import { DocumentTotals } from '@/components/documents/DocumentTotals';
 import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload, extractLogisticsFromRecord } from '@/components/documents/DocumentLogisticsSection';
 import { useProductAdd } from '@/components/documents/ProductSelector';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveDimensions } from '@/utils/products/effectiveDimensions';
 import { usePriceValidation } from '@/modules/documents/usePriceValidation';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
@@ -309,10 +310,12 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     const product = productData || products?.find(p => p.id === productId);
     if (!product) return;
     const { unitPrice, discountPercent, priceSource, ipiRate } = resolveProductPricing(product, formData.ipi_mode);
+    // Snapshot grava dimensões EFETIVAS (base + sanfona) — espelha o ERP.
+    const eff = getEffectiveDimensions(product);
     addItem({
       product_id: product.id, description: product.name, quantity: 1,
-      unit_price: unitPrice, width: product.width, length: product.length,
-      thickness: product.thickness, discount_percent: discountPercent,
+      unit_price: unitPrice, width: eff.width, length: eff.length,
+      thickness: eff.thickness, discount_percent: discountPercent,
       subtotal: unitPrice, ipi_rate: ipiRate, product, calculated_price_source: priceSource,
     });
     addRecent(product.id);
