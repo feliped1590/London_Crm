@@ -2,9 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, X } from 'lucide-react';
 import { useFichaLookups } from '@/hooks/useFichaLookups';
 import type { FichaProfile } from '@/hooks/useProductLookups';
 
@@ -55,7 +53,7 @@ function num(v: string): number | undefined {
 }
 
 export function FichaTecnicaSection({ profile, value, onChange }: Props) {
-  const { machines, cylinders, accessories } = useFichaLookups();
+  const { machines, cylinders } = useFichaLookups();
 
   if (!profile || profile === 'none') {
     return (
@@ -70,13 +68,11 @@ export function FichaTecnicaSection({ profile, value, onChange }: Props) {
   };
 
   const showStandUp = PROFILES_WITH_STAND_UP.includes(profile);
-  const showAcessorios = PROFILES_WITH_BAG_OR_STANDUP.includes(profile);
   const showEmbalagem = PROFILES_WITH_BAG_OR_STANDUP.includes(profile);
   const showBobina = PROFILES_WITH_BOBINA.includes(profile);
   const showSentido = profile === 'bobina_impressa';
   const showImpressao = PROFILES_WITH_PRINT.includes(profile);
 
-  const acessoriosList = value.acessorios || [];
 
   return (
     <div className="space-y-6">
@@ -103,56 +99,6 @@ export function FichaTecnicaSection({ profile, value, onChange }: Props) {
         </section>
       )}
 
-      {showAcessorios && (
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Acessórios</h4>
-            <Button type="button" variant="outline" size="sm" className="gap-1"
-              onClick={() => onChange({ ...value, acessorios: [...acessoriosList, { accessory_id: '' }] })}>
-              <Plus className="h-3.5 w-3.5" /> Adicionar
-            </Button>
-          </div>
-          {acessoriosList.length === 0 && (
-            <p className="text-xs text-muted-foreground">Nenhum acessório adicionado.</p>
-          )}
-          <div className="space-y-2">
-            {acessoriosList.map((acc, idx) => (
-              <div key={idx} className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Label className="text-xs">Acessório</Label>
-                  <Select value={acc.accessory_id || undefined}
-                    onValueChange={(v) => {
-                      const next = [...acessoriosList];
-                      next[idx] = { ...next[idx], accessory_id: v };
-                      onChange({ ...value, acessorios: next });
-                    }}>
-                    <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
-                    <SelectContent>
-                      {accessories.items.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-1">
-                  <Label className="text-xs">Detalhe (opcional)</Label>
-                  <Input value={acc.valor || ''} onChange={(e) => {
-                    const next = [...acessoriosList];
-                    next[idx] = { ...next[idx], valor: e.target.value };
-                    onChange({ ...value, acessorios: next });
-                  }} />
-                </div>
-                <Button type="button" variant="ghost" size="icon" onClick={() => {
-                  const next = acessoriosList.filter((_, i) => i !== idx);
-                  onChange({ ...value, acessorios: next });
-                }}>
-                  <X className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {showEmbalagem && (
         <section className="space-y-3">
