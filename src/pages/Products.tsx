@@ -1000,6 +1000,26 @@ export default function Products() {
       return;
     }
 
+    // Validação Sanfona — obrigatória quando grupo é Stand Up OU descrição contém "sanfona"
+    {
+      const fichaProfile = (grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none';
+      const isStandUpGroup = fichaProfile === 'stand_up_liso' || fichaProfile === 'stand_up_impresso';
+      const nameHasSanfona = /sanfona/i.test(`${formData.name || ''} ${formData.nome_impresso || ''}`);
+      const sanfonaRequired = isStandUpGroup || nameHasSanfona;
+      if (sanfonaRequired) {
+        const s = (formData.ficha_tecnica as any)?.sanfona;
+        const valor = Number(s?.valor);
+        if (!s?.ativa || !s?.local || !Number.isFinite(valor) || valor <= 0) {
+          toast.error(
+            'Sanfona obrigatória: informe a localização (Lateral/Fundo) e o valor em mm na aba Ficha Técnica.',
+            { duration: 7000 }
+          );
+          setFormTab('ficha');
+          return;
+        }
+      }
+    }
+
     // Normalização de nome_impresso e geração automática de erp_versao
     const submitData = { ...formData };
     submitData.nome_impresso = normalizePrintedName(submitData.nome_impresso) || '';
