@@ -61,7 +61,7 @@ export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired 
 
   const isNone = !profile || profile === 'none';
 
-  if (isNone && !sanfonaRequired) {
+  if (isNone) {
     return (
       <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
         Selecione um grupo com perfil de ficha técnica configurado para preencher os campos específicos.
@@ -78,17 +78,14 @@ export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired 
   const showBobina = PROFILES_WITH_BOBINA.includes(profile);
   const showSentido = profile === 'bobina_impressa';
   const showImpressao = PROFILES_WITH_PRINT.includes(profile);
-  // Sanfona: disponível para sacos/standup ou quando obrigatória (nome contém "sanfona")
-  const showSanfona = PROFILES_WITH_BAG_OR_STANDUP.includes(profile) || sanfonaRequired;
-  const sanfonaAtiva = sanfonaRequired ? true : !!value.sanfona?.ativa;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-medium text-muted-foreground">Ficha Técnica</h3>
         {!isNone && <Badge variant="outline" className="text-xs">{profile.replace(/_/g, ' ')}</Badge>}
-        {sanfonaRequired && <Badge variant="destructive" className="text-xs">Sanfona obrigatória</Badge>}
       </div>
+
 
       {showStandUp && (
         <section className="space-y-3">
