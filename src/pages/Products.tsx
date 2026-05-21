@@ -58,6 +58,7 @@ import {
   tryGenerateErpVersion,
   hasAutoDimensions,
   VersionGenerationError,
+  extractGusset,
 } from '@/utils/products/generateVersion';
 import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
