@@ -65,6 +65,25 @@ export async function loadProductForSync(
     throw new Error(`Produto não encontrado: ${productId}`);
   }
 
+  // Versão filha (v2+): herda erp_product_code do pai se ainda não tiver.
+  // Se o pai também não tiver código, bloqueia o envio com erro claro.
+  if (product.parent_product_id) {
+    const { data: parent } = await supabase
+      .from('products')
+      .select('erp_product_code')
+      .eq('id', product.parent_product_id)
+      .maybeSingle();
+    const parentCode = parent?.erp_product_code?.toString().trim();
+    if (!parentCode) {
+      throw new Error(
+        'Versão não pode ser sincronizada antes do produto principal ter código ERP',
+      );
+    }
+    if (!product.erp_product_code?.toString().trim()) {
+      product.erp_product_code = parentCode;
+    }
+  }
+
   // Prioridade: executor informado pela fila/JWT → created_by do produto → usuário padrão do tenant.
   let userIdForErp = executorUserId || product.created_by || null;
 

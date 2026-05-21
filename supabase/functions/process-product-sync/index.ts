@@ -243,6 +243,9 @@ Deno.serve(async (req) => {
           pendente_envio: false,
           erp_synced_at: new Date().toISOString(),
           origem_alteracao: 'SYNC',
+          // Espelha o número da versão enviado ao ERP (1 para principal, 2+ para variações)
+          erp_versao_codigo: String(productForSync.versao_numero ?? 1),
+          erp_versao_situacao: 'A',
         };
 
         // Se ERP retornou um código (CREATE), persiste; em UPDATE mantém o existente
