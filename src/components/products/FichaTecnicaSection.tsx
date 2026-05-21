@@ -53,7 +53,7 @@ function num(v: string): number | undefined {
 }
 
 export function FichaTecnicaSection({ profile, value, onChange }: Props) {
-  const { machines, cylinders, accessories } = useFichaLookups();
+  const { machines, cylinders } = useFichaLookups();
 
   if (!profile || profile === 'none') {
     return (
