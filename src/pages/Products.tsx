@@ -1023,7 +1023,7 @@ export default function Products() {
     submitData.erp_subgrupo = subgrupoLabel;
     if (hasAutoDimensions(profile)) {
       try {
-        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness);
+        const version = generateErpVersion(profile, submitData.width, submitData.length, submitData.thickness, extractGusset(submitData.ficha_tecnica));
         if (version) {
           submitData.erp_versao = version;
         }
