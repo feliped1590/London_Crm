@@ -1,37 +1,77 @@
-## Diagnóstico
+## Plano — Dimensões efetivas (com sanfona) em cálculos e atributos ERP
 
-O toast "O campo Versão (ERP) é obrigatório. Preencha manualmente." aparece porque `handleSave` em `src/pages/Products.tsx` consulta `hasAutoDimensions(profile)`. Quando o perfil do grupo é `'none'`, a geração automática é desligada.
+### Princípio
 
-Estado atual no banco (`product_groups.dimension_profile`):
+| Camada | Valor exemplo | Origem |
+|---|---|---|
+| `products.width` / `length` / `thickness` | 100 / 250 / 0,24 | DB — limpo, imutável |
+| `ficha_tecnica.sanfona` | `{ativa:true, local:'Fundo', valor:30}` | DB — editável |
+| **Dimensões efetivas** (runtime) | 100 / 280 / 0,24 | computado via helper |
+| **Atributo ERP** (Largura/Comprimento) | 100 / **280** | soma efetiva |
+| **`erp_versao`** (string visual) | `100x250+30x0,240` | composição literal |
 
-```text
-BOBINA              partial
-IMPRESSO BOBINA     partial
-IMPRESSO SACO       full
-LISO BOBINA         partial
-LISO SACO           full
-STAND UP IMPRESSO   none   ← bug
-STAND UP LISO       none   ← bug
-STAND UP POUCH      none   (intencional — sem ficha, sem dimensões)
+DB intacto. Sanfona entra **só no momento do cálculo / envio**.
+
+### Implementação
+
+**1. Helper único — `getEffectiveDimensions`**
+
+`src/utils/products/effectiveDimensions.ts`:
+```ts
+export function getEffectiveDimensions(p) {
+  const s = p.ficha_tecnica?.sanfona;
+  const add = (s?.ativa && Number(s?.valor) > 0) ? Number(s.valor) : 0;
+  return {
+    width:     (p.width  || 0) + (s?.local === 'Lateral' ? add : 0),
+    length:    (p.length || 0) + (s?.local === 'Fundo'   ? add : 0),
+    thickness: p.thickness || 0,
+  };
+}
 ```
 
-Os grupos Stand Up usam Largura + Comprimento + Espessura no formulário (formato `LxCxE`), portanto deveriam ser `full` como os grupos Saco. Provavelmente foram cadastrados como `none` por engano numa migration anterior — e por isso o `erp_versao` parou de ser gerado.
+Espelho SQL: função `public.get_effective_dimensions(p_product products)` retornando `(width, length, thickness)` — reusada pelo `extract_attribute_value`.
 
-## Plano
+**2. Cálculos comerciais usam efetivo**
 
-1. Criar migration atualizando os dois grupos Stand Up com ficha técnica para o perfil correto:
+- `src/utils/pricing/packagingPricing.ts` → no ramo `MIL`, trocar `product.width/length` por `getEffectiveDimensions(product).{width,length}` antes de `calcularFatorMilheiro`.
+- Auditar com `rg "product\.(width|length|thickness)"` em `src/utils/pricing/`, `src/modules/documents/`, `src/components/orders/`, `src/components/documents/` para identificar outros pontos que multiplicam dimensões em cálculo de preço/peso — aplicar o mesmo helper.
+- **Não tocar** em `unit_price` nem em qualquer input do usuário.
 
-   ```sql
-   UPDATE public.product_groups
-      SET dimension_profile = 'full'
-    WHERE label IN ('STAND UP LISO', 'STAND UP IMPRESSO');
-   ```
+**3. Atributos ERP — enviar soma numérica**
 
-   `STAND UP POUCH` fica como `none` (sem ficha, sem dimensões — comportamento intencional).
+Alterar SQL `extract_attribute_value`:
+- Hoje, paths `width`/`length` retornam string concatenada (ex.: `"100+30"`) quando há sanfona.
+- Novo: usar `get_effective_dimensions` e retornar **soma numérica** formatada (ex.: `"280"`).
 
-2. Validar reabrindo o cadastro de produto Stand Up Liso da tela atual: ao preencher Largura/Comprimento/Espessura (e opcionalmente a sanfona) o campo `Versão (ERP)` deve aparecer preenchido automaticamente (`100x200+30x0,240` no caso da tela), e o "Criar" deve concluir sem o erro de Versão obrigatória.
+Trigger `detect_dirty_attributes` continua disparando quando `ficha_tecnica` muda (já marca width/length como `is_dirty`), então `process-attribute-sync` reenvia automaticamente.
 
-## Fora de escopo
+**4. `erp_versao` — sem mudança**
 
-- Não tocar em código TypeScript: a lógica de geração e o fallback (`group?.dimension_profile || 'full'`) já estão corretos. O problema é exclusivamente de dado.
-- Não alterar `STAND UP POUCH` nem grupos de Bobina (perfis já corretos).
+`generateErpVersion` (TS) e `auto_generate_erp_versao` (SQL trigger) continuam gerando `100x250+30x0,240`. É o rótulo visual da versão no ERP.
+
+**5. Backfill**
+
+Para produtos com sanfona ativa:
+- Tocar `updated_at` em `products` (UPDATE no-op) → trigger regenera `erp_versao` automaticamente.
+- `UPDATE attribute_values SET is_dirty = true` para `attribute_path IN ('width','length')` desses produtos → fila de atributos reenvia.
+
+**6. Validação**
+
+Produto teste (`TESTE DE IMPRESSO`, Stand Up Impresso, 100×250×0,24, sanfona Fundo 30):
+
+| Verificação | Esperado |
+|---|---|
+| `products.length` no DB | `250` (intacto) |
+| `erp_versao` no DB | `100x250+30x0,240` |
+| Payload atributo Largura | `valor_padrao = "100"` |
+| Payload atributo Comprimento | `valor_padrao = "280"` |
+| Payload atributo Espessura | `valor_padrao = "0,240"` |
+| Payload produto `versoes[].detalhes` | `100x250+30x0,240` |
+| Preço milheiro em novo pedido | `fator × 100 × 280 × 0,24 / 1.000.000` |
+
+### Fora de escopo
+
+- Não tocar em `products.width/length/thickness` (continuam puros).
+- Não recalcular pedidos já criados (snapshot congelado, conforme decidido).
+- Não tocar em `fator_kg`/preço armazenado no produto (decidido: não há mais fator armazenado em item).
+- Suporte simultâneo a Lateral + Fundo (não existe).
