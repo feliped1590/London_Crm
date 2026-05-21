@@ -96,6 +96,30 @@ function formatDimension(value: number, isThickness: boolean): string {
   return Number.isInteger(value) ? value.toString() : value.toString().replace('.', ',');
 }
 
+// ─── Sanfona (gusset) ─────────────────────────────────────────────────
+
+export type GussetLocation = 'Lateral' | 'Fundo';
+
+export interface GussetData {
+  ativa?: boolean;
+  local?: GussetLocation;
+  valor?: number;
+}
+
+/** Lê o bloco sanfona de um objeto ficha_tecnica e devolve apenas se ativa+válida. */
+export function extractGusset(ficha: any): GussetData | undefined {
+  const s = ficha?.sanfona;
+  if (!s || !s.ativa) return undefined;
+  const valor = Number(s.valor);
+  if (!s.local || !Number.isFinite(valor) || valor <= 0) return undefined;
+  return { ativa: true, local: s.local, valor };
+}
+
+function applyGusset(baseFormatted: string, gusset: GussetData | undefined, target: GussetLocation): string {
+  if (!gusset || gusset.local !== target || !gusset.valor || gusset.valor <= 0) return baseFormatted;
+  return `${baseFormatted}+${formatDimension(gusset.valor, false)}`;
+}
+
 // ─── Geração da versão ────────────────────────────────────────────────
 
 export class VersionGenerationError extends Error {
@@ -108,20 +132,19 @@ export class VersionGenerationError extends Error {
 /**
  * Gera o erp_versao automaticamente a partir das dimensões.
  *
- * - full:    "100x150x0,120" (LxCxE)
- * - partial: "100x0,120"     (LxE)
+ * - full:    "100x150x0,120" (LxCxE) — com sanfona: "100+30x150x0,120" ou "100x150+30x0,120"
+ * - partial: "100x0,120"     (LxE)   — com sanfona: "100+30x0,120"
  * - none:    não gera (retorna null — o formulário deve exigir preenchimento manual)
- *
- * @throws VersionGenerationError se dimensões obrigatórias estiverem ausentes
  */
 export function generateErpVersion(
   profile: DimensionProfile,
   width: number | undefined,
   length: number | undefined,
-  thickness: number | undefined
+  thickness: number | undefined,
+  gusset?: GussetData,
 ): string | null {
   if (profile === 'none') {
-    return null; // Versão manual — formulário valida separadamente
+    return null;
   }
 
   const w = Number(width) || 0;
@@ -134,7 +157,9 @@ export function generateErpVersion(
         'Para este grupo, Largura, Comprimento e Espessura são obrigatórios para gerar a versão.'
       );
     }
-    return `${formatDimension(w, false)}x${formatDimension(l, false)}x${formatDimension(t, true)}`;
+    const wStr = applyGusset(formatDimension(w, false), gusset, 'Lateral');
+    const lStr = applyGusset(formatDimension(l, false), gusset, 'Fundo');
+    return `${wStr}x${lStr}x${formatDimension(t, true)}`;
   }
 
   if (profile === 'partial') {
@@ -143,33 +168,28 @@ export function generateErpVersion(
         'Para este grupo, Largura e Espessura são obrigatórios para gerar a versão.'
       );
     }
-    return `${formatDimension(w, false)}x${formatDimension(t, true)}`;
+    const wStr = applyGusset(formatDimension(w, false), gusset, 'Lateral');
+    return `${wStr}x${formatDimension(t, true)}`;
   }
 
   return null;
 }
 
-/**
- * Tenta gerar a versão de forma segura (sem lançar exceção).
- * Retorna a string gerada ou string vazia se impossível.
- * Usado nos onChange para preview em tempo real.
- */
+/** Versão segura (sem exceção). */
 export function tryGenerateErpVersion(
   profile: DimensionProfile,
   width: number | undefined,
   length: number | undefined,
-  thickness: number | undefined
+  thickness: number | undefined,
+  gusset?: GussetData,
 ): string {
   try {
-    return generateErpVersion(profile, width, length, thickness) || '';
+    return generateErpVersion(profile, width, length, thickness, gusset) || '';
   } catch {
     return '';
   }
 }
 
-/**
- * Verifica se um perfil possui dimensões auto-geradas.
- */
 export function hasAutoDimensions(profile: DimensionProfile): boolean {
   return profile === 'full' || profile === 'partial';
 }
