@@ -68,13 +68,11 @@ export function FichaTecnicaSection({ profile, value, onChange }: Props) {
   };
 
   const showStandUp = PROFILES_WITH_STAND_UP.includes(profile);
-  const showAcessorios = PROFILES_WITH_BAG_OR_STANDUP.includes(profile);
   const showEmbalagem = PROFILES_WITH_BAG_OR_STANDUP.includes(profile);
   const showBobina = PROFILES_WITH_BOBINA.includes(profile);
   const showSentido = profile === 'bobina_impressa';
   const showImpressao = PROFILES_WITH_PRINT.includes(profile);
 
-  const acessoriosList = value.acessorios || [];
 
   return (
     <div className="space-y-6">
