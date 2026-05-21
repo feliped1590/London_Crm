@@ -24,6 +24,7 @@ import { OrderItemDetailModal } from './OrderItemDetailModal';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
+import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
