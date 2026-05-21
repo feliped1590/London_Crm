@@ -1816,11 +1816,28 @@ export default function Products() {
                 </TabsContent>
 
                 <TabsContent value="ficha" className="space-y-4 mt-4">
-                  <FichaTecnicaSection
-                    profile={(grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none'}
-                    value={formData.ficha_tecnica}
-                    onChange={(next) => setFormData({ ...formData, ficha_tecnica: next })}
-                  />
+                  {(() => {
+                    const fichaProfile = (grupos.items as GroupLookupItem[]).find(g => g.id === formData.grupo_id)?.ficha_profile || 'none';
+                    const isStandUpGroup = fichaProfile === 'stand_up_liso' || fichaProfile === 'stand_up_impresso';
+                    const nameHasSanfona = /sanfona/i.test(`${formData.name || ''} ${formData.nome_impresso || ''}`);
+                    const sanfonaRequired = isStandUpGroup || nameHasSanfona;
+                    return (
+                      <FichaTecnicaSection
+                        profile={fichaProfile}
+                        sanfonaRequired={sanfonaRequired}
+                        value={formData.ficha_tecnica}
+                        onChange={(next) => {
+                          const newData: any = { ...formData, ficha_tecnica: next };
+                          const prof = getGroupProfile(newData.grupo_id);
+                          if (hasAutoDimensions(prof)) {
+                            newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(next));
+                          }
+                          if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                          setFormData(newData);
+                        }}
+                      />
+                    );
+                  })()}
                 </TabsContent>
 
                 <TabsContent value="clientes" className="space-y-4 mt-4">
