@@ -112,6 +112,7 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [unlockErpCode, setUnlockErpCode] = useState(false);
+  const [unlockDescription, setUnlockDescription] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
@@ -1421,24 +1422,55 @@ export default function Products() {
                       <div className="col-span-3">
                         <div className="flex items-center justify-between h-7">
                           <Label htmlFor="name">Descrição *</Label>
+                          {isAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                if (unlockDescription) {
+                                  setUnlockDescription(false);
+                                  setIsAutoDescription(true);
+                                  setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
+                                  return;
+                                }
+                                const ok = window.confirm(
+                                  'Atenção: a Descrição é gerada automaticamente pela classificação do produto. Edição manual pode causar inconsistências. Deseja continuar?'
+                                );
+                                if (ok) setUnlockDescription(true);
+                              }}
+                            >
+                              {unlockDescription ? 'Cancelar edição' : 'Editar (admin)'}
+                            </Button>
+                          )}
                         </div>
                         <Input
                           id="name"
                           value={formData.name}
                           onChange={(e) => {
+                            if (!unlockDescription) return;
                             setFormData({ ...formData, name: e.target.value });
                             setIsAutoDescription(false);
                           }}
                           onBlur={() => {
-                            if (!formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
+                            if (!unlockDescription && !formData.name?.trim() && checkAutoDescriptionByTipo(formData.tipo_id)) {
                               setIsAutoDescription(true);
                               setFormData(prev => ({ ...prev, name: recalcularDescricao(prev) }));
                             }
                           }}
                           placeholder={isAutoDescription ? "Descrição do produto (gerada automaticamente)" : "Digite a descrição do produto"}
                           required
+                          readOnly={!unlockDescription}
+                          className={!unlockDescription ? 'bg-muted cursor-not-allowed' : ''}
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {unlockDescription
+                            ? 'Edição liberada. As próximas mudanças na classificação não irão sobrescrever.'
+                            : 'Gerada automaticamente pela classificação. Admins podem desbloquear.'}
+                        </p>
                       </div>
+
 
                       {/* Código ERP */}
                       <div className="col-span-1">
