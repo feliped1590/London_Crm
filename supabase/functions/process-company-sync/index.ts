@@ -61,6 +61,14 @@ function isPermanentCompanySyncError(message: string): boolean {
   );
 }
 
+function sanitizePersistedError(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\u0000/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, 4000);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -591,10 +599,11 @@ Deno.serve(async (req) => {
         }
 
       } catch (err: any) {
-        console.error(`[process-company-sync] Erro:`, err.message);
+        const persistedError = sanitizePersistedError(err.message || err);
+        console.error(`[process-company-sync] Erro:`, persistedError);
 
         const newAttempts = (queueItem.attempts || 0) + 1;
-        const isPermanent = isPermanentCompanySyncError(err.message || '');
+        const isPermanent = isPermanentCompanySyncError(persistedError);
         const isFinal = isPermanent || newAttempts >= 5;
         const retryDelay = Math.min(60 * Math.pow(2, newAttempts), 3600);
         const nextRetry = new Date(Date.now() + retryDelay * 1000).toISOString();
@@ -602,9 +611,9 @@ Deno.serve(async (req) => {
         const queueUpdate: Record<string, unknown> = {
           status: isFinal ? 'failed' : 'pending',
           attempts: newAttempts,
-          error_message: err.message,
+          error_message: persistedError,
           next_retry_at: isFinal ? null : nextRetry,
-          response: { error: err.message, permanent: isPermanent, retryable: !isPermanent },
+          response: { error: persistedError, permanent: isPermanent, retryable: !isPermanent },
           updated_at: new Date().toISOString(),
         };
         if (payloadForLog) queueUpdate.payload = payloadForLog;
@@ -625,12 +634,12 @@ Deno.serve(async (req) => {
           entity_id: queueItem.company_id,
           direction: 'crm_to_erp',
             status: 'error',
-            error_message: err.message,
-            response_payload: { error: err.message, technical: true, permanent: isPermanent },
+            error_message: persistedError,
+            response_payload: { error: persistedError, technical: true, permanent: isPermanent },
         });
 
         errorCount++;
-        results.push({ company_id: queueItem.company_id, status: isFinal ? 'failed' : 'retry', error: err.message });
+        results.push({ company_id: queueItem.company_id, status: isFinal ? 'failed' : 'retry', error: persistedError });
       }
     }
 
