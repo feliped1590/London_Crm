@@ -18,12 +18,13 @@ const corsHeaders = {
 };
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
+const ERP_REQUEST_TIMEOUT_MS = 12_000;
 
-async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 2): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 0): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), ERP_REQUEST_TIMEOUT_MS);
     try {
       return await fetch(url, { ...init, signal: controller.signal });
     } catch (err: any) {
@@ -486,22 +487,6 @@ Deno.serve(async (req) => {
         }
         const payload = buildCompanyPayload(mapped);
         payloadForLog = JSON.parse(payload);
-
-        // Recheck anti-duplicidade antes do envio (cenário de concorrência)
-        if (company.cnpj) {
-          await new Promise(r => setTimeout(r, 500));
-          invalidateCache(company.cnpj);
-          const recheck = await searchWithCache(company.cnpj);
-          if (recheck) {
-            console.log(`[process-company-sync] Recheck: cliente apareceu no ERP (${recheck}), evitando duplicata`);
-            await supabase.from('companies').update({ erp_code: recheck, erp_synced_at: new Date().toISOString() }).eq('id', queueItem.company_id);
-            await supabase.from('company_sync_queue').update({ status: 'completed', processed_at: new Date().toISOString(), response: { found_existing: true, erp_code: recheck, via: 'recheck' }, updated_at: new Date().toISOString() }).eq('id', queueItem.id);
-            await supabase.from('erp_sync_logs').insert({ entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'found_existing', external_id: recheck, response_payload: { erp_code: recheck, via: 'recheck' } });
-            successCount++;
-            results.push({ company_id: queueItem.company_id, status: 'found_existing', erp_code: recheck });
-            continue;
-          }
-        }
 
         const correlationId = crypto.randomUUID();
         console.log('[process-company-sync] Fase B: enviando cliente ao ERP', {
