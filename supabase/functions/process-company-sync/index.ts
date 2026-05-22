@@ -18,12 +18,13 @@ const corsHeaders = {
 };
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
+const ERP_REQUEST_TIMEOUT_MS = 12_000;
 
-async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 2): Promise<Response> {
+async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 0): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= retries + 1; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
+    const timeout = setTimeout(() => controller.abort(), ERP_REQUEST_TIMEOUT_MS);
     try {
       return await fetch(url, { ...init, signal: controller.signal });
     } catch (err: any) {
@@ -56,9 +57,19 @@ function isPermanentCompanySyncError(message: string): boolean {
   const normalized = message.toUpperCase();
   return (
     normalized.includes('CNPJ_CPF_ALFANUMERICO') ||
+    normalized.includes('ORA-20029') ||
+    normalized.includes('INSCRIÇÃO ESTADUAL DA UF MG DEVE CONTER 13 CARACTERES') ||
     (normalized.includes('ORA-06550') && normalized.includes('PLS-00302')) ||
     (normalized.includes('ORA-06550') && normalized.includes('PLS-00320'))
   );
+}
+
+function sanitizePersistedError(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\u0000/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .trim()
+    .slice(0, 4000);
 }
 
 Deno.serve(async (req) => {
@@ -479,22 +490,6 @@ Deno.serve(async (req) => {
         const payload = buildCompanyPayload(mapped);
         payloadForLog = JSON.parse(payload);
 
-        // Recheck anti-duplicidade antes do envio (cenário de concorrência)
-        if (company.cnpj) {
-          await new Promise(r => setTimeout(r, 500));
-          invalidateCache(company.cnpj);
-          const recheck = await searchWithCache(company.cnpj);
-          if (recheck) {
-            console.log(`[process-company-sync] Recheck: cliente apareceu no ERP (${recheck}), evitando duplicata`);
-            await supabase.from('companies').update({ erp_code: recheck, erp_synced_at: new Date().toISOString() }).eq('id', queueItem.company_id);
-            await supabase.from('company_sync_queue').update({ status: 'completed', processed_at: new Date().toISOString(), response: { found_existing: true, erp_code: recheck, via: 'recheck' }, updated_at: new Date().toISOString() }).eq('id', queueItem.id);
-            await supabase.from('erp_sync_logs').insert({ entity_type: 'company', entity_id: queueItem.company_id, direction: 'crm_to_erp', status: 'found_existing', external_id: recheck, response_payload: { erp_code: recheck, via: 'recheck' } });
-            successCount++;
-            results.push({ company_id: queueItem.company_id, status: 'found_existing', erp_code: recheck });
-            continue;
-          }
-        }
-
         const correlationId = crypto.randomUUID();
         console.log('[process-company-sync] Fase B: enviando cliente ao ERP', {
           correlationId,
@@ -591,10 +586,11 @@ Deno.serve(async (req) => {
         }
 
       } catch (err: any) {
-        console.error(`[process-company-sync] Erro:`, err.message);
+        const persistedError = sanitizePersistedError(err.message || err);
+        console.error(`[process-company-sync] Erro:`, persistedError);
 
         const newAttempts = (queueItem.attempts || 0) + 1;
-        const isPermanent = isPermanentCompanySyncError(err.message || '');
+        const isPermanent = isPermanentCompanySyncError(persistedError);
         const isFinal = isPermanent || newAttempts >= 5;
         const retryDelay = Math.min(60 * Math.pow(2, newAttempts), 3600);
         const nextRetry = new Date(Date.now() + retryDelay * 1000).toISOString();
@@ -602,9 +598,9 @@ Deno.serve(async (req) => {
         const queueUpdate: Record<string, unknown> = {
           status: isFinal ? 'failed' : 'pending',
           attempts: newAttempts,
-          error_message: err.message,
+          error_message: persistedError,
           next_retry_at: isFinal ? null : nextRetry,
-          response: { error: err.message, permanent: isPermanent, retryable: !isPermanent },
+          response: { error: persistedError, permanent: isPermanent, retryable: !isPermanent },
           updated_at: new Date().toISOString(),
         };
         if (payloadForLog) queueUpdate.payload = payloadForLog;
@@ -625,12 +621,12 @@ Deno.serve(async (req) => {
           entity_id: queueItem.company_id,
           direction: 'crm_to_erp',
             status: 'error',
-            error_message: err.message,
-            response_payload: { error: err.message, technical: true, permanent: isPermanent },
+            error_message: persistedError,
+            response_payload: { error: persistedError, technical: true, permanent: isPermanent },
         });
 
         errorCount++;
-        results.push({ company_id: queueItem.company_id, status: isFinal ? 'failed' : 'retry', error: err.message });
+        results.push({ company_id: queueItem.company_id, status: isFinal ? 'failed' : 'retry', error: persistedError });
       }
     }
 

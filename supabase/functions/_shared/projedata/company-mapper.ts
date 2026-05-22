@@ -189,7 +189,7 @@ export async function searchClienteByCnpj(
   console.log(`[searchClienteByCnpj] L3: Consultando ERP por CNPJ ${cnpjNorm}`);
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
+  const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
     const res = await fetch(apiUrl, {
@@ -253,7 +253,7 @@ export async function searchClienteByCnpj(
   } catch (err: any) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') {
-      console.warn('[searchClienteByCnpj] Timeout (15s) na consulta ao ERP');
+      console.warn('[searchClienteByCnpj] Timeout (5s) na consulta ao ERP');
     } else {
       console.warn(`[searchClienteByCnpj] Erro na consulta: ${err.message}`);
     }
