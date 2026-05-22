@@ -1,55 +1,73 @@
+# Correção: CNPJ enviado ao ERP perde zero à esquerda
+
 ## Problema
 
-A tabela `cron.job_run_details` chegou a **394 MB** — maior tabela do banco, consumindo ~200 MB nas últimas 24h. Não existe retenção automática, e há jobs rodando sem necessidade.
+No envio do pedido `PED-2026-0090` o ERP rejeitou com:
 
-## Diagnóstico dos cron jobs
+> Cliente/Pre-cliente não cadastrado para o CNPJ_CPF **9474676000191**
 
-### Dispatchers a cada 30s (mantém — são necessários)
+O CNPJ correto é **09474676000191** (14 dígitos). Estamos transformando o CNPJ em `Number` no payload, e o JavaScript descarta o `0` à frente, resultando em 13 dígitos.
 
-São pares de jobs (job principal + offset com `pg_sleep(30)`) que verificam filas de sincronização com o ERP:
+Quando enviávamos com o zero (string), o ERP retornava outro erro de tipo — porque o campo estava chegando como string sem padrão. A correção é tratar o CNPJ **sempre como string com 14 dígitos** (CPF como string de 11), igual ao restante dos campos textuais já enviados ao ERP (ex: `cnpj_cpf` no `IMP_CLIENTE` já é string).
 
-- `dispatch-company-sync-30s` + `-offset` → `process-company-sync`
-- `dispatch-order-sync-30s` + `-offset` → `process-order-sync`
-- `dispatch-product-sync-30s` + `-offset` → `process-product-sync`
+## Causa
 
-Cada disparo usa `WHERE EXISTS (... status = 'pending')`, então só chama a edge function se houver item na fila. **A função em si raramente roda** — mas a checagem do cron sempre registra uma linha no histórico. Isso é o padrão "dispatcher 30s" já documentado no projeto.
+`supabase/functions/_shared/projedata/order-mapper.ts`:
 
-### `process-scheduled-emails` (remover)
+```ts
+function cnpjToNumber(cnpj: string): number {
+  const digits = cnpj.replace(/\D/g, '');
+  return Number(digits);   // ← perde o zero à esquerda
+}
+...
+cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
+```
 
-Rodando a cada minuto desde janeiro = 177.637 execuções. Os logs mostram que toda execução retorna **"No scheduled emails to process"**. O módulo de e-mails não está em uso. **Esse é o maior responsável pelo histórico acumulado.**
+E em `order-types.ts`:
 
-### `process-product-sync-every-5min` (remover — redundante)
+```ts
+cpf_cnpj_cliente: number;
+```
 
-Faz exatamente a mesma coisa que `dispatch-product-sync-30s`, mas sem o filtro `WHERE EXISTS`. Foi substituído pelos dispatchers de 30s.
+## Solução
 
-## Ações
+Padronizar `cpf_cnpj_cliente` como **string normalizada (somente dígitos, com pad de zero à esquerda quando necessário)** em todo o pipeline de pedidos. O envelope serializado já escapa as aspas corretamente, então o ERP recebe `"cpf_cnpj_cliente":"09474676000191"`.
 
-1. **Remover jobs obsoletos:**
-   - `cron.unschedule('process-scheduled-emails')`
-   - `cron.unschedule('process-product-sync-every-5min')`
+### Arquivos a alterar
 
-2. **Criar retenção automática de 7 dias** para `cron.job_run_details` e `net._http_response`:
-   - Novo job `cleanup-cron-history-daily` rodando às 02:30 BRT
-   - `DELETE FROM cron.job_run_details WHERE end_time < now() - interval '7 days';`
-   - `DELETE FROM net._http_response WHERE created < now() - interval '7 days';`
+1. **`supabase/functions/_shared/projedata/order-types.ts`**
+   - Trocar `cpf_cnpj_cliente: number` → `cpf_cnpj_cliente: string`
 
-3. **Limpeza imediata one-shot:**
-   - Apagar tudo > 7 dias agora (libera ~390 MB)
-   - Rodar `VACUUM (ANALYZE) cron.job_run_details; VACUUM (ANALYZE) net._http_response;` para devolver o espaço ao disco
+2. **`supabase/functions/_shared/projedata/order-mapper.ts`**
+   - Remover `cnpjToNumber`
+   - Adicionar helper `normalizeCnpjCpf(value: string): string` que:
+     - Remove tudo que não for dígito
+     - Faz `padStart(14, '0')` se tiver entre 12–14 dígitos (CNPJ)
+     - Faz `padStart(11, '0')` se tiver entre 9–11 dígitos (CPF)
+     - Lança erro se ficar fora desses tamanhos
+   - Linha 135: `cpf_cnpj_cliente: normalizeCnpjCpf(order.company_cnpj)`
+   - Linha 159 (`buildOrderPayload`): apenas repassa a string
 
-## Out of scope
+3. **`src/components/integrations/OrderPayloadSimulator.tsx`** (linha 312)
+   - Trocar `Number(company.cnpj.replace(/\D/g, ''))` por `company.cnpj.replace(/\D/g, '').padStart(14, '0')` para o preview ficar fiel ao que o backend envia.
 
-- Não mexer nos dispatchers de 30s — são parte da arquitetura de sincronização com o ERP.
-- Não mexer no módulo de e-mails (continua disponível para quando for ativado — só remove o job que rodava no vazio).
-- Sem mudança em código de aplicação.
+### Resultado esperado no payload
 
-## Resultado esperado
+```json
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "IMP_PEDIDO_V3",
+  "#out#p_retorno": "T",
+  "json": "{\"cpf_cnpj_cliente\":\"09474676000191\", ...}"
+}
+```
 
-- Liberação imediata de **~390 MB** de disco
-- Crescimento futuro estabilizado em ~60 MB de pico (apenas 7 dias dos dispatchers)
-- Disco volta a ter 7+ GB livres, sem precisar fazer upgrade da instância
-- Logs do banco voltam a ser legíveis (177k linhas de "no email to process" some)
+## Fora de escopo
 
-## Observação sobre o módulo de e-mails
+- Não mexer no `company-mapper` (já envia string corretamente)
+- Não alterar `cnpjToNumber` em outras integrações (não existe em outro lugar)
+- Não reprocessar pedidos já sincronizados — o próximo retry do `PED-2026-0090` usará o novo formato
 
-Quando o módulo for ativado de fato (envio de e-mails transacionais ou de autenticação), o setup oficial recria o cron necessário automaticamente. Remover agora não compromete nada.
+## Memória a atualizar
+
+Adicionar regra em `mem://integrations/erp-order-outbound-sync`: **CNPJ/CPF sempre enviado como string normalizada (14 ou 11 dígitos com zeros à esquerda) no payload IMP_PEDIDO_V3.**

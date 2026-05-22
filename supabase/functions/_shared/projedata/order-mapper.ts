@@ -52,10 +52,17 @@ export interface CRMPaymentCondition {
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-/** Remove formatação do CNPJ e converte para número */
-function cnpjToNumber(cnpj: string): number {
-  const digits = cnpj.replace(/\D/g, '');
-  return Number(digits);
+/**
+ * Normaliza CNPJ/CPF para string somente-dígitos, preservando zeros à esquerda.
+ * - CNPJ: 14 dígitos (pad com '0' à esquerda se vier com 12-13)
+ * - CPF: 11 dígitos (pad com '0' à esquerda se vier com 9-10)
+ * Lança erro se o tamanho ficar fora desses intervalos.
+ */
+function normalizeCnpjCpf(value: string): string {
+  const digits = (value ?? '').replace(/\D/g, '');
+  if (digits.length >= 12 && digits.length <= 14) return digits.padStart(14, '0');
+  if (digits.length >= 9 && digits.length <= 11) return digits.padStart(11, '0');
+  throw new Error(`CNPJ/CPF inválido (esperado 11 ou 14 dígitos): "${value}"`);
 }
 
 /** Converte ISO date para DD/MM/YYYY HH:mm:ss */
@@ -132,7 +139,7 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
   });
 
   return {
-    cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
+    cpf_cnpj_cliente: normalizeCnpjCpf(order.company_cnpj),
     data_pedido: formatDateERP(order.order_date),
     empresa: order.erp_empresa,
     fluxo_venda: order.erp_fluxo_venda,

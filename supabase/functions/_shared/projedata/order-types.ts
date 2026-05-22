@@ -40,7 +40,7 @@ export interface ProjedataOrderPayment {
 // ─── Pedido completo ────────────────────────────────────────────
 
 export interface ProjedataOrder {
-  cpf_cnpj_cliente: number;
+  cpf_cnpj_cliente: string;
   data_pedido: string;
   empresa: number;
   fluxo_venda: number;

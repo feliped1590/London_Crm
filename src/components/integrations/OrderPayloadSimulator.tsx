@@ -309,7 +309,7 @@ export function OrderPayloadSimulator() {
       // Build the full payload object (same as mapper)
       const orderDate = order.order_date || new Date().toISOString();
       const innerJson: Record<string, unknown> = {
-        cpf_cnpj_cliente: company?.cnpj ? Number(company.cnpj.replace(/\D/g, '')) : null,
+        cpf_cnpj_cliente: company?.cnpj ? company.cnpj.replace(/\D/g, '').padStart(14, '0') : null,
         data_pedido: formatDateERP(orderDate),
         empresa: erpEmpresa || null,
         fluxo_venda: typeMapping?.erp_flow_code ?? null,
