@@ -10352,12 +10352,7 @@ export type Database = {
       }
       recompute_company_lifecycle: {
         Args: { p_company_id?: string }
-        Returns: {
-          changed_to_ativo: number
-          changed_to_inativo: number
-          changed_to_perdido: number
-          total_processed: number
-        }[]
+        Returns: number
       }
       release_blocked_attributes: {
         Args: { p_product_id: string }

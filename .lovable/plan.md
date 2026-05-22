@@ -1,71 +1,57 @@
-## Reclassificação automática de clientes por atividade
+## Problema
 
-### Regras de negócio
-- **Cliente Ativo** → última interação ≤ 6 meses
-- **Cliente Inativo** → última interação entre 6 e 12 meses
-- **Cliente Perdido** → última interação > 12 meses
-- **Leads e Prospects** → entram no recálculo normalmente. Como muitos ainda não têm interações registradas, no **kickoff** vamos assumir `last_interaction_at = hoje` para qualquer empresa sem nenhum sinal — assim ninguém começa como "Perdido" injustamente. A partir daí o relógio passa a correr de verdade conforme novas interações forem (ou não) acontecendo.
-- O estágio `lead` / `prospect` em si **não muda** automaticamente — só o eixo Ativo/Inativo/Perdido é recalculado. A promoção Lead→Prospect→Cliente continua manual / via primeira venda.
+Os 5 cards do dashboard estão se sobrepondo:
 
-> Observação: Ativo/Inativo/Perdido vira um **atributo independente** do estágio comercial (lead, prospect, cliente). Toda empresa passa a ter os dois: o estágio comercial e o status de atividade.
+- **Leads** e **Prospects** contam empresas pelo `lifecycle_stage`
+- **Clientes Ativos / Inativos / Perdidos** contam pelo `activity_status` aplicado a **todas** as empresas
 
-### Fonte de dados (unificada)
-Vamos usar e estender a view `company_activity_summary`, que já consolida o "último contato". Hoje ela considera:
-- `activities` (timeline)
-- `tasks` concluídas
-- `email_logs` enviados
-- `whatsapp_messages` outbound
-- `deals` (criação)
-- `orders` (criação)
+Resultado: um lead com qualquer interação aparece em "Leads" **e** em "Clientes Ativos" simultaneamente. A soma passa de 100% da base.
 
-Vamos **adicionar** ao cálculo de `last_interaction_at`:
-- `entity_notes` (observações em empresa/contato/negócio)
-- `proposals` (`created_at` e `updated_at`)
-- `deal_stage_history` (mudança de etapa do funil)
-- `tasks.created_at` (não só conclusão — agendar tarefa já é interação)
-- `orders.updated_at`
+Diagnóstico no banco confirma:
+- 20.057 leads classificados como "ativo"
+- 8.626 prospects classificados como "ativo"
+- 4.888 clientes reais classificados como "ativo"
+- 0 inativos / 0 perdidos (o backfill aplicou `lifecycle_baseline_at = now()` para todos, "zerando o relógio")
 
-Isso vira a fonte única de verdade para "última interação" em todo o sistema (badges, filtros, dashboard, transferência de carteira por 60 dias).
+## Correção proposta
 
-### Como será aplicado
-1. **Função SQL** `recompute_company_lifecycle(p_company_id uuid DEFAULT NULL)`:
-   - Percorre todas as empresas (ou uma específica)
-   - Lê `last_interaction_at` da view; se NULL, aplica fallback: `COALESCE(companies.updated_at, companies.created_at, now())`
-   - Classifica em Ativo / Inativo / Perdido pelas faixas 6m / 12m
-   - Atualiza apenas se mudou, com `origem_alteracao = 'SYSTEM_LIFECYCLE'`
-2. **Backfill de kickoff** (rodado uma vez no deploy):
-   - Para toda empresa **sem nenhuma interação registrada**, grava `lifecycle_baseline_at = now()` numa coluna nova
-   - A view passa a usar `GREATEST(last_interaction_real, lifecycle_baseline_at)` — assim leads/prospects sem histórico começam como Ativo e só envelhecem dali em diante
-3. **Job diário** via `pg_cron` (03:00 BRT) executando `recompute_company_lifecycle(NULL)`
-4. **Promoção imediata**: trigger `AFTER INSERT` em `orders`, `activities`, `entity_notes` chama `recompute_company_lifecycle(NEW.company_id)` para promover de volta para Ativo sem esperar o cron
-5. **Auditoria**: cada mudança automática registrada em `company_audit_log` com `action = 'lifecycle_auto_reclassify'`, valor antigo, novo e data da última interação considerada
-6. **Botão manual** "Reclassificar agora" em Configurações para forçar recálculo geral
+### Regra única e mutuamente exclusiva
 
-### Impacto na UI (sem mudar layout)
-- `/customers` e `LifecyclePanel` do dashboard refletem os novos contadores automaticamente
-- Tooltip nos badges Inativo/Perdido: "Última interação: <data> (<X meses atrás>)"
+Cada empresa entra em **exatamente um** dos 5 grupos:
 
-### Detalhes técnicos
-- Nova coluna `companies.lifecycle_baseline_at timestamptz` (preenchida no kickoff para registros sem interação)
-- Nova coluna `companies.lifecycle_updated_at timestamptz` (auditoria)
-- View `company_activity_summary` recriada incluindo `entity_notes`, `proposals`, `deal_stage_history`, `tasks.created_at`, `orders.updated_at`, e usando `GREATEST(..., lifecycle_baseline_at)` como piso
-- Função:
-  ```text
-  recompute_company_lifecycle(p_company_id uuid DEFAULT NULL)
-    → JOIN company_activity_summary
-    → CASE months_between(now, last) < 6  → active
-            < 12 → inactive
-            ELSE → lost
-    → UPDATE companies SET lifecycle_stage_atividade = ...,
-                           lifecycle_updated_at = now(),
-                           origem_alteracao = 'SYSTEM_LIFECYCLE'
-    → INSERT company_audit_log
-  ```
-- Cron agendado via `supabase--insert` (não migration) com `pg_cron` + `pg_net`
-- Backfill único após deploy: roda a função para todas as empresas e gera relatório (quantas Ativo→Inativo, etc.)
+| Card | Critério |
+|------|----------|
+| Leads | `lifecycle_stage = 'lead'` |
+| Prospects | `lifecycle_stage = 'prospect'` |
+| Clientes Ativos | `lifecycle_stage = 'customer_active'` **E** última interação ≤ 6 meses |
+| Clientes Inativos | `lifecycle_stage = 'customer_active'` **E** última interação entre 6 e 12 meses |
+| Clientes Perdidos | `lifecycle_stage = 'customer_active'` **E** última interação > 12 meses |
 
-### Pontos a confirmar antes de implementar
-1. **Eixos separados ou substituição?** Hoje `lifecycle_stage` mistura `lead/prospect/customer_active/inactive/lost`. Posso:
-   - (a) Manter como está e sobrescrever — quando vira Inativo deixa de ser "lead"
-   - (b) Recomendado: criar coluna nova `activity_status` (ativo/inativo/perdido) separada de `lifecycle_stage` (lead/prospect/cliente), assim você enxerga "Lead Ativo", "Cliente Inativo", etc.
-2. **Mudar o gatilho dos 60 dias de transferência de carteira** para usar a mesma `last_interaction_at` unificada? (recomendado, evita duas verdades)
+O eixo `activity_status` (ativo / inativo / perdido) **passa a se aplicar apenas a clientes** — leads e prospects não recebem mais essa classificação (ficam `NULL`).
+
+### O que muda
+
+1. **Função `recompute_company_lifecycle`**: passa a só calcular `activity_status` quando `lifecycle_stage = 'customer_active'`. Para lead/prospect, escreve `NULL`.
+
+2. **RPC `get_activity_status_counts`**: filtra `WHERE lifecycle_stage = 'customer_active'` antes de agrupar.
+
+3. **Backfill corretivo**: 
+   - Zera `activity_status` de todas as empresas que não são clientes.
+   - Recalcula `activity_status` dos clientes reais usando a `last_interaction_at` real. Onde não houver nenhuma interação registrada, usa `companies.created_at` como referência (não mais `now()`), revelando inatividade verdadeira.
+   - `lifecycle_baseline_at` deixa de ser usado como "zera o relógio" — vira apenas um marcador opcional.
+
+4. **Percentual nos cards (`LifecyclePanel.tsx`)**: `totalCompanies` passa a somar os 5 cards (leads + prospects + 3 buckets de clientes) — agora dá exatamente 100%.
+
+### Out of scope
+
+- Não mexer na regra de 60 dias de transferência de carteira.
+- Não mexer nos gatilhos de promoção (continuam funcionando — só param de marcar lead/prospect como "ativo").
+- Sem mudanças na UI além do recálculo do percentual.
+
+## Esperado após aplicar
+
+Com os dados atuais:
+- Leads: 20.057 (~52%)
+- Prospects: 8.626 (~22%)
+- Clientes Ativos / Inativos / Perdidos: 4.888 distribuídos entre os 3 conforme a interação real (provavelmente a maioria como Perdidos, dado que muitos clientes herdados não têm histórico recente no CRM)
+- **Soma = 100%**
