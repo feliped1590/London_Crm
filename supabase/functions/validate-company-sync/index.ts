@@ -51,15 +51,15 @@ Deno.serve(async (req) => {
 
     // 2. Cidade mapeada
     let cidadeCodigo = 0;
-    if (company.city && company.state) {
-      const { data: cityMap } = await supabase
-        .from('erp_cities')
-        .select('codigo_erp')
-        .eq('nome', company.city)
-        .eq('uf', company.state)
-        .maybeSingle();
-      cidadeCodigo = cityMap?.codigo_erp ?? 0;
+    if (company.city && company.state && (company as any).tenant_id) {
+      const { data: codeData } = await supabase.rpc('lookup_erp_city', {
+        p_tenant: (company as any).tenant_id,
+        p_nome: company.city,
+        p_uf: company.state,
+      });
+      cidadeCodigo = typeof codeData === 'number' ? codeData : (codeData ?? 0);
     }
+
 
     // 3. Vendedor com código ERP
     let salesRepName: string | null = null;
