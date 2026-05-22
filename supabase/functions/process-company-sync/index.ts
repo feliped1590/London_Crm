@@ -324,15 +324,17 @@ Deno.serve(async (req) => {
 
         // ═══ FASE B: Validação + Envio IMP_CLIENTE_V4 ═══
 
-        // 4. Buscar cidade_codigo
-        const { data: cityMapping } = await supabase
-          .from('erp_cities')
-          .select('codigo_erp')
-          .eq('nome', company.city || '')
-          .eq('uf', company.state || '')
-          .maybeSingle();
+        // 4. Buscar cidade_codigo (tolerante a maiúsculas/acentos/espaços)
+        let cidadeCodigo = 0;
+        if (company.city && company.state && company.tenant_id) {
+          const { data: codeData } = await supabase.rpc('lookup_erp_city', {
+            p_tenant: company.tenant_id,
+            p_nome: company.city,
+            p_uf: company.state,
+          });
+          cidadeCodigo = typeof codeData === 'number' ? codeData : (codeData ?? 0);
+        }
 
-        const cidadeCodigo = cityMapping?.codigo_erp ?? 0;
 
         // 5. Resolver vendedor ERP (informativo — validador decide se bloqueia)
         let vendedorCodigo = 0;
