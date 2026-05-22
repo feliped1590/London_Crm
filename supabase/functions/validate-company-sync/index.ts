@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     // 1. Carregar empresa
     const { data: company, error: companyErr } = await supabase
       .from('companies')
-      .select('id, name, cnpj, tipo_pessoa, address, zip_code, city, state, sales_rep_id, created_by, setor_id, segmento_id, setores(nome), segmentos(erp_code)')
+      .select('id, name, cnpj, tipo_pessoa, address, zip_code, city, state, tenant_id, sales_rep_id, created_by, setor_id, segmento_id, setores(nome), segmentos(erp_code)')
       .eq('id', companyId)
       .single();
 
