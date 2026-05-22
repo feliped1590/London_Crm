@@ -1,57 +1,55 @@
 ## Problema
 
-Os 5 cards do dashboard estão se sobrepondo:
+A tabela `cron.job_run_details` chegou a **394 MB** — maior tabela do banco, consumindo ~200 MB nas últimas 24h. Não existe retenção automática, e há jobs rodando sem necessidade.
 
-- **Leads** e **Prospects** contam empresas pelo `lifecycle_stage`
-- **Clientes Ativos / Inativos / Perdidos** contam pelo `activity_status` aplicado a **todas** as empresas
+## Diagnóstico dos cron jobs
 
-Resultado: um lead com qualquer interação aparece em "Leads" **e** em "Clientes Ativos" simultaneamente. A soma passa de 100% da base.
+### Dispatchers a cada 30s (mantém — são necessários)
 
-Diagnóstico no banco confirma:
-- 20.057 leads classificados como "ativo"
-- 8.626 prospects classificados como "ativo"
-- 4.888 clientes reais classificados como "ativo"
-- 0 inativos / 0 perdidos (o backfill aplicou `lifecycle_baseline_at = now()` para todos, "zerando o relógio")
+São pares de jobs (job principal + offset com `pg_sleep(30)`) que verificam filas de sincronização com o ERP:
 
-## Correção proposta
+- `dispatch-company-sync-30s` + `-offset` → `process-company-sync`
+- `dispatch-order-sync-30s` + `-offset` → `process-order-sync`
+- `dispatch-product-sync-30s` + `-offset` → `process-product-sync`
 
-### Regra única e mutuamente exclusiva
+Cada disparo usa `WHERE EXISTS (... status = 'pending')`, então só chama a edge function se houver item na fila. **A função em si raramente roda** — mas a checagem do cron sempre registra uma linha no histórico. Isso é o padrão "dispatcher 30s" já documentado no projeto.
 
-Cada empresa entra em **exatamente um** dos 5 grupos:
+### `process-scheduled-emails` (remover)
 
-| Card | Critério |
-|------|----------|
-| Leads | `lifecycle_stage = 'lead'` |
-| Prospects | `lifecycle_stage = 'prospect'` |
-| Clientes Ativos | `lifecycle_stage = 'customer_active'` **E** última interação ≤ 6 meses |
-| Clientes Inativos | `lifecycle_stage = 'customer_active'` **E** última interação entre 6 e 12 meses |
-| Clientes Perdidos | `lifecycle_stage = 'customer_active'` **E** última interação > 12 meses |
+Rodando a cada minuto desde janeiro = 177.637 execuções. Os logs mostram que toda execução retorna **"No scheduled emails to process"**. O módulo de e-mails não está em uso. **Esse é o maior responsável pelo histórico acumulado.**
 
-O eixo `activity_status` (ativo / inativo / perdido) **passa a se aplicar apenas a clientes** — leads e prospects não recebem mais essa classificação (ficam `NULL`).
+### `process-product-sync-every-5min` (remover — redundante)
 
-### O que muda
+Faz exatamente a mesma coisa que `dispatch-product-sync-30s`, mas sem o filtro `WHERE EXISTS`. Foi substituído pelos dispatchers de 30s.
 
-1. **Função `recompute_company_lifecycle`**: passa a só calcular `activity_status` quando `lifecycle_stage = 'customer_active'`. Para lead/prospect, escreve `NULL`.
+## Ações
 
-2. **RPC `get_activity_status_counts`**: filtra `WHERE lifecycle_stage = 'customer_active'` antes de agrupar.
+1. **Remover jobs obsoletos:**
+   - `cron.unschedule('process-scheduled-emails')`
+   - `cron.unschedule('process-product-sync-every-5min')`
 
-3. **Backfill corretivo**: 
-   - Zera `activity_status` de todas as empresas que não são clientes.
-   - Recalcula `activity_status` dos clientes reais usando a `last_interaction_at` real. Onde não houver nenhuma interação registrada, usa `companies.created_at` como referência (não mais `now()`), revelando inatividade verdadeira.
-   - `lifecycle_baseline_at` deixa de ser usado como "zera o relógio" — vira apenas um marcador opcional.
+2. **Criar retenção automática de 7 dias** para `cron.job_run_details` e `net._http_response`:
+   - Novo job `cleanup-cron-history-daily` rodando às 02:30 BRT
+   - `DELETE FROM cron.job_run_details WHERE end_time < now() - interval '7 days';`
+   - `DELETE FROM net._http_response WHERE created < now() - interval '7 days';`
 
-4. **Percentual nos cards (`LifecyclePanel.tsx`)**: `totalCompanies` passa a somar os 5 cards (leads + prospects + 3 buckets de clientes) — agora dá exatamente 100%.
+3. **Limpeza imediata one-shot:**
+   - Apagar tudo > 7 dias agora (libera ~390 MB)
+   - Rodar `VACUUM (ANALYZE) cron.job_run_details; VACUUM (ANALYZE) net._http_response;` para devolver o espaço ao disco
 
-### Out of scope
+## Out of scope
 
-- Não mexer na regra de 60 dias de transferência de carteira.
-- Não mexer nos gatilhos de promoção (continuam funcionando — só param de marcar lead/prospect como "ativo").
-- Sem mudanças na UI além do recálculo do percentual.
+- Não mexer nos dispatchers de 30s — são parte da arquitetura de sincronização com o ERP.
+- Não mexer no módulo de e-mails (continua disponível para quando for ativado — só remove o job que rodava no vazio).
+- Sem mudança em código de aplicação.
 
-## Esperado após aplicar
+## Resultado esperado
 
-Com os dados atuais:
-- Leads: 20.057 (~52%)
-- Prospects: 8.626 (~22%)
-- Clientes Ativos / Inativos / Perdidos: 4.888 distribuídos entre os 3 conforme a interação real (provavelmente a maioria como Perdidos, dado que muitos clientes herdados não têm histórico recente no CRM)
-- **Soma = 100%**
+- Liberação imediata de **~390 MB** de disco
+- Crescimento futuro estabilizado em ~60 MB de pico (apenas 7 dias dos dispatchers)
+- Disco volta a ter 7+ GB livres, sem precisar fazer upgrade da instância
+- Logs do banco voltam a ser legíveis (177k linhas de "no email to process" some)
+
+## Observação sobre o módulo de e-mails
+
+Quando o módulo for ativado de fato (envio de e-mails transacionais ou de autenticação), o setup oficial recria o cron necessário automaticamente. Remover agora não compromete nada.
