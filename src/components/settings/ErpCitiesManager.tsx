@@ -87,7 +87,12 @@ export function ErpCitiesManager() {
       closeDialog();
     },
     onError: (err: any) => {
-      toast.error('Erro: ' + (err.message || 'Erro desconhecido'));
+      const msg = String(err?.message || '');
+      if (msg.includes('idx_erp_cities_tenant_nome_uf')) {
+        toast.error('Esta cidade já está mapeada (verifique grafias com/sem acento ou maiúsculas).');
+      } else {
+        toast.error('Erro: ' + (msg || 'Erro desconhecido'));
+      }
     },
   });
 
