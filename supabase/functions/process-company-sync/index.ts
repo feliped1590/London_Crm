@@ -100,11 +100,18 @@ Deno.serve(async (req) => {
 
       const { data: existingEntry } = await supabase
         .from('company_sync_queue')
-        .select('id, status')
+        .select('id, status, updated_at')
         .eq('company_id', targetCompanyId)
         .maybeSingle();
 
-      if (existingEntry?.status === 'processing') {
+      // Lock órfão: item em 'processing' há mais de 5 min é considerado abandonado
+      const STALE_LOCK_MS = 5 * 60_000;
+      const isStaleProcessing =
+        existingEntry?.status === 'processing' &&
+        !!existingEntry.updated_at &&
+        Date.now() - new Date(existingEntry.updated_at).getTime() > STALE_LOCK_MS;
+
+      if (existingEntry?.status === 'processing' && !isStaleProcessing) {
         return jsonResponse({ success: true, processed: 0, message: 'Cliente já está sendo processado na fila' });
       }
 
@@ -138,6 +145,22 @@ Deno.serve(async (req) => {
         .update({ integration_status: 'not_synced' })
         .eq('id', targetCompanyId)
         .eq('integration_status', 'sync_error');
+    }
+
+    // 0. Recupera locks órfãos: itens em 'processing' há mais de 5 min (worker anterior morreu)
+    const staleLockThreshold = new Date(Date.now() - 5 * 60_000).toISOString();
+    const { data: recovered } = await supabase
+      .from('company_sync_queue')
+      .update({
+        status: 'pending',
+        error_message: 'Recuperado de lock órfão (worker anterior não finalizou)',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('status', 'processing')
+      .lt('updated_at', staleLockThreshold)
+      .select('id');
+    if (recovered && recovered.length > 0) {
+      console.warn(`[process-company-sync] Recuperados ${recovered.length} lock(s) órfão(s)`);
     }
 
     // 1. Buscar itens pendentes da fila (excluindo bloqueados por validação e pausados)
