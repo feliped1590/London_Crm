@@ -100,11 +100,18 @@ Deno.serve(async (req) => {
 
       const { data: existingEntry } = await supabase
         .from('company_sync_queue')
-        .select('id, status')
+        .select('id, status, updated_at')
         .eq('company_id', targetCompanyId)
         .maybeSingle();
 
-      if (existingEntry?.status === 'processing') {
+      // Lock órfão: item em 'processing' há mais de 5 min é considerado abandonado
+      const STALE_LOCK_MS = 5 * 60_000;
+      const isStaleProcessing =
+        existingEntry?.status === 'processing' &&
+        !!existingEntry.updated_at &&
+        Date.now() - new Date(existingEntry.updated_at).getTime() > STALE_LOCK_MS;
+
+      if (existingEntry?.status === 'processing' && !isStaleProcessing) {
         return jsonResponse({ success: true, processed: 0, message: 'Cliente já está sendo processado na fila' });
       }
 
