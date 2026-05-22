@@ -1,73 +1,77 @@
-# Correção: CNPJ enviado ao ERP perde zero à esquerda
+## Diagnóstico
 
-## Problema
+Cliente exibido como **CAFELLOW** (CNPJ 53.817.395/0001-86, nome real no banco: *TMP COMERCIO DE BEBIDAS LTDA*, id `19252384-71b3-4dda-b69a-b82519022043`).
 
-No envio do pedido `PED-2026-0090` o ERP rejeitou com:
+A fila `company_sync_queue` tem **1 item travado** desde **21/05 19:08** com:
 
-> Cliente/Pre-cliente não cadastrado para o CNPJ_CPF **9474676000191**
+- `status = 'processing'`
+- `attempts = 0`
+- `error_message = null`
+- `processed_at = null`
 
-O CNPJ correto é **09474676000191** (14 dígitos). Estamos transformando o CNPJ em `Number` no payload, e o JavaScript descarta o `0` à frente, resultando em 13 dígitos.
+Não há logs da edge `process-company-sync` para esse item — o worker começou a processar (fez o lock pulando de `pending` → `processing` na linha 224 de `process-company-sync/index.ts`) mas **morreu antes de finalizar** (timeout, crash ou deploy no meio da execução).
 
-Quando enviávamos com o zero (string), o ERP retornava outro erro de tipo — porque o campo estava chegando como string sem padrão. A correção é tratar o CNPJ **sempre como string com 14 dígitos** (CPF como string de 11), igual ao restante dos campos textuais já enviados ao ERP (ex: `cnpj_cpf` no `IMP_CLIENTE` já é string).
+### Por que ficou eternamente "Processando"
 
-## Causa
+1. O worker só pega itens com `status = 'pending'` (linha 147). Itens em `processing` nunca são retomados.
+2. O botão de retentar do usuário retorna cedo nas linhas 107–109:
+   ```ts
+   if (existingEntry?.status === 'processing') {
+     return jsonResponse({ ..., message: 'Cliente já está sendo processado na fila' });
+   }
+   ```
+   Ou seja, o usuário não consegue destravar pela UI — sempre vê "já está sendo processado".
+3. Não existe nenhum mecanismo de **stale-lock recovery** (timeout de execução, cron de limpeza, etc).
 
-`supabase/functions/_shared/projedata/order-mapper.ts`:
+Esse é um bug latente: qualquer crash/timeout durante o sync deixa o cliente preso para sempre.
+
+## Plano
+
+### 1. Destravar imediatamente o item da CAFELLOW/TMP
+
+Migração SQL única, resetando o registro para `pending`:
+
+```sql
+UPDATE company_sync_queue
+SET status = 'pending',
+    attempts = 0,
+    error_message = NULL,
+    next_retry_at = NULL,
+    processed_at = NULL,
+    updated_at = now()
+WHERE id = '41967ab9-b86a-4069-9f4a-56f80fe0b5fc'
+  AND status = 'processing';
+```
+
+Próximo tick do cron `process-company-sync` (ou clique manual no avião) faz o sync normalmente.
+
+### 2. Prevenir o problema (stale-lock recovery)
+
+Em `supabase/functions/process-company-sync/index.ts`, **antes** de buscar a fila pendente (antes da linha 144), adicionar um pequeno bloco que devolve para `pending` qualquer item em `processing` há mais de **5 minutos**:
 
 ```ts
-function cnpjToNumber(cnpj: string): number {
-  const digits = cnpj.replace(/\D/g, '');
-  return Number(digits);   // ← perde o zero à esquerda
-}
-...
-cpf_cnpj_cliente: cnpjToNumber(order.company_cnpj),
+// Recupera locks órfãos (worker morreu antes de finalizar)
+const staleThreshold = new Date(Date.now() - 5 * 60_000).toISOString();
+await supabase
+  .from('company_sync_queue')
+  .update({
+    status: 'pending',
+    error_message: 'Recuperado de lock órfão (worker anterior não finalizou)',
+    updated_at: new Date().toISOString(),
+  })
+  .eq('status', 'processing')
+  .lt('updated_at', staleThreshold);
 ```
 
-E em `order-types.ts`:
+Também ajustar o early-return das linhas 107–109 para aplicar a mesma regra: se o item está em `processing` mas o `updated_at` é mais antigo que 5 minutos, considerar órfão e resetar antes de seguir o fluxo normal (em vez de retornar a mensagem de "já está sendo processado").
 
-```ts
-cpf_cnpj_cliente: number;
-```
+### 3. Validação
 
-## Solução
-
-Padronizar `cpf_cnpj_cliente` como **string normalizada (somente dígitos, com pad de zero à esquerda quando necessário)** em todo o pipeline de pedidos. O envelope serializado já escapa as aspas corretamente, então o ERP recebe `"cpf_cnpj_cliente":"09474676000191"`.
-
-### Arquivos a alterar
-
-1. **`supabase/functions/_shared/projedata/order-types.ts`**
-   - Trocar `cpf_cnpj_cliente: number` → `cpf_cnpj_cliente: string`
-
-2. **`supabase/functions/_shared/projedata/order-mapper.ts`**
-   - Remover `cnpjToNumber`
-   - Adicionar helper `normalizeCnpjCpf(value: string): string` que:
-     - Remove tudo que não for dígito
-     - Faz `padStart(14, '0')` se tiver entre 12–14 dígitos (CNPJ)
-     - Faz `padStart(11, '0')` se tiver entre 9–11 dígitos (CPF)
-     - Lança erro se ficar fora desses tamanhos
-   - Linha 135: `cpf_cnpj_cliente: normalizeCnpjCpf(order.company_cnpj)`
-   - Linha 159 (`buildOrderPayload`): apenas repassa a string
-
-3. **`src/components/integrations/OrderPayloadSimulator.tsx`** (linha 312)
-   - Trocar `Number(company.cnpj.replace(/\D/g, ''))` por `company.cnpj.replace(/\D/g, '').padStart(14, '0')` para o preview ficar fiel ao que o backend envia.
-
-### Resultado esperado no payload
-
-```json
-{
-  "tipoComando": "ASDCOMANDO",
-  "grupoComando": "IMP_PEDIDO_V3",
-  "#out#p_retorno": "T",
-  "json": "{\"cpf_cnpj_cliente\":\"09474676000191\", ...}"
-}
-```
+- Após aplicar a migração: `SELECT status FROM company_sync_queue WHERE id = '41967ab9-...'` → deve estar `pending`.
+- Acompanhar próximo run da edge function e confirmar que o cliente vai para `synced` ou `error` (com mensagem real).
+- Em runs futuros, qualquer item travado por crash será auto-recuperado em até 5 min.
 
 ## Fora de escopo
 
-- Não mexer no `company-mapper` (já envia string corretamente)
-- Não alterar `cnpjToNumber` em outras integrações (não existe em outro lugar)
-- Não reprocessar pedidos já sincronizados — o próximo retry do `PED-2026-0090` usará o novo formato
-
-## Memória a atualizar
-
-Adicionar regra em `mem://integrations/erp-order-outbound-sync`: **CNPJ/CPF sempre enviado como string normalizada (14 ou 11 dígitos com zeros à esquerda) no payload IMP_PEDIDO_V3.**
+- Não vou mexer no nome exibido na UI ("CAFELLOW" vs nome real no banco) — é outra investigação.
+- Não vou alterar lógica de mapper/validator do company sync.
