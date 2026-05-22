@@ -1,77 +1,45 @@
 ## Diagnóstico
 
-Cliente exibido como **CAFELLOW** (CNPJ 53.817.395/0001-86, nome real no banco: *TMP COMERCIO DE BEBIDAS LTDA*, id `19252384-71b3-4dda-b69a-b82519022043`).
+A cidade **ARAPONGAS/PR** está sim cadastrada (`codigo_erp = 3929`), e **Florianópolis/SC** provavelmente nem foi tentada ainda. O motivo do erro "não mapeada" não é a ausência do registro — é como o sistema procura.
 
-A fila `company_sync_queue` tem **1 item travado** desde **21/05 19:08** com:
+Em `validate-company-sync/index.ts` e `process-company-sync/index.ts` a busca é:
 
-- `status = 'processing'`
-- `attempts = 0`
-- `error_message = null`
-- `processed_at = null`
+```ts
+.from('erp_cities')
+.eq('nome', company.city)   // ← match EXATO
+.eq('uf', company.state)
+```
 
-Não há logs da edge `process-company-sync` para esse item — o worker começou a processar (fez o lock pulando de `pending` → `processing` na linha 224 de `process-company-sync/index.ts`) mas **morreu antes de finalizar** (timeout, crash ou deploy no meio da execução).
+Como `erp_cities.nome` está em **CAIXA ALTA** (`ARAPONGAS`) e o `companies.city` está como o usuário digitou (`Arapongas`, `arapongas`, `Florianópolis`), o `eq` falha — daí "não mapeada". O mesmo problema acontece com acentos (`Florianópolis` vs `FLORIANOPOLIS`) e espaços extras.
 
-### Por que ficou eternamente "Processando"
-
-1. O worker só pega itens com `status = 'pending'` (linha 147). Itens em `processing` nunca são retomados.
-2. O botão de retentar do usuário retorna cedo nas linhas 107–109:
-   ```ts
-   if (existingEntry?.status === 'processing') {
-     return jsonResponse({ ..., message: 'Cliente já está sendo processado na fila' });
-   }
-   ```
-   Ou seja, o usuário não consegue destravar pela UI — sempre vê "já está sendo processado".
-3. Não existe nenhum mecanismo de **stale-lock recovery** (timeout de execução, cron de limpeza, etc).
-
-Esse é um bug latente: qualquer crash/timeout durante o sync deixa o cliente preso para sempre.
+E ao tentar cadastrar manualmente, o índice único `idx_erp_cities_tenant_nome_uf` bloqueia porque já existe (com outra grafia).
 
 ## Plano
 
-### 1. Destravar imediatamente o item da CAFELLOW/TMP
+### 1. Normalização no banco
+- Habilitar extensão `unaccent` (se ainda não estiver).
+- Criar função `public.normalize_city_name(text)` que faz `lower(unaccent(trim(...)))`.
+- Substituir o índice único atual por um **índice único funcional** sobre `(tenant_id, normalize_city_name(nome), upper(uf))` — assim "Arapongas", "ARAPONGAS" e "arapongas " são considerados a mesma cidade e o cadastro duplicado é bloqueado antes de gerar erro feio.
+- Criar função `public.lookup_erp_city(p_tenant uuid, p_nome text, p_uf text) returns int` que retorna o `codigo_erp` usando a mesma normalização.
 
-Migração SQL única, resetando o registro para `pending`:
+### 2. Edge functions
+- `validate-company-sync/index.ts`: trocar o `.from('erp_cities').eq(...)` por `supabase.rpc('lookup_erp_city', { p_tenant, p_nome: company.city, p_uf: company.state })`.
+- `process-company-sync/index.ts`: mesma substituição na seção de lookup de cidade (linha ~329).
 
-```sql
-UPDATE company_sync_queue
-SET status = 'pending',
-    attempts = 0,
-    error_message = NULL,
-    next_retry_at = NULL,
-    processed_at = NULL,
-    updated_at = now()
-WHERE id = '41967ab9-b86a-4069-9f4a-56f80fe0b5fc'
-  AND status = 'processing';
-```
+### 3. UI — `ErpCitiesManager.tsx`
+- Ao salvar, padronizar `nome` para Title Case com `trim()` (e `uf` já é uppercased) só para apresentação — a unicidade real fica garantida pelo índice normalizado.
+- Mensagem de erro amigável quando o índice único disparar: "Esta cidade já está mapeada (verifique grafias/acentos)" em vez do erro cru do Postgres.
 
-Próximo tick do cron `process-company-sync` (ou clique manual no avião) faz o sync normalmente.
+### 4. Validação retroativa (opcional, mesmo PR)
+- Rodar um `SELECT` no `companies` cruzando com `erp_cities` via a nova função para listar quantos clientes "destravam" sozinhos depois do fix — só para confirmar o impacto.
 
-### 2. Prevenir o problema (stale-lock recovery)
+## Resultado esperado
 
-Em `supabase/functions/process-company-sync/index.ts`, **antes** de buscar a fila pendente (antes da linha 144), adicionar um pequeno bloco que devolve para `pending` qualquer item em `processing` há mais de **5 minutos**:
-
-```ts
-// Recupera locks órfãos (worker morreu antes de finalizar)
-const staleThreshold = new Date(Date.now() - 5 * 60_000).toISOString();
-await supabase
-  .from('company_sync_queue')
-  .update({
-    status: 'pending',
-    error_message: 'Recuperado de lock órfão (worker anterior não finalizou)',
-    updated_at: new Date().toISOString(),
-  })
-  .eq('status', 'processing')
-  .lt('updated_at', staleThreshold);
-```
-
-Também ajustar o early-return das linhas 107–109 para aplicar a mesma regra: se o item está em `processing` mas o `updated_at` é mais antigo que 5 minutos, considerar órfão e resetar antes de seguir o fluxo normal (em vez de retornar a mensagem de "já está sendo processado").
-
-### 3. Validação
-
-- Após aplicar a migração: `SELECT status FROM company_sync_queue WHERE id = '41967ab9-...'` → deve estar `pending`.
-- Acompanhar próximo run da edge function e confirmar que o cliente vai para `synced` ou `error` (com mensagem real).
-- Em runs futuros, qualquer item travado por crash será auto-recuperado em até 5 min.
+- LUSETH (Arapongas/PR) e MERCADO FLORIPA (Florianópolis/SC) passam a casar com os registros existentes em `erp_cities` e seguem para a fila de sync sem precisar de novo cadastro.
+- Cadastros manuais com grafias diferentes são bloqueados com mensagem clara em vez do erro de constraint.
 
 ## Fora de escopo
 
-- Não vou mexer no nome exibido na UI ("CAFELLOW" vs nome real no banco) — é outra investigação.
-- Não vou alterar lógica de mapper/validator do company sync.
+- Reescrita do UI da tela de Cidades.
+- Importação em massa de cidades do IBGE.
+- Mudanças no padrão de armazenamento de `companies.city` (continua como o usuário digitou).

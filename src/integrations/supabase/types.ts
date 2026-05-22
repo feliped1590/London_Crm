@@ -10332,7 +10332,12 @@ export type Database = {
       is_within_access_window: { Args: { p_user_id: string }; Returns: boolean }
       is_within_access_window_for_rls: { Args: never; Returns: boolean }
       lock_order: { Args: { p_order_id: string }; Returns: Json }
+      lookup_erp_city: {
+        Args: { p_nome: string; p_tenant: string; p_uf: string }
+        Returns: number
+      }
       next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
+      normalize_city_name: { Args: { p_text: string }; Returns: string }
       process_stock_movement: {
         Args: {
           p_company_id: string
@@ -10463,6 +10468,7 @@ export type Database = {
         }
         Returns: Json
       }
+      unaccent: { Args: { "": string }; Returns: string }
       unlock_order: { Args: { p_order_id: string }; Returns: Json }
       user_has_legal_entity_access: {
         Args: { _legal_entity_id: string }
