@@ -49,10 +49,11 @@ export function LifecyclePanel() {
   });
 
   const totalCompanies = counts
-    ? (counts['activity:ativo'] ?? 0)
+    ? (counts['lifecycle:lead'] ?? 0)
+      + (counts['lifecycle:prospect'] ?? 0)
+      + (counts['activity:ativo'] ?? 0)
       + (counts['activity:inativo'] ?? 0)
       + (counts['activity:perdido'] ?? 0)
-      + (counts['activity:unknown'] ?? 0)
     : 0;
 
   const handleClick = (stage: LifecycleStage) => {
