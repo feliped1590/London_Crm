@@ -57,6 +57,8 @@ function isPermanentCompanySyncError(message: string): boolean {
   const normalized = message.toUpperCase();
   return (
     normalized.includes('CNPJ_CPF_ALFANUMERICO') ||
+    normalized.includes('ORA-20029') ||
+    normalized.includes('INSCRIÇÃO ESTADUAL DA UF MG DEVE CONTER 13 CARACTERES') ||
     (normalized.includes('ORA-06550') && normalized.includes('PLS-00302')) ||
     (normalized.includes('ORA-06550') && normalized.includes('PLS-00320'))
   );
