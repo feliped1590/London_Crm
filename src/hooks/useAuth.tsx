@@ -37,6 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        // Diagnóstico: registrar eventos de auth para investigar quedas de sessão
+        try {
+          console.info('[auth]', event, {
+            hasSession: !!currentSession,
+            userId: currentSession?.user?.id ?? null,
+            expiresAt: currentSession?.expires_at ?? null,
+            at: new Date().toISOString(),
+          });
+        } catch (_) {}
+
         // After first init, auth state changes always update
         if (initialized && !cancelled) {
           setSession(currentSession);
@@ -83,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    console.info('[auth] signOut chamado', { at: new Date().toISOString() });
     try {
       const sessionId = getSessionId();
       if (sessionId) {
@@ -106,8 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(null);
       setUser(null);
       clearSessionId();
-      const storageKey = `sb-lusyhkizwoihixcvcgap-auth-token`;
-      localStorage.removeItem(storageKey);
+      // Não removemos manualmente a chave sb-*-auth-token aqui: o
+      // supabase.auth.signOut({ scope: 'local' }) já cuida disso. Limpar
+      // manualmente pode derrubar sessões válidas se este caminho for
+      // disparado por engano em outros fluxos.
     }
   }, []);
 
