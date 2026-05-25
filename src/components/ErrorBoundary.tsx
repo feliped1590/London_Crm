@@ -22,6 +22,23 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
+
+    // Detecta crashes típicos causados por extensões de tradução (Google Translate,
+    // Microsoft Translator) que mexem no DOM por baixo do React.
+    const msg = `${error?.name || ''} ${error?.message || ''}`;
+    const isTranslatorCrash =
+      /insertBefore|removeChild|appendChild/i.test(msg) &&
+      /Node|NotFoundError|not a child/i.test(msg);
+
+    if (isTranslatorCrash) {
+      const FLAG = 'translator-crash-reloaded';
+      const already = sessionStorage.getItem(FLAG);
+      if (!already) {
+        sessionStorage.setItem(FLAG, String(Date.now()));
+        console.warn('[ErrorBoundary] Provável crash por extensão de tradução. Recarregando uma vez.');
+        window.location.reload();
+      }
+    }
   }
 
   handleReload = () => {
