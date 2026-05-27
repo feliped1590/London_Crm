@@ -778,6 +778,8 @@ export default function Customers() {
                   </TableBody>
                 </Table>
               </div>
+              </CompanySyncProvider>
+
 
               {totalItems > 0 && (
                 <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
