@@ -88,9 +88,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
-  useOrderSyncRealtime(orderId);
-  const { data: queueEntry } = useQuery({
+  const { entry: batchEntry, isInBatch } = useOrderSyncEntry(orderId);
+  useOrderSyncRealtime(orderId, !isInBatch);
+  const { data: individualEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('order_sync_queue')
@@ -105,9 +107,11 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
     staleTime: 5_000,
     refetchInterval: (query) => {
       const status = (query.state.data as any)?.status;
-      return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
+      // Polling APENAS em estados ativos. Estados terminais não mudam sozinhos.
+      return (status === 'pending' || status === 'processing') ? 3_000 : false;
     },
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   // Prioridade: blocked_validation/permanent_failure > pending/processing > outdated > completed > demais
   let displayStatus: string;
