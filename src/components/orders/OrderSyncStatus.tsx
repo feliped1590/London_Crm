@@ -261,7 +261,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   };
 
   const tooltipLabel = isBlocked
-    ? 'Corrigir dados pendentes'
+    ? 'Revalidar e enviar ao ERP'
     : isPermanentFailure ? 'Pedido bloqueado no ERP'
       : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
