@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
 import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/CompanySyncStatus';
+import { CompanySyncProvider } from '@/components/sync/SyncBatchProviders';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
