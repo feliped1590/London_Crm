@@ -64,6 +64,7 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
+import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
 
