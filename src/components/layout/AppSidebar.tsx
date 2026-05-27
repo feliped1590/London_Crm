@@ -192,6 +192,12 @@ export function AppSidebar() {
               <NavLink
                 to={item.to}
                 onClick={handleNavClick}
+                onMouseEnter={() => {
+                  import('@/lib/routePrefetch').then((m) => m.prefetchRoute(item.to));
+                }}
+                onFocus={() => {
+                  import('@/lib/routePrefetch').then((m) => m.prefetchRoute(item.to));
+                }}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all duration-200 ease-in-out",
                   isMobile ? "py-3 min-h-[48px]" : "py-2.5",
