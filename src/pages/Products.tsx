@@ -2249,6 +2249,7 @@ export default function Products() {
                 </TableBody>
               </Table>
             </div>
+            </ProductSyncProvider>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Package className="h-12 w-12 mb-4" />
