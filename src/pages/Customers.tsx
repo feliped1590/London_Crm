@@ -647,6 +647,7 @@ export default function Customers() {
             </div>
           ) : (
             <>
+              <CompanySyncProvider ids={visibleCustomerIds}>
               <div className="table-responsive">
                 <Table className="min-w-[1100px]">
                   <TableHeader>
