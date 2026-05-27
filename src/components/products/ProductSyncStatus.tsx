@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useAuth } from '@/hooks/useAuth';
+import { useProductSyncEntry } from '@/components/sync/SyncBatchProviders';
 
 type ProductSyncSnapshot = {
   id: string;
