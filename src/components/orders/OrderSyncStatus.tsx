@@ -185,9 +185,11 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
   const [entityLabel, setEntityLabel] = useState<string>('');
 
+  const { entry: batchEntry, isInBatch } = useOrderSyncEntry(orderId);
   // Saber se já está bloqueado para mostrar "Corrigir dados"
-  const { data: queueEntry } = useQuery({
+  const { data: individualEntry } = useQuery({
     queryKey: ['order_sync_status_btn', orderId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('order_sync_queue')
@@ -200,6 +202,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
     },
     staleTime: 10_000,
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   const isBlocked = queueEntry?.status === 'blocked_validation';
   const isPermanentFailure = queueEntry?.status === 'permanent_failure';
