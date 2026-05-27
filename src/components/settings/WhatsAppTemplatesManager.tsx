@@ -76,6 +76,7 @@ export function WhatsAppTemplatesManager() {
       if (error) throw error;
       return data as WhatsAppTemplate[];
     },
+    enabled: WHATSAPP_ENABLED,
   });
 
   const createMutation = useMutation({

@@ -569,6 +569,7 @@ export function useContactsWithMetrics(days: number = 30) {
       );
 
       return contactsMetrics;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }

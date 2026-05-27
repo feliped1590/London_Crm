@@ -54,6 +54,7 @@ export function WhatsAppTemplateSelector({
       if (error) throw error;
       return data as WhatsAppTemplate[];
     },
+    enabled: WHATSAPP_ENABLED,
   });
 
   const filteredTemplates = templates?.filter(t => 
