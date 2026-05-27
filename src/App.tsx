@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,36 +16,38 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
+
+// Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Today from "./pages/Today";
-import Companies from "./pages/Companies";
-import Contacts from "./pages/Contacts";
-import Customers from "./pages/Customers";
-import CustomerDetail from "./pages/CustomerDetail";
-import CustomerNew from "./pages/CustomerNew";
-import Pipeline from "./pages/Pipeline";
-import Tasks from "./pages/Tasks";
-import Emails from "./pages/Emails";
-import Reports from "./pages/Reports";
-import Settings from "./pages/Settings";
-import WhatsApp from "./pages/WhatsApp";
-import Integrations from "./pages/Integrations";
-import Products from "./pages/Products";
-import Orders from "./pages/Orders";
-import Bots from "./pages/Bots";
-import BotBuilder from "./pages/BotBuilder";
-import ProposalPublic from "./pages/ProposalPublic";
-import Insights from "./pages/Insights";
-import PricingTables from "./pages/PricingTables";
-import Prospecting from "./pages/Prospecting";
-import Stock from "./pages/Stock";
-import Carriers from "./pages/Carriers";
-import ImportCompanies from "./pages/ImportCompanies";
 import AccessBlocked from "./pages/AccessBlocked";
-
-
 import NotFound from "./pages/NotFound";
+import Today from "./pages/Today";
+
+// Lazy-loaded (code-splitting). Carrega só quando a rota é visitada.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Companies = lazy(() => import("./pages/Companies"));
+const Contacts = lazy(() => import("./pages/Contacts"));
+const Customers = lazy(() => import("./pages/Customers"));
+const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
+const CustomerNew = lazy(() => import("./pages/CustomerNew"));
+const Pipeline = lazy(() => import("./pages/Pipeline"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Emails = lazy(() => import("./pages/Emails"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Settings = lazy(() => import("./pages/Settings"));
+const WhatsApp = lazy(() => import("./pages/WhatsApp"));
+const Integrations = lazy(() => import("./pages/Integrations"));
+const Products = lazy(() => import("./pages/Products"));
+const Orders = lazy(() => import("./pages/Orders"));
+const Bots = lazy(() => import("./pages/Bots"));
+const BotBuilder = lazy(() => import("./pages/BotBuilder"));
+const ProposalPublic = lazy(() => import("./pages/ProposalPublic"));
+const Insights = lazy(() => import("./pages/Insights"));
+const PricingTables = lazy(() => import("./pages/PricingTables"));
+const Prospecting = lazy(() => import("./pages/Prospecting"));
+const Stock = lazy(() => import("./pages/Stock"));
+const Carriers = lazy(() => import("./pages/Carriers"));
+const ImportCompanies = lazy(() => import("./pages/ImportCompanies"));
 
 // Keys estruturais que devem ser persistidas no cache
 const PERSISTABLE_QUERY_KEYS = [
@@ -83,6 +85,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Fallback leve para Suspense — não trava UI, apenas mantém layout limpo
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center h-[60vh]">
+      <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+    </div>
+  );
+}
 
 // Componente que monitora mudanças de autenticação e limpa o cache apenas quando necessário
 function AuthStateListener() {
@@ -141,6 +152,7 @@ const App = () => (
               <TooltipProvider>
               <Toaster />
               <Sonner />
+              <Suspense fallback={<RouteFallback />}>
               <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/access-blocked" element={<AccessBlocked />} />
@@ -179,6 +191,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
               </Routes>
+              </Suspense>
             </TooltipProvider>
             </SidebarProvider>
           </ErrorBoundary>
