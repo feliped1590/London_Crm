@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2, Send, History } from 'lucide-react';
+import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Wand2, Send, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';

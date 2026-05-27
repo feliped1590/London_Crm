@@ -42,6 +42,7 @@ import {
   ClipboardList,
   Brain,
   Users,
+  Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
