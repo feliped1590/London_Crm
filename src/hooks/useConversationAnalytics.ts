@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { WHATSAPP_ENABLED } from '@/config/features';
+
 
 export interface ContactMetrics {
   totalMessages: number;
@@ -107,7 +109,7 @@ export function useContactMetrics(phone: string | null) {
         lastMessageDirection: lastMessage?.direction as 'inbound' | 'outbound' | null,
       };
     },
-    enabled: !!phone,
+    enabled: WHATSAPP_ENABLED && !!phone,
   });
 }
 
@@ -129,7 +131,7 @@ export function useConversationSummary(phone: string | null) {
       if (error) throw error;
       return data as ConversationSummary | null;
     },
-    enabled: !!phone,
+    enabled: WHATSAPP_ENABLED && !!phone,
   });
 }
 
@@ -149,7 +151,7 @@ export function useConversationObjections(phone: string | null) {
       if (error) throw error;
       return (data || []) as ConversationObjection[];
     },
-    enabled: !!phone,
+    enabled: WHATSAPP_ENABLED && !!phone,
   });
 }
 
