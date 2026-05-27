@@ -42,6 +42,7 @@ import {
   ClipboardList,
   Brain,
   Users,
+  Settings2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +56,9 @@ import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
 import { BIAdvancedTab } from '@/components/reports/BIAdvancedTab';
 import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
+import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
+import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
+import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -90,6 +94,7 @@ export default function Reports() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [dashboardName, setDashboardName] = useState('Meu Dashboard');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [customerCardSettingsOpen, setCustomerCardSettingsOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -247,6 +252,10 @@ export default function Reports() {
             <ClipboardList className="h-4 w-4" />
             Operacional
           </TabsTrigger>
+          <TabsTrigger value="clientes" className="gap-2">
+            <Users className="h-4 w-4" />
+            Clientes
+          </TabsTrigger>
           <TabsTrigger value="funnel" className="gap-2">
             <TrendingUp className="h-4 w-4" />
             Funil de Vendas
@@ -278,6 +287,23 @@ export default function Reports() {
             <OperationalReportsTab />
           </div>
         </TabsContent>
+
+        {/* Customers Indicators Tab */}
+        <TabsContent value="clientes" className="space-y-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setCustomerCardSettingsOpen(true)}>
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Personalizar painel</span>
+            </Button>
+            <ExportPDFButton containerId="report-clientes" title="Indicadores de Clientes" />
+          </div>
+          <div id="report-clientes" className="space-y-6">
+            <LifecyclePanel />
+            <CustomerDashboardCards />
+          </div>
+          <DashboardCardSettings open={customerCardSettingsOpen} onOpenChange={setCustomerCardSettingsOpen} />
+        </TabsContent>
+
 
         {/* Sales Funnel Tab */}
         <TabsContent value="funnel" className="space-y-6">

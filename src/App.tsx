@@ -12,10 +12,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { AppInitializer } from "@/components/AppInitializer";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { VersionChecker } from "@/components/VersionChecker";
+import { TopProgressBar } from "@/components/TopProgressBar";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { useAuth } from "@/hooks/useAuth";
 import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
+import { prefetchTopRoutesIdle } from "@/lib/routePrefetch";
 
 // Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
 import Auth from "./pages/Auth";
@@ -136,6 +138,9 @@ function RealtimeSync() {
   const { user } = useAuth();
   const { isContextReady } = useLegalEntities();
   useRealtimeSync(isContextReady ? user?.id : undefined);
+  useEffect(() => {
+    if (user?.id) prefetchTopRoutesIdle();
+  }, [user?.id]);
   return null;
 }
 
@@ -143,6 +148,7 @@ const App = () => (
   <BrowserRouter>
     <QueryClientProvider client={queryClient}>
       <AuthStateListener />
+      <TopProgressBar />
       <VersionChecker />
       <AuthProvider>
         <AppInitializer>

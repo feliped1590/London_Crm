@@ -17,10 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Settings2, Wand2, Send, History } from 'lucide-react';
-import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
-import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
-import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
+import { Plus, Search, Users, RefreshCw, Building2, User, TrendingUp, Clock, MessageCircle, Pencil, Trash2, Power, PowerOff, ArrowUpDown, ArrowUp, ArrowDown, Filter, X, Wand2, Send, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
@@ -128,7 +125,7 @@ export default function Customers() {
     setCurrentPage(1);
   }, [searchParams]);
 
-  const [cardSettingsOpen, setCardSettingsOpen] = useState(false);
+  
   const [isEnriching, setIsEnriching] = useState(false);
   const [enrichResult, setEnrichResult] = useState<any>(null);
   const [enrichDialogOpen, setEnrichDialogOpen] = useState(false);
@@ -481,10 +478,6 @@ export default function Customers() {
               </Button>
             </div>
           )}
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => setCardSettingsOpen(true)}>
-            <Settings2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Personalizar painel</span>
-          </Button>
           {canCreateCustomers && (
             <Button className="gap-2" size="sm" onClick={() => navigate('/customers/new')}>
               <Plus className="h-4 w-4" />
@@ -494,10 +487,6 @@ export default function Customers() {
           )}
         </div>
       </div>
-
-      <LifecyclePanel />
-      <CustomerDashboardCards />
-      <DashboardCardSettings open={cardSettingsOpen} onOpenChange={setCardSettingsOpen} />
 
       <Card>
         <CardHeader>
