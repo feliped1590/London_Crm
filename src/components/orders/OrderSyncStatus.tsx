@@ -261,7 +261,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   };
 
   const tooltipLabel = isBlocked
-    ? 'Corrigir dados pendentes'
+    ? 'Revalidar e enviar ao ERP'
     : isPermanentFailure ? 'Pedido bloqueado no ERP'
       : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
@@ -275,8 +275,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
               size="icon"
               onClick={(e) => {
                 e.stopPropagation();
-                if (isBlocked) handleShowBlocked();
-                else if (isPermanentFailure) toast.error(PERMANENT_ORDER_SYNC_MESSAGE);
+                if (isPermanentFailure) toast.error(PERMANENT_ORDER_SYNC_MESSAGE);
                 else handleSync();
               }}
               disabled={isSyncing || isPermanentFailure}
