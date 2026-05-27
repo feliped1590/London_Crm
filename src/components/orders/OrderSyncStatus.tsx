@@ -7,11 +7,15 @@ import { CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-re
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+import { useOrderSyncEntry } from '@/components/sync/SyncBatchProviders';
 
-function useOrderSyncRealtime(orderId: string) {
+// Realtime channel per row — só é usado quando o componente NÃO está dentro de
+// <OrderSyncProvider>. Dentro de listas (Orders.tsx), o provider abre 1 canal
+// único e este hook fica desativado via `enabled=false`.
+function useOrderSyncRealtime(orderId: string, enabled: boolean) {
   const queryClient = useQueryClient();
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId || !enabled) return;
     const channel = supabase
       .channel(`order-sync-ui-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, () => {
@@ -25,7 +29,7 @@ function useOrderSyncRealtime(orderId: string) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [orderId, queryClient]);
+  }, [orderId, queryClient, enabled]);
 }
 
 interface OrderSyncStatusProps {
@@ -84,9 +88,11 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
-  useOrderSyncRealtime(orderId);
-  const { data: queueEntry } = useQuery({
+  const { entry: batchEntry, isInBatch } = useOrderSyncEntry(orderId);
+  useOrderSyncRealtime(orderId, !isInBatch);
+  const { data: individualEntry } = useQuery({
     queryKey: ['order_sync_status', orderId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('order_sync_queue')
@@ -101,9 +107,11 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
     staleTime: 5_000,
     refetchInterval: (query) => {
       const status = (query.state.data as any)?.status;
-      return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
+      // Polling APENAS em estados ativos. Estados terminais não mudam sozinhos.
+      return (status === 'pending' || status === 'processing') ? 3_000 : false;
     },
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   // Prioridade: blocked_validation/permanent_failure > pending/processing > outdated > completed > demais
   let displayStatus: string;
@@ -177,9 +185,11 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
   const [entityLabel, setEntityLabel] = useState<string>('');
 
+  const { entry: batchEntry, isInBatch } = useOrderSyncEntry(orderId);
   // Saber se já está bloqueado para mostrar "Corrigir dados"
-  const { data: queueEntry } = useQuery({
+  const { data: individualEntry } = useQuery({
     queryKey: ['order_sync_status_btn', orderId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('order_sync_queue')
@@ -192,6 +202,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
     },
     staleTime: 10_000,
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   const isBlocked = queueEntry?.status === 'blocked_validation';
   const isPermanentFailure = queueEntry?.status === 'permanent_failure';

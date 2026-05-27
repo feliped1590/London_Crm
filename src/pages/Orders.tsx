@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw, Lock } from 'lucide-react';
 import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
+import { OrderSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -191,6 +192,9 @@ export default function Orders() {
 
   // Server-side filters + pagination already applied.
   const filteredOrders = orders;
+  // IDs visíveis na página — usados pelo OrderSyncProvider para fazer
+  // uma única query agregada de sync status em vez de 1 por linha.
+  const visibleOrderIds = useMemo(() => (filteredOrders ?? []).map((o) => o.id), [filteredOrders]);
 
   const getStatusStats = () => {
     if (!statusStats) return [];
@@ -312,6 +316,7 @@ export default function Orders() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
            ) : filteredOrders && filteredOrders.length > 0 ? (
+             <OrderSyncProvider ids={visibleOrderIds}>
              <div className="table-responsive">
                <Table className="min-w-[900px]">
                  <TableHeader>
@@ -488,6 +493,7 @@ export default function Orders() {
                  </TableBody>
                </Table>
              </div>
+             </OrderSyncProvider>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <ShoppingCart className="h-12 w-12 mb-4" />

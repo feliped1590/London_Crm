@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
 import { toast } from 'sonner';
 import { CompanySyncBadge, CompanySyncButton } from '@/components/customers/CompanySyncStatus';
+import { CompanySyncProvider } from '@/components/sync/SyncBatchProviders';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
@@ -217,6 +218,8 @@ export default function Customers() {
   });
 
   const customers = queryResult || [];
+  // IDs visíveis — alimenta CompanySyncProvider (1 query agregada, 1 canal Realtime)
+  const visibleCustomerIds = useMemo(() => customers.map((c: any) => c.id), [customers]);
   const totalItems = customers.length > 0 ? Number(customers[0].total_count) : 0;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -644,6 +647,7 @@ export default function Customers() {
             </div>
           ) : (
             <>
+              <CompanySyncProvider ids={visibleCustomerIds}>
               <div className="table-responsive">
                 <Table className="min-w-[1100px]">
                   <TableHeader>
@@ -774,6 +778,8 @@ export default function Customers() {
                   </TableBody>
                 </Table>
               </div>
+              </CompanySyncProvider>
+
 
               {totalItems > 0 && (
                 <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">

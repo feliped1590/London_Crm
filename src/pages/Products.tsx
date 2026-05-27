@@ -64,6 +64,7 @@ import { type GroupLookupItem, type LookupItem } from '@/hooks/useProductLookups
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { ProductSyncBadge, ProductSyncButton } from '@/components/products/ProductSyncStatus';
+import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
 
@@ -2130,6 +2131,7 @@ export default function Products() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : products && products.length > 0 ? (
+            <ProductSyncProvider ids={(products ?? []).map((p: any) => p.id)}>
             <div className="table-responsive">
               <Table className="min-w-[900px]">
                 <TableHeader>
@@ -2247,6 +2249,7 @@ export default function Products() {
                 </TableBody>
               </Table>
             </div>
+            </ProductSyncProvider>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
               <Package className="h-12 w-12 mb-4" />

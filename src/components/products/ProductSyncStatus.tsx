@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useAuth } from '@/hooks/useAuth';
+import { useProductSyncEntry } from '@/components/sync/SyncBatchProviders';
 
 type ProductSyncSnapshot = {
   id: string;
@@ -87,11 +88,11 @@ function cacheProductSnapshot(queryClient: QueryClient, snapshot: ProductSyncSna
   });
 }
 
-function useProductSyncRealtime(productId: string, onProductUpdated?: (product: ProductSyncSnapshot) => void) {
+function useProductSyncRealtime(productId: string, enabled: boolean, onProductUpdated?: (product: ProductSyncSnapshot) => void) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!productId) return;
+    if (!productId || !enabled) return;
 
     const channel = supabase
       .channel(`product-sync-ui-${productId}`)
@@ -110,12 +111,13 @@ function useProductSyncRealtime(productId: string, onProductUpdated?: (product: 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [productId, queryClient, onProductUpdated]);
+  }, [productId, queryClient, onProductUpdated, enabled]);
 }
 
-function useProductQueueEntry(productId: string) {
+function useProductQueueEntry(productId: string, enabled: boolean) {
   return useQuery({
     queryKey: ['product_sync_status', productId],
+    enabled,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('product_sync_queue')
@@ -130,15 +132,18 @@ function useProductQueueEntry(productId: string) {
     staleTime: 5_000,
     refetchInterval: (query: any) => {
       const status = query.state.data?.status;
-      return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
+      // Polling apenas em estados ativos. Terminais não mudam sozinhos.
+      return (status === 'pending' || status === 'processing') ? 3_000 : false;
     },
   });
 }
 
 export function ProductSyncBadge({ productId, erpProductCode, onProductUpdated }: ProductSyncStatusProps) {
-  useProductSyncRealtime(productId, onProductUpdated);
+  const { entry: batchEntry, isInBatch } = useProductSyncEntry(productId);
+  useProductSyncRealtime(productId, !isInBatch, onProductUpdated);
   const erpCode = useProductErpCode(productId, erpProductCode);
-  const { data: queueEntry } = useProductQueueEntry(productId);
+  const { data: individualEntry } = useProductQueueEntry(productId, !isInBatch);
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   let displayStatus: string;
   if (queueEntry && (queueEntry.status === 'pending' || queueEntry.status === 'processing' || queueEntry.status === 'retry')) {
