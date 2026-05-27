@@ -288,6 +288,23 @@ export default function Reports() {
           </div>
         </TabsContent>
 
+        {/* Customers Indicators Tab */}
+        <TabsContent value="clientes" className="space-y-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => setCustomerCardSettingsOpen(true)}>
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Personalizar painel</span>
+            </Button>
+            <ExportPDFButton containerId="report-clientes" title="Indicadores de Clientes" />
+          </div>
+          <div id="report-clientes" className="space-y-6">
+            <LifecyclePanel />
+            <CustomerDashboardCards />
+          </div>
+          <DashboardCardSettings open={customerCardSettingsOpen} onOpenChange={setCustomerCardSettingsOpen} />
+        </TabsContent>
+
+
         {/* Sales Funnel Tab */}
         <TabsContent value="funnel" className="space-y-6">
           <div className="flex justify-end">
