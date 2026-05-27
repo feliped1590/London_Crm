@@ -30,7 +30,7 @@ import { DocumentLogisticsSection, EMPTY_DELIVERY_FIELDS, buildLogisticsPayload,
 import { useProductAdd } from '@/components/documents/ProductSelector';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import { getEffectiveDimensions } from '@/utils/products/effectiveDimensions';
-import { usePriceValidation } from '@/modules/documents/usePriceValidation';
+import { usePriceValidation } from '@/modules/documents';
 import { ProductSearchModal } from '@/components/products/ProductSearchModal';
 import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { getWonStageForPipeline } from '@/lib/stageStatus';
