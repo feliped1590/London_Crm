@@ -192,6 +192,9 @@ export default function Orders() {
 
   // Server-side filters + pagination already applied.
   const filteredOrders = orders;
+  // IDs visíveis na página — usados pelo OrderSyncProvider para fazer
+  // uma única query agregada de sync status em vez de 1 por linha.
+  const visibleOrderIds = useMemo(() => (filteredOrders ?? []).map((o) => o.id), [filteredOrders]);
 
   const getStatusStats = () => {
     if (!statusStats) return [];
