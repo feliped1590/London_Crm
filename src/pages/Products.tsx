@@ -2131,6 +2131,7 @@ export default function Products() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           ) : products && products.length > 0 ? (
+            <ProductSyncProvider ids={(products ?? []).map((p: any) => p.id)}>
             <div className="table-responsive">
               <Table className="min-w-[900px]">
                 <TableHeader>
