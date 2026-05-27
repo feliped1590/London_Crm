@@ -7,11 +7,15 @@ import { CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lucide-re
 import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+import { useOrderSyncEntry } from '@/components/sync/SyncBatchProviders';
 
-function useOrderSyncRealtime(orderId: string) {
+// Realtime channel per row — só é usado quando o componente NÃO está dentro de
+// <OrderSyncProvider>. Dentro de listas (Orders.tsx), o provider abre 1 canal
+// único e este hook fica desativado via `enabled=false`.
+function useOrderSyncRealtime(orderId: string, enabled: boolean) {
   const queryClient = useQueryClient();
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId || !enabled) return;
     const channel = supabase
       .channel(`order-sync-ui-${orderId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, () => {
@@ -25,7 +29,7 @@ function useOrderSyncRealtime(orderId: string) {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [orderId, queryClient]);
+  }, [orderId, queryClient, enabled]);
 }
 
 interface OrderSyncStatusProps {
