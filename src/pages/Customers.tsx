@@ -218,6 +218,8 @@ export default function Customers() {
   });
 
   const customers = queryResult || [];
+  // IDs visíveis — alimenta CompanySyncProvider (1 query agregada, 1 canal Realtime)
+  const visibleCustomerIds = useMemo(() => customers.map((c: any) => c.id), [customers]);
   const totalItems = customers.length > 0 ? Number(customers[0].total_count) : 0;
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
