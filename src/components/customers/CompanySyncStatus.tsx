@@ -7,6 +7,7 @@ import { Cloud, CloudOff, Loader2, AlertTriangle, Check, Send, Wrench } from 'lu
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+import { useCompanySyncEntry } from '@/components/sync/SyncBatchProviders';
 
 interface CompanySyncStatusProps {
   companyId: string;
