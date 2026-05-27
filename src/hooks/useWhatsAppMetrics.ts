@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, subDays, differenceInMinutes, format, parseISO, startOfHour } from 'date-fns';
+import { WHATSAPP_ENABLED } from '@/config/features';
 
 export interface WhatsAppMetrics {
   avgFirstResponseTime: number | null; // in minutes
