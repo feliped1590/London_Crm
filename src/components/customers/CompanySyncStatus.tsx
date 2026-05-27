@@ -60,6 +60,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyncStatusProps) {
+  const { entry: batchEntry, isInBatch } = useCompanySyncEntry(companyId);
   // Fetch erp_code from companies if not provided
   const { data: companyData } = useQuery({
     queryKey: ['company_erp_code', companyId],
@@ -78,8 +79,9 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
 
   const erpCode = erpCodeProp ?? companyData?.erp_code;
 
-  const { data: queueEntry } = useQuery({
+  const { data: individualEntry } = useQuery({
     queryKey: ['company_sync_status', companyId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('company_sync_queue')
@@ -94,9 +96,11 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
     staleTime: 5_000,
     refetchInterval: (query: any) => {
       const status = query.state.data?.status;
-      return (status === 'pending' || status === 'processing') ? 3_000 : 15_000;
+      // Polling apenas em estados ativos. Terminais não mudam sozinhos.
+      return (status === 'pending' || status === 'processing') ? 3_000 : false;
     },
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   let displayStatus: string;
   if (queueEntry?.status === 'blocked_validation') {
