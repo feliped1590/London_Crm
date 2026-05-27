@@ -82,7 +82,7 @@ export function useDashboardData(filterUserId?: string | null) {
     queryFn: async () => {
       let query = supabase
         .from('deals')
-        .select('*')
+        .select('stage,value,pipeline_id,created_at,owner_id')
         .order('created_at', { ascending: false });
       
       if (effectiveUserId) {
@@ -99,12 +99,13 @@ export function useDashboardData(filterUserId?: string | null) {
       return data;
     },
     enabled: !!user?.id && !!salesPipelineIds,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: tasks } = useQuery({
     queryKey: ['dashboard-tasks', effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from('tasks').select('*');
+      let query = supabase.from('tasks').select('status,priority,assigned_to');
       
       if (effectiveUserId) {
         query = query.eq('assigned_to', effectiveUserId);
@@ -115,6 +116,7 @@ export function useDashboardData(filterUserId?: string | null) {
       return data;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: companiesCount } = useQuery({
@@ -129,6 +131,7 @@ export function useDashboardData(filterUserId?: string | null) {
       return count || 0;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: contactsCount } = useQuery({
@@ -143,12 +146,13 @@ export function useDashboardData(filterUserId?: string | null) {
       return count || 0;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: proposals } = useQuery({
     queryKey: ['dashboard-proposals', effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from('proposals').select('*');
+      let query = supabase.from('proposals').select('status,created_by');
       
       if (effectiveUserId) {
         query = query.eq('created_by', effectiveUserId);
@@ -159,12 +163,13 @@ export function useDashboardData(filterUserId?: string | null) {
       return data;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: orders } = useQuery({
     queryKey: ['dashboard-orders', effectiveUserId],
     queryFn: async () => {
-      let query = supabase.from('orders').select('*');
+      let query = supabase.from('orders').select('status,total_value,created_at,created_by');
       
       if (effectiveUserId) {
         query = query.eq('created_by', effectiveUserId);
@@ -175,6 +180,7 @@ export function useDashboardData(filterUserId?: string | null) {
       return data;
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 
   // WhatsApp desativado (auditoria perf 2026-05) — não consulta whatsapp_messages
@@ -190,6 +196,7 @@ export function useDashboardData(filterUserId?: string | null) {
       if (error) throw error;
       return count || 0;
     },
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: orderItems } = useQuery({
@@ -197,11 +204,13 @@ export function useDashboardData(filterUserId?: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('order_items')
-        .select('*, product:products(name)');
+        .select('quantity,description,product:products(name)');
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
   });
+
 
   const getMetricData = (metricType: MetricType): MetricData => {
     const wonDeals = deals?.filter((d) => d.stage === 'fechado_ganho') || [];
