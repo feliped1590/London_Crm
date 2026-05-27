@@ -172,9 +172,11 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
   const [companyName, setCompanyName] = useState<string>('');
 
+  const { entry: batchEntry, isInBatch } = useCompanySyncEntry(companyId);
   // Saber se já está bloqueado para destacar que será uma nova validação/envio
-  const { data: queueEntry } = useQuery({
+  const { data: individualEntry } = useQuery({
     queryKey: ['company_sync_status_btn', companyId],
+    enabled: !isInBatch,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('company_sync_queue')
@@ -187,6 +189,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
     },
     staleTime: 10_000,
   });
+  const queueEntry = isInBatch ? batchEntry : individualEntry;
 
   const isBlocked = queueEntry?.status === 'blocked_validation';
 
