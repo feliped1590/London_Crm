@@ -960,6 +960,36 @@ export default function Products() {
       return;
     }
 
+    // Guard contra descrições "pobres" (ex.: apenas "SACO LISO", igual ao Grupo).
+    // Vale também para admins que destravaram o campo — rede de segurança.
+    {
+      const normalized = formData.name.trim().toUpperCase().replace(/\s+/g, ' ');
+      const labels = [
+        getLookupLabel(familias.items, formData.family_id),
+        getLookupLabel(grupos.items, formData.grupo_id),
+        getLookupLabel(subgrupos.items, formData.subgrupo_id),
+        getLookupLabel(classes.items, formData.class_id),
+      ]
+        .filter(Boolean)
+        .map((l) => (l as string).trim().toUpperCase().replace(/\s+/g, ' '));
+      if (labels.includes(normalized)) {
+        toast.error(
+          'Descrição incompleta: ela está igual a um item de classificação. Limpe o campo e clique fora para regerar automaticamente.',
+          { duration: 7000 },
+        );
+        setFormTab('geral');
+        return;
+      }
+      if (formData.erp_versao && !normalized.includes(formData.erp_versao.toUpperCase())) {
+        toast.error(
+          `Descrição incompleta: deve conter a versão "${formData.erp_versao}". Limpe o campo e clique fora para regerar.`,
+          { duration: 7000 },
+        );
+        setFormTab('geral');
+        return;
+      }
+    }
+
     // SKU é gerado automaticamente — validar que foi gerado
     if (!formData.sku) {
       toast.error('SKU não foi gerado. Preencha os campos de classificação.');
