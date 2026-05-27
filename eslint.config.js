@@ -21,6 +21,20 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // Arquitetura modular: módulos só podem ser importados externamente via barrel (index.ts).
+      // Imports relativos dentro do mesmo módulo continuam permitidos.
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["@/modules/*/*"],
+              message:
+                "Importe módulos apenas pela API pública: '@/modules/<dominio>' (sem subpaths). Veja docs/00-overview/modular-architecture.md",
+            },
+          ],
+        },
+      ],
     },
   },
 );
