@@ -56,6 +56,9 @@ import { LossReasonsChart } from '@/components/reports/LossReasonsChart';
 import { OperationalReportsTab } from '@/components/reports/OperationalReportsTab';
 import { BIAdvancedTab } from '@/components/reports/BIAdvancedTab';
 import { SellerProductivityReport } from '@/components/reports/SellerProductivityReport';
+import { CustomerDashboardCards } from '@/components/dashboard/CustomerDashboardCards';
+import { LifecyclePanel } from '@/components/dashboard/LifecyclePanel';
+import { DashboardCardSettings } from '@/components/dashboard/DashboardCardSettings';
 import {
   DashboardWidget as WidgetType,
   DashboardConfig,
@@ -91,6 +94,7 @@ export default function Reports() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [dashboardName, setDashboardName] = useState('Meu Dashboard');
   const [isPrinting, setIsPrinting] = useState(false);
+  const [customerCardSettingsOpen, setCustomerCardSettingsOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -247,6 +251,10 @@ export default function Reports() {
           <TabsTrigger value="operacional" className="gap-2">
             <ClipboardList className="h-4 w-4" />
             Operacional
+          </TabsTrigger>
+          <TabsTrigger value="clientes" className="gap-2">
+            <Users className="h-4 w-4" />
+            Clientes
           </TabsTrigger>
           <TabsTrigger value="funnel" className="gap-2">
             <TrendingUp className="h-4 w-4" />
