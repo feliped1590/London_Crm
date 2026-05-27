@@ -181,7 +181,8 @@ export function useWhatsAppMetrics(days: number = 30) {
       };
 
       return metrics;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -221,7 +222,8 @@ export function useVolumeByDay(days: number = 30) {
       });
 
       return volumeByDay;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -260,7 +262,8 @@ export function useVolumeByHour(days: number = 30) {
       });
 
       return volumeByHour;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -383,7 +386,8 @@ export function useSellerPerformance(days: number = 30) {
       });
 
       return performance;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
@@ -445,7 +449,8 @@ export function useResponseTimeTrend(days: number = 30) {
       trend.sort((a, b) => a.date.localeCompare(b.date));
 
       return trend;
-    }
+    },
+    enabled: WHATSAPP_ENABLED,
   });
 }
 
