@@ -89,6 +89,7 @@ export function SellerProductivityReport() {
 
   const [sortBy, setSortBy] = useState<SortField>('interaction_score');
   const [chartType, setChartType] = useState<ChartType>('vertical');
+  const [expanded, setExpanded] = useState(false);
 
   const sorted = [...data].sort((a, b) => b[sortBy] - a[sortBy]);
 
