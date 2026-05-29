@@ -209,7 +209,7 @@ export function SellerProductivityReport() {
           <CardContent className="flex items-center gap-4 py-4">
             <Trophy className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm text-muted-foreground">Vendedor mais produtivo</p>
+              <p className="text-sm text-muted-foreground">{mode === 'sales_rep' ? 'Vendedor mais produtivo' : 'Usuário mais produtivo'}</p>
               <p className="text-lg font-bold text-foreground">{topSeller.seller_name}</p>
             </div>
             <div className="ml-auto flex gap-6">
