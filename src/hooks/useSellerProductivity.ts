@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, endOfDay, subDays, startOfMonth } from 'date-fns';
 
 export type PeriodFilter = 'today' | '7days' | 'month' | 'custom';
+export type ProductivityMode = 'user' | 'sales_rep';
 
 export interface SellerProductivityRow {
   seller_id: string;
