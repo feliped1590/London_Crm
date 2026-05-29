@@ -191,6 +191,18 @@ export function SellerProductivityReport() {
         </div>
       </div>
 
+      <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        {mode === 'user' ? (
+          <>
+            <strong>Modo Usuário:</strong> conta interações de quem operou o sistema (criou atividade, tarefa, proposta, pedido etc.). Útil para medir adoção e uso do CRM.
+          </>
+        ) : (
+          <>
+            <strong>Modo Vendedor:</strong> conta interações atribuídas ao vendedor responsável pela empresa/negócio, mesmo quando lançadas por outro usuário (admin, back-office). Tarefas e e-mails sem vínculo a empresa não entram nesse modo.
+          </>
+        )}
+      </div>
+
       {/* Top seller highlight */}
       {topSeller && !isLoading && (
         <Card className="border-primary/30 bg-primary/5">
