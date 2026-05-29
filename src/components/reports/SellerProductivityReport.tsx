@@ -81,6 +81,8 @@ export function SellerProductivityReport() {
     isLoadingManagers,
     selectedManagerId,
     setSelectedManagerId,
+    mode,
+    setMode,
   } = useSellerProductivity();
 
   const [sortBy, setSortBy] = useState<SortField>('interaction_score');
