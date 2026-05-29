@@ -124,6 +124,7 @@ export function SellerProductivityReport() {
           </Select>
         </div>
 
+        <div>
           <label className="text-sm font-medium text-muted-foreground mb-1 block">Período</label>
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
             <SelectTrigger className="w-[180px]">
