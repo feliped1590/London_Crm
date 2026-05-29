@@ -234,12 +234,8 @@ export function SellerProductivityReport() {
       )}
 
       {/* Chart */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Ranking de Produtividade
-          </CardTitle>
+      {(() => {
+        const chartControls = (
           <div className="flex items-center gap-2">
             <Select value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
               <SelectTrigger className="w-[180px]">
@@ -261,72 +257,83 @@ export function SellerProductivityReport() {
               </SelectContent>
             </Select>
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-[350px] w-full" />
-          ) : data.length === 0 ? (
-            <div className="flex items-center justify-center h-[200px] text-muted-foreground">
-              {selectedManagerId ? 'Nenhuma interação encontrada para a equipe selecionada' : 'Nenhuma interação encontrada no período selecionado'}
-            </div>
-          ) : chartType === 'vertical' ? (
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={chartData} margin={{ left: 10, right: 30, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-25} textAnchor="end" height={60} />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    value,
-                    name === 'score' ? 'Score' : name === 'meta' ? 'Meta' : 'Interações',
-                  ]}
-                />
-                <Legend />
-                {avgTarget && sortBy === 'interaction_score' && (
-                  <ReferenceLine y={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
-                )}
-                <Bar dataKey={dataKey} name={dataLabel} radius={[6, 6, 0, 0]}>
-                  {chartData.map((entry, i) => {
-                    const target = entry.meta;
-                    const score = entry.score;
-                    const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
-                    return (
-                      <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : chartType === 'horizontal' ? (
-            <ResponsiveContainer width="100%" height={Math.max(300, sorted.length * 50)}>
-              <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 13 }} />
-                <Tooltip
-                  formatter={(value: number, name: string) => [
-                    value,
-                    name === 'score' ? 'Score' : 'Interações',
-                  ]}
-                />
-                <Legend />
-                {avgTarget && sortBy === 'interaction_score' && (
-                  <ReferenceLine x={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
-                )}
-                <Bar dataKey={dataKey} name={dataLabel} radius={[0, 6, 6, 0]}>
-                  {chartData.map((entry, i) => {
-                    const target = entry.meta;
-                    const score = entry.score;
-                    const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
-                    return (
-                      <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
+        );
+
+        const renderChart = (height: number | string) => {
+          if (isLoading) {
+            return <Skeleton className="w-full" style={{ height: typeof height === 'number' ? height : 350 }} />;
+          }
+          if (data.length === 0) {
+            return (
+              <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                {selectedManagerId ? 'Nenhuma interação encontrada para a equipe selecionada' : 'Nenhuma interação encontrada no período selecionado'}
+              </div>
+            );
+          }
+          if (chartType === 'vertical') {
+            return (
+              <ResponsiveContainer width="100%" height={height}>
+                <BarChart data={chartData} margin={{ left: 10, right: 30, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-25} textAnchor="end" height={60} />
+                  <YAxis />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [
+                      value,
+                      name === 'score' ? 'Score' : name === 'meta' ? 'Meta' : 'Interações',
+                    ]}
+                  />
+                  <Legend />
+                  {avgTarget && sortBy === 'interaction_score' && (
+                    <ReferenceLine y={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
+                  )}
+                  <Bar dataKey={dataKey} name={dataLabel} radius={[6, 6, 0, 0]}>
+                    {chartData.map((entry, i) => {
+                      const target = entry.meta;
+                      const score = entry.score;
+                      const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
+                      return (
+                        <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
+                      );
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            );
+          }
+          if (chartType === 'horizontal') {
+            return (
+              <ResponsiveContainer width="100%" height={height}>
+                <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" />
+                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 13 }} />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [
+                      value,
+                      name === 'score' ? 'Score' : 'Interações',
+                    ]}
+                  />
+                  <Legend />
+                  {avgTarget && sortBy === 'interaction_score' && (
+                    <ReferenceLine x={avgTarget} stroke="hsl(var(--destructive))" strokeDasharray="6 4" label={{ value: `Meta: ${avgTarget}`, position: 'insideTopRight', fill: 'hsl(var(--destructive))', fontSize: 12 }} />
+                  )}
+                  <Bar dataKey={dataKey} name={dataLabel} radius={[0, 6, 6, 0]}>
+                    {chartData.map((entry, i) => {
+                      const target = entry.meta;
+                      const score = entry.score;
+                      const isBelowTarget = target != null && sortBy === 'interaction_score' && score < target;
+                      return (
+                        <Cell key={i} fill={isBelowTarget ? 'hsl(var(--destructive))' : COLORS[i % COLORS.length]} opacity={isBelowTarget ? 0.7 : 1} />
+                      );
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            );
+          }
+          return (
+            <ResponsiveContainer width="100%" height={height}>
               <PieChart>
                 <Pie
                   data={chartData}
@@ -334,7 +341,7 @@ export function SellerProductivityReport() {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={120}
+                  outerRadius={typeof height === 'number' && height > 500 ? 220 : 120}
                   label={({ name, participacao }) => `${name}: ${participacao}%`}
                 >
                   {chartData.map((_, i) => (
@@ -345,9 +352,62 @@ export function SellerProductivityReport() {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+          );
+        };
+
+        const cardHeight = chartType === 'horizontal' ? Math.max(300, sorted.length * 50) : 350;
+        const expandedHeight = chartType === 'horizontal' ? Math.max(500, sorted.length * 60) : '100%';
+
+        return (
+          <>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Ranking de Produtividade
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  {chartControls}
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setExpanded(true)}
+                          aria-label="Expandir gráfico"
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Expandir gráfico</TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
+                </div>
+              </CardHeader>
+              <CardContent>{renderChart(cardHeight)}</CardContent>
+            </Card>
+
+            <Dialog open={expanded} onOpenChange={setExpanded}>
+              <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] flex flex-col">
+                <DialogHeader>
+                  <div className="flex items-center justify-between gap-4 pr-8">
+                    <DialogTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Ranking de Produtividade
+                    </DialogTitle>
+                    {chartControls}
+                  </div>
+                </DialogHeader>
+                <div className="flex-1 min-h-0 overflow-auto">
+                  {renderChart(expandedHeight)}
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        );
+      })()}
+
 
       {/* Detail table */}
       <Card>
