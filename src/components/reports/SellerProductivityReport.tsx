@@ -81,6 +81,8 @@ export function SellerProductivityReport() {
     isLoadingManagers,
     selectedManagerId,
     setSelectedManagerId,
+    mode,
+    setMode,
   } = useSellerProductivity();
 
   const [sortBy, setSortBy] = useState<SortField>('interaction_score');
@@ -109,6 +111,19 @@ export function SellerProductivityReport() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4">
+        <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Agrupar por</label>
+          <Select value={mode} onValueChange={(v) => setMode(v as 'user' | 'sales_rep')}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">Usuário (quem operou)</SelectItem>
+              <SelectItem value="sales_rep">Vendedor (sales_rep)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <label className="text-sm font-medium text-muted-foreground mb-1 block">Período</label>
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
@@ -176,13 +191,25 @@ export function SellerProductivityReport() {
         </div>
       </div>
 
+      <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        {mode === 'user' ? (
+          <>
+            <strong>Modo Usuário:</strong> conta interações de quem operou o sistema (criou atividade, tarefa, proposta, pedido etc.). Útil para medir adoção e uso do CRM.
+          </>
+        ) : (
+          <>
+            <strong>Modo Vendedor:</strong> conta interações atribuídas ao vendedor responsável pela empresa/negócio, mesmo quando lançadas por outro usuário (admin, back-office). Tarefas e e-mails sem vínculo a empresa não entram nesse modo.
+          </>
+        )}
+      </div>
+
       {/* Top seller highlight */}
       {topSeller && !isLoading && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="flex items-center gap-4 py-4">
             <Trophy className="h-8 w-8 text-primary" />
             <div>
-              <p className="text-sm text-muted-foreground">Vendedor mais produtivo</p>
+              <p className="text-sm text-muted-foreground">{mode === 'sales_rep' ? 'Vendedor mais produtivo' : 'Usuário mais produtivo'}</p>
               <p className="text-lg font-bold text-foreground">{topSeller.seller_name}</p>
             </div>
             <div className="ml-auto flex gap-6">
@@ -336,7 +363,7 @@ export function SellerProductivityReport() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="sticky left-0 bg-background z-10">#</TableHead>
-                    <TableHead className="sticky left-10 bg-background z-10">Vendedor</TableHead>
+                    <TableHead className="sticky left-10 bg-background z-10">{mode === 'sales_rep' ? 'Vendedor' : 'Usuário'}</TableHead>
                     <TableHead className="text-center">Atividades</TableHead>
                     <TableHead className="text-center">Tarefas Criadas</TableHead>
                     <TableHead className="text-center">Tarefas Concluídas</TableHead>

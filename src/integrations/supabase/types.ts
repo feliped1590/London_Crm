@@ -10203,6 +10203,34 @@ export type Database = {
       }
       get_region_by_state: { Args: { state_code: string }; Returns: string }
       get_sales_rep_name: { Args: { p_sales_rep_id: string }; Returns: string }
+      get_sales_rep_productivity: {
+        Args: {
+          p_end_date: string
+          p_manager_user_id?: string
+          p_sales_rep_id?: string
+          p_start_date: string
+        }
+        Returns: {
+          activities: number
+          deal_updates: number
+          efficiency_rate: number
+          emails: number
+          interaction_score: number
+          notes: number
+          orders: number
+          participation_percent: number
+          pipeline_conversion_rate: number
+          proposal_conversion_rate: number
+          proposals: number
+          rank_position: number
+          seller_id: string
+          seller_name: string
+          stage_changes: number
+          tasks_completed: number
+          tasks_created: number
+          total_interactions: number
+        }[]
+      }
       get_seller_performance: {
         Args: {
           p_compare_previous?: boolean

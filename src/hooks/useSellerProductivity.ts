@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, endOfDay, subDays, startOfMonth } from 'date-fns';
 
 export type PeriodFilter = 'today' | '7days' | 'month' | 'custom';
+export type ProductivityMode = 'user' | 'sales_rep';
 
 export interface SellerProductivityRow {
   seller_id: string;
@@ -76,6 +77,7 @@ export function useSellerProductivity() {
   const [customEnd, setCustomEnd] = useState<Date | undefined>();
   const [selectedSellerId, setSelectedSellerId] = useState<string | undefined>();
   const [selectedManagerId, setSelectedManagerId] = useState<string | undefined>();
+  const [mode, setMode] = useState<ProductivityMode>('user');
 
   const dateRange = useMemo(
     () => getDateRange(period, customStart, customEnd),
@@ -83,19 +85,24 @@ export function useSellerProductivity() {
   );
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['seller-productivity', dateRange.start.toISOString(), dateRange.end.toISOString(), selectedSellerId, selectedManagerId],
+    queryKey: ['seller-productivity', mode, dateRange.start.toISOString(), dateRange.end.toISOString(), selectedSellerId, selectedManagerId],
     queryFn: async () => {
       const params: Record<string, unknown> = {
         p_start_date: dateRange.start.toISOString(),
         p_end_date: dateRange.end.toISOString(),
       };
-      if (selectedSellerId) {
-        params.p_seller_id = selectedSellerId;
-      }
       if (selectedManagerId) {
         params.p_manager_user_id = selectedManagerId;
       }
-      const { data, error } = await supabase.rpc('get_seller_productivity', params as any);
+      const rpcName = mode === 'sales_rep' ? 'get_sales_rep_productivity' : 'get_seller_productivity';
+      if (selectedSellerId) {
+        if (mode === 'sales_rep') {
+          params.p_sales_rep_id = selectedSellerId;
+        } else {
+          params.p_seller_id = selectedSellerId;
+        }
+      }
+      const { data, error } = await supabase.rpc(rpcName as any, params as any);
       if (error) throw error;
       return (data ?? []) as unknown as SellerProductivityRow[];
     },
@@ -199,5 +206,7 @@ export function useSellerProductivity() {
     setSelectedManagerId,
     dateRange,
     periodType,
+    mode,
+    setMode,
   };
 }
