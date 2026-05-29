@@ -363,7 +363,7 @@ export function SellerProductivityReport() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="sticky left-0 bg-background z-10">#</TableHead>
-                    <TableHead className="sticky left-10 bg-background z-10">Vendedor</TableHead>
+                    <TableHead className="sticky left-10 bg-background z-10">{mode === 'sales_rep' ? 'Vendedor' : 'Usuário'}</TableHead>
                     <TableHead className="text-center">Atividades</TableHead>
                     <TableHead className="text-center">Tarefas Criadas</TableHead>
                     <TableHead className="text-center">Tarefas Concluídas</TableHead>
