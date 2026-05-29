@@ -1,63 +1,72 @@
-# Plano: Delay de navegação + Mover indicadores para nova aba em Relatórios
+## Diagnóstico rápido
 
-## 1) Delay ao clicar em uma página
+A instância está saudável em CPU/memória: banco online, memória em ~58%, disco de dados em ~11%, conexões moderadas. O alerta da tela é especificamente **Disk read/write I/O budget**, não falta de espaço nem necessariamente CPU.
 
-### Causa raiz
-`src/App.tsx` usa `lazy()` em todas as rotas com um único `<Suspense fallback={<RouteFallback />}>`. Ao clicar:
-1. Navegador baixa o chunk JS da rota (rede).
-2. Só depois o Suspense troca a tela — sem feedback imediato, dá sensação de "clique sem resposta".
-3. Em rotas pesadas (Customers, Pipeline), somam-se as queries iniciais antes do primeiro paint útil.
+O que apareceu agora:
+- Não há query longa presa rodando.
+- O tráfego de Edge Functions está praticamente zerado na última hora.
+- Os crons de ERP ainda rodam a cada 2 minutos, mas em geral retornam rápido.
+- O maior consumo histórico de leitura está vindo de `companies`, `contacts`, filas de sync e tabelas pequenas com varreduras repetidas.
+- `pg_stat_statements` não está habilitado, então ainda não temos o ranking exato das queries por I/O.
 
-### Ações (sem mudança de regra de negócio)
+Isso pode ser uma combinação de:
+1. gráfico/orçamento de I/O ainda refletindo janela acumulada após o pico anterior;
+2. muitas queries curtas de frontend/realtime, não queries longas;
+3. crons/checks de fila e realtime ainda gerando pequenas leituras contínuas;
+4. falta de visibilidade fina porque `pg_stat_statements` ainda não existe.
 
-**A. Feedback instantâneo**
-- Barra de progresso fina no topo (estilo NProgress) acionada por mudança de `location` e desligada quando o Suspense resolve. Aparece em <50ms — elimina a sensação de "travado".
+## Plano emergencial
 
-**B. Prefetch dos chunks das rotas**
-- No `NavLink` do menu: no `onMouseEnter`/`onFocus` disparar o `import()` da rota correspondente. Quando o usuário clica, o chunk já está em cache → transição quase instantânea.
-- Prefetch automático em `requestIdleCallback` das 3 rotas mais usadas (Today, Customers, Pipeline) após login.
+### 1. Medir delta real em janela curta
+Criar uma leitura comparativa de estatísticas por tabela para diferenciar contador histórico de consumo atual:
+- leitura atual de `pg_stat_user_tables`, `pg_statio_user_tables` e saúde do banco;
+- aguardar alguns minutos;
+- comparar crescimento de leituras/blocos por tabela.
 
-**C. Pequenos ajustes**
-- Garantir `staleTime` adequado nas queries das páginas pesadas (já é 5min global; revisar overrides).
+Objetivo: confirmar se o 100% é alerta atrasado/acumulado ou se ainda tem carga ativa.
 
-> Resultado esperado: clique → barra em <50ms → conteúdo em <300ms (rota pré-carregada).
+### 2. Habilitar observabilidade de queries
+Aplicar uma migração para habilitar `pg_stat_statements` e, se necessário, uma função segura de leitura administrativa.
 
----
+Objetivo: listar as queries que mais fazem leitura de disco, em vez de inferir só pela tabela.
 
-## 2) Mover indicadores da página Clientes para nova aba em Relatórios
+### 3. Modo contenção temporária dos jobs de sync
+Enquanto estabiliza, reduzir ainda mais a carga automática:
+- pausar temporariamente os dispatchers de sync de ERP, ou mover de 2 minutos para 10/15 minutos;
+- manter rotinas críticas leves, como limpeza de sessão, se não forem culpadas.
 
-### Hoje em `/customers` (topo)
-| Bloco | Componente | RPCs | Custo |
-|---|---|---|---|
-| Faixa colorida (Leads/Prospects/Ativos/Inativos/Perdidos) | `LifecyclePanel` | `get_lifecycle_counts` + `get_activity_status_counts` | 2 round-trips paralelos |
-| Faixa branca (Total, Setor, Segmento, Atividade, Ativos 30d, Negócios em aberto) | `CustomerDashboardCards` | `get_dashboard_card_metrics` | 1 round-trip |
+Objetivo: tirar pressão contínua do disco enquanto monitoramos.
 
-**Impacto:** não bloqueia a tabela de clientes (queries independentes), mas adiciona 3 RPCs de agregação a cada visita da página mais acessada — pressão constante no banco e ~150–400ms extras em rede.
+### 4. Cortar consumo residual de WhatsApp no banco
+Como o módulo ainda não está em uso:
+- remover tabelas/canais de WhatsApp de qualquer publicação realtime se existirem;
+- manter frontend já bloqueado pelo feature flag;
+- confirmar se não há webhook/função ativa ou request recente relacionado a WhatsApp.
 
-### Mudança
+Objetivo: garantir consumo zero do módulo.
 
-1. **`src/pages/Reports.tsx`**
-   - Adicionar nova aba **"Clientes"** no `<Tabs>` existente (junto com Operacional, Funil de Vendas, BI Avançado, Produtividade, Dashboard Personalizado).
-   - Conteúdo da aba: `<LifecyclePanel />` + `<CustomerDashboardCards />` + botão **"Personalizar painel"** (`<DashboardCardSettings />`), na mesma ordem visual de hoje.
-   - Ícone sugerido: `Users` (já importado).
+### 5. Otimizar `companies` e busca/filtros
+A tabela `companies` ainda é o maior ponto histórico de leitura. Revisar consultas da tela de clientes/prospecção para:
+- evitar `ILIKE '%termo%'` sem índice adequado;
+- adicionar índice trigram para busca textual se necessário;
+- limitar paginação e agregações automáticas;
+- confirmar se RPCs de dashboard não estão rodando fora da aba Relatórios.
 
-2. **`src/pages/Customers.tsx`**
-   - Remover `<LifecyclePanel />`, `<CustomerDashboardCards />` e o botão "Personalizar painel" do topo.
-   - Manter título, ações (Enriquecer, Novo Cliente), filtros e tabela.
+Objetivo: reduzir o principal consumidor real quando usuários navegam no CRM.
 
-3. **Nada muda em:** RPCs, schema, RLS, lógica de cliques nos cards (a navegação para `/customers?lifecycle=...` continua funcionando da aba de Relatórios).
+### 6. Monitorar e decidir sobre custo
+Depois da contenção:
+- acompanhar o gráfico por 30–60 min;
+- se cair, o problema era carga/queries e não precisa subir mais;
+- se continuar em 100% com pouca carga ativa, tratar como janela de orçamento ainda saturada ou necessidade de tier com mais I/O.
 
-### Ganho
-- `/customers`: −3 RPCs por visita → carregamento mais leve e menos carga no banco em horário de pico.
-- Indicadores ficam em local apropriado (Relatórios), acessados sob demanda.
+Sobre custo: a tela de upgrade da Lovable Cloud é a fonte final de preço por tier. Como você já saiu de tiny para mini, eu recomendo **não subir novamente agora** antes de medir o delta real por pelo menos 30–60 minutos após os cortes, porque a métrica pode demorar a refletir alívio.
 
----
+## Próxima ação ao aprovar
 
-## Escopo fora deste plano
-- Reescrita de RPCs, mudanças em RLS/schema, redesign visual dos cards.
-
-## Ordem de execução
-1. Item 2 (mover indicadores) — ganho imediato e isolado.
-2. Item 1 (feedback + prefetch) — em sequência.
-
-Posso seguir?
+Vou executar em modo seguro:
+1. medir delta real de I/O;
+2. habilitar `pg_stat_statements`;
+3. pausar ou espaçar crons de sync temporariamente;
+4. confirmar zero consumo de WhatsApp;
+5. voltar com um resumo objetivo: “continua consumindo agora” vs “é resíduo da janela do gráfico”.
