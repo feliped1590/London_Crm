@@ -1,72 +1,86 @@
-## Diagnóstico rápido
 
-A instância está saudável em CPU/memória: banco online, memória em ~58%, disco de dados em ~11%, conexões moderadas. O alerta da tela é especificamente **Disk read/write I/O budget**, não falta de espaço nem necessariamente CPU.
+## 1. Diagnóstico — Produtividade de BEATRIZ LEMES ALVES (comercial3@embazec.com.br)
 
-O que apareceu agora:
-- Não há query longa presa rodando.
-- O tráfego de Edge Functions está praticamente zerado na última hora.
-- Os crons de ERP ainda rodam a cada 2 minutos, mas em geral retornam rápido.
-- O maior consumo histórico de leitura está vindo de `companies`, `contacts`, filas de sync e tabelas pequenas com varreduras repetidas.
-- `pg_stat_statements` não está habilitado, então ainda não temos o ranking exato das queries por I/O.
+Período: **01/05/2026 → 29/05/2026** (Este mês), tenant da Qualyvac.
 
-Isso pode ser uma combinação de:
-1. gráfico/orçamento de I/O ainda refletindo janela acumulada após o pico anterior;
-2. muitas queries curtas de frontend/realtime, não queries longas;
-3. crons/checks de fila e realtime ainda gerando pequenas leituras contínuas;
-4. falta de visibilidade fina porque `pg_stat_statements` ainda não existe.
+| Métrica | Valor no período |
+|---|---|
+| Atividades criadas | **0** |
+| Tarefas criadas | **0** |
+| Tarefas concluídas | **0** |
+| Mudanças de etapa | **0** |
+| Propostas criadas | **0** |
+| Pedidos criados (created_by) | **0** |
+| Pedidos como sales_rep | **0** |
+| Notas em deals | **0** |
+| E-mails enviados | **0** |
+| Updates em deals (audit) | **0** |
+| **Score** | **0** |
 
-## Plano emergencial
+Contexto:
+- Usuário existe e tem **23 empresas** atribuídas como `sales_rep`.
+- **Último login: 09/03/2026** (≈ 80 dias atrás).
+- Última atividade/tarefa registrada: nenhuma.
 
-### 1. Medir delta real em janela curta
-Criar uma leitura comparativa de estatísticas por tabela para diferenciar contador histórico de consumo atual:
-- leitura atual de `pg_stat_user_tables`, `pg_statio_user_tables` e saúde do banco;
-- aguardar alguns minutos;
-- comparar crescimento de leituras/blocos por tabela.
+**Conclusão:** O sistema está correto em não exibir Beatriz no ranking — ela não teve nenhuma interação registrada em maio. O motivo é operacional (usuária não está usando o CRM), não um bug.
 
-Objetivo: confirmar se o 100% é alerta atrasado/acumulado ou se ainda tem carga ativa.
+---
 
-### 2. Habilitar observabilidade de queries
-Aplicar uma migração para habilitar `pg_stat_statements` e, se necessário, uma função segura de leitura administrativa.
+## 2. Como o ranking é calculado hoje (validação da metodologia)
 
-Objetivo: listar as queries que mais fazem leitura de disco, em vez de inferir só pela tabela.
+RPC `get_seller_productivity` agrupa interações por **`created_by` (user_id)**, não por `sales_rep_id`. Fontes:
 
-### 3. Modo contenção temporária dos jobs de sync
-Enquanto estabiliza, reduzir ainda mais a carga automática:
-- pausar temporariamente os dispatchers de sync de ERP, ou mover de 2 minutos para 10/15 minutos;
-- manter rotinas críticas leves, como limpeza de sessão, se não forem culpadas.
+```
+activities.created_by · tasks.created_by · tasks.assigned_to (concluídas)
+deal_stage_history.changed_by · proposals.created_by · orders.created_by
+entity_notes.created_by · email_logs.sent_by · deal_audit_log.changed_by (distinct deal/dia)
+```
 
-Objetivo: tirar pressão contínua do disco enquanto monitoramos.
+Score = Σ (contagem × peso de `crm_activity_weights`).
+Pesos default: activities 1, tasks_created 1, tasks_completed 2, stage_changes 3, proposals 4, orders 6, notes 1, emails 1, deal_updates 1.
 
-### 4. Cortar consumo residual de WhatsApp no banco
-Como o módulo ainda não está em uso:
-- remover tabelas/canais de WhatsApp de qualquer publicação realtime se existirem;
-- manter frontend já bloqueado pelo feature flag;
-- confirmar se não há webhook/função ativa ou request recente relacionado a WhatsApp.
+**Observações importantes:**
+- O label "Vendedor" no relatório é enganoso: hoje **já é por usuário** (created_by). O filtro `selectedSellerId` na verdade recebe um `user_id`.
+- Pedidos/propostas/empresas atribuídos a um sales_rep mas **criados por outra pessoa** (ex.: admin lançando pelo vendedor) não contam para o vendedor — só para quem criou.
+- Mudanças de etapa via automação (sem `changed_by`) ficam fora — comportamento correto.
 
-Objetivo: garantir consumo zero do módulo.
+---
 
-### 5. Otimizar `companies` e busca/filtros
-A tabela `companies` ainda é o maior ponto histórico de leitura. Revisar consultas da tela de clientes/prospecção para:
-- evitar `ILIKE '%termo%'` sem índice adequado;
-- adicionar índice trigram para busca textual se necessário;
-- limitar paginação e agregações automáticas;
-- confirmar se RPCs de dashboard não estão rodando fora da aba Relatórios.
+## 3. O que vou implementar
 
-Objetivo: reduzir o principal consumidor real quando usuários navegam no CRM.
+### 3.1. Toggle "Por Vendedor" × "Por Usuário" no Relatório de Produtividade
+Acima do ranking, adicionar um seletor:
 
-### 6. Monitorar e decidir sobre custo
-Depois da contenção:
-- acompanhar o gráfico por 30–60 min;
-- se cair, o problema era carga/queries e não precisa subir mais;
-- se continuar em 100% com pouca carga ativa, tratar como janela de orçamento ainda saturada ou necessidade de tier com mais I/O.
+- **Por Usuário (atual)** — quem efetivamente operou o sistema (created_by). Útil para gestão de uso/adoção.
+- **Por Vendedor (sales_rep)** — quem é o dono comercial do registro (sales_rep_id em orders/proposals/deals/companies). Útil para performance comercial real, mesmo quando o lançamento é feito por outra pessoa (admin, back-office).
 
-Sobre custo: a tela de upgrade da Lovable Cloud é a fonte final de preço por tier. Como você já saiu de tiny para mini, eu recomendo **não subir novamente agora** antes de medir o delta real por pelo menos 30–60 minutos após os cortes, porque a métrica pode demorar a refletir alívio.
+Para isso, criar nova RPC `get_sales_rep_productivity(p_start, p_end, p_sales_rep_id?, p_manager_user_id?)` espelhando a estrutura atual mas usando `sales_rep_id` nos eventos onde existe (orders, proposals, deals, stage_changes via deals.sales_rep_id, notes/activities via company.sales_rep_id). Tarefas e e-mails permanecem por usuário (não têm sales_rep), com nota explicando.
 
-## Próxima ação ao aprovar
+O hook `useSellerProductivity` ganha um parâmetro `mode: 'user' | 'sales_rep'` e chama a RPC correspondente.
 
-Vou executar em modo seguro:
-1. medir delta real de I/O;
-2. habilitar `pg_stat_statements`;
-3. pausar ou espaçar crons de sync temporariamente;
-4. confirmar zero consumo de WhatsApp;
-5. voltar com um resumo objetivo: “continua consumindo agora” vs “é resíduo da janela do gráfico”.
+### 3.2. Renomear/clarear labels na UI
+- Card e filtros: "Vendedor" → "Vendedor (sales_rep)" ou "Usuário (quem operou)" conforme o modo.
+- Tooltip explicando a diferença.
+
+### 3.3. Mostrar vendedores/usuários com score zero (opcional)
+Hoje quem tem 0 interação simplesmente some do ranking. Adicionar toggle "Mostrar inativos" que faz LEFT JOIN com `sales_reps` ativos (ou profiles ativos) e lista quem ficou zerado — útil para enxergar casos como o da Beatriz sem precisar abrir auditoria.
+
+---
+
+## 4. Fora do escopo
+- Não alteramos pesos nem fórmula do score.
+- Não mexemos no cálculo de "Vendedor mais produtivo" (continua usando o modo selecionado).
+- WhatsApp segue desativado (já tratado).
+
+---
+
+## Detalhes técnicos
+- Nova migration: `CREATE FUNCTION public.get_sales_rep_productivity(...)` com mesma estrutura (SECURITY DEFINER, restrita a admin/dev, multi-tenant via `get_user_tenant_ids`).
+- Fontes por modo `sales_rep`:
+  - orders/proposals: filtra por `sales_rep_id`
+  - deals/stage_changes/notes/activities/deal_audit: join com `deals`/`companies` e usa o `sales_rep_id` da entidade
+  - tasks/emails: continuam por usuário (sem sales_rep) — score parcial nesse modo
+- Hook `useSellerProductivity` recebe `mode`, faz roteamento da RPC, cache key separado por modo.
+- Componente `SellerProductivityReport.tsx`: novo `<Tabs>`/`<ToggleGroup>` no topo + atualização dos labels.
+
+Posso seguir?
