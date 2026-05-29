@@ -112,6 +112,18 @@ export function SellerProductivityReport() {
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4">
         <div>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Agrupar por</label>
+          <Select value={mode} onValueChange={(v) => setMode(v as 'user' | 'sales_rep')}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="user">Usuário (quem operou)</SelectItem>
+              <SelectItem value="sales_rep">Vendedor (sales_rep)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
           <label className="text-sm font-medium text-muted-foreground mb-1 block">Período</label>
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
             <SelectTrigger className="w-[180px]">
