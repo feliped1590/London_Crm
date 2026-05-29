@@ -201,7 +201,6 @@ export function useSellerProductivity() {
     customEnd,
     setCustomEnd,
     selectedSellerId,
-    setSellerSellerId: setSelectedSellerId,
     setSelectedSellerId,
     selectedManagerId,
     setSelectedManagerId,
