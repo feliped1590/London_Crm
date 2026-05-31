@@ -29,36 +29,36 @@ export const STAGE_STATUS_OPTIONS: StageStatusOption[] = [
   {
     value: 'won',
     label: 'Ganho',
-    description: 'Etapa de fechamento positivo (única por funil)',
-    unique: true,
+    description: 'Etapa de fechamento positivo',
+    unique: false,
     terminal: true,
   },
   {
     value: 'lost',
     label: 'Perdido',
-    description: 'Etapa de fechamento negativo (única por funil)',
-    unique: true,
+    description: 'Etapa de fechamento negativo',
+    unique: false,
     terminal: true,
   },
   {
     value: 'rejected',
     label: 'Reprovado',
     description: 'Negócio reprovado em alguma análise (crédito, qualidade, etc.)',
-    unique: true,
+    unique: false,
     terminal: true,
   },
   {
     value: 'cancelled',
     label: 'Cancelado',
     description: 'Negócio cancelado pelo cliente ou internamente',
-    unique: true,
+    unique: false,
     terminal: true,
   },
   {
     value: 'no_profile',
     label: 'Sem Perfil',
     description: 'Cliente fora do perfil ideal (ICP) — descartado',
-    unique: true,
+    unique: false,
     terminal: true,
   },
 ];
@@ -71,9 +71,13 @@ export function getStageStatusOption(status?: string | null): StageStatusOption 
 }
 
 export interface PipelineStageStatusMap {
-  wonStageId: string | null;
-  lostStageId: string | null;
+  wonStageIds: string[];
+  lostStageIds: string[];
   openStageIds: string[];
+  /** Primeiro id de Ganho (menor sort_order). Mantido para compatibilidade. */
+  wonStageId: string | null;
+  /** Primeiro id de Perdido (menor sort_order). Mantido para compatibilidade. */
+  lostStageId: string | null;
 }
 
 /**
@@ -106,8 +110,8 @@ export function isOpenStage(stageStatus?: string | null, legacyStage?: string | 
 }
 
 /**
- * Busca, para um pipeline específico, qual é a etapa de Ganho, Perdido e quais são as Abertas.
- * Usa a função SQL get_pipeline_stage_status para evitar múltiplos round-trips.
+ * Busca, para um pipeline específico, as etapas Ganho/Perdido/Abertas.
+ * Agora suporta múltiplas etapas por status.
  */
 export async function getPipelineStageStatusMap(pipelineId: string): Promise<PipelineStageStatusMap> {
   const { data, error } = await supabase.rpc('get_pipeline_stage_status' as any, {
@@ -116,17 +120,30 @@ export async function getPipelineStageStatusMap(pipelineId: string): Promise<Pip
 
   if (error) throw error;
 
-  const result = data as { won_stage_id: string | null; lost_stage_id: string | null; open_stage_ids: string[] };
+  const result = data as {
+    won_stage_ids?: string[] | null;
+    lost_stage_ids?: string[] | null;
+    open_stage_ids?: string[] | null;
+    won_stage_id?: string | null;
+    lost_stage_id?: string | null;
+  };
+
+  const wonStageIds = result?.won_stage_ids ?? [];
+  const lostStageIds = result?.lost_stage_ids ?? [];
+
   return {
-    wonStageId: result?.won_stage_id ?? null,
-    lostStageId: result?.lost_stage_id ?? null,
+    wonStageIds,
+    lostStageIds,
     openStageIds: result?.open_stage_ids ?? [],
+    wonStageId: result?.won_stage_id ?? wonStageIds[0] ?? null,
+    lostStageId: result?.lost_stage_id ?? lostStageIds[0] ?? null,
   };
 }
 
 /**
  * Dado o pipeline_id de um deal, descobre o `stage` (texto legado) que representa Ganho.
  * Usado para mover o deal ao aprovar uma proposta sem hardcode de 'fechado_ganho'.
+ * Em funis com mais de uma etapa Ganho, retorna a primeira (menor sort_order).
  */
 export async function getWonStageForPipeline(pipelineId: string | null | undefined): Promise<{
   stageId: string | null;
@@ -141,16 +158,18 @@ export async function getWonStageForPipeline(pipelineId: string | null | undefin
     .select('id, stage')
     .eq('pipeline_id', pipelineId)
     .eq('stage_status', 'won')
-    .maybeSingle();
+    .order('sort_order', { ascending: true })
+    .limit(1);
 
   if (error) {
     console.error('getWonStageForPipeline error:', error);
     return { stageId: null, stageCode: 'fechado_ganho' };
   }
 
+  const row = data?.[0];
   return {
-    stageId: data?.id ?? null,
-    // fallback para o legado se a etapa won não tiver código textual
-    stageCode: data?.stage ?? 'fechado_ganho',
+    stageId: row?.id ?? null,
+    stageCode: row?.stage ?? 'fechado_ganho',
   };
 }
+
