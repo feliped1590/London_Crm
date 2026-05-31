@@ -15,9 +15,11 @@ export function usePipelineStageStatus(pipelineId: string | null | undefined) {
   });
 
   const map: PipelineStageStatusMap = data ?? {
+    wonStageIds: [],
+    lostStageIds: [],
+    openStageIds: [],
     wonStageId: null,
     lostStageId: null,
-    openStageIds: [],
   };
 
   return {
