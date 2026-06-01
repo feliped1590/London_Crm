@@ -12,6 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useErpCities, normalizeCityName } from '@/hooks/useErpCities';
 
+const BR_UFS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+  'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+];
+
 interface CityStateSelectProps {
   city: string;
   state: string;
