@@ -12,6 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useErpCities, normalizeCityName } from '@/hooks/useErpCities';
 
+const BR_UFS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
+  'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
+];
+
 interface CityStateSelectProps {
   city: string;
   state: string;
@@ -116,11 +121,14 @@ export function CityStateSelect({
             <SelectValue placeholder={isLoading ? 'Carregando...' : 'Selecione a UF'} />
           </SelectTrigger>
           <SelectContent>
-            {data.ufs.map((uf) => (
-              <SelectItem key={uf} value={uf}>
-                {uf}
-              </SelectItem>
-            ))}
+            {BR_UFS.map((uf) => {
+              const mapped = data.ufs.includes(uf);
+              return (
+                <SelectItem key={uf} value={uf}>
+                  {uf}{!mapped ? ' (sem cidades mapeadas)' : ''}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -129,36 +137,48 @@ export function CityStateSelect({
         <Label htmlFor="city">
           Cidade {required && <span className="text-destructive">*</span>}
         </Label>
-        <Select
-          value={currentCityIsMapped && city ? city : undefined}
-          onValueChange={(value) => onChange({ city: value, state: ufKey })}
-          disabled={disabled || isLoading || !ufKey}
-        >
-          <SelectTrigger id="city">
-            <SelectValue
-              placeholder={
-                !ufKey
-                  ? 'Selecione a UF primeiro'
-                  : cityList.length === 0
-                  ? 'Nenhuma cidade mapeada para esta UF'
-                  : 'Selecione a cidade'
-              }
+        {ufKey && cityList.length === 0 ? (
+          <>
+            <Input
+              id="city"
+              value={city}
+              onChange={(e) => onChange({ city: e.target.value, state: ufKey })}
+              disabled={disabled}
+              required={required}
+              placeholder="Digite a cidade"
             />
-          </SelectTrigger>
-          <SelectContent>
-            {!currentCityIsMapped && city && (
-              <SelectItem value={`__legacy__:${city}`} disabled>
-                {city} (não mapeada — selecione outra)
-              </SelectItem>
-            )}
-            {cityList.map((c) => (
-              <SelectItem key={`${c.uf}-${c.codigo_erp}-${c.nome}`} value={c.nome}>
-                {c.nome}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {!currentCityIsMapped && city && (
+            <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+              <AlertTriangle className="h-3 w-3" />
+              Nenhuma cidade mapeada no ERP para {ufKey}. A sincronização pode
+              falhar até que a cidade seja cadastrada.
+            </p>
+          </>
+        ) : (
+          <Select
+            value={currentCityIsMapped && city ? city : undefined}
+            onValueChange={(value) => onChange({ city: value, state: ufKey })}
+            disabled={disabled || isLoading || !ufKey}
+          >
+            <SelectTrigger id="city">
+              <SelectValue
+                placeholder={!ufKey ? 'Selecione a UF primeiro' : 'Selecione a cidade'}
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {!currentCityIsMapped && city && (
+                <SelectItem value={`__legacy__:${city}`} disabled>
+                  {city} (não mapeada — selecione outra)
+                </SelectItem>
+              )}
+              {cityList.map((c) => (
+                <SelectItem key={`${c.uf}-${c.codigo_erp}-${c.nome}`} value={c.nome}>
+                  {c.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {!currentCityIsMapped && city && cityList.length > 0 && (
           <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
             <AlertTriangle className="h-3 w-3" />
             Cidade atual não está mapeada no ERP. Selecione uma da lista para
