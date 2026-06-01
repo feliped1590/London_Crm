@@ -29,15 +29,23 @@ export function useErpCities() {
     queryKey: ['erp-cities'],
     staleTime: 1000 * 60 * 30,
     queryFn: async (): Promise<ErpCitiesData> => {
-      const { data, error } = await supabase
-        .from('erp_cities')
-        .select('nome, uf, codigo_erp')
-        .order('uf', { ascending: true })
-        .order('nome', { ascending: true });
-
-      if (error) throw error;
-
-      const rows = (data ?? []) as ErpCity[];
+      // Paginamos para superar o limite default de 1000 linhas do PostgREST
+      const pageSize = 1000;
+      let from = 0;
+      const rows: ErpCity[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from('erp_cities')
+          .select('nome, uf, codigo_erp')
+          .order('uf', { ascending: true })
+          .order('nome', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as ErpCity[];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
       const citiesByUf: Record<string, ErpCity[]> = {};
       for (const row of rows) {
         const uf = (row.uf || '').toUpperCase();

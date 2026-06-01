@@ -53,15 +53,26 @@ export function ErpCitiesManager() {
   }, [user?.id]);
 
   const { data: cities = [], isLoading } = useQuery({
-    queryKey: ['erp-cities'],
+    queryKey: ['erp-cities-manager'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from('erp_cities')
-        .select('*')
-        .order('uf')
-        .order('nome');
-      if (error) throw error;
-      return data as ErpCity[];
+      // Paginação para superar o limite default de 1000 linhas
+      const pageSize = 1000;
+      let from = 0;
+      const all: ErpCity[] = [];
+      while (true) {
+        const { data, error } = await (supabase as any)
+          .from('erp_cities')
+          .select('*')
+          .order('uf')
+          .order('nome')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as ErpCity[];
+        all.push(...batch);
+        if (batch.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
@@ -82,7 +93,7 @@ export function ErpCitiesManager() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-cities-manager'] }); queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
       toast.success(editingCity ? 'Cidade atualizada!' : 'Cidade adicionada!');
       closeDialog();
     },
@@ -102,7 +113,7 @@ export function ErpCitiesManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-cities-manager'] }); queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
       toast.success('Cidade removida!');
     },
   });
