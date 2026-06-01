@@ -34,6 +34,7 @@ export default function CustomerNew() {
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
   const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
+  const { data: erpCitiesData } = useErpCities();
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
 
   // Set default sales rep when loaded
@@ -114,7 +115,10 @@ export default function CustomerNew() {
       if (response.data?.success) {
         const { data } = response.data;
         
-        // Fill fields - don't overwrite if already edited by user
+        // Fill fields - don't overwrite if already edited by user.
+        // For city, try to match against ERP-mapped cities to use the canonical name.
+        const uf = (data.endereco.uf || '').toUpperCase();
+        const matchedCity = matchMappedCity(erpCitiesData, data.endereco.cidade, uf);
         setCompanyForm(prev => ({
           ...prev,
           name: prev.name || data.razao_social,
@@ -124,8 +128,8 @@ export default function CustomerNew() {
           address_number: prev.address_number || data.endereco.numero || '',
           neighborhood: prev.neighborhood || data.endereco.bairro || '',
           zip_code: prev.zip_code || data.endereco.cep || '',
-          city: prev.city || data.endereco.cidade,
-          state: prev.state || data.endereco.uf,
+          city: prev.city || (matchedCity?.nome ?? ''),
+          state: prev.state || uf,
         }));
         
         setCnpjLookupDone(true);
