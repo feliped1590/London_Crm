@@ -1,0 +1,1 @@
+GRANT DELETE ON public.erp_cities TO sandbox_exec;

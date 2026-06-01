@@ -1,0 +1,1 @@
+GRANT INSERT, UPDATE ON public.erp_cities TO sandbox_exec;
