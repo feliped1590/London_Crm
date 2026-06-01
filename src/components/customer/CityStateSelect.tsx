@@ -139,18 +139,16 @@ export function CityStateSelect({
         </Label>
         {ufKey && cityList.length === 0 ? (
           <>
-            <Input
-              id="city"
-              value={city}
-              onChange={(e) => onChange({ city: e.target.value, state: ufKey })}
-              disabled={disabled}
-              required={required}
-              placeholder="Digite a cidade"
-            />
+            <Select disabled>
+              <SelectTrigger id="city">
+                <SelectValue placeholder="Nenhuma cidade mapeada para esta UF" />
+              </SelectTrigger>
+              <SelectContent />
+            </Select>
             <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
               <AlertTriangle className="h-3 w-3" />
-              Nenhuma cidade mapeada no ERP para {ufKey}. A sincronização pode
-              falhar até que a cidade seja cadastrada.
+              Nenhuma cidade mapeada no ERP para {ufKey}. Solicite ao
+              administrador o cadastro da cidade antes de prosseguir.
             </p>
           </>
         ) : (
