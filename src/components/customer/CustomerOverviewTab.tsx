@@ -27,6 +27,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { formatCurrency } from '@/lib/formatters';
 import { resolveUserForSalesRep } from '@/lib/ownership';
+import { CityStateSelect } from '@/components/customer/CityStateSelect';
 
 const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 const STAGE_LABELS: Record<string, string> = {
@@ -298,14 +299,15 @@ export function CustomerOverviewTab({
               <Label htmlFor="zip_code">CEP <span className="text-destructive">*</span></Label>
               <Input id="zip_code" value={companyForm.zip_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, zip_code: e.target.value })} disabled={!isEditing || isErpCustomer} placeholder="00000-000" maxLength={9} />
             </div>
-            <div>
-              <Label htmlFor="city">Cidade <span className="text-destructive">*</span></Label>
-              <Input id="city" value={companyForm.city} onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })} disabled={!isEditing || isErpCustomer} />
-            </div>
-            <div>
-              <Label htmlFor="state">Estado <span className="text-destructive">*</span></Label>
-              <Input id="state" value={companyForm.state} onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })} disabled={!isEditing || isErpCustomer} />
-            </div>
+            <CityStateSelect
+              city={companyForm.city || ''}
+              state={companyForm.state || ''}
+              onChange={({ city, state }) =>
+                setCompanyForm({ ...companyForm, city, state })
+              }
+              disabled={!isEditing || isErpCustomer}
+              required
+            />
             {!isErpCustomer && (
               <div className="col-span-2">
                 <Label htmlFor="notes">Observações</Label>
