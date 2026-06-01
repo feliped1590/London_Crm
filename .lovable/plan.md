@@ -1,59 +1,44 @@
-# Permitir múltiplas etapas vinculadas a cada Status de Etapa
+# Cidade/Estado a partir do mapeamento ERP
 
-## Situação atual
+## Problema
+O erro "Cidade X/UF não mapeada no ERP" ocorre porque hoje o usuário digita cidade e UF como texto livre nos formulários de cliente. Qualquer divergência de grafia (acento, abreviação, espaço) em relação à tabela `erp_cities` quebra a sincronização.
 
-No cadastro de etapas do pipeline (Configurações → Pipeline), o campo **Status da Etapa** restringe alguns valores a **apenas uma etapa por funil**:
+## Solução
+Substituir os `<Input>` de Cidade e Estado por dois `<Select>` encadeados, populados a partir de `erp_cities` (tenant atual):
 
-- **Em andamento** → permite várias ✅
-- **Ganho** → apenas 1 por funil ❌
-- **Perdido** → apenas 1 por funil ❌
-- **Reprovado** → apenas 1 por funil ❌ (bloqueio só no front)
-- **Cancelado** → apenas 1 por funil ❌ (bloqueio só no front)
-- **Sem Perfil** → apenas 1 por funil ❌ (bloqueio só no front)
+1. **Estado (UF)** — lista única de UFs presentes em `erp_cities` para o tenant, ordenada.
+2. **Cidade** — lista de cidades da UF selecionada, ordenada por nome. O valor salvo em `companies.city` é exatamente o `nome` da `erp_cities` (mesma string usada no matcher do ERP).
 
-A restrição é aplicada em três camadas:
-1. **Frontend** (`STAGE_STATUS_OPTIONS.unique = true` + validação no `UnifiedPipelineManager`)
-2. **Banco de dados** — índices únicos parciais para `won` e `lost`
-3. **Trigger** `validate_pipeline_stage_status` (mensagem de erro amigável para `won`/`lost`)
+Assim é impossível salvar uma cidade não mapeada, eliminando a classe inteira de erros.
 
-## Objetivo
+## Escopo
+Aplicar nos dois formulários de cliente:
+- `src/pages/CustomerNew.tsx` (cadastro)
+- `src/components/customer/CustomerOverviewTab.tsx` (edição)
 
-Permitir **N etapas** vinculadas a qualquer status (incluindo Ganho, Perdido, Reprovado, Cancelado e Sem Perfil), mantendo a classificação semântica de cada etapa para os dashboards e regras de negócio.
+Mantém o restante do formulário e regras atuais (campos obrigatórios, lookup CNPJ, etc.).
 
-## Mudanças
-
-### 1. Banco de dados (migração)
-- Remover os índices únicos parciais `unique_won_stage_per_pipeline` e `unique_lost_stage_per_pipeline`.
-- Remover (ou simplificar) o trigger `validate_pipeline_stage_status` e sua função, já que não haverá mais bloqueio de unicidade.
-- Atualizar a função `get_pipeline_stage_status(p_pipeline_id)` para retornar **arrays** em vez de IDs únicos:
-  - `won_stage_ids: uuid[]`
-  - `lost_stage_ids: uuid[]`
-  - `open_stage_ids: uuid[]` (já é array hoje)
-
-### 2. Camada de tipos / helpers (`src/lib/stageStatus.ts`)
-- Marcar todas as opções de `STAGE_STATUS_OPTIONS` como `unique: false`.
-- Atualizar `PipelineStageStatusMap` para usar `wonStageIds: string[]` e `lostStageIds: string[]`.
-- Atualizar `getPipelineStageStatusMap` para ler os arrays retornados pela função SQL.
-- Ajustar `getWonStageForPipeline` para tolerar múltiplas etapas Ganho: usar `.limit(1)` em vez de `.maybeSingle()` e devolver a primeira pela `sort_order` (mantém comportamento atual de aprovação de proposta).
-
-### 3. Hook `src/hooks/usePipelineStageStatus.ts`
-- Refletir o novo shape (`wonStageIds`/`lostStageIds`).
-
-### 4. Tela de Configurações do Pipeline (`UnifiedPipelineManager.tsx`)
-- Remover a validação que impede salvar uma segunda etapa com status "único".
-- Manter o ícone/cor por status (Trophy/Ganho, XCircle/Perdido, etc.).
-- Atualizar o texto descritivo dos status (remover "(única por funil)" das descrições em `STAGE_STATUS_OPTIONS`).
-
-### 5. Comportamento preservado
-- Aprovação automática de proposta → continua movendo o deal para **a primeira** etapa com status `won` do funil (mesmo critério atual de `sort_order`).
-- Dashboards, badges e cálculo de "negócio aberto/terminal" continuam funcionando, pois usam `stage_status` por linha — não dependem de unicidade.
-- Mapeamento etapa → status de pedido (`pipeline_stage_order_status_map`) não muda.
+## Detalhes técnicos
+- Novo hook `useErpCities()` em `src/hooks/`:
+  - Query única: `select uf, nome, codigo_erp from erp_cities order by uf, nome`.
+  - Retorna `{ ufs: string[], citiesByUf: Record<string, {nome, codigo_erp}[]> }` memoizado.
+  - Cache via React Query (longo `staleTime`, key por tenant).
+- Componente reutilizável `CityStateSelect` em `src/components/customer/`:
+  - Props: `state`, `city`, `onChange({state, city})`, `disabled`.
+  - Ao trocar UF, limpa a cidade.
+  - Usa `Select` do shadcn.
+- **Preenchimento via BrasilAPI (CNPJ lookup)**: hoje preenche `city`/`state` como texto. Após o lookup, tentar casar a cidade retornada com `erp_cities` (normalização sem acento + uppercase). Se casar, pré-seleciona; se não casar, deixa o campo Cidade vazio com hint "Cidade do CNPJ (X) não está mapeada — selecione a mais próxima ou cadastre em Settings → ERP → Cidades".
+- **Compatibilidade com clientes legados**: se o cliente já tem `city`/`state` que não estão em `erp_cities`, exibir o valor atual como item desabilitado no topo da lista com aviso "(não mapeada)", forçando o usuário a escolher uma válida ao editar.
+- **Fallback se `erp_cities` estiver vazio para o tenant**: exibir mensagem "Nenhuma cidade mapeada. Cadastre em Settings → ERP → Cidades." e manter inputs livres (somente nesse caso) para não bloquear o cadastro inicial.
 
 ## Fora do escopo
-- Nenhuma mudança no Kanban, no fluxo de movimentação de deals, em automações ou em permissões de perfil.
-- Nenhuma migração de dados existentes (etapas atuais continuam como estão).
+- Não altera a tabela `erp_cities` nem o validador `validate-company-sync` (continuam como fonte da verdade).
+- Não mexe em formulários de outras entidades (contatos, fornecedores).
+- Não importa novas cidades em massa — segue manual em Settings.
 
-## Validação após implementação
-- Cadastrar duas etapas "Perdido" no mesmo funil e confirmar que ambas salvam.
-- Aprovar uma proposta em um funil com múltiplas etapas Ganho e confirmar que o deal vai para a primeira (menor `sort_order`).
-- Conferir badges de status na lista de etapas e no Kanban.
+## Validação
+- Cadastrar novo cliente: UF lista apenas estados com cidades mapeadas; Cidade lista apenas as da UF.
+- Editar cliente legado com cidade inválida: campo mostra "(não mapeada)" e exige nova seleção para salvar.
+- Lookup por CNPJ com cidade mapeada → preenche automaticamente.
+- Lookup por CNPJ com cidade não mapeada → mostra hint, não bloqueia.
+- Tentar sincronizar com ERP após salvar → não deve mais dar erro "cidade não mapeada".
