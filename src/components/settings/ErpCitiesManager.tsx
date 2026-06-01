@@ -93,7 +93,7 @@ export function ErpCitiesManager() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-cities-manager'] }); queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
       toast.success(editingCity ? 'Cidade atualizada!' : 'Cidade adicionada!');
       closeDialog();
     },
@@ -113,7 +113,7 @@ export function ErpCitiesManager() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
+      queryClient.invalidateQueries({ queryKey: ['erp-cities-manager'] }); queryClient.invalidateQueries({ queryKey: ['erp-cities'] });
       toast.success('Cidade removida!');
     },
   });
