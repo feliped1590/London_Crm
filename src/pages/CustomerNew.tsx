@@ -19,6 +19,10 @@ import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCa
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { useErpCities, matchMappedCity } from '@/hooks/useErpCities';
+import { CityStateSelect } from '@/components/customer/CityStateSelect';
+
+
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -30,6 +34,7 @@ export default function CustomerNew() {
   const [selectedLegalEntityId, setSelectedLegalEntityId] = useState<string | null>(null);
   const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
+  const { data: erpCitiesData } = useErpCities();
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
 
   // Set default sales rep when loaded
@@ -110,7 +115,10 @@ export default function CustomerNew() {
       if (response.data?.success) {
         const { data } = response.data;
         
-        // Fill fields - don't overwrite if already edited by user
+        // Fill fields - don't overwrite if already edited by user.
+        // For city, try to match against ERP-mapped cities to use the canonical name.
+        const uf = (data.endereco.uf || '').toUpperCase();
+        const matchedCity = matchMappedCity(erpCitiesData, data.endereco.cidade, uf);
         setCompanyForm(prev => ({
           ...prev,
           name: prev.name || data.razao_social,
@@ -120,8 +128,8 @@ export default function CustomerNew() {
           address_number: prev.address_number || data.endereco.numero || '',
           neighborhood: prev.neighborhood || data.endereco.bairro || '',
           zip_code: prev.zip_code || data.endereco.cep || '',
-          city: prev.city || data.endereco.cidade,
-          state: prev.state || data.endereco.uf,
+          city: prev.city || (matchedCity?.nome ?? ''),
+          state: prev.state || uf,
         }));
         
         setCnpjLookupDone(true);
@@ -798,26 +806,14 @@ export default function CustomerNew() {
                 />
               </div>
               
-              <div>
-                <Label htmlFor="city">Cidade *</Label>
-                <Input
-                  id="city"
-                  value={companyForm.city}
-                  onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">Estado *</Label>
-                <Input
-                  id="state"
-                  value={companyForm.state}
-                  onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })}
-                  maxLength={2}
-                  placeholder="UF"
-                  required
-                />
-              </div>
+              <CityStateSelect
+                city={companyForm.city}
+                state={companyForm.state}
+                onChange={({ city, state }) =>
+                  setCompanyForm({ ...companyForm, city, state })
+                }
+                required
+              />
             </div>
 
             <div className="flex justify-end">
