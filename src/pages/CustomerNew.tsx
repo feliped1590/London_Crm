@@ -19,6 +19,10 @@ import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCa
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { useErpCities, matchMappedCity } from '@/hooks/useErpCities';
+import { CityStateSelect } from '@/components/customer/CityStateSelect';
+
+
 
 type CustomerType = 'PJ' | 'PF';
 
@@ -798,26 +802,14 @@ export default function CustomerNew() {
                 />
               </div>
               
-              <div>
-                <Label htmlFor="city">Cidade *</Label>
-                <Input
-                  id="city"
-                  value={companyForm.city}
-                  onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="state">Estado *</Label>
-                <Input
-                  id="state"
-                  value={companyForm.state}
-                  onChange={(e) => setCompanyForm({ ...companyForm, state: e.target.value })}
-                  maxLength={2}
-                  placeholder="UF"
-                  required
-                />
-              </div>
+              <CityStateSelect
+                city={companyForm.city}
+                state={companyForm.state}
+                onChange={({ city, state }) =>
+                  setCompanyForm({ ...companyForm, city, state })
+                }
+                required
+              />
             </div>
 
             <div className="flex justify-end">
