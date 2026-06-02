@@ -314,7 +314,8 @@ function CatalogTab({ tenantId, items, loading, onChanged }: {
 }
 
 // ─────────────────────────── MAPEAMENTO ───────────────────────────
-const CRM_PATH_PRESETS: { label: string; source: 'ficha_tecnica' | 'product_column'; path: string }[] = [
+const CRM_PATH_PRESETS: { label: string; source: 'ficha_tecnica' | 'product_column' | 'derived'; path: string }[] = [
+  { label: 'Tipo Solda — derivado do Subgrupo (apenas Saco/Stand Up)', source: 'derived', path: 'tipo_solda' },
   { label: 'Largura (mm) — produto', source: 'product_column', path: 'width' },
   { label: 'Comprimento (mm) — produto', source: 'product_column', path: 'length' },
   { label: 'Espessura (mm) — produto', source: 'product_column', path: 'thickness' },
