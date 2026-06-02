@@ -112,6 +112,7 @@ export default function Products() {
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [unlockErpCode, setUnlockErpCode] = useState(false);
   const [unlockDescription, setUnlockDescription] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
