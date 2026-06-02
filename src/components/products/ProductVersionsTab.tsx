@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Loader2, Copy, Pencil } from 'lucide-react';
+import { Plus, Loader2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { useProductLookups, type LookupItem } from '@/hooks/useProductLookups';
 import { getGroupProfile } from '@/utils/products/getGroupProfile';
 import {
@@ -20,7 +21,8 @@ import { generateProductDescription } from '@/utils/products/generateProductDesc
 interface ProductVersionsTabProps {
   productId: string;
   canEdit: boolean;
-  onEditVersion?: (productId: string) => void;
+  selectedVersionId?: string | null;
+  onSelectVersion?: (productId: string) => void;
 }
 
 interface VersionRow {
@@ -43,11 +45,16 @@ const getLookupLabel = (items: { id: string; label: string }[], id?: string | nu
   id ? items.find((i) => i.id === id)?.label : undefined;
 
 /**
- * Lista todas as versões (pai + filhos) de um item. Cada versão é independente:
- * SKU, descrição, erp_versao e ficha técnica são por versão. Alterações em uma
- * versão NÃO se propagam para outras.
+ * Grade de versões: cada linha é uma versão independente. Clique seleciona
+ * a versão e o formulário superior passa a editá-la. Status (ativa/inativa)
+ * vive somente aqui.
  */
-export function ProductVersionsTab({ productId, canEdit, onEditVersion }: ProductVersionsTabProps) {
+export function ProductVersionsTab({
+  productId,
+  canEdit,
+  selectedVersionId,
+  onSelectVersion,
+}: ProductVersionsTabProps) {
   const qc = useQueryClient();
   const { tipos, grupos, subgrupos, familias, classes } = useProductLookups();
   const [newW, setNewW] = useState<string>('');
@@ -98,7 +105,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
 
     setCreating(true);
     try {
-      // Load parent's full row to inherit identity/lookups
       const { data: parent, error: pErr } = await supabase
         .from('products')
         .select('*')
@@ -108,7 +114,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
 
       const profile = getGroupProfile(grupos.items, parent.grupo_id);
 
-      // erp_versao próprio da nova versão
       let erpVersao = '';
       try {
         erpVersao =
@@ -122,7 +127,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
         throw err;
       }
 
-      // SKU estrutural próprio
       const childSku = generateStructuralSku({
         tipoCode: getLookupValue(tipos.items, parent.tipo_id),
         familyCode: getLookupValue(familias.items, parent.family_id),
@@ -135,7 +139,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
         dimensionProfile: profile,
       });
 
-      // Descrição (cadastro completo) própria
       const baseName = generateProductDescription({
         family: getLookupLabel(familias.items, parent.family_id),
         group: getLookupLabel(grupos.items, parent.grupo_id),
@@ -145,7 +148,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
       });
       const childName = [baseName, erpVersao].filter(Boolean).join(' ');
 
-      // Build child payload: strip identity-fixed/auto fields, override per-version data
       const {
         id: _id,
         sku: _sku,
@@ -163,7 +165,6 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
         ...inherit
       } = parent as any;
 
-      // Clona ficha técnica do pai como ponto de partida — versão evolui de forma independente.
       const fichaClone = JSON.parse(JSON.stringify((parent as any).ficha_tecnica ?? {}));
 
       const childPayload: any = {
@@ -181,7 +182,11 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
         ficha_tecnica: fichaClone,
       };
 
-      const { error: insErr } = await supabase.from('products').insert(childPayload);
+      const { data: inserted, error: insErr } = await supabase
+        .from('products')
+        .insert(childPayload)
+        .select('id')
+        .single();
       if (insErr) throw insErr;
 
       toast.success('Nova versão criada');
@@ -191,6 +196,9 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
       qc.invalidateQueries({ queryKey: ['product-versions', productId] });
       qc.invalidateQueries({ queryKey: ['products'] });
       qc.invalidateQueries({ queryKey: ['products-search'] });
+      if (inserted?.id && onSelectVersion) {
+        onSelectVersion(inserted.id);
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao criar versão');
     } finally {
@@ -198,7 +206,8 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
     }
   };
 
-  const handleToggleActive = async (v: VersionRow) => {
+  const handleToggleActive = async (e: React.MouseEvent, v: VersionRow) => {
+    e.stopPropagation();
     if (!canEdit) return;
     const { error } = await supabase
       .from('products')
@@ -224,73 +233,74 @@ export function ProductVersionsTab({ productId, canEdit, onEditVersion }: Produc
   const versions = data?.versions ?? [];
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-        Cada versão é independente: <strong>SKU</strong>, <strong>descrição</strong>,{' '}
-        <strong>erp_versao</strong> e <strong>ficha técnica</strong> são por versão.
-        Identidade (família, grupo, subgrupo, classe, código ERP) é compartilhada na criação.
+        Clique em uma versão para editá-la no formulário acima. Cada versão tem{' '}
+        <strong>dimensões, sanfona, SKU, descrição, erp_versao, ficha técnica e status</strong>{' '}
+        próprios. Identidade (família, grupo, subgrupo, classe, código ERP) é compartilhada.
       </div>
 
-      <div className="rounded-md border overflow-x-auto">
+      <div className="w-full rounded-md border overflow-auto max-h-[60vh]">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40">
+          <thead className="bg-muted sticky top-0 z-10">
             <tr className="text-left">
-              <th className="px-3 py-2 w-12">Vers.</th>
-              <th className="px-3 py-2 whitespace-nowrap">Dimensões (L × C × E)</th>
-              <th className="px-3 py-2">SKU</th>
-              <th className="px-3 py-2">erp_versao</th>
+              <th className="px-3 py-2 w-16">Vers.</th>
+              <th className="px-3 py-2 whitespace-nowrap w-44">Dimensões (L × C × E)</th>
+              <th className="px-3 py-2 w-56">SKU</th>
+              <th className="px-3 py-2 w-32">erp_versao</th>
               <th className="px-3 py-2">Descrição</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2 text-right">Ações</th>
+              <th className="px-3 py-2 w-24">Status</th>
+              <th className="px-3 py-2 text-right w-28">Ações</th>
             </tr>
           </thead>
           <tbody>
-            {versions.map((v) => (
-              <tr key={v.id} className="border-t align-top">
-                <td className="px-3 py-2 font-mono">
-                  v{v.versao_numero}
-                  {v.parent_product_id === null && (
-                    <Badge variant="outline" className="ml-2 text-[10px]">
-                      principal
+            {versions.map((v) => {
+              const isSelected = v.id === selectedVersionId;
+              return (
+                <tr
+                  key={v.id}
+                  onClick={() => onSelectVersion?.(v.id)}
+                  className={cn(
+                    'border-t align-top cursor-pointer transition-colors',
+                    isSelected
+                      ? 'bg-primary/10 border-l-4 border-l-primary'
+                      : 'hover:bg-accent/50 border-l-4 border-l-transparent',
+                  )}
+                >
+                  <td className="px-3 py-2 font-mono">
+                    v{v.versao_numero}
+                    {v.parent_product_id === null && (
+                      <Badge variant="outline" className="ml-2 text-[10px]">
+                        principal
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {v.width ?? '—'} × {v.length ?? '—'} × {v.thickness ?? '—'}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs break-all">{v.sku}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{v.erp_versao || '—'}</td>
+                  <td className="px-3 py-2 text-xs">{v.name || '—'}</td>
+                  <td className="px-3 py-2">
+                    <Badge variant={v.active ? 'default' : 'secondary'}>
+                      {v.active ? 'Ativa' : 'Inativa'}
                     </Badge>
-                  )}
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {v.width ?? '—'} × {v.length ?? '—'} × {v.thickness ?? '—'}
-                </td>
-                <td className="px-3 py-2 font-mono text-xs">{v.sku}</td>
-                <td className="px-3 py-2 font-mono text-xs">{v.erp_versao || '—'}</td>
-                <td className="px-3 py-2 text-xs max-w-[280px]">{v.name || '—'}</td>
-                <td className="px-3 py-2">
-                  <Badge variant={v.active ? 'default' : 'secondary'}>
-                    {v.active ? 'Ativa' : 'Inativa'}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 text-right whitespace-nowrap">
-                  {canEdit && onEditVersion && v.id !== productId && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onEditVersion(v.id)}
-                      title="Editar esta versão"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  {canEdit && v.parent_product_id !== null && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleToggleActive(v)}
-                    >
-                      {v.active ? 'Inativar' : 'Reativar'}
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                    {canEdit && v.parent_product_id !== null && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => handleToggleActive(e, v)}
+                      >
+                        {v.active ? 'Inativar' : 'Reativar'}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -112,6 +112,7 @@ export default function Products() {
   const [pageTab, setPageTab] = useState('catalogo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [unlockErpCode, setUnlockErpCode] = useState(false);
   const [unlockDescription, setUnlockDescription] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -358,7 +359,11 @@ export default function Products() {
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
   const isEditing = !!editingProduct;
   const hasErpCode = !!(editingProduct as any)?.erp_product_code;
-  const structuralLocked = isEditing && hasErpCode;
+  // Edição liberada para qualquer usuário: campos estruturais não ficam mais
+  // travados pelo vínculo com ERP. Apenas o Código ERP em si segue restrito
+  // a admin (controlado por `unlockErpCode` mais abaixo).
+  const structuralLocked = false;
+  const isChildVersion = !!(editingProduct as any)?.parent_product_id;
 
   useEffect(() => {
     if (defaultsApplied || editingProduct || tipos.items.length === 0 || unitMeasures.items.length === 0) return;
@@ -756,6 +761,7 @@ export default function Products() {
       ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
+    setSelectedVersionId(null);
     setThicknessInput('');
     setIsDialogOpen(false);
     setFormTab('geral');
@@ -927,8 +933,9 @@ export default function Products() {
   };
 
   const executeSave = (submitData: typeof formData) => {
-    // Edição de produto sem ERP: se o SKU mudou, pedir confirmação.
-    if (editingProduct && !hasErpCode && submitData.sku !== editingProduct.sku) {
+    // Qualquer alteração que mude o SKU pede confirmação ao usuário, mesmo
+    // que o produto já tenha sido sincronizado com o ERP.
+    if (editingProduct && submitData.sku && submitData.sku !== editingProduct.sku) {
       const changes = computeStructuralChanges(submitData);
       setStructuralChangePayload({
         submitData,
@@ -1138,8 +1145,7 @@ export default function Products() {
     setSimilarProducts([]);
   };
 
-  const handleEdit = (product: Product) => {
-    recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
+  const applyProductToForm = (product: Product) => {
     setEditingProduct(product);
     setThicknessInput(formatDimensionInput(product.thickness));
     setFormData({
@@ -1184,6 +1190,42 @@ export default function Products() {
       erp_versao_situacao: product.erp_versao_situacao || 'A',
       ficha_tecnica: ((product as any).ficha_tecnica || {}) as FichaTecnicaData,
     });
+  };
+
+  const loadVersion = async (versionId: string) => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', versionId)
+      .single();
+    if (error || !data) {
+      toast.error('Erro ao carregar versão');
+      return;
+    }
+    applyProductToForm(data as Product);
+    setSelectedVersionId(versionId);
+    setIsAutoDescription(false);
+    setUnlockErpCode(false);
+  };
+
+  const handleEdit = async (product: Product) => {
+    recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
+
+    // Ao abrir o produto, sempre carrega a versão principal (parent_product_id IS NULL).
+    // A navegação para outras versões é feita pela grade de versões dentro do dialog.
+    let principal: Product = product;
+    const parentId = (product as any).parent_product_id;
+    if (parentId) {
+      const { data: parent } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', parentId)
+        .single();
+      if (parent) principal = parent as Product;
+    }
+
+    applyProductToForm(principal);
+    setSelectedVersionId(principal.id);
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
@@ -1407,20 +1449,12 @@ export default function Products() {
                 </TabsList>
 
                 <TabsContent value="geral" className="space-y-4 mt-4">
-                  {structuralLocked ? (
-                    <Alert>
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
-                        Este produto já foi sincronizado com o ERP e sua estrutura não pode ser alterada.
-                        Para mudanças estruturais, utilize a opção <strong>"Duplicar Produto"</strong>.
-                      </AlertDescription>
-                    </Alert>
-                  ) : isEditing ? (
+                  {isEditing ? (
                     <Alert>
                       <AlertTriangle className="h-4 w-4" />
                       <AlertDescription>
                         Alterações em campos estruturais (tipo, classificação ou dimensões) irão{' '}
-                        <strong>regenerar o SKU</strong> do produto. Uma confirmação será solicitada ao salvar.
+                        <strong>regenerar o SKU</strong> desta versão. Uma confirmação será solicitada ao salvar.
                       </AlertDescription>
                     </Alert>
                   ) : null}
@@ -1972,36 +2006,22 @@ export default function Products() {
                       />
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="active"
-                        checked={formData.active}
-                        onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-                      />
-                      <Label htmlFor="active">Produto Ativo</Label>
-                    </div>
-
                     {editingProduct && (
-                      <div className="pt-4 border-t mt-4">
+                      <div className="pt-4 border-t mt-4 -mx-6 px-6">
                         <div className="flex items-center gap-2 mb-3">
                           <Layers className="h-4 w-4 text-muted-foreground" />
                           <h3 className="text-sm font-semibold">Versões</h3>
+                          {isChildVersion && (
+                            <Badge variant="outline" className="text-[10px]">
+                              editando v{(editingProduct as any).versao_numero}
+                            </Badge>
+                          )}
                         </div>
                         <ProductVersionsTab
                           productId={editingProduct.id}
                           canEdit={canEditProducts}
-                          onEditVersion={async (versionId) => {
-                            const { data: v, error } = await supabase
-                              .from('products')
-                              .select('*')
-                              .eq('id', versionId)
-                              .single();
-                            if (error || !v) {
-                              toast.error('Erro ao carregar versão');
-                              return;
-                            }
-                            handleEdit(v as Product);
-                          }}
+                          selectedVersionId={selectedVersionId}
+                          onSelectVersion={loadVersion}
                         />
                       </div>
                     )}
