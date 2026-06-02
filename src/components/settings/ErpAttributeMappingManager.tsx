@@ -34,7 +34,7 @@ type Mapping = {
   id: string;
   tenant_id: string;
   attribute_catalog_id: string;
-  crm_source: 'ficha_tecnica' | 'product_column';
+  crm_source: 'ficha_tecnica' | 'product_column' | 'derived';
   crm_path: string;
   crm_label: string | null;
   transform: string | null;
