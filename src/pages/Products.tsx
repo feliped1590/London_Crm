@@ -1987,7 +1987,22 @@ export default function Products() {
                           <Layers className="h-4 w-4 text-muted-foreground" />
                           <h3 className="text-sm font-semibold">Versões</h3>
                         </div>
-                        <ProductVersionsTab productId={editingProduct.id} canEdit={canEditProducts} />
+                        <ProductVersionsTab
+                          productId={editingProduct.id}
+                          canEdit={canEditProducts}
+                          onEditVersion={async (versionId) => {
+                            const { data: v, error } = await supabase
+                              .from('products')
+                              .select('*')
+                              .eq('id', versionId)
+                              .single();
+                            if (error || !v) {
+                              toast.error('Erro ao carregar versão');
+                              return;
+                            }
+                            handleEdit(v as Product);
+                          }}
+                        />
                       </div>
                     )}
                   </div>
