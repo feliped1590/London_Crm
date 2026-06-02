@@ -761,6 +761,7 @@ export default function Products() {
       ficha_tecnica: {} as FichaTecnicaData,
     });
     setEditingProduct(null);
+    setSelectedVersionId(null);
     setThicknessInput('');
     setIsDialogOpen(false);
     setFormTab('geral');
