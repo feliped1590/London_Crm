@@ -1,44 +1,40 @@
-# Cidade/Estado a partir do mapeamento ERP
+## Objetivo
+Adicionar suporte ao atributo ERP **Tipo Solda** sem criar campo novo no cadastro de produto. O valor vem do **subgrupo** do produto e só é enviado ao ERP quando o produto for de grupo **Saco** ou **Stand Up** (via `ficha_profile`).
 
-## Problema
-O erro "Cidade X/UF não mapeada no ERP" ocorre porque hoje o usuário digita cidade e UF como texto livre nos formulários de cliente. Qualquer divergência de grafia (acento, abreviação, espaço) em relação à tabela `erp_cities` quebra a sincronização.
+## Comportamento
+- Cadastro de produto: **nada muda visualmente**. O subgrupo já existe.
+- Tela "Atributos ERP → Mapeamento": ao criar mapeamento para o ERP code 5 (Tipo Solda), aparece uma nova opção no select "Campo do CRM":
+  - **"Tipo Solda — derivado do Subgrupo"**.
+- Sync `IMP_ATRIBFICHA_V1`: envia `valor_padrao = label do subgrupo` (ex.: `"2 SOLDAS"`, `"FUNDO RETO"`).
+- Se o produto pertencer a grupo cujo `ficha_profile` ≠ `saco_*` / `stand_up_*` → o atributo **não é enfileirado** (nem se houver mapeamento). Se já existir item na fila e o grupo mudar, é descartado/limpo.
+- Se o subgrupo estiver vazio ou produto fora do escopo → a fila marca esse item como inválido (`error_message: "Produto fora do escopo de Tipo Solda"`) sem retry infinito.
 
-## Solução
-Substituir os `<Input>` de Cidade e Estado por dois `<Select>` encadeados, populados a partir de `erp_cities` (tenant atual):
+## Mudanças técnicas
 
-1. **Estado (UF)** — lista única de UFs presentes em `erp_cities` para o tenant, ordenada.
-2. **Cidade** — lista de cidades da UF selecionada, ordenada por nome. O valor salvo em `companies.city` é exatamente o `nome` da `erp_cities` (mesma string usada no matcher do ERP).
+### 1. Banco (migration)
+- Adicionar `crm_source = 'derived'` como valor aceito em `product_attribute_mapping` (atualizar CHECK constraint).
+- Atualizar função `extract_attribute_value(p_product, p_source, p_path)`:
+  - Quando `p_source = 'derived'` e `p_path = 'tipo_solda'`:
+    - Buscar `ficha_profile` do grupo do produto (`product_groups.ficha_profile` via `p_product.grupo_id`).
+    - Se profile ∉ {`saco_liso`,`saco_impresso`,`stand_up_liso`,`stand_up_impresso`} → `RETURN NULL`.
+    - Senão, retornar `product_subgroups.label` correspondente a `p_product.subgrupo_id`.
+- Atualizar trigger `detect_dirty_attributes` para reenfileirar atributos derivados quando `subgrupo_id` ou `grupo_id` mudar.
 
-Assim é impossível salvar uma cidade não mapeada, eliminando a classe inteira de erros.
+### 2. Edge function `process-attribute-sync`
+- Quando `valor_padrao` vier `NULL` para mapeamento `derived/tipo_solda`, marcar item como `status='skipped_out_of_scope'` (novo status) em vez de erro com retry.
+- Manter resto do fluxo.
 
-## Escopo
-Aplicar nos dois formulários de cliente:
-- `src/pages/CustomerNew.tsx` (cadastro)
-- `src/components/customer/CustomerOverviewTab.tsx` (edição)
+### 3. Frontend `ErpAttributeMappingManager.tsx`
+- Adicionar opção em `CRM_PATH_PRESETS`:
+  ```ts
+  { label: 'Tipo Solda — derivado do Subgrupo', source: 'derived', path: 'tipo_solda' }
+  ```
+- Estender tipos locais `Mapping.crm_source` para incluir `'derived'`.
 
-Mantém o restante do formulário e regras atuais (campos obrigatórios, lookup CNPJ, etc.).
+### 4. Memória
+- Atualizar `mem://integrations/erp-attribute-sync` documentando o source `derived` e o gate por `ficha_profile`.
 
-## Detalhes técnicos
-- Novo hook `useErpCities()` em `src/hooks/`:
-  - Query única: `select uf, nome, codigo_erp from erp_cities order by uf, nome`.
-  - Retorna `{ ufs: string[], citiesByUf: Record<string, {nome, codigo_erp}[]> }` memoizado.
-  - Cache via React Query (longo `staleTime`, key por tenant).
-- Componente reutilizável `CityStateSelect` em `src/components/customer/`:
-  - Props: `state`, `city`, `onChange({state, city})`, `disabled`.
-  - Ao trocar UF, limpa a cidade.
-  - Usa `Select` do shadcn.
-- **Preenchimento via BrasilAPI (CNPJ lookup)**: hoje preenche `city`/`state` como texto. Após o lookup, tentar casar a cidade retornada com `erp_cities` (normalização sem acento + uppercase). Se casar, pré-seleciona; se não casar, deixa o campo Cidade vazio com hint "Cidade do CNPJ (X) não está mapeada — selecione a mais próxima ou cadastre em Settings → ERP → Cidades".
-- **Compatibilidade com clientes legados**: se o cliente já tem `city`/`state` que não estão em `erp_cities`, exibir o valor atual como item desabilitado no topo da lista com aviso "(não mapeada)", forçando o usuário a escolher uma válida ao editar.
-- **Fallback se `erp_cities` estiver vazio para o tenant**: exibir mensagem "Nenhuma cidade mapeada. Cadastre em Settings → ERP → Cidades." e manter inputs livres (somente nesse caso) para não bloquear o cadastro inicial.
-
-## Fora do escopo
-- Não altera a tabela `erp_cities` nem o validador `validate-company-sync` (continuam como fonte da verdade).
-- Não mexe em formulários de outras entidades (contatos, fornecedores).
-- Não importa novas cidades em massa — segue manual em Settings.
-
-## Validação
-- Cadastrar novo cliente: UF lista apenas estados com cidades mapeadas; Cidade lista apenas as da UF.
-- Editar cliente legado com cidade inválida: campo mostra "(não mapeada)" e exige nova seleção para salvar.
-- Lookup por CNPJ com cidade mapeada → preenche automaticamente.
-- Lookup por CNPJ com cidade não mapeada → mostra hint, não bloqueia.
-- Tentar sincronizar com ERP após salvar → não deve mais dar erro "cidade não mapeada".
+## Fora de escopo
+- Sem novo campo de UI no cadastro de produto.
+- Sem alteração no `FichaTecnicaSection`.
+- Sem nova tabela: reaproveita `product_subgroups.label` direto.
