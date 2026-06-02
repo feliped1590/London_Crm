@@ -932,8 +932,9 @@ export default function Products() {
   };
 
   const executeSave = (submitData: typeof formData) => {
-    // Edição de produto sem ERP: se o SKU mudou, pedir confirmação.
-    if (editingProduct && !hasErpCode && submitData.sku !== editingProduct.sku) {
+    // Qualquer alteração que mude o SKU pede confirmação ao usuário, mesmo
+    // que o produto já tenha sido sincronizado com o ERP.
+    if (editingProduct && submitData.sku && submitData.sku !== editingProduct.sku) {
       const changes = computeStructuralChanges(submitData);
       setStructuralChangePayload({
         submitData,
