@@ -255,7 +255,7 @@ export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired 
               </Select>
             </div>
             <div>
-              <Label>Repetição lateral (mm)</Label>
+              <Label>Repetição lateral (Pista (mm))</Label>
               <Input type="number" step="0.01" min="0" value={value.impressao?.repeticao_lateral ?? ''}
                 onChange={(e) => update('impressao', { repeticao_lateral: num(e.target.value) })} />
             </div>
