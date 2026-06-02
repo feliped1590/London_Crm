@@ -255,12 +255,12 @@ export function FichaTecnicaSection({ profile, value, onChange, sanfonaRequired 
               </Select>
             </div>
             <div>
-              <Label>Repetição lateral (mm)</Label>
+              <Label>Repetição lateral (Pista (mm))</Label>
               <Input type="number" step="0.01" min="0" value={value.impressao?.repeticao_lateral ?? ''}
                 onChange={(e) => update('impressao', { repeticao_lateral: num(e.target.value) })} />
             </div>
             <div>
-              <Label>Repetição longitudinal (mm)</Label>
+              <Label>Repetição longitudinal (Passo (mm))</Label>
               <Input type="number" step="0.01" min="0" value={value.impressao?.repeticao_longitudinal ?? ''}
                 onChange={(e) => update('impressao', { repeticao_longitudinal: num(e.target.value) })} />
             </div>
