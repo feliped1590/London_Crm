@@ -119,6 +119,16 @@ Deno.serve(async (req) => {
       if (attrErr || !attr) throw new Error(`Atributo não encontrado: ${attrErr?.message ?? ''}`);
       if (!attr.ativo) throw new Error('Atributo está inativo no catálogo');
 
+      // Verifica se este atributo tem mapeamento derivado (ex.: tipo_solda) para
+      // saber se valor vazio significa "produto fora de escopo" (não retentar).
+      const { data: mappingRow } = await supabase
+        .from('product_attribute_mapping')
+        .select('crm_source, crm_path')
+        .eq('attribute_catalog_id', item.attribute_catalog_id)
+        .eq('tenant_id', item.tenant_id)
+        .eq('ativo', true)
+        .maybeSingle();
+
       const { data: value, error: valErr } = await supabase
         .from('product_attribute_values')
         .select('id, valor_padrao')
@@ -128,6 +138,19 @@ Deno.serve(async (req) => {
 
       if (valErr) throw new Error(`Falha ao ler valor: ${valErr.message}`);
       if (!value || value.valor_padrao === null || value.valor_padrao === '') {
+        if (mappingRow?.crm_source === 'derived') {
+          await supabase
+            .from('attribute_sync_queue')
+            .update({
+              status: 'skipped_out_of_scope',
+              error_message: 'Produto fora do escopo para este atributo derivado (ex.: grupo não é Saco/Stand Up ou subgrupo vazio)',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', item.id);
+          blockedCount++;
+          results.push({ id: item.id, status: 'skipped_out_of_scope' });
+          continue;
+        }
         throw new Error('Valor do atributo está vazio no CRM');
       }
 
