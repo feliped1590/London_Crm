@@ -359,7 +359,11 @@ export default function Products() {
   const currentGroupIsPrinted = isGroupPrinted(formData.grupo_id);
   const isEditing = !!editingProduct;
   const hasErpCode = !!(editingProduct as any)?.erp_product_code;
-  const structuralLocked = isEditing && hasErpCode;
+  // Edição liberada para qualquer usuário: campos estruturais não ficam mais
+  // travados pelo vínculo com ERP. Apenas o Código ERP em si segue restrito
+  // a admin (controlado por `unlockErpCode` mais abaixo).
+  const structuralLocked = false;
+  const isChildVersion = !!(editingProduct as any)?.parent_product_id;
 
   useEffect(() => {
     if (defaultsApplied || editingProduct || tipos.items.length === 0 || unitMeasures.items.length === 0) return;
