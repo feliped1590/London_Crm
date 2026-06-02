@@ -1144,8 +1144,7 @@ export default function Products() {
     setSimilarProducts([]);
   };
 
-  const handleEdit = (product: Product) => {
-    recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
+  const applyProductToForm = (product: Product) => {
     setEditingProduct(product);
     setThicknessInput(formatDimensionInput(product.thickness));
     setFormData({
@@ -1190,6 +1189,42 @@ export default function Products() {
       erp_versao_situacao: product.erp_versao_situacao || 'A',
       ficha_tecnica: ((product as any).ficha_tecnica || {}) as FichaTecnicaData,
     });
+  };
+
+  const loadVersion = async (versionId: string) => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', versionId)
+      .single();
+    if (error || !data) {
+      toast.error('Erro ao carregar versão');
+      return;
+    }
+    applyProductToForm(data as Product);
+    setSelectedVersionId(versionId);
+    setIsAutoDescription(false);
+    setUnlockErpCode(false);
+  };
+
+  const handleEdit = async (product: Product) => {
+    recordProductInteraction({ entityId: product.id, tenantId: product.tenant_id, interactionType: 'view' });
+
+    // Ao abrir o produto, sempre carrega a versão principal (parent_product_id IS NULL).
+    // A navegação para outras versões é feita pela grade de versões dentro do dialog.
+    let principal: Product = product;
+    const parentId = (product as any).parent_product_id;
+    if (parentId) {
+      const { data: parent } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', parentId)
+        .single();
+      if (parent) principal = parent as Product;
+    }
+
+    applyProductToForm(principal);
+    setSelectedVersionId(principal.id);
     setIsDialogOpen(true);
     setFormTab('geral');
     setIsAutoDescription(false);
