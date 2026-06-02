@@ -2013,36 +2013,22 @@ export default function Products() {
                       />
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id="active"
-                        checked={formData.active}
-                        onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
-                      />
-                      <Label htmlFor="active">Produto Ativo</Label>
-                    </div>
-
                     {editingProduct && (
-                      <div className="pt-4 border-t mt-4">
+                      <div className="pt-4 border-t mt-4 -mx-6 px-6">
                         <div className="flex items-center gap-2 mb-3">
                           <Layers className="h-4 w-4 text-muted-foreground" />
                           <h3 className="text-sm font-semibold">Versões</h3>
+                          {isChildVersion && (
+                            <Badge variant="outline" className="text-[10px]">
+                              editando v{(editingProduct as any).versao_numero}
+                            </Badge>
+                          )}
                         </div>
                         <ProductVersionsTab
                           productId={editingProduct.id}
                           canEdit={canEditProducts}
-                          onEditVersion={async (versionId) => {
-                            const { data: v, error } = await supabase
-                              .from('products')
-                              .select('*')
-                              .eq('id', versionId)
-                              .single();
-                            if (error || !v) {
-                              toast.error('Erro ao carregar versão');
-                              return;
-                            }
-                            handleEdit(v as Product);
-                          }}
+                          selectedVersionId={selectedVersionId}
+                          onSelectVersion={loadVersion}
                         />
                       </div>
                     )}
