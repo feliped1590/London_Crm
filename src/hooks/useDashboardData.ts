@@ -362,14 +362,11 @@ export function useDashboardData(filterUserId?: string | null) {
       case 'products_count':
         return { value: productsCount || 0, subtitle: 'produtos ativos' };
       case 'top_products': {
-        const productCounts: Record<string, { name: string; count: number }> = {};
-        orderItems?.forEach((item) => {
-          const name = item.product?.name || item.description;
-          if (!productCounts[name]) productCounts[name] = { name, count: 0 };
-          productCounts[name].count += item.quantity;
-        });
-        const sorted = Object.values(productCounts).sort((a, b) => b.count - a.count).slice(0, 5);
-        return { chartData: sorted.map((p) => ({ name: p.name, value: p.count })) };
+        const chartData = (topProducts || []).map((p) => ({
+          name: p.name,
+          value: Number(p.total_quantity) || 0,
+        }));
+        return { chartData };
       }
       default:
         return { value: '-' };
