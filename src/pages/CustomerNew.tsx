@@ -48,9 +48,11 @@ export default function CustomerNew() {
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // CNPJ lookup states (BrasilAPI)
+  // CNPJ lookup states
   const [isLookingUpCnpj, setIsLookingUpCnpj] = useState(false);
   const [cnpjLookupDone, setCnpjLookupDone] = useState(false);
+  const [cnpjLookupSource, setCnpjLookupSource] = useState<'cnpjws' | 'brasilapi' | 'cache' | null>(null);
+  const [cnpjLookupFallback, setCnpjLookupFallback] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const lastLookedUpCnpj = useRef<string>('');
   
