@@ -6,6 +6,7 @@
 
 import type { NormalizedCnpjResult } from './types.ts';
 import { selectInscricaoEstadual } from './ieSelector.ts';
+import { classifyCnae } from './cnaeClassifier.ts';
 
 function onlyDigits(value: unknown): string {
   return String(value ?? '').replace(/\D/g, '');
