@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor, Clock } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor, Clock, Tags } from 'lucide-react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
@@ -42,6 +42,7 @@ import { ProductivityScoreSettings } from '@/components/settings/ProductivitySco
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
+import { ClassificacaoManager } from '@/components/settings/ClassificacaoManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -777,6 +778,12 @@ export default function Settings() {
               CNPJs
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="classificacao" className="gap-2">
+              <Tags className="h-4 w-4" />
+              Classificação
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -1223,6 +1230,13 @@ export default function Settings() {
             <LegalEntityPermissionsManager />
           </TabsContent>
         )}
+
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="classificacao" className="mt-6 space-y-6">
+            <ClassificacaoManager />
+          </TabsContent>
+        )}
+
 
 
 
