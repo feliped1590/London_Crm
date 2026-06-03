@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor, Clock } from 'lucide-react';
+import { Plus, Settings2, Pencil, Trash2, GripVertical, Palette, Users, UserPlus, Shield, Zap, Lock, Headphones, FolderOpen, Target, TrendingUp, Bell, CheckSquare, Bot, ClipboardCheck, Search, Calculator, Building2, ArrowLeftRight, RefreshCw, DollarSign, Monitor, Clock, Tags } from 'lucide-react';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
 import { toast } from 'sonner';
