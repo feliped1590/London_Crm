@@ -248,9 +248,22 @@ Deno.serve(async (req) => {
           erp_versao_situacao: 'A',
         };
 
-        // Se ERP retornou um código (CREATE), persiste; em UPDATE mantém o existente
-        if (!isUpdate && parsedResult.erpCode) {
-          productUpdate.erp_product_code = parsedResult.erpCode;
+        // Persiste erp_product_code na linha sempre que ela estiver vazia.
+        // Para versões filhas (v2+) o productForSync já vem com o código herdado do pai,
+        // mas a linha do filho no banco continua NULL — precisamos gravar para o badge
+        // e para destravar os atributos bloqueados.
+        const { data: rowSnapshot } = await supabase
+          .from('products')
+          .select('erp_product_code')
+          .eq('id', item.product_id)
+          .maybeSingle();
+        const rowHasCode = !!rowSnapshot?.erp_product_code?.toString().trim();
+        if (!rowHasCode) {
+          const codeToPersist = parsedResult.erpCode
+            ?? (productForSync.erp_product_code?.toString().trim() || null);
+          if (codeToPersist) {
+            productUpdate.erp_product_code = codeToPersist;
+          }
         }
 
         const { error: productUpdateError } = await supabase
