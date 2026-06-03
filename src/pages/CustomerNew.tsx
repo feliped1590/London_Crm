@@ -133,7 +133,8 @@ export default function CustomerNew() {
           : null;
 
         const uf = (data.endereco.uf || '').toUpperCase();
-        const matchedCity = matchMappedCity(erpCitiesData, data.endereco.cidade, uf);
+        const rawCity = data.endereco.cidade || '';
+        const matchedCity = matchMappedCity(erpCitiesData, rawCity, uf);
         setCompanyForm(prev => ({
           ...prev,
           name: prev.name || data.razao_social,
@@ -150,6 +151,12 @@ export default function CustomerNew() {
           city: prev.city || (matchedCity?.nome ?? ''),
           state: prev.state || uf,
         }));
+
+        // Se a cidade ainda não foi resolvida (erp_cities pode não ter carregado),
+        // guarda o valor bruto para tentar novamente quando os dados chegarem.
+        if (!matchedCity && rawCity && uf) {
+          setPendingCityLookup({ city: rawCity, uf });
+        }
 
         setCnpjLookupSource(source);
         setCnpjLookupFallback(fallbackUsed);
