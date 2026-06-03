@@ -778,6 +778,12 @@ export default function Settings() {
               CNPJs
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="classificacao" className="gap-2">
+              <Tags className="h-4 w-4" />
+              Classificação
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
