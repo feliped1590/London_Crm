@@ -1101,6 +1101,36 @@ export type Database = {
           },
         ]
       }
+      cnpj_lookup_cache: {
+        Row: {
+          cnpj: string
+          expires_at: string
+          fetched_at: string
+          hit_count: number
+          last_hit_at: string | null
+          payload: Json
+          source: string
+        }
+        Insert: {
+          cnpj: string
+          expires_at: string
+          fetched_at?: string
+          hit_count?: number
+          last_hit_at?: string | null
+          payload: Json
+          source: string
+        }
+        Update: {
+          cnpj?: string
+          expires_at?: string
+          fetched_at?: string
+          hit_count?: number
+          last_hit_at?: string | null
+          payload?: Json
+          source?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active: boolean | null
