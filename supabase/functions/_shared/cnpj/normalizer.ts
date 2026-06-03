@@ -49,6 +49,8 @@ export function fromBrasilApi(raw: BrasilApiRawResponse): NormalizedCnpjResult {
     ? `${raw.cnae_fiscal} - ${raw.cnae_fiscal_descricao}`
     : asString(raw.cnae_fiscal_descricao);
 
+  const classification = classifyCnae(cnae);
+
   return {
     razao_social: asString(raw.razao_social),
     nome_fantasia: asString(raw.nome_fantasia),
@@ -67,7 +69,8 @@ export function fromBrasilApi(raw: BrasilApiRawResponse): NormalizedCnpjResult {
     telefone: onlyDigits(raw.ddd_telefone_1),
     porte: asString(raw.porte),
     capital_social: asNumber(raw.capital_social),
-    // BrasilAPI não fornece IE, tipo Matriz/Filial nem regime tributário.
+    ...classification,
+    // BrasilAPI não fornece IE, tipo Matriz/Filial, regime tributário, nem e-mail.
   };
 }
 
