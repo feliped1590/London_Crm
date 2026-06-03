@@ -1,0 +1,1 @@
+DELETE FROM public.cnpj_lookup_cache WHERE source = 'brasilapi';
