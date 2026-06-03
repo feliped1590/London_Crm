@@ -16,6 +16,7 @@ import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpj
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
