@@ -401,10 +401,7 @@ export default function CustomerNew() {
         toast.error('Informe o nome fantasia');
         return;
       }
-      if (!companyForm.inscricao_estadual?.trim()) {
-        toast.error('Informe a inscrição estadual');
-        return;
-      }
+      // IE opcional — será gravada como "ISENTO" se vazia.
     }
     
     // Telefone obrigatório
