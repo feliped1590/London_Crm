@@ -278,9 +278,7 @@ export default function CustomerNew() {
         if (!isValidCNPJ(documentClean)) {
           throw new Error('CNPJ inválido');
         }
-      if (!companyForm.inscricao_estadual?.trim()) {
-        throw new Error('Inscrição Estadual é obrigatória');
-      }
+      // Inscrição Estadual é opcional — quando ausente, gravamos "ISENTO".
       }
       
       // *** DUPLICATE CHECK - Database validation before insert ***
