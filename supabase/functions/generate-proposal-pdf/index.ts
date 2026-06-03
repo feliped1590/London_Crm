@@ -326,6 +326,17 @@ serve(async (req) => {
           .conditions-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 14px; }
           .conditions-box p { margin: 4px 0; font-size: 11px; }
           .conditions-box strong { color: #2d3748; }
+
+          /* ===== ARTES ===== */
+          .artes { margin-top: 25px; page-break-before: always; }
+          .artes-title { font-size: 13px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 2px solid #1a1a2e; padding-bottom: 6px; }
+          .arte-item { page-break-inside: avoid; margin-bottom: 22px; }
+          .arte-item h3 { font-size: 11px; font-weight: 700; color: #2d3748; margin-bottom: 8px; }
+          .arte-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+          .arte-fig { border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; background: #fff; text-align: center; }
+          .arte-fig img { max-width: 320px; max-height: 320px; width: auto; height: auto; object-fit: contain; display: block; }
+          .arte-fig figcaption { font-size: 9px; color: #4a5568; margin-top: 4px; word-break: break-all; max-width: 320px; }
+          
           
           /* ===== ACCEPTANCE ===== */
           .acceptance { margin-top: 25px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 20px; }
