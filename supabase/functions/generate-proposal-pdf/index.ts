@@ -192,6 +192,40 @@ serve(async (req) => {
       </tr>
     `}).join('');
 
+    const escapeHtml = (s: string) =>
+      String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const artesBlocks = processedItems
+      .map((item: any, index: number) => {
+        const arts = item.product_id ? attachmentsByProductId.get(item.product_id) || [] : [];
+        if (arts.length === 0) return '';
+        const figures = arts
+          .map(
+            (a) => `
+            <figure class="arte-fig">
+              <img src="${a.url}" alt="${escapeHtml(a.name)}" />
+              <figcaption>${escapeHtml(a.name)}</figcaption>
+            </figure>`
+          )
+          .join('');
+        const sku = item.product?.sku || '-';
+        const desc = escapeHtml(item.description || item.product?.name || '');
+        return `
+          <div class="arte-item">
+            <h3>Item ${index + 1} — ${escapeHtml(sku)} — ${desc}</h3>
+            <div class="arte-grid">${figures}</div>
+          </div>`;
+      })
+      .join('');
+
+    const artesHtml = artesBlocks
+      ? `
+        <section class="artes">
+          <h2 class="artes-title">Artes dos Produtos</h2>
+          ${artesBlocks}
+        </section>`
+      : '';
+
     const html = `
       <!DOCTYPE html>
       <html>
