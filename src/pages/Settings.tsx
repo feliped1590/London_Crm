@@ -42,6 +42,7 @@ import { ProductivityScoreSettings } from '@/components/settings/ProductivitySco
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
+import { ClassificacaoManager } from '@/components/settings/ClassificacaoManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
