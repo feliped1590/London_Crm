@@ -45,6 +45,8 @@ export default function CustomerNew() {
       setSelectedSalesRepId(defaultSalesRepId);
     }
   }, [defaultSalesRepId]);
+
+  
   
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
@@ -57,6 +59,19 @@ export default function CustomerNew() {
   const [cnpjLookupFallback, setCnpjLookupFallback] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const lastLookedUpCnpj = useRef<string>('');
+  // Raw city/uf returned by CNPJ lookup, pending resolution against erp_cities
+  const [pendingCityLookup, setPendingCityLookup] = useState<{ city: string; uf: string } | null>(null);
+
+  // Resolve pending city lookup once erp_cities finishes loading
+  useEffect(() => {
+    if (!pendingCityLookup) return;
+    if (erpCitiesData.all.length === 0) return;
+    const matched = matchMappedCity(erpCitiesData, pendingCityLookup.city, pendingCityLookup.uf);
+    if (matched) {
+      setCompanyForm(prev => (prev.city ? prev : { ...prev, city: matched.nome, state: prev.state || pendingCityLookup.uf }));
+    }
+    setPendingCityLookup(null);
+  }, [erpCitiesData, pendingCityLookup]);
   
   // Iniflex ERP lookup states
   const [isCheckingIniflex, setIsCheckingIniflex] = useState(false);
@@ -131,7 +146,8 @@ export default function CustomerNew() {
           : null;
 
         const uf = (data.endereco.uf || '').toUpperCase();
-        const matchedCity = matchMappedCity(erpCitiesData, data.endereco.cidade, uf);
+        const rawCity = data.endereco.cidade || '';
+        const matchedCity = matchMappedCity(erpCitiesData, rawCity, uf);
         setCompanyForm(prev => ({
           ...prev,
           name: prev.name || data.razao_social,
@@ -148,6 +164,12 @@ export default function CustomerNew() {
           city: prev.city || (matchedCity?.nome ?? ''),
           state: prev.state || uf,
         }));
+
+        // Se a cidade ainda não foi resolvida (erp_cities pode não ter carregado),
+        // guarda o valor bruto para tentar novamente quando os dados chegarem.
+        if (!matchedCity && rawCity && uf) {
+          setPendingCityLookup({ city: rawCity, uf });
+        }
 
         setCnpjLookupSource(source);
         setCnpjLookupFallback(fallbackUsed);
