@@ -142,6 +142,9 @@ export function fromCnpjWs(raw: CnpjWsRawResponse): NormalizedCnpjResult {
     .join(' ')
     .trim();
 
+  const classification = classifyCnae(cnae);
+  const emailEst = asString(est.email).toLowerCase();
+
   return {
     razao_social: asString(raw.razao_social),
     nome_fantasia: asString(est.nome_fantasia),
@@ -163,5 +166,7 @@ export function fromCnpjWs(raw: CnpjWsRawResponse): NormalizedCnpjResult {
     inscricao_estadual: ieSelected ?? undefined,
     is_matriz: isMatriz,
     regime_tributario: regime,
+    email: emailEst || undefined,
+    ...classification,
   };
 }
