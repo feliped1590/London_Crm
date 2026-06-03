@@ -57,6 +57,8 @@ export default function CustomerNew() {
   const [cnpjLookupFallback, setCnpjLookupFallback] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const lastLookedUpCnpj = useRef<string>('');
+  // Raw city/uf returned by CNPJ lookup, pending resolution against erp_cities
+  const [pendingCityLookup, setPendingCityLookup] = useState<{ city: string; uf: string } | null>(null);
   
   // Iniflex ERP lookup states
   const [isCheckingIniflex, setIsCheckingIniflex] = useState(false);
