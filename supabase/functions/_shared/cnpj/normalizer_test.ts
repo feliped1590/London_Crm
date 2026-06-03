@@ -30,7 +30,7 @@ Deno.test('Normalizer BrasilAPI: shape mínimo', () => {
   assertEquals(out.cnae_principal, '4751201 - Comércio varejista de produtos diversos');
   assertEquals(out.endereco.uf, 'SP');
   assertEquals(out.endereco.cidade, 'SAO PAULO');
-  assertEquals(out.telefone, '113333444');  // só dígitos
+  assertEquals(out.telefone, '1133334444');  // só dígitos
   assertEquals(out.capital_social, 100000);
   assertEquals(out.inscricao_estadual, undefined);  // BrasilAPI não fornece
   assertEquals(out.is_matriz, undefined);
