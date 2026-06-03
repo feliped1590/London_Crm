@@ -57,6 +57,45 @@ serve(async (req) => {
       console.error('Error fetching items:', itemsError);
     }
 
+    // Buscar artes (anexos de imagem) dos produtos presentes nos itens
+    const productIds = Array.from(
+      new Set((items || []).map((it: any) => it.product_id).filter(Boolean))
+    );
+    const attachmentsByProductId = new Map<string, Array<{ url: string; name: string }>>();
+    if (productIds.length > 0) {
+      const { data: atts, error: attsError } = await supabase
+        .from('file_attachments')
+        .select('id, entity_id, bucket, object_path, original_name, is_public, mime_type')
+        .eq('entity_type', 'product')
+        .in('entity_id', productIds)
+        .ilike('mime_type', 'image/%')
+        .order('created_at', { ascending: true });
+
+      if (attsError) {
+        console.error('Error fetching product attachments:', attsError);
+      }
+
+      for (const a of atts || []) {
+        let url: string | null = null;
+        if (a.is_public) {
+          const { data } = supabase.storage.from(a.bucket).getPublicUrl(a.object_path);
+          url = data?.publicUrl || null;
+        } else {
+          const { data, error: signErr } = await supabase.storage
+            .from(a.bucket)
+            .createSignedUrl(a.object_path, 3600);
+          if (signErr) {
+            console.error('Sign URL error:', signErr, a.bucket, a.object_path);
+          }
+          url = data?.signedUrl || null;
+        }
+        if (!url) continue;
+        const arr = attachmentsByProductId.get(a.entity_id) || [];
+        arr.push({ url, name: a.original_name });
+        attachmentsByProductId.set(a.entity_id, arr);
+      }
+    }
+
     // Fetch carrier if present
     let carrierData: any = null;
     if (proposal.carrier_id) {
