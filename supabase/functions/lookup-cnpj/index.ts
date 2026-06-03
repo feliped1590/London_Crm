@@ -73,12 +73,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fase 1: BrasilAPI como provider primário, com cache + logs.
+    // Fase 2B: CNPJ.ws como provider primário, fallback automático p/ BrasilAPI.
     const result = await lookupCnpj(cnpjClean, {
-      provider: 'brasilapi',
+      provider: 'cnpjws',
       allowFallback: true,
       forceRefresh,
     });
+
 
     if (!result.ok) {
       if (result.code === 'not_found') {
