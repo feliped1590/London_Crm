@@ -1,107 +1,57 @@
-# Ajustes no cadastro de cliente (CNPJ.ws + inferência de classificação)
+## Problema
 
-Diagnóstico dos 4 pontos levantados na tela `/customers/new`.
+Hoje as tabelas `setores`, `segmentos` e `atividades` existem no banco e são **lidas** pelo cadastro de cliente (via `useClassificacao`), mas **não existe nenhuma tela para cadastrar/editar** esses registros. Por isso o Setor "Serviços" aparece sem segmentos e o dropdown fica travado — não tem como popular pela UI.
 
-## 1. "BrasilAPI" ainda aparece no banner verde
-**Causa:** o texto está hard-coded em `src/pages/CustomerNew.tsx` (linha 591):
-> "Dados obtidos da Receita Federal via BrasilAPI. Confira antes de salvar."
+## Objetivo
 
-O backend já devolve `response.data.source` (`cnpjws` | `brasilapi` | `cache`) e `fallback_used`, mas o frontend ignora.
+Adicionar uma aba **"Classificação"** em *Configurações* permitindo ao Admin gerenciar a taxonomia em três níveis (Setor → Segmento → Atividade), isolada por tenant.
 
-**Correção:** guardar `source` no state e renderizar dinamicamente:
-- `cnpjws` → "Dados obtidos da Receita Federal via CNPJ.ws."
-- `brasilapi` → "Dados obtidos da Receita Federal via BrasilAPI."
-- `cache` → "Dados obtidos do cache (consulta recente)."
-- Se `fallback_used = true` → acrescentar "(fallback aplicado)".
+## Escopo
 
-## 2. Inscrição Estadual não foi preenchida
-**Causas combinadas:**
-- A consulta exibida na tela foi atendida pelo **cache** populado em testes anteriores quando o CnpjWsProvider ainda não estava em produção — o registro em `cnpj_lookup_cache` veio da BrasilAPI, que não devolve IE.
-- O frontend **não lê** `data.inscricao_estadual` mesmo quando presente.
+### 1. Nova aba em Settings
+- Item de menu **"Classificação"** dentro de *Configurações* (visível só para Admin/Dev).
+- Layout em 3 colunas (mestre-detalhe):
+  - **Setores** (esquerda) — lista clicável; o selecionado filtra a coluna do meio.
+  - **Segmentos** (centro) — lista filtrada pelo setor selecionado.
+  - **Atividades** (direita) — lista filtrada pelo segmento selecionado.
 
-**Correção:**
-1. Mapear `data.inscricao_estadual` no `setCompanyForm` (respeitando regra "não sobrescrever se já preenchido").
-2. Forçar **invalidação do cache** desse CNPJ uma única vez (script de migração ou flag `force_refresh=true` no primeiro lookup pós-deploy, apenas para entradas com `source='brasilapi'` antigas) — opcional, discutir antes de executar.
-3. Quando o IE Selector devolve `null` (ambiguidade / sem IE ativa), manter campo vazio — comportamento atual já é seguro.
+### 2. Operações por nível
+Cada coluna terá:
+- Botão **"+ Novo"** abrindo modal simples (campo *Nome* + *Ordem*).
+- Botão de **editar** (renomear / mudar ordem / ativar-inativar) por linha.
+- Botão de **excluir** com confirmação (soft delete via `is_active=false` para preservar histórico de clientes vinculados).
 
-## 3. Inferir Setor + Segmento a partir do CNAE
-A CNPJ.ws devolve `cnae_principal` como `"22.22-6-00 - Fabricação de embalagens de material plástico"`. Dá para inferir via heurística usando a taxonomia já existente em `setores` / `segmentos`.
+### 3. Regras de negócio
+- Apagar um Setor não remove segmentos/atividades filhos — apenas marca o setor como inativo. Filhos continuam visíveis se o cliente já estava vinculado, mas somem dos dropdowns de novo cadastro.
+- Nome único por nível dentro do mesmo pai (ex.: dois segmentos com mesmo nome no mesmo setor → bloqueado).
+- `tenant_id` preenchido automaticamente.
+- Apenas Admin/Dev podem criar/editar/inativar; demais usuários só leem.
 
-### Estratégia (regra determinística, sem IA)
-Criar `supabase/functions/_shared/cnpj/cnaeClassifier.ts` com duas camadas:
+### 4. Seed inicial sugerido (opcional)
+Botão **"Sugerir taxonomia padrão"** que popula uma base coerente com a heurística do CNAE Classifier já implementada (Indústria → Embalagem, Frigorífico, Laticínios…; Serviços → Tecnologia, Transportadoras…; Comércio → Varejo, Atacado…; etc.). Importa só o que ainda não existe.
 
-**Camada 1 — Setor pelo prefixo CNAE (Divisão, 2 dígitos):**
-```text
-01–03 → Agropecuária
-05–33 → Indústria
-35–43 → Indústria (utilities/construção tratadas como Indústria)
-45–47 → Comércio   (47 = varejo, 46 = atacado → ver camada 2)
-49–96 → Serviços
-```
-Fallback: se a descrição contém "distribui", "atacad" → **Distribuidora**.
+### 5. Integração com o cadastro de cliente
+Sem mudanças no `CustomerNew.tsx` — ele já consome `useClassificacao`, então assim que o Admin cadastrar os segmentos, o dropdown destrava automaticamente e as sugestões via CNAE passam a casar.
 
-**Camada 2 — Segmento por palavras-chave na descrição** (case/acentos insensíveis), batendo contra os nomes já cadastrados em `segmentos` daquele setor:
+## Fora de escopo
+- Reorganizar clientes existentes em massa.
+- Bulk import por CSV (pode vir depois).
+- Edição inline drag-and-drop de ordem (usaremos campo numérico simples).
 
-| Palavra-chave na descrição CNAE | Segmento candidato |
-|---|---|
-| embalagem, embalagens | Embalagem / Embalagens |
-| café | Café |
-| celulose, papel | Celulose |
-| cereal, grão | Cerealista |
-| cosmético, perfumaria | Cosméticos |
-| frigorífico, abate | Frigorífico |
-| laticínio, leite, queijo | Laticínios |
-| massa, pastifício, panificação | Massas e Pastifícios |
-| pescado, peixe, frutos do mar | Pescados e Psicultura |
-| pet, ração animal | Pet |
-| químico, defensivo | Químicos |
-| supermercado | Supermercado |
-| varejo, loja | Varejo |
-| atacado | Atacado |
-| representação | Representação |
-| transporte | Transportadoras |
-| software, ti, tecnologia | Tecnologia |
-| hospital, médico, farmac | Hospitalar |
-| alimento, bebida | Alimentos / Alimentos e Bebidas |
-| fertilizante, herbicida | Herbicidas Fertilizantes |
-| higiene, limpeza | Higiene e Limpeza |
-| hortifruti, fruta, hortaliça | Hortifruti |
-| natural, orgânic | Produtos Naturais |
-| embutido, defumado | Embutidos |
-| fumo, tabaco | Fumo e Tabaco |
-| manufatura | Manufatura |
+## Detalhes técnicos
 
-**Resolução:** o backend devolve `setor_sugerido` + `segmento_sugerido` como **strings (nomes)**. O frontend resolve para IDs consultando `setores` e `segmentos` do tenant. Se não houver match exato, devolve apenas o setor.
+- **Arquivos novos:**
+  - `src/pages/settings/ClassificacaoSettings.tsx` (página principal 3 colunas).
+  - `src/components/settings/classificacao/ClassificacaoLevelColumn.tsx` (componente reutilizado p/ Setor/Segmento/Atividade).
+  - `src/components/settings/classificacao/ClassificacaoFormDialog.tsx` (modal create/edit).
+  - `src/hooks/useClassificacaoAdmin.ts` (mutations: create/update/softDelete + invalidate da query `classificacao-options`).
+  - Opcional: edge function `seed-classificacao-default` para o botão de sugestão.
+- **Roteamento:** adicionar rota em `src/App.tsx` (ex.: `/settings/classificacao`) e link no menu de Configurações.
+- **RLS:** verificar/garantir policies em `setores/segmentos/atividades` para INSERT/UPDATE restrito a Admin/Dev do tenant (migration se faltar).
+- **Validação:** unicidade `(tenant_id, parent_id, nome)` por trigger/constraint.
 
-**Regra de aplicação no frontend:** preencher Setor/Segmento somente se ambos estiverem vazios (não sobrescrever escolha do usuário) e exibir badge "🤖 Sugerido pelo CNAE" ao lado.
-
-**Exemplo solicitado:** CNAE `22.22-6-00 - Fabricação de embalagens de material plástico` → Divisão 22 → **Indústria** + palavra "embalagens" → segmento **Embalagens**. ✓
-
-## 4. Email
-**Causa:** o normalizer da CNPJ.ws não está expondo `estabelecimento.email` (já está no `CnpjWsRawResponse` mas não é mapeado).
-
-**Correção:**
-1. Adicionar `email?: string` em `NormalizedCnpjResult` (`types.ts`).
-2. Em `fromCnpjWs`: `email: asString(est.email).toLowerCase()`.
-3. Em `fromBrasilApi`: BrasilAPI também devolve `email` em alguns casos — mapear igual.
-4. Frontend: `email: prev.email || data.email || ''`.
-
-## Arquivos alterados
-
-| Arquivo | Mudança |
-|---|---|
-| `supabase/functions/_shared/cnpj/types.ts` | + `email?`, + `setor_sugerido?`, + `segmento_sugerido?` em `NormalizedCnpjResult` |
-| `supabase/functions/_shared/cnpj/normalizer.ts` | mapear `email` em ambos os providers; chamar classifier |
-| `supabase/functions/_shared/cnpj/cnaeClassifier.ts` | **novo** — heurística CNAE → setor/segmento |
-| `supabase/functions/_shared/cnpj/cnaeClassifier_test.ts` | **novo** — testes de classificação |
-| `src/pages/CustomerNew.tsx` | banner dinâmico por `source`; mapear IE, email, setor/segmento sugeridos |
-
-## Arquivos NÃO alterados
-- `supabase/functions/_shared/projedata/company-mapper.ts` ✅
-- payload `IMP_CLIENTE_V4` ✅
-- schema da tabela `companies` ✅
-- `supabase/functions/enrich-company-single/index.ts`, `enrich-companies-batch/index.ts`, `prospecting-search/index.ts` (continuam em BrasilAPI conforme combinado)
-- `lookup-cnpj/index.ts` (orquestração já correta)
-
-## Fora deste escopo (perguntar antes)
-- Limpar entradas antigas do `cnpj_lookup_cache` que vieram da BrasilAPI para que a próxima consulta puxe IE via CNPJ.ws — posso fazer via SQL ou via botão "🔄 Atualizar" no banner do frontend (passando `force_refresh=true`).
+## Critérios de aceite
+1. Admin acessa *Configurações → Classificação* e cria "Tecnologia" sob o setor "Serviços".
+2. Ao voltar em *Novo Cliente* com CNAE de TI, o dropdown Segmento abre e "Tecnologia" aparece — auto-sugestão do CNAE preenche automaticamente.
+3. Usuário comum (Vendas) não vê o botão "+ Novo" nem consegue chamar a mutation.
+4. Inativar um segmento faz ele sumir dos novos cadastros, mas clientes antigos continuam exibindo o nome.
