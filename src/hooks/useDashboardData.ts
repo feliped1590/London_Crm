@@ -77,23 +77,26 @@ export function useDashboardData(filterUserId?: string | null) {
     },
   });
 
+  // Janela de 12 meses para listagens de apoio do dashboard
+  const since12mIso = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
+
   const { data: deals } = useQuery({
-    queryKey: ['dashboard-deals', effectiveUserId, salesPipelineIds],
+    queryKey: ['dashboard-deals', effectiveUserId, salesPipelineIds, since12mIso],
     queryFn: async () => {
       let query = supabase
         .from('deals')
         .select('stage,value,pipeline_id,created_at,owner_id')
-        .order('created_at', { ascending: false });
-      
+        .gte('created_at', since12mIso)
+        .order('created_at', { ascending: false })
+        .limit(5000);
+
       if (effectiveUserId) {
         query = query.eq('owner_id', effectiveUserId);
       }
-
-      // Only include deals from sales pipelines for dashboard metrics
       if (salesPipelineIds && salesPipelineIds.length > 0) {
         query = query.in('pipeline_id', salesPipelineIds);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -103,14 +106,18 @@ export function useDashboardData(filterUserId?: string | null) {
   });
 
   const { data: tasks } = useQuery({
-    queryKey: ['dashboard-tasks', effectiveUserId],
+    queryKey: ['dashboard-tasks', effectiveUserId, since12mIso],
     queryFn: async () => {
-      let query = supabase.from('tasks').select('status,priority,assigned_to');
-      
+      let query = supabase
+        .from('tasks')
+        .select('status,priority,assigned_to')
+        .gte('created_at', since12mIso)
+        .limit(5000);
+
       if (effectiveUserId) {
         query = query.eq('assigned_to', effectiveUserId);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -150,14 +157,18 @@ export function useDashboardData(filterUserId?: string | null) {
   });
 
   const { data: proposals } = useQuery({
-    queryKey: ['dashboard-proposals', effectiveUserId],
+    queryKey: ['dashboard-proposals', effectiveUserId, since12mIso],
     queryFn: async () => {
-      let query = supabase.from('proposals').select('status,created_by');
-      
+      let query = supabase
+        .from('proposals')
+        .select('status,created_by')
+        .gte('created_at', since12mIso)
+        .limit(5000);
+
       if (effectiveUserId) {
         query = query.eq('created_by', effectiveUserId);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -167,14 +178,18 @@ export function useDashboardData(filterUserId?: string | null) {
   });
 
   const { data: orders } = useQuery({
-    queryKey: ['dashboard-orders', effectiveUserId],
+    queryKey: ['dashboard-orders', effectiveUserId, since12mIso],
     queryFn: async () => {
-      let query = supabase.from('orders').select('status,total_value,created_at,created_by');
-      
+      let query = supabase
+        .from('orders')
+        .select('status,total_value,created_at,created_by')
+        .gte('created_at', since12mIso)
+        .limit(5000);
+
       if (effectiveUserId) {
         query = query.eq('created_by', effectiveUserId);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data;
@@ -199,14 +214,13 @@ export function useDashboardData(filterUserId?: string | null) {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: orderItems } = useQuery({
-    queryKey: ['dashboard-order-items'],
+  // Top produtos agregado no servidor — evita baixar a tabela order_items inteira
+  const { data: topProducts } = useQuery({
+    queryKey: ['dashboard-top-products'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('order_items')
-        .select('quantity,description,product:products(name)');
+      const { data, error } = await supabase.rpc('dashboard_top_products', { p_limit: 5 });
       if (error) throw error;
-      return data;
+      return (data as Array<{ name: string; total_quantity: number }>) || [];
     },
     staleTime: 5 * 60 * 1000,
   });
