@@ -6,6 +6,7 @@
 
 import type { NormalizedCnpjResult } from './types.ts';
 import { selectInscricaoEstadual } from './ieSelector.ts';
+import { classifyCnae } from './cnaeClassifier.ts';
 
 function onlyDigits(value: unknown): string {
   return String(value ?? '').replace(/\D/g, '');
@@ -48,6 +49,8 @@ export function fromBrasilApi(raw: BrasilApiRawResponse): NormalizedCnpjResult {
     ? `${raw.cnae_fiscal} - ${raw.cnae_fiscal_descricao}`
     : asString(raw.cnae_fiscal_descricao);
 
+  const classification = classifyCnae(cnae);
+
   return {
     razao_social: asString(raw.razao_social),
     nome_fantasia: asString(raw.nome_fantasia),
@@ -66,7 +69,8 @@ export function fromBrasilApi(raw: BrasilApiRawResponse): NormalizedCnpjResult {
     telefone: onlyDigits(raw.ddd_telefone_1),
     porte: asString(raw.porte),
     capital_social: asNumber(raw.capital_social),
-    // BrasilAPI não fornece IE, tipo Matriz/Filial nem regime tributário.
+    ...classification,
+    // BrasilAPI não fornece IE, tipo Matriz/Filial, regime tributário, nem e-mail.
   };
 }
 
@@ -138,6 +142,9 @@ export function fromCnpjWs(raw: CnpjWsRawResponse): NormalizedCnpjResult {
     .join(' ')
     .trim();
 
+  const classification = classifyCnae(cnae);
+  const emailEst = asString(est.email).toLowerCase();
+
   return {
     razao_social: asString(raw.razao_social),
     nome_fantasia: asString(est.nome_fantasia),
@@ -159,5 +166,7 @@ export function fromCnpjWs(raw: CnpjWsRawResponse): NormalizedCnpjResult {
     inscricao_estadual: ieSelected ?? undefined,
     is_matriz: isMatriz,
     regime_tributario: regime,
+    email: emailEst || undefined,
+    ...classification,
   };
 }

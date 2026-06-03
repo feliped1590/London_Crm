@@ -33,6 +33,12 @@ export interface NormalizedCnpjResult {
   is_matriz?: boolean;
   /** Opcional — preenchido APENAS quando Simples/MEI é confirmado. */
   regime_tributario?: 'simples_nacional';
+  /** E-mail do estabelecimento (quando o provider devolver). */
+  email?: string;
+  /** Setor sugerido a partir do CNAE (nome, p/ resolver ID no frontend). */
+  setor_sugerido?: string;
+  /** Segmento sugerido a partir do CNAE (nome). */
+  segmento_sugerido?: string;
 }
 
 export type ProviderName = 'brasilapi' | 'cnpjws';

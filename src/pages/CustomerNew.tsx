@@ -16,6 +16,7 @@ import { formatCNPJ, formatCPF, cleanDocument, isValidCNPJ } from '@/lib/cpfCnpj
 import type { Json } from '@/integrations/supabase/types';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ClassificacaoCascade } from '@/components/classificacao/ClassificacaoCascade';
+import { useClassificacao } from '@/hooks/useClassificacao';
 import { useSalesReps } from '@/hooks/useSalesReps';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
@@ -35,6 +36,7 @@ export default function CustomerNew() {
   const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
   const { data: erpCitiesData } = useErpCities();
+  const { setores, segmentos } = useClassificacao();
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
 
   // Set default sales rep when loaded
@@ -48,9 +50,11 @@ export default function CustomerNew() {
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // CNPJ lookup states (BrasilAPI)
+  // CNPJ lookup states
   const [isLookingUpCnpj, setIsLookingUpCnpj] = useState(false);
   const [cnpjLookupDone, setCnpjLookupDone] = useState(false);
+  const [cnpjLookupSource, setCnpjLookupSource] = useState<'cnpjws' | 'brasilapi' | 'cache' | null>(null);
+  const [cnpjLookupFallback, setCnpjLookupFallback] = useState(false);
   const [cnpjLookupError, setCnpjLookupError] = useState<string | null>(null);
   const lastLookedUpCnpj = useRef<string>('');
   
@@ -114,9 +118,18 @@ export default function CustomerNew() {
       
       if (response.data?.success) {
         const { data } = response.data;
-        
-        // Fill fields - don't overwrite if already edited by user.
-        // For city, try to match against ERP-mapped cities to use the canonical name.
+        const source = (response.data.source ?? null) as 'cnpjws' | 'brasilapi' | 'cache' | null;
+        const fallbackUsed = response.data.fallback_used === true;
+
+        // Resolver setor/segmento sugeridos (nomes → IDs) só se ainda vazios
+        const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        const setorSugerido = data.setor_sugerido
+          ? setores.find(s => normalize(s.nome) === normalize(data.setor_sugerido))?.id ?? null
+          : null;
+        const segmentoSugerido = (setorSugerido && data.segmento_sugerido)
+          ? segmentos.find(s => s.setor_id === setorSugerido && normalize(s.nome) === normalize(data.segmento_sugerido))?.id ?? null
+          : null;
+
         const uf = (data.endereco.uf || '').toUpperCase();
         const matchedCity = matchMappedCity(erpCitiesData, data.endereco.cidade, uf);
         setCompanyForm(prev => ({
@@ -124,6 +137,10 @@ export default function CustomerNew() {
           name: prev.name || data.razao_social,
           fantasia: prev.fantasia || data.nome_fantasia,
           phone: prev.phone || data.telefone,
+          email: prev.email || data.email || '',
+          inscricao_estadual: prev.inscricao_estadual || data.inscricao_estadual || '',
+          setor_id: prev.setor_id || setorSugerido,
+          segmento_id: prev.segmento_id || segmentoSugerido,
           address: prev.address || data.endereco.logradouro || '',
           address_number: prev.address_number || data.endereco.numero || '',
           neighborhood: prev.neighborhood || data.endereco.bairro || '',
@@ -131,7 +148,9 @@ export default function CustomerNew() {
           city: prev.city || (matchedCity?.nome ?? ''),
           state: prev.state || uf,
         }));
-        
+
+        setCnpjLookupSource(source);
+        setCnpjLookupFallback(fallbackUsed);
         setCnpjLookupDone(true);
       } else {
         setCnpjLookupError(response.data?.error || 'Erro ao consultar');
@@ -588,7 +607,11 @@ export default function CustomerNew() {
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       <AlertTitle className="text-green-700">Dados encontrados</AlertTitle>
                       <AlertDescription className="text-green-600">
-                        Dados obtidos da Receita Federal via BrasilAPI. Confira antes de salvar.
+                        {cnpjLookupSource === 'cnpjws' && 'Dados obtidos da Receita Federal via CNPJ.ws.'}
+                        {cnpjLookupSource === 'brasilapi' && 'Dados obtidos da Receita Federal via BrasilAPI.'}
+                        {cnpjLookupSource === 'cache' && 'Dados obtidos do cache (consulta recente).'}
+                        {!cnpjLookupSource && 'Dados obtidos da Receita Federal.'}
+                        {cnpjLookupFallback && ' (fallback aplicado)'} Confira antes de salvar.
                       </AlertDescription>
                     </Alert>
                   )}
