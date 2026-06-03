@@ -1,10 +1,10 @@
 /**
  * lookup-cnpj — endpoint público de consulta de CNPJ para o cadastro.
  *
- * Fase 1: refatorado para usar o orquestrador `_shared/cnpj`.
- * - Provider primário: BrasilAPI (mantém comportamento histórico).
+ * Fase 2B: provider primário = CNPJ.ws, fallback automático para BrasilAPI.
  * - Cache de 30 dias em `cnpj_lookup_cache`.
  * - Logs: cnpj, provider, fallback, elapsedMs (gerados no orquestrador).
+
  *
  * Contrato de resposta MANTIDO 100% compatível com o frontend atual.
  */
@@ -73,12 +73,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fase 1: BrasilAPI como provider primário, com cache + logs.
+    // Fase 2B: CNPJ.ws como provider primário, fallback automático p/ BrasilAPI.
     const result = await lookupCnpj(cnpjClean, {
-      provider: 'brasilapi',
+      provider: 'cnpjws',
       allowFallback: true,
       forceRefresh,
     });
+
 
     if (!result.ok) {
       if (result.code === 'not_found') {
