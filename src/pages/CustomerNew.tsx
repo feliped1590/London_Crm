@@ -70,6 +70,17 @@ export default function CustomerNew() {
   const lastLookedUpCnpj = useRef<string>('');
   // Raw city/uf returned by CNPJ lookup, pending resolution against erp_cities
   const [pendingCityLookup, setPendingCityLookup] = useState<{ city: string; uf: string } | null>(null);
+
+  // Resolve pending city lookup once erp_cities finishes loading
+  useEffect(() => {
+    if (!pendingCityLookup) return;
+    if (erpCitiesData.all.length === 0) return;
+    const matched = matchMappedCity(erpCitiesData, pendingCityLookup.city, pendingCityLookup.uf);
+    if (matched) {
+      setCompanyForm(prev => (prev.city ? prev : { ...prev, city: matched.nome, state: prev.state || pendingCityLookup.uf }));
+    }
+    setPendingCityLookup(null);
+  }, [erpCitiesData, pendingCityLookup]);
   
   // Iniflex ERP lookup states
   const [isCheckingIniflex, setIsCheckingIniflex] = useState(false);
