@@ -2234,7 +2234,16 @@ export default function Products() {
                           </span>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="font-mono font-medium">{product.sku}</TableCell>
+                      <TableCell className="font-mono font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{product.sku}</span>
+                          {((product as any).versao_numero ?? 1) > 1 && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              v{(product as any).versao_numero}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Package className="h-4 w-4 text-muted-foreground" />
