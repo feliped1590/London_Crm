@@ -1,76 +1,75 @@
-# Versões independentes com SKU, descrição e atributos próprios
 
-## Problema
+## 1. Versão 2 fica "Não enviado" mesmo após sync OK
 
-Hoje, ao criar uma nova versão em `ProductVersionsTab`:
-- O filho herda o `name` (cadastro completo) do pai — que termina com o `erp_versao` do pai. Resultado: 5 versões diferentes aparecem com o mesmo nome.
-- O `sku` é gravado como placeholder (`"<pai>-v"`).
-- Os atributos (ficha técnica e demais campos editáveis) ficam compartilhados via cópia inicial, mas não há fluxo claro para editar cada versão de forma isolada.
+### Causa
+Em `loadProductForSync` (`supabase/functions/_shared/projedata/product-validator.ts`), quando o filho não tem `erp_product_code`, ele **herda em memória** o código do pai. Isso faz `isProductUpdate()` retornar `true`, e o bloco em `process-product-sync` que persiste `erp_product_code` só roda quando `!isUpdate`. Resultado: a fila marca `completed`, mas a linha do filho continua com `erp_product_code = NULL` → o `ProductSyncBadge` mostra "Não enviado", e os itens em `attribute_sync_queue` permanecem `blocked_no_erp_code` (porque o `process-attribute-sync` lê o `erp_product_code` da linha do filho).
 
-## Objetivo
+### Correção (`supabase/functions/process-product-sync/index.ts`)
+Após o sync de sucesso, sempre persistir `erp_product_code` na linha quando estiver vazia, usando: `parsedResult.erpCode` (se ERP retornou) **ou** o código herdado do pai (`productForSync.erp_product_code`). Isso vale para filhos (v2+) e mantém o comportamento atual do v1.
 
-Cada versão (pai e filhos) é uma linha **independente** em `products`:
+Em seguida, manter a chamada `release_blocked_attributes` + drain de `process-attribute-sync` (já existem) — agora elas funcionarão porque a linha terá `erp_product_code`.
 
-1. **SKU, `erp_versao` e `name`** recalculados a partir das próprias dimensões.
-2. **Atributos editáveis por versão** (ficha técnica, fiscal por versão se aplicável, dimensões, observações, etc.) — alterar uma versão **não** afeta as outras.
+### Reparo do registro atual
+Migração one-shot para os filhos já sincronizados sem código:
 
-A relação `parent_product_id` continua existindo apenas como agrupamento visual (linhagem da família de versões). Não há mais propagação automática do pai para os filhos.
+```sql
+UPDATE public.products c
+SET erp_product_code = p.erp_product_code,
+    origem_alteracao = 'SYNC'
+FROM public.products p
+WHERE c.parent_product_id = p.id
+  AND c.erp_product_code IS NULL
+  AND p.erp_product_code IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM public.product_sync_queue q
+    WHERE q.product_id = c.id AND q.status = 'completed'
+  );
 
-## Mudanças
+-- Reabrir atributos bloqueados desses filhos
+UPDATE public.attribute_sync_queue q
+SET status = 'pending', error_message = NULL, next_retry_at = NULL, updated_at = now()
+FROM public.products c
+WHERE q.product_id = c.id
+  AND q.status = 'blocked_no_erp_code'
+  AND c.erp_product_code IS NOT NULL;
+```
 
-### 1. Criação de versão — `src/components/products/ProductVersionsTab.tsx`
+(Sem alterar regra do `IMP_ITEM_VERSAO_TESTE` — o envio de atributos da v2 continua via `IMP_ATRIBFICHA_V1`, agora desbloqueado.)
 
-No `handleCreate`, antes do `insert`:
+## 2. Identificação da versão na listagem de produtos
 
-1. Reaproveitar lookups (`useProductLookups`) para obter labels/códigos.
-2. Calcular o perfil de dimensão do grupo (mover `getGroupProfile` de `Products.tsx` para util compartilhado `src/utils/products/getGroupProfile.ts`).
-3. Gerar para o filho:
-   - `erp_versao` via `generateErpVersion(profile, w, l, t, extractGusset(parent.ficha_tecnica))`
-   - `sku` via `generateStructuralSku({ tipoCode, familyCode, groupCode, subgroupCode, classCode, width:w, length:l, thickness:t, dimensionProfile: profile })`
-   - `name` via `generateProductDescription({ family, group, subgroup, productClass, printedName: parent.nome_impresso })` + `erp_versao` do filho
-4. **Clonar** a `ficha_tecnica` do pai como ponto de partida (snapshot inicial), depois cada versão evolui independente.
-5. Enviar `erp_versao`, `sku`, `name`, `ficha_tecnica` clonada e demais campos herdados no `childPayload` (substitui o placeholder atual de `sku`).
+`src/pages/Products.tsx` (tabela em torno da linha 2237): exibir `v{versao_numero}` ao lado do SKU quando `versao_numero > 1`. Sem badge para v1 (subentendido).
 
-`sku_unique` continua sendo gerado pelo trigger `trg_generate_sku_unique`.
+```tsx
+<TableCell className="font-mono font-medium">
+  <div className="flex items-center gap-2">
+    <span>{product.sku}</span>
+    {(product as any).versao_numero > 1 && (
+      <Badge variant="outline" className="text-[10px]">v{(product as any).versao_numero}</Badge>
+    )}
+  </div>
+</TableCell>
+```
 
-### 2. Edição de versão
+Listagem já faz `select('*')`, então `versao_numero` está disponível — sem mudança de query.
 
-Permitir abrir cada linha da tabela em `ProductVersionsTab` no mesmo formulário de produto, mas vinculado ao **id da versão** (filho), não do pai. O `handleEdit` em `Products.tsx` já carrega por id — adicionar botão "Editar" por linha na tabela de versões que invoca o mesmo dialog para o filho.
+## 3. Largura total da área "Versões" no cadastro
 
-Ao salvar:
-- Recalcular `erp_versao`, `sku` e `name` da própria versão (já há lógica em `Products.tsx` que cobre isso para o pai — passa a aplicar igual para filhos).
-- `pendente_envio = true`, `origem_alteracao = 'CRM'` para sincronizar com ERP.
-- **Nenhuma propagação** para outras versões.
+A aba "Geral" do formulário usa `<div className="grid grid-cols-2 gap-4">`. O bloco `Versões` em `src/pages/Products.tsx` (~linha 2009) está **sem** `col-span-2`, então ocupa apenas metade da largura.
 
-### 3. Remoção de propagação implícita
+Adicionar `col-span-2` ao wrapper do bloco e remover `-mx-6 px-6` (que provoca overflow horizontal junto com `overflow-y-auto` do DialogContent), substituindo por `col-span-2 pt-4 border-t mt-4`.
 
-- **Não criar** trigger de propagação pai → filhos.
-- Garantir que nenhum job/trigger atual sobrescreva campos das versões com valores do pai. Auditar:
-  - `compute_product_erp_hash` — já usa campos da própria linha, OK.
-  - `detect_dirty_attributes` (fila de atributos ERP) — já reage por produto individual, OK.
-  - Verificar se há outras queries em edge functions / hooks que filtram por `parent_product_id IS NULL` e replicam — não aplicar.
+Em `src/components/products/ProductVersionsTab.tsx`, garantir `w-full` no contêiner externo da tabela e manter `table-fixed` para o header sticky funcionar até o fim.
 
-### 4. Listagem na aba (mesmo componente)
+## Arquivos alterados
 
-A tabela passa a exibir:
-- Versão, Dimensões, SKU, `erp_versao`, **Descrição (`name`)**, Status
-- Ação "Editar" (abre formulário do filho) e "Inativar/Reativar".
+- `supabase/functions/process-product-sync/index.ts` — persistir `erp_product_code` também em filhos (mesmo quando `isUpdate=true` por herança).
+- Nova migração — reparar filhos já sincronizados e reabrir atributos bloqueados.
+- `src/pages/Products.tsx` — badge `vN` na listagem + `col-span-2` no bloco Versões.
+- `src/components/products/ProductVersionsTab.tsx` — garantir largura total do contêiner.
 
-### 5. Migration de backfill
+## Fora do escopo
 
-Script idempotente para versões existentes:
-- Recalcular `erp_versao`, `sku`, `name` de cada filho a partir das suas próprias dimensões e dos lookups herdados.
-- Manter `ficha_tecnica` atual de cada versão (não sobrescrever).
-- Marcar `pendente_envio = true` e `origem_alteracao = 'CRM'`.
-
-### 6. Memória
-
-Atualizar `mem://features/product-structural-immutability-and-sku-architecture`:
-- Cada versão é independente: SKU, `erp_versao`, `name`, `ficha_tecnica` e atributos são por versão.
-- `parent_product_id` é apenas linhagem; pai e filhos compartilham apenas o `erp_product_code` (mesma identidade no ERP) e os lookups iniciais no momento da criação.
-
-## Fora de escopo
-
-- Mudar regra de imutabilidade de campos técnicos (continuam imutáveis após criação, por versão).
-- Alterar fluxo de sincronização ERP além de marcar `pendente_envio` no recálculo.
-- Unificar formulário (ainda é o mesmo `ProductDialog`, apenas invocado com o id do filho).
+- Mudanças no payload IMP_ITEM_VERSAO_TESTE / mapper.
+- Mudanças em RLS ou triggers de `attribute_sync_queue`.
+- Re-trigger automático de envio de atributos (será disparado pelo drain existente após o `release_blocked_attributes`).
