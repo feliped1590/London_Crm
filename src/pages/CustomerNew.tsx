@@ -36,6 +36,7 @@ export default function CustomerNew() {
   const { myActiveSalesReps, defaultSalesRepId } = useSalesReps();
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
   const { data: erpCitiesData } = useErpCities();
+  const { setores, segmentos } = useClassificacao();
   const [selectedSalesRepId, setSelectedSalesRepId] = useState<string | null>(null);
 
   // Set default sales rep when loaded
