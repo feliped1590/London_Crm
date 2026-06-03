@@ -46,16 +46,7 @@ export default function CustomerNew() {
     }
   }, [defaultSalesRepId]);
 
-  // Resolve pending city lookup once erp_cities finishes loading
-  useEffect(() => {
-    if (!pendingCityLookup) return;
-    if (erpCitiesData.all.length === 0) return;
-    const matched = matchMappedCity(erpCitiesData, pendingCityLookup.city, pendingCityLookup.uf);
-    if (matched) {
-      setCompanyForm(prev => (prev.city ? prev : { ...prev, city: matched.nome, state: prev.state || pendingCityLookup.uf }));
-    }
-    setPendingCityLookup(null);
-  }, [erpCitiesData, pendingCityLookup]);
+  
   
   const [step, setStep] = useState(1);
   const [customerType, setCustomerType] = useState<CustomerType>('PJ');
