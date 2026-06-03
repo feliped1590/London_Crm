@@ -733,41 +733,6 @@ export default function CustomerNew() {
                 </>
               )}
               
-              {legalEntities.length > 0 && (
-                <div className="col-span-2">
-                  <Label htmlFor="legal_entity">CNPJ Atendimento</Label>
-                  <Select 
-                    value={selectedLegalEntityId || effectiveEntityId || ''} 
-                    onValueChange={(v) => setSelectedLegalEntityId(v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o CNPJ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {legalEntities.map((le) => (
-                        <SelectItem key={le.id} value={le.id}>
-                          {le.name} — {formatCNPJ(le.cnpj)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {myActiveSalesReps.length > 0 && (
-                <div className="col-span-2">
-                  <Label>Vendedor Comercial</Label>
-                  <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o vendedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {myActiveSalesReps.map(rep => (
-                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <div>
                 <Label htmlFor="phone">Telefone *</Label>
                 <Input
@@ -837,6 +802,42 @@ export default function CustomerNew() {
                 }
                 required
               />
+
+              {legalEntities.length > 0 && (
+                <div className="col-span-2">
+                  <Label htmlFor="legal_entity">CNPJ Atendimento</Label>
+                  <Select
+                    value={selectedLegalEntityId || effectiveEntityId || ''}
+                    onValueChange={(v) => setSelectedLegalEntityId(v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o CNPJ" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {legalEntities.map((le) => (
+                        <SelectItem key={le.id} value={le.id}>
+                          {le.name} — {formatCNPJ(le.cnpj)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {myActiveSalesReps.length > 0 && (
+                <div className="col-span-2">
+                  <Label>Vendedor Comercial</Label>
+                  <Select value={selectedSalesRepId || ''} onValueChange={v => setSelectedSalesRepId(v || null)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {myActiveSalesReps.map(rep => (
+                        <SelectItem key={rep.id} value={rep.id}>{rep.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end">
