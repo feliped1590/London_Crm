@@ -607,7 +607,11 @@ export default function CustomerNew() {
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       <AlertTitle className="text-green-700">Dados encontrados</AlertTitle>
                       <AlertDescription className="text-green-600">
-                        Dados obtidos da Receita Federal via BrasilAPI. Confira antes de salvar.
+                        {cnpjLookupSource === 'cnpjws' && 'Dados obtidos da Receita Federal via CNPJ.ws.'}
+                        {cnpjLookupSource === 'brasilapi' && 'Dados obtidos da Receita Federal via BrasilAPI.'}
+                        {cnpjLookupSource === 'cache' && 'Dados obtidos do cache (consulta recente).'}
+                        {!cnpjLookupSource && 'Dados obtidos da Receita Federal.'}
+                        {cnpjLookupFallback && ' (fallback aplicado)'} Confira antes de salvar.
                       </AlertDescription>
                     </Alert>
                   )}
