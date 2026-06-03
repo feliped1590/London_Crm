@@ -57,6 +57,45 @@ serve(async (req) => {
       console.error('Error fetching items:', itemsError);
     }
 
+    // Buscar artes (anexos de imagem) dos produtos presentes nos itens
+    const productIds = Array.from(
+      new Set((items || []).map((it: any) => it.product_id).filter(Boolean))
+    );
+    const attachmentsByProductId = new Map<string, Array<{ url: string; name: string }>>();
+    if (productIds.length > 0) {
+      const { data: atts, error: attsError } = await supabase
+        .from('file_attachments')
+        .select('id, entity_id, bucket, object_path, original_name, is_public, mime_type')
+        .eq('entity_type', 'product')
+        .in('entity_id', productIds)
+        .ilike('mime_type', 'image/%')
+        .order('created_at', { ascending: true });
+
+      if (attsError) {
+        console.error('Error fetching product attachments:', attsError);
+      }
+
+      for (const a of atts || []) {
+        let url: string | null = null;
+        if (a.is_public) {
+          const { data } = supabase.storage.from(a.bucket).getPublicUrl(a.object_path);
+          url = data?.publicUrl || null;
+        } else {
+          const { data, error: signErr } = await supabase.storage
+            .from(a.bucket)
+            .createSignedUrl(a.object_path, 3600);
+          if (signErr) {
+            console.error('Sign URL error:', signErr, a.bucket, a.object_path);
+          }
+          url = data?.signedUrl || null;
+        }
+        if (!url) continue;
+        const arr = attachmentsByProductId.get(a.entity_id) || [];
+        arr.push({ url, name: a.original_name });
+        attachmentsByProductId.set(a.entity_id, arr);
+      }
+    }
+
     // Fetch carrier if present
     let carrierData: any = null;
     if (proposal.carrier_id) {
@@ -152,6 +191,40 @@ serve(async (req) => {
         <td class="right bold">${formatCurrency(item.totalItem)}</td>
       </tr>
     `}).join('');
+
+    const escapeHtml = (s: string) =>
+      String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const artesBlocks = processedItems
+      .map((item: any, index: number) => {
+        const arts = item.product_id ? attachmentsByProductId.get(item.product_id) || [] : [];
+        if (arts.length === 0) return '';
+        const figures = arts
+          .map(
+            (a) => `
+            <figure class="arte-fig">
+              <img src="${a.url}" alt="${escapeHtml(a.name)}" />
+              <figcaption>${escapeHtml(a.name)}</figcaption>
+            </figure>`
+          )
+          .join('');
+        const sku = item.product?.sku || '-';
+        const desc = escapeHtml(item.description || item.product?.name || '');
+        return `
+          <div class="arte-item">
+            <h3>Item ${index + 1} — ${escapeHtml(sku)} — ${desc}</h3>
+            <div class="arte-grid">${figures}</div>
+          </div>`;
+      })
+      .join('');
+
+    const artesHtml = artesBlocks
+      ? `
+        <section class="artes">
+          <h2 class="artes-title">Artes dos Produtos</h2>
+          ${artesBlocks}
+        </section>`
+      : '';
 
     const html = `
       <!DOCTYPE html>
@@ -253,6 +326,17 @@ serve(async (req) => {
           .conditions-box { border: 1px solid #e2e8f0; border-radius: 4px; padding: 14px; }
           .conditions-box p { margin: 4px 0; font-size: 11px; }
           .conditions-box strong { color: #2d3748; }
+
+          /* ===== ARTES ===== */
+          .artes { margin-top: 25px; page-break-before: always; }
+          .artes-title { font-size: 13px; font-weight: 700; color: #2d3748; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; border-bottom: 2px solid #1a1a2e; padding-bottom: 6px; }
+          .arte-item { page-break-inside: avoid; margin-bottom: 22px; }
+          .arte-item h3 { font-size: 11px; font-weight: 700; color: #2d3748; margin-bottom: 8px; }
+          .arte-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+          .arte-fig { border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; background: #fff; text-align: center; }
+          .arte-fig img { max-width: 320px; max-height: 320px; width: auto; height: auto; object-fit: contain; display: block; }
+          .arte-fig figcaption { font-size: 9px; color: #4a5568; margin-top: 4px; word-break: break-all; max-width: 320px; }
+          
           
           /* ===== ACCEPTANCE ===== */
           .acceptance { margin-top: 25px; border: 1px solid #e2e8f0; border-radius: 4px; padding: 20px; }
@@ -408,6 +492,10 @@ serve(async (req) => {
             </div>
           </div>
         </div>
+
+        ${artesHtml}
+
+
 
         <!-- CONDIÇÕES COMERCIAIS -->
         ${(proposal.payment_terms || proposal.delivery_terms || proposal.observations) ? `
