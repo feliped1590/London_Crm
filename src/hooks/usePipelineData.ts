@@ -225,19 +225,17 @@ export function usePipelineData(selectedPipelineId: string | null) {
     queryKey: ['delegated_deal_sales_rep_ids', user?.id, uniqueDealSalesRepIds],
     queryFn: async () => {
       if (!user?.id || uniqueDealSalesRepIds.length === 0) return [];
-      const entries = await Promise.all(uniqueDealSalesRepIds.map(async (salesRepId) => {
-        const checks = await Promise.all(['deal', 'pipeline'].map(async (entityType) => {
-          const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
-            p_user_id: user.id,
-            p_owner_id: salesRepId,
-            p_entity_type: entityType,
-          });
-          if (error) throw error;
-          return !!data;
-        }));
-        return checks.some(Boolean) ? salesRepId : null;
-      }));
-      return entries.filter(Boolean) as string[];
+      const { data, error } = await (supabase as any).rpc('can_manage_portfolio_batch', {
+        p_user_id: user.id,
+        p_owner_ids: uniqueDealSalesRepIds,
+        p_entity_types: ['deal', 'pipeline'],
+      });
+      if (error) throw error;
+      const allowed = new Set<string>();
+      for (const row of (data ?? []) as Array<{ owner_id: string; allowed: boolean }>) {
+        if (row.allowed) allowed.add(row.owner_id);
+      }
+      return Array.from(allowed);
     },
     enabled: !!user?.id && uniqueDealSalesRepIds.length > 0,
     staleTime: 5 * 60 * 1000,

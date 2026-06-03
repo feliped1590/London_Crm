@@ -181,16 +181,13 @@ export function usePortfolioProtection(companyId: string | undefined) {
     queryKey: ['portfolio_protection_delegation', user?.id, companySalesRepId],
     queryFn: async () => {
       if (!user?.id || !companySalesRepId) return false;
-      const checks = await Promise.all(['company', 'contact', 'deal', 'order', 'pipeline'].map(async (entityType) => {
-        const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
-          p_user_id: user.id,
-          p_owner_id: companySalesRepId,
-          p_entity_type: entityType,
-        });
-        if (error) throw error;
-        return !!data;
-      }));
-      return checks.some(Boolean);
+      const { data, error } = await (supabase as any).rpc('can_manage_portfolio_batch', {
+        p_user_id: user.id,
+        p_owner_ids: [companySalesRepId],
+        p_entity_types: ['company', 'contact', 'deal', 'order', 'pipeline'],
+      });
+      if (error) throw error;
+      return ((data ?? []) as Array<{ allowed: boolean }>).some((r) => r.allowed);
     },
     enabled: !!user?.id && !!companySalesRepId,
     staleTime: 5 * 60 * 1000,

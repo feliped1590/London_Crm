@@ -54,25 +54,33 @@ export function useEffectiveCustomerAccess(
         } satisfies DelegationPermissions;
       }
 
-      const entityMap = [
-        ['company', 'can_manage_companies'],
-        ['contact', 'can_manage_contacts'],
-        ['deal', 'can_manage_deals'],
-        ['order', 'can_manage_orders'],
-        ['pipeline', 'can_manage_pipeline'],
-      ] as const;
+      const entityMap: Record<string, keyof DelegationPermissions> = {
+        company: 'can_manage_companies',
+        contact: 'can_manage_contacts',
+        deal: 'can_manage_deals',
+        order: 'can_manage_orders',
+        pipeline: 'can_manage_pipeline',
+      };
 
-      const entries = await Promise.all(entityMap.map(async ([entityType, key]) => {
-        const { data, error } = await (supabase as any).rpc('can_manage_portfolio', {
-          p_user_id: user.id,
-          p_owner_id: salesRepId,
-          p_entity_type: entityType,
-        });
-        if (error) throw error;
-        return [key, !!data] as const;
-      }));
+      const { data, error } = await (supabase as any).rpc('can_manage_portfolio_batch', {
+        p_user_id: user.id,
+        p_owner_ids: [salesRepId],
+        p_entity_types: Object.keys(entityMap),
+      });
+      if (error) throw error;
 
-      return Object.fromEntries(entries) as unknown as DelegationPermissions;
+      const result: DelegationPermissions = {
+        can_manage_companies: false,
+        can_manage_contacts: false,
+        can_manage_deals: false,
+        can_manage_orders: false,
+        can_manage_pipeline: false,
+      };
+      for (const row of (data ?? []) as Array<{ entity_type: string; allowed: boolean }>) {
+        const key = entityMap[row.entity_type];
+        if (key) result[key] = !!row.allowed;
+      }
+      return result;
     },
     enabled: !!user?.id && !!salesRepId,
     staleTime: 5 * 60 * 1000,
