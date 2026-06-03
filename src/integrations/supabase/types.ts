@@ -9883,6 +9883,13 @@ export type Database = {
         }
         Returns: Json
       }
+      dashboard_top_products: {
+        Args: { p_limit?: number }
+        Returns: {
+          name: string
+          total_quantity: number
+        }[]
+      }
       enqueue_bulk_company_sync: { Args: never; Returns: Json }
       extract_attribute_value: {
         Args: {
