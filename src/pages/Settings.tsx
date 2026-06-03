@@ -1231,6 +1231,13 @@ export default function Settings() {
           </TabsContent>
         )}
 
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="classificacao" className="mt-6 space-y-6">
+            <ClassificacaoManager />
+          </TabsContent>
+        )}
+
+
 
 
         {isDeveloper && (
