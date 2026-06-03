@@ -2007,7 +2007,7 @@ export default function Products() {
                     </div>
 
                     {editingProduct && (
-                      <div className="pt-4 border-t mt-4 -mx-6 px-6">
+                      <div className="col-span-2 pt-4 border-t mt-4">
                         <div className="flex items-center gap-2 mb-3">
                           <Layers className="h-4 w-4 text-muted-foreground" />
                           <h3 className="text-sm font-semibold">Versões</h3>
