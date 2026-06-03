@@ -85,14 +85,21 @@ export function useSalesGoals(userId?: string) {
         } as GoalProgress;
       }
 
-      // Fetch won deals within the goal period
+      // Fetch won deals within the goal period.
+      // Fallback to updated_at when closed_at is NULL (legacy deals or paths that
+      // bypassed the closed_at trigger).
+      const start = currentGoal.period_start;
+      const end = currentGoal.period_end;
       const { data: deals, error } = await supabase
         .from('deals')
-        .select('id, value, closed_at')
+        .select('id, value, closed_at, updated_at')
         .eq('owner_id', targetUserId)
         .eq('stage', 'fechado_ganho')
-        .gte('closed_at', currentGoal.period_start)
-        .lte('closed_at', currentGoal.period_end);
+        .or(
+          `and(closed_at.gte.${start},closed_at.lte.${end}),` +
+          `and(closed_at.is.null,updated_at.gte.${start},updated_at.lte.${end})`
+        );
+
 
       if (error) throw error;
 
