@@ -482,6 +482,10 @@ serve(async (req) => {
           </div>
         </div>
 
+        ${artesHtml}
+
+
+
         <!-- CONDIÇÕES COMERCIAIS -->
         ${(proposal.payment_terms || proposal.delivery_terms || proposal.observations) ? `
         <div class="section">
