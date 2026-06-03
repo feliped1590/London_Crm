@@ -54,7 +54,7 @@ const SEGMENTO_KEYWORDS: Array<{ kw: RegExp; segmento: string }> = [
   { kw: /\bsoftware|tecnologia|informatica|sistemas\b/, segmento: 'Tecnologia' },
   { kw: /\brepresenta\b/, segmento: 'Representação' },
   { kw: /\batacad\b/, segmento: 'Atacado' },
-  { kw: /\bvarejo|loja\b/, segmento: 'Varejo' },
+  { kw: /\bvarej|\bloja\b/, segmento: 'Varejo' },
   { kw: /\bbebid\b/, segmento: 'Alimentos e Bebidas' },
   { kw: /\baliment\b/, segmento: 'Alimentos' },
   { kw: /\bmanufatura\b/, segmento: 'Manufatura' },
