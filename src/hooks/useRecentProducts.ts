@@ -40,7 +40,7 @@ export function useRecentProducts(_legalEntityIdOverride?: string | null) {
       if (recentIds.length === 0) return [];
       const { data, error } = await supabase
         .from('products')
-        .select('id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg')
+        .select('id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg, unit_measure, ficha_tecnica')
         .in('id', recentIds);
       if (error) throw error;
       const map = new Map((data ?? []).map(p => [p.id, p]));

@@ -275,6 +275,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             aliquota_ipi,
             fator_kg,
             unit_measure,
+            ficha_tecnica,
             active
           )
         `)
