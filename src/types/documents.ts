@@ -16,6 +16,7 @@ export interface ProductLookup {
   aliquota_ipi?: number | null;
   fator_kg?: number | null;
   unit_measure?: string | null;
+  ficha_tecnica?: any | null;
 }
 
 /**
