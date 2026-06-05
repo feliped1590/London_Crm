@@ -4,7 +4,7 @@ import type { ProductLookup } from '@/types/documents';
 import { useEffect } from 'react';
 import { tokenizeSearchTerm, escapePostgrestOrToken } from '@/utils/search/normalizeSearchTerm';
 
-const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg, unit_measure';
+const PRODUCT_SELECT_COLUMNS = 'id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg, unit_measure, ficha_tecnica';
 
 export interface ProductSearchFilters {
   text?: string;
