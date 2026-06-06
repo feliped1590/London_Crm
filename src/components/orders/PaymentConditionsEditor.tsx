@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { Plus, Trash2, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Wand2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { useResolvePaymentTermsRule } from '@/hooks/useCommercialGovernance';
 
 export interface PaymentConditionDraft {
   id?: string;
@@ -26,7 +27,10 @@ interface Props {
   onChange: (next: PaymentConditionDraft[]) => void;
   totalAmount: number;
   disabled?: boolean;
+  companyId?: string | null;
+  salesRepId?: string | null;
 }
+
 
 const NEW_ROW = (parcela: number): PaymentConditionDraft => ({
   parcela,
