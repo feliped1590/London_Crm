@@ -60,6 +60,17 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
   const isLocked = false;
   const isEditable = canEdit;
 
+  const { data: commissionRule } = useResolveCommissionRule({
+    productId: item?.product_id ?? null,
+    companyId: companyId ?? null,
+    salesRepId: salesRepId ?? null,
+    enabled: open,
+  });
+  const maxPct = commissionRule?.max_pct != null ? Number(commissionRule.max_pct) : null;
+  const defaultPct = commissionRule?.default_pct != null ? Number(commissionRule.default_pct) : null;
+  const commissionExceeds = maxPct != null && (draft?.commission_pct ?? 0) > maxPct + 0.0001;
+
+
   const updateDraftField = (field: keyof OrderItemDraft, value: any) => {
     if (!isEditable) return;
     setDraft(prev => {
