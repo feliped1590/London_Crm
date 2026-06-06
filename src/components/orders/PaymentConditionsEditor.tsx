@@ -62,6 +62,34 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
     },
   });
 
+  // Governance: resolve the payment terms rule and corresponding templates
+  const { data: paymentRule } = useResolvePaymentTermsRule({
+    companyId: companyId ?? null,
+    salesRepId: salesRepId ?? null,
+    amount: totalAmount,
+    enabled: totalAmount > 0,
+  });
+  const { data: governanceTemplates = [] } = useQuery({
+    queryKey: ['governance-payment-templates'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payment_terms_templates')
+        .select('id, name, rank')
+        .eq('is_active', true);
+      return (data || []) as Array<{ id: string; name: string; rank: number }>;
+    },
+  });
+  const suggestedTemplate = paymentRule?.default_template_id
+    ? governanceTemplates.find((t) => t.id === paymentRule.default_template_id)
+    : null;
+  const maxRank = paymentRule?.max_template_rank ?? null;
+  // Try to identify which template the current rows match by max parcela days
+  const currentMaxDias = useMemo(
+    () => (value.length ? Math.max(...value.map((r) => Number(r.dias) || 0)) : 0),
+    [value],
+  );
+
+
   const totalAlocado = useMemo(() => {
     const somaV = value.filter(r => r.tipo === 'V').reduce((s, r) => s + (Number(r.valor) || 0), 0);
     const saldoRestante = Math.max(0, totalAmount - somaV);
