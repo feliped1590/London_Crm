@@ -196,6 +196,10 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
   if (order.erp_redespacho != null) {
     result.redespacho = order.erp_redespacho;
   }
+  if (followupArray) {
+    // ERP exige follow-up em duas posições: raiz (followup_pedido) + dentro de cada item (followup_item)
+    result.followup_pedido = followupArray;
+  }
 
   return result;
 }
@@ -223,6 +227,7 @@ export function buildOrderPayload(order: ProjedataOrder): string {
 
   if (order.transportador != null) innerJson.transportador = order.transportador;
   if (order.redespacho != null) innerJson.redespacho = order.redespacho;
+  if (order.followup_pedido) innerJson.followup_pedido = order.followup_pedido;
 
   innerJson.itens = order.itens;
   innerJson.pagto = order.pagto;
