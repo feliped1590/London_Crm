@@ -75,6 +75,12 @@ type LinkedCompanyProduct = ProductLookup & {
 
 const ORDER_TYPE_OPTIONS: OrderType[] = ['Novo/Alteração', 'Repeticao', 'Pronto Entrega'];
 
+const SALE_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'venda_tributada', label: 'Venda Tributada' },
+  { value: 'bonificacao', label: 'Bonificação' },
+  { value: 'remessa_amostra', label: 'Remessa de Amostra' },
+];
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -136,6 +142,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     paymentMethod: string; paymentTerms: string; dealId: string;
     carrierId: string; freightType: string; deliverySameAsCompany: boolean;
     deliveryFields: typeof EMPTY_DELIVERY_FIELDS;
+    saleType: string; redespachoCarrierId: string;
   }
   const [originalSnapshot, setOriginalSnapshot] = useState<OrderSnapshot | null>(null);
 
@@ -144,6 +151,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [freightType, setFreightType] = useState('');
   const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
   const [deliveryFields, setDeliveryFields] = useState(EMPTY_DELIVERY_FIELDS);
+  const [redespachoCarrierId, setRedespachoCarrierId] = useState('');
+
+  // Tipo de Venda (header sovereign — propagado a todos os itens)
+  const [saleType, setSaleType] = useState<string>('venda_tributada');
+
+  // Follow-up modal (somente em criação manual)
+  const [followupOpen, setFollowupOpen] = useState(false);
+  const [followupText, setFollowupText] = useState('');
+  const [carrierSearchOrder, setCarrierSearchOrder] = useState('');
 
   // Shared hooks
   const {
@@ -175,6 +191,37 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       return (data || []) as Array<{ crm_payment_method: string; erp_payment_description: string }>;
     },
   });
+
+  const { data: carriersList = [] } = useQuery({
+    queryKey: ['carriers-order-dialog', carrierSearchOrder],
+    queryFn: async () => {
+      let q = supabase.from('carriers').select('id, name, trade_name, erp_code').eq('active', true).order('name').limit(50);
+      if (carrierSearchOrder) q = q.ilike('name', `%${carrierSearchOrder}%`);
+      const { data } = await q;
+      return (data || []) as Array<{ id: string; name: string; trade_name: string | null; erp_code: number | null }>;
+    },
+  });
+
+  const { data: selectedCarriers = [] } = useQuery({
+    queryKey: ['carriers-order-dialog-selected', carrierId, redespachoCarrierId],
+    queryFn: async () => {
+      const ids = [carrierId, redespachoCarrierId].filter(Boolean) as string[];
+      if (ids.length === 0) return [];
+      const { data } = await supabase.from('carriers').select('id, name, trade_name, erp_code').in('id', ids);
+      return (data || []) as Array<{ id: string; name: string; trade_name: string | null; erp_code: number | null }>;
+    },
+    enabled: !!(carrierId || redespachoCarrierId),
+  });
+
+  const carrierOptionsOrder = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; trade_name: string | null; erp_code: number | null }>();
+    [...carriersList, ...selectedCarriers].forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).map(c => ({
+      value: c.id,
+      label: (c.trade_name ? `${c.trade_name} (${c.name})` : c.name) + (c.erp_code != null ? ` — ERP ${c.erp_code}` : ' — sem ERP'),
+    }));
+  }, [carriersList, selectedCarriers]);
+
 
   const { data: companiesRaw } = useQuery({
     queryKey: ['companies-search-orders', orderCompanySearch],
@@ -405,7 +452,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: legacyMethod, payment_terms: legacyTerms,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
 
@@ -436,6 +485,30 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (paymentConditions.length > 0) {
         await persistPaymentConditions('order', newOrder.id, paymentConditions);
       }
+
+      // Persiste Follow-up para Faturamento (entrado via modal antes do submit)
+      const followupTrim = (followupText || '').trim();
+      if (followupTrim) {
+        let erpUserCode: number | null = null;
+        if (user?.id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('erp_user_code')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          erpUserCode = profile?.erp_user_code ? Number(profile.erp_user_code) : null;
+        }
+        await (supabase as any).from('order_followups').insert({
+          order_id: newOrder.id,
+          tenant_id: (newOrder as any).tenant_id ?? null,
+          sequencia: 1,
+          tipo: 1,
+          texto: followupTrim,
+          created_by: user?.id || null,
+          erp_user_code: erpUserCode,
+        });
+      }
+
 
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id, field_name: 'created', field_label: 'Pedido criado',
@@ -520,7 +593,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: legacyMethod, payment_terms: legacyTerms,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
 
@@ -685,7 +760,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null,
         payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
 
@@ -762,7 +839,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     freightType: freightType || '',
     deliverySameAsCompany,
     deliveryFields,
-  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields]);
+    saleType: saleType || 'venda_tributada',
+    redespachoCarrierId: redespachoCarrierId || '',
+  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields, saleType, redespachoCarrierId]);
 
   const itemsChanged = useCallback((): boolean => {
     if (items.length !== originalItems.length) return true;
@@ -826,7 +905,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setDeliverySameAsCompany(logistics.deliverySameAsCompany);
       setDeliveryFields(logistics.deliveryFields);
       setDealId((order as any).deal_id || '');
+      setSaleType((order as any).sale_type || 'venda_tributada');
+      setRedespachoCarrierId((order as any).redespacho_carrier_id || '');
     } else if (open && !order) {
+      setSaleType('venda_tributada');
+      setRedespachoCarrierId('');
       setLegalEntityId(activeLegalEntityId || '');
       setDealId('');
       if (preSelectedCompanyId) {
@@ -877,6 +960,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       paymentMethod: (order as any).payment_method || '',
       paymentTerms: (order as any).payment_terms || '',
       dealId: (order as any).deal_id || '',
+      saleType: (order as any).sale_type || 'venda_tributada',
+      redespachoCarrierId: (order as any).redespacho_carrier_id || '',
       ...extractLogisticsFromRecord(order),
     });
   }, [open, order, existingOrderItems, activeLegalEntityId]);
@@ -887,6 +972,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setItems([]); setOriginalItems([]); setSelectedProductId('');
       setLegalEntityId(''); setOrderType('Novo/Alteração');
       setCarrierId(''); setFreightType('');
+      setRedespachoCarrierId(''); setSaleType('venda_tributada');
+      setFollowupOpen(false); setFollowupText('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
       setPaymentConditions([]); setOriginalPaymentConditions([]);
@@ -1037,12 +1124,22 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   // Pode desbloquear: admin OU (acesso total ao módulo Pedidos + cliente da carteira/delegado)
   const canUnlock = isOrderLocked && hasOrdersFullAccess && (isAdmin || !isPortfolioBlocked);
 
+  // Follow-up é persistido dentro da própria mutation (antes da fila de sync).
+  const performCreate = useCallback(async () => {
+    await createOrderMutation.mutateAsync();
+  }, [createOrderMutation]);
+
   const handleSubmit = () => {
     // Check portfolio protection before submitting
     if (!checkAccess()) return;
     if (!priceValidation.validateBeforeSubmit()) return;
-    if (isEditMode) updateOrderMutation.mutate();
-    else createOrderMutation.mutate();
+    if (isEditMode) {
+      updateOrderMutation.mutate();
+    } else {
+      // Em criação manual, abre modal de Follow-up para Faturamento
+      setFollowupText('');
+      setFollowupOpen(true);
+    }
   };
 
   const isPending = createOrderMutation.isPending || updateOrderMutation.isPending;
@@ -1306,21 +1403,73 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
 
-      <div className="space-y-2">
-        <Label>Tipo de Frete</Label>
-        <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
-          <SelectTrigger className="max-w-md">
-            <SelectValue placeholder="Selecione o tipo de frete" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
-            <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
-            <SelectItem value="REDESPACHO">Redespacho</SelectItem>
-            <SelectItem value="PCIF">PCIF — Próprio CIF</SelectItem>
-            <SelectItem value="PFOB">PFOB — Próprio FOB</SelectItem>
-            <SelectItem value="SEM">Sem Frete</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>
+            Tipo de Venda <span className="text-destructive">*</span>
+          </Label>
+          <Select value={saleType} onValueChange={setSaleType} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo de venda" />
+            </SelectTrigger>
+            <SelectContent>
+              {SALE_TYPE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Aplica-se a todos os itens do pedido.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tipo de Frete</Label>
+          <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo de frete" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+              <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+              <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+              <SelectItem value="PCIF">PCIF — Próprio CIF</SelectItem>
+              <SelectItem value="PFOB">PFOB — Próprio FOB</SelectItem>
+              <SelectItem value="SEM">Sem Frete</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Transportadora</Label>
+          <SearchableSelect
+            options={[{ value: '__NONE__', label: 'Nenhuma' }, ...carrierOptionsOrder]}
+            value={carrierId || '__NONE__'}
+            onChange={(v) => setCarrierId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione uma transportadora"
+            searchPlaceholder="Buscar transportadora..."
+            onSearchChange={setCarrierSearchOrder}
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">
+            Carregada automaticamente da preferida do cliente.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Redespacho (opcional)</Label>
+          <SearchableSelect
+            options={[{ value: '__NONE__', label: 'Nenhum' }, ...carrierOptionsOrder]}
+            value={redespachoCarrierId || '__NONE__'}
+            onChange={(v) => setRedespachoCarrierId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione um redespacho"
+            searchPlaceholder="Buscar transportadora..."
+            onSearchChange={setCarrierSearchOrder}
+            disabled={!canEdit}
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -1568,6 +1717,54 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <Dialog open={followupOpen} onOpenChange={(o) => { if (!createOrderMutation.isPending) setFollowupOpen(o); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Follow-up para Faturamento</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label>
+            Descrição <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            value={followupText}
+            onChange={(e) => setFollowupText(e.target.value)}
+            placeholder="Instruções para o setor de faturamento..."
+            rows={5}
+            autoFocus
+            disabled={createOrderMutation.isPending}
+          />
+          <p className="text-xs text-muted-foreground">
+            Esta descrição será enviada ao ERP junto com o pedido.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setFollowupOpen(false)}
+            disabled={createOrderMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!followupText.trim()) {
+                toast.error('Descrição é obrigatória');
+                return;
+              }
+              try {
+                await performCreate();
+                setFollowupOpen(false);
+              } catch { /* toast no onError */ }
+            }}
+            disabled={createOrderMutation.isPending || !followupText.trim()}
+          >
+            {createOrderMutation.isPending ? 'Criando...' : 'Confirmar criação'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
