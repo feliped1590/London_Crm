@@ -69,8 +69,9 @@ import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
 
-type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at';
+type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at' | 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 type SortDirection = 'asc' | 'desc';
+type ColumnFilterKey = 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 
 type ProductHistoryEntry = {
   id: string;
