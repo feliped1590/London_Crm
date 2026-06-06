@@ -28,9 +28,12 @@ interface OrderItemDetailModalProps {
   index: number;
   onUpdate: (index: number, updatedItem: OrderItemDraft) => void;
   canEdit: boolean;
+  companyId?: string | null;
+  salesRepId?: string | null;
 }
 
-export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit }: OrderItemDetailModalProps) {
+export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit, companyId, salesRepId }: OrderItemDetailModalProps) {
+
   const [draft, setDraft] = useState<OrderItemDraft | null>(null);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [productData, setProductData] = useState<any>(null);
