@@ -4852,6 +4852,7 @@ export type Database = {
           length: number | null
           observations: string | null
           observations_pcp: string | null
+          ordem_compra: string | null
           order_id: string
           product_id: string | null
           quantity: number
@@ -4885,6 +4886,7 @@ export type Database = {
           length?: number | null
           observations?: string | null
           observations_pcp?: string | null
+          ordem_compra?: string | null
           order_id: string
           product_id?: string | null
           quantity?: number
@@ -4918,6 +4920,7 @@ export type Database = {
           length?: number | null
           observations?: string | null
           observations_pcp?: string | null
+          ordem_compra?: string | null
           order_id?: string
           product_id?: string | null
           quantity?: number
