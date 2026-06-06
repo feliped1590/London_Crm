@@ -205,8 +205,14 @@ export async function loadOrderForValidation(
     throw new Error(`Erro ao carregar itens: ${itemsError.message}`);
   }
 
-  // Mapeamento de tipos de venda
-  const distinctSaleTypes = [...new Set((items || []).map((i: any) => i.sale_type || 'venda_tributada'))];
+  // Tipo de venda do HEADER do pedido (sovereign — propagado a todos os itens)
+  const orderSaleType: string = (order as any).sale_type || 'venda_tributada';
+
+  // Mapeamento de tipos de venda — inclui header + qualquer sale_type legado nos itens
+  const distinctSaleTypes = [...new Set([
+    orderSaleType,
+    ...((items || []).map((i: any) => i.sale_type || 'venda_tributada')),
+  ])];
   const saleTypeMap = new Map<string, number>();
   if (distinctSaleTypes.length > 0) {
     const { data: saleTypeMappings } = await supabase
@@ -216,11 +222,45 @@ export async function loadOrderForValidation(
       .eq('is_active', true);
     (saleTypeMappings || []).forEach((m: any) => saleTypeMap.set(m.crm_sale_type, m.erp_sale_type_code));
   }
+  const orderTipoVendaCode = saleTypeMap.get(orderSaleType) ?? null;
+
+  // ─── Transportadora e Redespacho ────────────────────────────────────
+  const carrierIds = [order.carrier_id, order.redespacho_carrier_id].filter(Boolean);
+  const carrierErpMap = new Map<string, number>();
+  if (carrierIds.length > 0) {
+    const { data: carriersData } = await supabase
+      .from('carriers')
+      .select('id, erp_code')
+      .in('id', carrierIds);
+    (carriersData || []).forEach((c: any) => {
+      if (c.erp_code != null) carrierErpMap.set(c.id, Number(c.erp_code));
+    });
+  }
+  const carrierErpCode = order.carrier_id ? (carrierErpMap.get(order.carrier_id) ?? null) : null;
+  const redespachoErpCode = order.redespacho_carrier_id ? (carrierErpMap.get(order.redespacho_carrier_id) ?? null) : null;
+
+  // ─── Follow-up de Faturamento ───────────────────────────────────────
+  const { data: followupRow } = await supabase
+    .from('order_followups')
+    .select('texto, erp_user_code')
+    .eq('order_id', orderId)
+    .order('sequencia', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  // Se o follow-up não tem erp_user_code (registros legados), tenta usar o do criador
+  const followup = followupRow?.texto
+    ? {
+        texto: followupRow.texto as string,
+        erp_user_code: Number(followupRow.erp_user_code ?? erpUsuario),
+      }
+    : null;
 
   // pedido_terceiro: prioriza fila → orders → fallback
   const pedidoTerceiro = pedidoTerceiroFromQueue
     || order.pedido_terceiro
     || (parseInt((order.number || '').replace(/\D/g, ''), 10) || 0);
+
 
   // Monta objeto de validação
   const toValidate: OrderToValidate = {
