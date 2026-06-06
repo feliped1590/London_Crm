@@ -13,6 +13,8 @@ import { formatCurrency } from '@/lib/formatters';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
+import { useResolveCommissionRule } from '@/hooks/useCommercialGovernance';
+
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
