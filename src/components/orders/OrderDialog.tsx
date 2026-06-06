@@ -1409,21 +1409,73 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
 
-      <div className="space-y-2">
-        <Label>Tipo de Frete</Label>
-        <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
-          <SelectTrigger className="max-w-md">
-            <SelectValue placeholder="Selecione o tipo de frete" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
-            <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
-            <SelectItem value="REDESPACHO">Redespacho</SelectItem>
-            <SelectItem value="PCIF">PCIF — Próprio CIF</SelectItem>
-            <SelectItem value="PFOB">PFOB — Próprio FOB</SelectItem>
-            <SelectItem value="SEM">Sem Frete</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>
+            Tipo de Venda <span className="text-destructive">*</span>
+          </Label>
+          <Select value={saleType} onValueChange={setSaleType} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo de venda" />
+            </SelectTrigger>
+            <SelectContent>
+              {SALE_TYPE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Aplica-se a todos os itens do pedido.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tipo de Frete</Label>
+          <Select value={freightType} onValueChange={setFreightType} disabled={!canEdit}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o tipo de frete" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CIF">CIF — Frete por conta do vendedor</SelectItem>
+              <SelectItem value="FOB">FOB — Frete por conta do cliente</SelectItem>
+              <SelectItem value="REDESPACHO">Redespacho</SelectItem>
+              <SelectItem value="PCIF">PCIF — Próprio CIF</SelectItem>
+              <SelectItem value="PFOB">PFOB — Próprio FOB</SelectItem>
+              <SelectItem value="SEM">Sem Frete</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Transportadora</Label>
+          <SearchableSelect
+            options={[{ value: '__NONE__', label: 'Nenhuma' }, ...carrierOptionsOrder]}
+            value={carrierId || '__NONE__'}
+            onChange={(v) => setCarrierId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione uma transportadora"
+            searchPlaceholder="Buscar transportadora..."
+            onSearchChange={setCarrierSearchOrder}
+            disabled={!canEdit}
+          />
+          <p className="text-xs text-muted-foreground">
+            Carregada automaticamente da preferida do cliente.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Redespacho (opcional)</Label>
+          <SearchableSelect
+            options={[{ value: '__NONE__', label: 'Nenhum' }, ...carrierOptionsOrder]}
+            value={redespachoCarrierId || '__NONE__'}
+            onChange={(v) => setRedespachoCarrierId(v === '__NONE__' ? '' : (v || ''))}
+            placeholder="Selecione um redespacho"
+            searchPlaceholder="Buscar transportadora..."
+            onSearchChange={setCarrierSearchOrder}
+            disabled={!canEdit}
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
