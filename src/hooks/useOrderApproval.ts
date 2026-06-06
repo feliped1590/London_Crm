@@ -201,6 +201,31 @@ export function useOrderApproval(
 
       const newStatus = rule.next;
 
+      // Governança comercial: valida exceções pendentes antes de transicionar
+      const { data: validation, error: validationError } = await supabase.rpc(
+        'validate_order_status_transition',
+        { _order_id: orderId, _next_status: newStatus as any },
+      );
+      if (validationError) throw validationError;
+      const v = (validation as any) || {};
+      if (v.ok === false) {
+        const blocks = Array.isArray(v.blocks) ? v.blocks : [];
+        const reasons = blocks.map((b: any) => b.reason).filter(Boolean).join(' · ');
+        throw new Error(
+          reasons || 'Pedido bloqueado pela Governança Comercial. Ajuste os itens ou solicite aprovação.',
+        );
+      }
+      if (v.requires_approval && (v.open_requests ?? 0) === 0) {
+        throw new Error(
+          'Este pedido excede limites de governança. Envie uma solicitação de aprovação antes de avançar.',
+        );
+      }
+      if ((v.open_requests ?? 0) > 0) {
+        throw new Error(
+          'Existe uma solicitação de aprovação pendente para este pedido. Aguarde a revisão antes de avançar.',
+        );
+      }
+
       const { error: approvalError } = await supabase
         .from('order_approvals')
         .insert({
@@ -227,6 +252,7 @@ export function useOrderApproval(
 
       return { from: orderStatus, to: newStatus };
     },
+
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_approvals', orderId] });
