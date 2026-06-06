@@ -975,6 +975,7 @@ export type Database = {
           cnpj: string | null
           created_at: string | null
           email: string | null
+          erp_code: number | null
           id: string
           ie: string | null
           name: string
@@ -994,6 +995,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          erp_code?: number | null
           id?: string
           ie?: string | null
           name: string
@@ -1013,6 +1015,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string | null
           email?: string | null
+          erp_code?: number | null
           id?: string
           ie?: string | null
           name?: string
@@ -4712,6 +4715,53 @@ export type Database = {
           },
         ]
       }
+      order_followups: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          erp_user_code: number | null
+          id: string
+          order_id: string
+          sequencia: number
+          tenant_id: string
+          texto: string
+          tipo: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          erp_user_code?: number | null
+          id?: string
+          order_id: string
+          sequencia?: number
+          tenant_id: string
+          texto: string
+          tipo?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          erp_user_code?: number | null
+          id?: string
+          order_id?: string
+          sequencia?: number
+          tenant_id?: string
+          texto?: string
+          tipo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_followups_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_item_erp_data: {
         Row: {
           account_code: string | null
@@ -5356,6 +5406,8 @@ export type Database = {
           payment_terms: string | null
           pedido_terceiro: number | null
           proposal_id: string | null
+          redespacho_carrier_id: string | null
+          sale_type: string
           sales_rep_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal_products: number
@@ -5416,6 +5468,8 @@ export type Database = {
           payment_terms?: string | null
           pedido_terceiro?: number | null
           proposal_id?: string | null
+          redespacho_carrier_id?: string | null
+          sale_type?: string
           sales_rep_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
@@ -5476,6 +5530,8 @@ export type Database = {
           payment_terms?: string | null
           pedido_terceiro?: number | null
           proposal_id?: string | null
+          redespacho_carrier_id?: string | null
+          sale_type?: string
           sales_rep_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal_products?: number
@@ -5549,6 +5605,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_redespacho_carrier_id_fkey"
+            columns: ["redespacho_carrier_id"]
+            isOneToOne: false
+            referencedRelation: "carriers"
             referencedColumns: ["id"]
           },
           {
