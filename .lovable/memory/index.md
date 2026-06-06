@@ -10,6 +10,7 @@ Bidirectional sync loops blocked by `origem_alteracao` (CRM/ERP/SYNC).
 Operational pipelines use `stage`. Commercial rules apply only to 'sales' pipelines.
 1 session per user. Login replaces active session.
 Produtos têm visibilidade global por tenant (igual a clientes); `legal_entity_id` é apenas vínculo p/ ERP.
+Todo texto livre (nomes, descrições, endereços, observações) é armazenado e exibido em MAIÚSCULAS. `<Input>`/`<Textarea>` forçam uppercase automaticamente (exceto `type=email|url|password|tel|number|date|...` ou `preserveCase`). Trigger `enforce_uppercase_text` garante no banco. E-mails, URLs, telefones, documentos e senhas preservam o case.
 Versões de produto: v1=pai (parent_product_id NULL), v2+=filhos. ERP recebe `codigo=pai.erp_product_code` e `versao=String(versao_numero)`. `erp_versao_codigo` é o identificador; `erp_versao` é só descritivo dimensional.
 
 ## Memories
