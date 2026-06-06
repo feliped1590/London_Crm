@@ -1124,40 +1124,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   // Pode desbloquear: admin OU (acesso total ao módulo Pedidos + cliente da carteira/delegado)
   const canUnlock = isOrderLocked && hasOrdersFullAccess && (isAdmin || !isPortfolioBlocked);
 
-  // Persist follow-up after order is created (manual flow only)
-  const persistFollowup = useCallback(async (orderId: string, tenantId: string | null) => {
-    const text = (followupText || '').trim();
-    if (!text) return;
-    try {
-      let erpUserCode: number | null = null;
-      if (user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('erp_user_code')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        erpUserCode = profile?.erp_user_code ? Number(profile.erp_user_code) : null;
-      }
-      await (supabase as any).from('order_followups').insert({
-        order_id: orderId,
-        tenant_id: tenantId,
-        sequencia: 1,
-        tipo: 1,
-        texto: text,
-        created_by: user?.id || null,
-        erp_user_code: erpUserCode,
-      });
-    } catch (e) {
-      console.warn('Falha ao persistir follow-up', e);
-    }
-  }, [followupText, user?.id]);
-
+  // Follow-up é persistido dentro da própria mutation (antes da fila de sync).
   const performCreate = useCallback(async () => {
-    const created: any = await createOrderMutation.mutateAsync();
-    if (created?.id) {
-      await persistFollowup(created.id, created.tenant_id || null);
-    }
-  }, [createOrderMutation, persistFollowup]);
+    await createOrderMutation.mutateAsync();
+  }, [createOrderMutation]);
 
   const handleSubmit = () => {
     // Check portfolio protection before submitting
