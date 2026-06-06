@@ -373,10 +373,11 @@ export function useOrderGovernanceState(orderId?: string | null) {
     queryKey: ['governance', 'order_commission_snapshots', orderId],
     queryFn: async () => {
       if (!orderId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('order_item_commission_snapshot')
         .select('*')
         .eq('order_id', orderId);
+
       if (error) throw error;
       return data || [];
     },
