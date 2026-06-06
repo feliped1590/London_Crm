@@ -838,7 +838,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setDeliverySameAsCompany(logistics.deliverySameAsCompany);
       setDeliveryFields(logistics.deliveryFields);
       setDealId((order as any).deal_id || '');
+      setSaleType((order as any).sale_type || 'venda_tributada');
+      setRedespachoCarrierId((order as any).redespacho_carrier_id || '');
     } else if (open && !order) {
+      setSaleType('venda_tributada');
+      setRedespachoCarrierId('');
       setLegalEntityId(activeLegalEntityId || '');
       setDealId('');
       if (preSelectedCompanyId) {
