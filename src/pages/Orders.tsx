@@ -33,7 +33,7 @@ const ORDER_LIST_COLUMNS = `
   company:companies(id, name),
   contact:contacts(id, first_name, last_name),
   proposal:proposals(id, number),
-  carrier:carriers(id, name, trade_name),
+  carrier:carriers!orders_carrier_id_fkey(id, name, trade_name),
   deal:deals(id, name, pipeline_stage:pipeline_stages(id, name))
 `;
 
