@@ -39,6 +39,8 @@ import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
+import { CommercialGovernanceTab } from '@/components/settings/governance/CommercialGovernanceTab';
+import { Scale } from 'lucide-react';
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
