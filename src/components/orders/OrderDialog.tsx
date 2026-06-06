@@ -136,6 +136,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     paymentMethod: string; paymentTerms: string; dealId: string;
     carrierId: string; freightType: string; deliverySameAsCompany: boolean;
     deliveryFields: typeof EMPTY_DELIVERY_FIELDS;
+    saleType: string; redespachoCarrierId: string;
   }
   const [originalSnapshot, setOriginalSnapshot] = useState<OrderSnapshot | null>(null);
 
@@ -144,6 +145,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [freightType, setFreightType] = useState('');
   const [deliverySameAsCompany, setDeliverySameAsCompany] = useState(true);
   const [deliveryFields, setDeliveryFields] = useState(EMPTY_DELIVERY_FIELDS);
+  const [redespachoCarrierId, setRedespachoCarrierId] = useState('');
+
+  // Tipo de Venda (header sovereign — propagado a todos os itens)
+  const [saleType, setSaleType] = useState<string>('venda_tributada');
+
+  // Follow-up modal (somente em criação manual)
+  const [followupOpen, setFollowupOpen] = useState(false);
+  const [followupText, setFollowupText] = useState('');
+  const [carrierSearchOrder, setCarrierSearchOrder] = useState('');
 
   // Shared hooks
   const {
