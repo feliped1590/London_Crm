@@ -29,8 +29,17 @@ export interface LoadedOrderContext {
   paymentConditions: Array<{ dias: number; forma_recebimento: number; parcela: number; tipo?: string; fator?: number }>;
   saleTypeMap: Map<string, number>;
   pedidoTerceiro: number;
+  // Tipo de venda do header (sovereign — propagado para todos os itens)
+  orderSaleType: string;
+  orderTipoVendaCode: number | null;
+  // Transportadora + redespacho
+  carrierErpCode: number | null;
+  redespachoErpCode: number | null;
+  // Follow-up do pedido (1 por pedido)
+  followup: { texto: string; erp_user_code: number } | null;
   toValidate: OrderToValidate;
 }
+
 
 export async function loadOrderForValidation(
   supabase: any,
