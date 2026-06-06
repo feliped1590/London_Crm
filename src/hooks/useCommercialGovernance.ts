@@ -350,12 +350,13 @@ export function useResolvePaymentTermsRule(params: {
     queryKey: ['governance', 'resolve_payment', tenantId, params.companyId, params.salesRepId, params.amount],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('resolve_payment_terms_rule', {
-        _tenant_id: tenantId!,
-        _company_id: params.companyId ?? null,
-        _sales_rep_id: params.salesRepId ?? null,
+        _tenant: tenantId!,
+        _company: params.companyId ?? null,
+        _sales_rep: params.salesRepId ?? null,
         _amount: params.amount,
-        _at: new Date().toISOString(),
+        _at: new Date().toISOString().slice(0, 10),
       });
+
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return row || null;
