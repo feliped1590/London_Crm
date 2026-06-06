@@ -39,6 +39,8 @@ import { BotsManager } from '@/components/settings/BotsManager';
 import { ActiveSessionsManager } from '@/components/settings/ActiveSessionsManager';
 import { SalesRepsManager } from '@/components/settings/SalesRepsManager';
 import { ProductivityScoreSettings } from '@/components/settings/ProductivityScoreSettings';
+import { CommercialGovernanceTab } from '@/components/settings/governance/CommercialGovernanceTab';
+import { Scale } from 'lucide-react';
 import { TransferApprovalsManager } from '@/components/settings/TransferApprovalsManager';
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
@@ -784,6 +786,12 @@ export default function Settings() {
               Classificação
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="governance" className="gap-2">
+              <Scale className="h-4 w-4" />
+              Governança Comercial
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -1234,6 +1242,12 @@ export default function Settings() {
         {(isAdmin || isDeveloper) && (
           <TabsContent value="classificacao" className="mt-6 space-y-6">
             <ClassificacaoManager />
+          </TabsContent>
+        )}
+
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="governance" className="mt-6 space-y-6">
+            <CommercialGovernanceTab />
           </TabsContent>
         )}
 
