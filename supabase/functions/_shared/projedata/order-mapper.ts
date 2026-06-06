@@ -139,18 +139,39 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     return mapped;
   });
 
+  // Pagto: sempre enviar `fator`.
+  // - tipo='V': valor em R$ da parcela.
+  // - tipo='P': percentual. Se a parcela não trouxe percentual (=0/null), rateia 100% entre as N parcelas P,
+  //            com ajuste de arredondamento na última para fechar exatamente em 100.
+  const pParcels = order.payment_conditions.filter(p => (p.tipo ?? 'P') !== 'V');
+  const nP = pParcels.length;
+  const anyPercentInformed = pParcels.some(p => Number(p.fator ?? 0) > 0);
+  let autoShare = 0;
+  if (nP > 0 && !anyPercentInformed) {
+    autoShare = Math.floor((100 / nP) * 100) / 100; // 2 casas decimais
+  }
+  let pSeen = 0;
   const pagto: ProjedataOrderPayment[] = order.payment_conditions.map(p => {
     const tipo = p.tipo ?? 'P';
-    const base: ProjedataOrderPayment = {
+    let fator: number;
+    if (tipo === 'V') {
+      fator = Number(p.fator ?? 0);
+    } else {
+      if (anyPercentInformed) {
+        fator = Number(p.fator ?? 0);
+      } else {
+        pSeen++;
+        // última parcela P recebe o ajuste de arredondamento
+        fator = (pSeen === nP) ? Number((100 - autoShare * (nP - 1)).toFixed(2)) : autoShare;
+      }
+    }
+    return {
       dias: p.dias,
       forma_recebimento: p.forma_recebimento,
       parcela: p.parcela,
       tipo,
+      fator,
     };
-    if (tipo === 'V') {
-      base.fator = p.fator ?? 0;
-    }
-    return base;
   });
 
   const result: ProjedataOrder = {
