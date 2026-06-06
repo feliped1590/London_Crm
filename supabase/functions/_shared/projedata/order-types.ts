@@ -63,6 +63,7 @@ export interface ProjedataOrder {
   frete: string;
   transportador?: number;       // código ERP da transportadora
   redespacho?: number;          // código ERP do redespacho (opcional)
+  followup_pedido?: ProjedataOrderFollowupItem[]; // follow-up no nível raiz
   itens: ProjedataOrderItem[];
   pagto: ProjedataOrderPayment[];
 }

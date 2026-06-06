@@ -195,7 +195,7 @@ export async function loadOrderForValidation(
     .from('order_items')
     .select(`
       id, quantity, unit_price, discount_percent, commission_pct, sort_order,
-      delivery_date, description, observations, observations_pcp, sale_type,
+      delivery_date, description, observations, observations_pcp, sale_type, ordem_compra,
       products!inner(id, erp_product_code, erp_versao, erp_versao_codigo, name)
     `)
     .eq('order_id', orderId)
