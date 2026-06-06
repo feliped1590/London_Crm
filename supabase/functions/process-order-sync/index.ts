@@ -299,6 +299,7 @@ Deno.serve(async (req) => {
               delivery_date: item.delivery_date || order.delivery_date,
               observations: item.observations || '',
               observations_pcp: item.observations_pcp || '',
+              ordem_compra: item.ordem_compra || '0',
             };
           }),
           payment_conditions: paymentConditions,
