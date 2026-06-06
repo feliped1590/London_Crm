@@ -1723,6 +1723,54 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <Dialog open={followupOpen} onOpenChange={(o) => { if (!createOrderMutation.isPending) setFollowupOpen(o); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Follow-up para Faturamento</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <Label>
+            Descrição <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            value={followupText}
+            onChange={(e) => setFollowupText(e.target.value)}
+            placeholder="Instruções para o setor de faturamento..."
+            rows={5}
+            autoFocus
+            disabled={createOrderMutation.isPending}
+          />
+          <p className="text-xs text-muted-foreground">
+            Esta descrição será enviada ao ERP junto com o pedido.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setFollowupOpen(false)}
+            disabled={createOrderMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!followupText.trim()) {
+                toast.error('Descrição é obrigatória');
+                return;
+              }
+              try {
+                await performCreate();
+                setFollowupOpen(false);
+              } catch { /* toast no onError */ }
+            }}
+            disabled={createOrderMutation.isPending || !followupText.trim()}
+          >
+            {createOrderMutation.isPending ? 'Criando...' : 'Confirmar criação'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
