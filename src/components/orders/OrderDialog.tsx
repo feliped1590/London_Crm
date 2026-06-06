@@ -75,6 +75,12 @@ type LinkedCompanyProduct = ProductLookup & {
 
 const ORDER_TYPE_OPTIONS: OrderType[] = ['Novo/Alteração', 'Repeticao', 'Pronto Entrega'];
 
+const SALE_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'venda_tributada', label: 'Venda Tributada' },
+  { value: 'bonificacao', label: 'Bonificação' },
+  { value: 'remessa_amostra', label: 'Remessa de Amostra' },
+];
+
 interface OrderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
