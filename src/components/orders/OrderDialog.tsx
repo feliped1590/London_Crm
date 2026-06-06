@@ -1563,7 +1563,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                   </p>
                 </div>
               )}
+              {isEditMode && order?.id && <OrderGovernanceBanner orderId={order.id} />}
               {renderOrderForm()}
+
             </TabsContent>
 
             <TabsContent value="approvals" className="space-y-4 mt-4">
