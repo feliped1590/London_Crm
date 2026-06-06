@@ -176,6 +176,37 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
           )}
         </div>
 
+        {paymentRule && (suggestedTemplate || maxRank != null) && (
+          <div
+            className={cn(
+              'flex items-start gap-2 rounded-md border px-3 py-2 text-xs',
+              maxRank != null && currentMaxDias > 0 && value.length > 0 && currentMaxDias > maxRank * 30 + 7
+                ? 'border-destructive/40 bg-destructive/5 text-destructive'
+                : 'border-muted bg-muted/30 text-muted-foreground',
+            )}
+          >
+            {maxRank != null && currentMaxDias > 0 && currentMaxDias > maxRank * 30 + 7 ? (
+              <ShieldAlert className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            ) : (
+              <ShieldCheck className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="space-y-0.5">
+              <p>
+                <strong>Governança:</strong>{' '}
+                {suggestedTemplate
+                  ? <>Template sugerido: <strong>{suggestedTemplate.name}</strong> (rank {suggestedTemplate.rank}).</>
+                  : 'Sem template sugerido para este nível.'}
+                {maxRank != null && <> Rank máximo permitido: <strong>{maxRank}</strong>.</>}
+              </p>
+              <p className="opacity-75">
+                A regra final será revalidada no servidor ao salvar. Se exceder, o pedido exigirá aprovação.
+              </p>
+            </div>
+          </div>
+        )}
+
+
+
         {shortcutOpen === 'simples' && (
           <div className="border rounded-md p-3 bg-muted/30 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
             <div>
