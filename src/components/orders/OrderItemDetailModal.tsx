@@ -255,15 +255,27 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                 />
               </div>
               <div className="space-y-2">
-                <Label>Comissão %</Label>
+                <Label className={commissionExceeds ? 'text-destructive' : ''}>
+                  Comissão %{commissionExceeds && ' ⚠️'}
+                </Label>
                 <Input
                   type="number" step={0.01}
                   value={draft.commission_pct || ''}
                   onChange={(e) => updateDraftField('commission_pct', Number(e.target.value) || 0)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+                  className={cn(
+                    !isEditable && 'bg-muted cursor-not-allowed',
+                    commissionExceeds && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
+                {commissionRule && (
+                  <p className={cn('text-[10px]', commissionExceeds ? 'text-destructive' : 'text-muted-foreground')}>
+                    Regra: padrão {defaultPct?.toFixed(2)}% · máx {maxPct?.toFixed(2)}%
+                    {commissionExceeds && ' — acima do limite, requer aprovação'}
+                  </p>
+                )}
               </div>
+
             </div>
 
             <div className="p-3 bg-muted/50 rounded-lg">
