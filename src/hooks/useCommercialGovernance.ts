@@ -309,3 +309,147 @@ export function usePendingApprovalRequests() {
 
   return { requests: list.data || [], isLoading: list.isLoading, review };
 }
+
+// ---------- Resolvers (per-order/item context) ----------
+export function useResolveCommissionRule(params: {
+  salesRepId?: string | null;
+  companyId?: string | null;
+  productId?: string | null;
+  enabled?: boolean;
+}) {
+  const { data: tenantId } = useActiveTenantId();
+  const enabled = (params.enabled ?? true) && !!tenantId && !!params.productId;
+  return useQuery({
+    queryKey: ['governance', 'resolve_commission', tenantId, params.salesRepId, params.companyId, params.productId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('resolve_commission_rule', {
+        _tenant_id: tenantId!,
+        _sales_rep_id: params.salesRepId ?? null,
+        _company_id: params.companyId ?? null,
+        _product_id: params.productId!,
+        _at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row || null;
+    },
+    enabled,
+  });
+}
+
+export function useResolvePaymentTermsRule(params: {
+  companyId?: string | null;
+  salesRepId?: string | null;
+  amount: number;
+  enabled?: boolean;
+}) {
+  const { data: tenantId } = useActiveTenantId();
+  const enabled = (params.enabled ?? true) && !!tenantId && params.amount > 0;
+  return useQuery({
+    queryKey: ['governance', 'resolve_payment', tenantId, params.companyId, params.salesRepId, params.amount],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('resolve_payment_terms_rule', {
+        _tenant_id: tenantId!,
+        _company_id: params.companyId ?? null,
+        _sales_rep_id: params.salesRepId ?? null,
+        _amount: params.amount,
+        _at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row || null;
+    },
+    enabled,
+  });
+}
+
+// ---------- Order-scoped governance state ----------
+export function useOrderGovernanceState(orderId?: string | null) {
+  const qc = useQueryClient();
+
+  const commissionSnapshots = useQuery({
+    queryKey: ['governance', 'order_commission_snapshots', orderId],
+    queryFn: async () => {
+      if (!orderId) return [];
+      const { data, error } = await supabase
+        .from('order_item_commission_snapshot')
+        .select('*')
+        .eq('order_id', orderId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orderId,
+  });
+
+  const paymentSnapshot = useQuery({
+    queryKey: ['governance', 'order_payment_snapshot', orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+      const { data, error } = await supabase
+        .from('order_payment_terms_snapshot')
+        .select('*')
+        .eq('order_id', orderId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orderId,
+  });
+
+  const requests = useQuery({
+    queryKey: ['governance', 'order_requests', orderId],
+    queryFn: async () => {
+      if (!orderId) return [];
+      const { data, error } = await supabase
+        .from('order_approval_requests')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('requested_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!orderId,
+  });
+
+  const create = useMutation({
+    mutationFn: async (args: {
+      kind: 'commission_exception' | 'payment_terms_exception';
+      justification: string;
+      requested_value?: number | null;
+      max_allowed?: number | null;
+      rule_id?: string | null;
+      order_item_id?: string | null;
+    }) => {
+      if (!orderId) throw new Error('Pedido não definido');
+      const { error } = await supabase.rpc('create_commercial_approval_request', {
+        _order_id: orderId,
+        _order_item_id: args.order_item_id ?? null,
+        _kind: args.kind,
+        _justification: args.justification,
+        _requested_value: args.requested_value ?? null,
+        _max_allowed: args.max_allowed ?? null,
+        _rule_id: args.rule_id ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['governance', 'order_requests', orderId] });
+      qc.invalidateQueries({ queryKey: QK.pending });
+      toast.success('Solicitação de aprovação enviada');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return {
+    commissionSnapshots: commissionSnapshots.data || [],
+    paymentSnapshot: paymentSnapshot.data || null,
+    requests: requests.data || [],
+    isLoading: commissionSnapshots.isLoading || paymentSnapshot.isLoading || requests.isLoading,
+    createRequest: create,
+    hasPending: (requests.data || []).some((r: any) => r.status === 'pending'),
+    hasNeedsApproval:
+      (commissionSnapshots.data || []).some((s: any) => s.needs_approval) ||
+      ((paymentSnapshot.data as any)?.needs_approval ?? false),
+  };
+}
+
