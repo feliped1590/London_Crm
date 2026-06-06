@@ -1,6 +1,6 @@
-# Governança Comercial — Plano Revisado (pré Fase 1)
+# Governança Comercial — Plano Revisado
 
-> Arquitetura aprovada conceitualmente. Ajustes solicitados aplicados abaixo. **Nenhum código nesta etapa.**
+> **Fase 1 concluída** ✅ — ADR `docs/02-decisions/0002-governanca-comercial.md` + memória `mem://features/commercial-governance` publicados. Próxima: **Fase 2 — Migrations**.
 
 ---
 
