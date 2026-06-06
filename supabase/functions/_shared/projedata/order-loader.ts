@@ -54,11 +54,13 @@ export async function loadOrderForValidation(
       total_discount, freight_type, pedido_terceiro, legal_entity_id,
       company_id, erp_rep_code, order_type, created_by,
       payment_terms, payment_method, sales_rep_id,
+      sale_type, carrier_id, redespacho_carrier_id,
       companies!inner(id, erp_code, cnpj, name, sales_rep_id),
       legal_entities(id, name, erp_company_code)
     `)
     .eq('id', orderId)
     .single();
+
 
   if (orderError || !order) {
     throw new Error(`Pedido não encontrado: ${orderId}`);
