@@ -14,6 +14,8 @@ import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 import { useResolveCommissionRule } from '@/hooks/useCommercialGovernance';
+import { cn } from '@/lib/utils';
+
 
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
