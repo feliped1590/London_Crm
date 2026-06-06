@@ -224,13 +224,14 @@ Deno.serve(async (req) => {
         const ctx = await loadOrderForValidation(supabase, queueItem.order_id, queueItem.pedido_terceiro);
         const { order, company, legalEntity, items, userName, erpUsuario, sellerName, erpVendedor,
                 crmOrderType, typeMapping, crmFreightType, freightMapping, crmPaymentMethod,
-                paymentMapping, paymentTermsStr, paymentConditions, saleTypeMap, toValidate } = ctx;
+                paymentMapping, paymentTermsStr, paymentConditions, saleTypeMap,
+                orderSaleType, orderTipoVendaCode,
+                carrierErpCode, redespachoErpCode, followup, toValidate } = ctx;
 
         // 4. Pré-validar (defesa em profundidade)
         const validation = validateOrderForSync(toValidate);
 
         if (!validation.valid) {
-          // Bloqueia sem consumir retries — usuário deve corrigir os dados
           console.warn(`[process-order-sync] Pedido ${queueItem.order_id} bloqueado por validação:`,
             validation.errors.map(e => e.field).join(', '));
 
@@ -266,7 +267,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType}→${typeMapping!.erp_flow_code}, vendedor=${sellerName} (erp:${erpVendedor}), frete=${crmFreightType}→${freightMapping!.erp_freight_code}, pagto=${crmPaymentMethod}→${paymentMapping!.erp_payment_code}, parcelas=${paymentTermsStr}`);
+        console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType}→${typeMapping!.erp_flow_code}, vendedor=${sellerName} (erp:${erpVendedor}), frete=${crmFreightType}→${freightMapping!.erp_freight_code}, pagto=${crmPaymentMethod}→${paymentMapping?.erp_payment_code ?? '?'}, parcelas=${paymentTermsStr}, sale_type=${orderSaleType}→${orderTipoVendaCode}, transp=${carrierErpCode}, redesp=${redespachoErpCode}, followup=${followup ? 'sim' : 'não'}`);
 
         // 5. Montar payload
         const crmOrder: CRMOrderForSync = {
@@ -281,9 +282,11 @@ Deno.serve(async (req) => {
           erp_fluxo_venda: typeMapping!.erp_flow_code,
           erp_usuario: erpUsuario,
           erp_vendedor: erpVendedor,
+          erp_transportador: carrierErpCode,
+          erp_redespacho: redespachoErpCode,
           items: items.map((item: any, idx: number): CRMOrderItemForSync => {
-            const itemSaleType = item.sale_type || 'venda_tributada';
-            const tipoVenda = saleTypeMap.get(itemSaleType)!;
+            // tipo_venda vem do HEADER (sovereign) — todos os itens recebem o mesmo
+            const tipoVenda = orderTipoVendaCode ?? saleTypeMap.get(item.sale_type || 'venda_tributada')!;
             return {
               seq: idx + 1,
               erp_product_code: item.products.erp_product_code,
@@ -299,7 +302,9 @@ Deno.serve(async (req) => {
             };
           }),
           payment_conditions: paymentConditions,
+          followup,
         };
+
 
         const projedataOrder = mapCRMOrderToProjedata(crmOrder);
         const payload = buildOrderPayload(projedataOrder);
