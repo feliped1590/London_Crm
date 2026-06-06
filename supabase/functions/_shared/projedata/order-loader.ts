@@ -274,6 +274,10 @@ export async function loadOrderForValidation(
     erp_fluxo_venda: typeMapping?.erp_flow_code ?? null,
     erp_vendedor: isNaN(erpVendedor) ? null : erpVendedor,
     erp_frete: freightMapping?.erp_freight_code ?? null,
+    carrier_id: order.carrier_id ?? null,
+    erp_transportador: carrierErpCode,
+    redespacho_carrier_id: order.redespacho_carrier_id ?? null,
+    erp_redespacho: redespachoErpCode,
     payment_method_mapped: allMethodsMapped && (crmPaymentMethod ? !!paymentMapping || methodCodeMap.has(crmPaymentMethod) : true),
     items: (items || []).map((i: any) => ({
       product_id: i.products?.id,
@@ -282,8 +286,9 @@ export async function loadOrderForValidation(
       product_erp_versao: i.products?.erp_versao_codigo ?? i.products?.erp_versao ?? null,
       quantity: i.quantity,
       unit_price: i.unit_price,
-      tipo_venda: saleTypeMap.get(i.sale_type || 'venda_tributada') ?? null,
-      sale_type: i.sale_type || 'venda_tributada',
+      // Tipo de venda sovereign = HEADER do pedido (todos os itens herdam)
+      tipo_venda: orderTipoVendaCode,
+      sale_type: orderSaleType,
     })),
     payment_conditions: paymentConditions,
     payment_terms_raw: paymentTermsStr,
@@ -308,6 +313,12 @@ export async function loadOrderForValidation(
     paymentConditions,
     saleTypeMap,
     pedidoTerceiro,
+    orderSaleType,
+    orderTipoVendaCode,
+    carrierErpCode,
+    redespachoErpCode,
+    followup,
     toValidate,
   };
 }
+
