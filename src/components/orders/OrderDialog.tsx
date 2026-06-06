@@ -772,7 +772,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     freightType: freightType || '',
     deliverySameAsCompany,
     deliveryFields,
-  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields]);
+    saleType: saleType || 'venda_tributada',
+    redespachoCarrierId: redespachoCarrierId || '',
+  }), [companyId, contactId, deliveryDate, observations, legalEntityId, ipiMode, orderType, paymentMethod, paymentTerms, dealId, carrierId, freightType, deliverySameAsCompany, deliveryFields, saleType, redespachoCarrierId]);
 
   const itemsChanged = useCallback((): boolean => {
     if (items.length !== originalItems.length) return true;
