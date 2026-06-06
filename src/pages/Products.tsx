@@ -433,49 +433,108 @@ export default function Products() {
     setCurrentPage(1);
   };
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead 
-      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center gap-1">
-        {children}
-        {sortField === field ? (
-          sortDirection === 'asc' ? (
-            <ArrowUp className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5 text-primary" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-        )}
-      </div>
-    </TableHead>
-  );
+  const familyIdsByFilter = (() => {
+    const term = columnFilters.family_id.trim().toLowerCase();
+    if (!term) return null;
+    return familias.items
+      .filter((f) => (f.label || '').toLowerCase().includes(term))
+      .map((f) => f.id);
+  })();
+
+  const applyCommonFilters = (q: any) => {
+    if (filterActive === 'active') q = q.eq('active', true);
+    else if (filterActive === 'inactive') q = q.eq('active', false);
+
+    if (searchTerm) {
+      for (const raw of tokenizeSearchTerm(searchTerm)) {
+        const t = escapePostgrestOrToken(raw);
+        if (t) q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
+      }
+    }
+
+    if (familyIdsByFilter) {
+      if (familyIdsByFilter.length === 0) q = q.eq('id', '00000000-0000-0000-0000-000000000000');
+      else q = q.in('family_id', familyIdsByFilter);
+    }
+    const um = columnFilters.unit_measure.trim();
+    if (um) q = q.ilike('unit_measure', `%${um}%`);
+    const ncm = columnFilters.ncm_code.trim();
+    if (ncm) q = q.ilike('ncm_code', `%${ncm}%`);
+    for (const dim of ['width', 'length', 'thickness'] as const) {
+      const raw = columnFilters[dim].trim().replace(',', '.');
+      if (raw) {
+        const n = Number(raw);
+        if (!Number.isNaN(n)) q = q.eq(dim, n);
+      }
+    }
+    return q;
+  };
+
+  const SortableHeader = ({ field, children, filterKey, filterPlaceholder, numeric }: {
+    field?: SortField;
+    children: React.ReactNode;
+    filterKey?: ColumnFilterKey;
+    filterPlaceholder?: string;
+    numeric?: boolean;
+  }) => {
+    const isSorted = field && sortField === field;
+    const filterValue = filterKey ? columnFilters[filterKey] : '';
+    const isFiltered = !!filterValue;
+    return (
+      <TableHead className="select-none">
+        <div className="flex items-center gap-1">
+          <div
+            className={field ? 'cursor-pointer hover:text-primary transition-colors flex items-center gap-1' : 'flex items-center gap-1'}
+            onClick={field ? () => handleSort(field) : undefined}
+          >
+            {children}
+            {field && (isSorted ? (
+              sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-primary" /> : <ArrowDown className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ))}
+          </div>
+          {filterKey && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className={`h-6 w-6 ${isFiltered ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                  <Filter className="h-3 w-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <div className="flex gap-1">
+                  <Input
+                    autoFocus
+                    value={filterValue}
+                    placeholder={filterPlaceholder || 'Filtrar...'}
+                    inputMode={numeric ? 'decimal' : 'text'}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setColumnFilters((prev) => ({ ...prev, [filterKey]: v }));
+                      setCurrentPage(1);
+                    }}
+                    className="h-8"
+                  />
+                  {isFiltered && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setColumnFilters((prev) => ({ ...prev, [filterKey]: '' })); setCurrentPage(1); }}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </TableHead>
+    );
+  };
 
   // Count query for total
   const { data: totalCount } = useQuery({
-    queryKey: ['products-count', activeLegalEntityId, filterTipo, filterActive, searchTerm],
+    queryKey: ['products-count', activeLegalEntityId, filterActive, searchTerm, columnFilters],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true });
-
-      if (filterTipo !== 'all') {
-        query = query.eq('tipo_id', filterTipo);
-      }
-      if (filterActive === 'active') {
-        query = query.eq('active', true);
-      } else if (filterActive === 'inactive') {
-        query = query.eq('active', false);
-      }
-      if (searchTerm) {
-        for (const raw of tokenizeSearchTerm(searchTerm)) {
-          const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
-        }
-      }
-
+      let query: any = supabase.from('products').select('id', { count: 'exact', head: true });
+      query = applyCommonFilters(query);
       const { count, error } = await query;
       if (error) throw error;
       return count || 0;
@@ -490,30 +549,15 @@ export default function Products() {
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
 
   const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', activeLegalEntityId, filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
+    queryKey: ['products', activeLegalEntityId, filterActive, searchTerm, sortField, sortDirection, safePage, columnFilters],
     queryFn: async () => {
       const orderColumn = sortField === 'tipo' ? 'tipo_id' : sortField;
-      let query = supabase
+      let query: any = supabase
         .from('products')
         .select('*')
         .order(orderColumn, { ascending: sortDirection === 'asc' })
         .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
-
-      if (filterTipo !== 'all') {
-        query = query.eq('tipo_id', filterTipo);
-      }
-      if (filterActive === 'active') {
-        query = query.eq('active', true);
-      } else if (filterActive === 'inactive') {
-        query = query.eq('active', false);
-      }
-      if (searchTerm) {
-        for (const raw of tokenizeSearchTerm(searchTerm)) {
-          const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
-        }
-      }
-
+      query = applyCommonFilters(query);
       const { data, error } = await query;
       if (error) throw error;
       return data as unknown as Product[];
@@ -522,6 +566,7 @@ export default function Products() {
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
+
 
   const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({
     queryKey: ['product-history', editingProduct?.id],
