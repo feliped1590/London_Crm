@@ -911,6 +911,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setItems([]); setOriginalItems([]); setSelectedProductId('');
       setLegalEntityId(''); setOrderType('Novo/Alteração');
       setCarrierId(''); setFreightType('');
+      setRedespachoCarrierId(''); setSaleType('venda_tributada');
+      setFollowupOpen(false); setFollowupText('');
       setDeliverySameAsCompany(true); setDeliveryFields(EMPTY_DELIVERY_FIELDS);
       setPaymentMethod(''); setPaymentTerms('');
       setPaymentConditions([]); setOriginalPaymentConditions([]);
