@@ -889,6 +889,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       paymentMethod: (order as any).payment_method || '',
       paymentTerms: (order as any).payment_terms || '',
       dealId: (order as any).deal_id || '',
+      saleType: (order as any).sale_type || 'venda_tributada',
+      redespachoCarrierId: (order as any).redespacho_carrier_id || '',
       ...extractLogisticsFromRecord(order),
     });
   }, [open, order, existingOrderItems, activeLegalEntityId]);
