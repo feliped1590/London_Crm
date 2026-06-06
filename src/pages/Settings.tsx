@@ -1245,6 +1245,12 @@ export default function Settings() {
           </TabsContent>
         )}
 
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="governance" className="mt-6 space-y-6">
+            <CommercialGovernanceTab />
+          </TabsContent>
+        )}
+
 
 
 
