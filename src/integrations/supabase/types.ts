@@ -10328,6 +10328,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_commercial_approval_request: {
+        Args: {
+          _justification: string
+          _max_allowed: Json
+          _order_id: string
+          _order_item_id: string
+          _request_type: string
+          _requested_value: Json
+          _rule_id: string
+        }
+        Returns: string
+      }
       dashboard_top_products: {
         Args: { p_limit?: number }
         Returns: {
@@ -10876,9 +10888,48 @@ export type Database = {
         Returns: number
       }
       reset_orders: { Args: never; Returns: Json }
+      resolve_commission_rule: {
+        Args: {
+          _at?: string
+          _company: string
+          _product: string
+          _sales_rep: string
+          _tenant: string
+        }
+        Returns: {
+          base: string
+          default_pct: number
+          max_pct: number
+          rule_id: string
+        }[]
+      }
+      resolve_payment_terms_rule: {
+        Args: {
+          _amount: number
+          _at?: string
+          _company: string
+          _sales_rep: string
+          _tenant: string
+        }
+        Returns: {
+          default_template_id: string
+          level: number
+          max_template_rank: number
+          rule_id: string
+        }[]
+      }
       resolve_user_for_sales_rep: {
         Args: { p_operation_context?: string; p_sales_rep_id: string }
         Returns: string
+      }
+      review_commercial_approval_request: {
+        Args: {
+          _approved_value?: Json
+          _decision: string
+          _id: string
+          _notes?: string
+        }
+        Returns: undefined
       }
       save_pipeline_with_entities: {
         Args: {
@@ -10993,6 +11044,10 @@ export type Database = {
         Returns: boolean
       }
       validate_app_session: { Args: { p_session_id: string }; Returns: Json }
+      validate_order_status_transition: {
+        Args: { _next_status: string; _order_id: string }
+        Returns: Json
+      }
       validate_stage_permission: {
         Args: {
           p_deal_id: string
