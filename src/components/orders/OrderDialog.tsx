@@ -532,7 +532,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: legacyMethod, payment_terms: legacyTerms,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).eq('id', order.id);
       if (orderError) throw orderError;
 
@@ -697,7 +699,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         total_ipi: orderTotalIpi,
         payment_method: paymentMethod || null,
         payment_terms: paymentTerms || null,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
 
