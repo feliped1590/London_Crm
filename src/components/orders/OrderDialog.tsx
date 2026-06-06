@@ -1271,7 +1271,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onChange={setPaymentConditions}
         totalAmount={orderTotal}
         disabled={!canEdit}
+        companyId={companyId || null}
+        salesRepId={(order as any)?.sales_rep_id ?? null}
       />
+
       {canEdit && (
 
         <div className="space-y-2">

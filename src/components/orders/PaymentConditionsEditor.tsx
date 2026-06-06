@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
-import { Plus, Trash2, Wand2 } from 'lucide-react';
+import { Plus, Trash2, Wand2, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 import { NumberInput } from '@/components/ui/NumberInput';
+import { useResolvePaymentTermsRule } from '@/hooks/useCommercialGovernance';
 
 export interface PaymentConditionDraft {
   id?: string;
@@ -26,7 +27,10 @@ interface Props {
   onChange: (next: PaymentConditionDraft[]) => void;
   totalAmount: number;
   disabled?: boolean;
+  companyId?: string | null;
+  salesRepId?: string | null;
 }
+
 
 const NEW_ROW = (parcela: number): PaymentConditionDraft => ({
   parcela,
@@ -37,7 +41,7 @@ const NEW_ROW = (parcela: number): PaymentConditionDraft => ({
   percentual: null,
 });
 
-export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled }: Props) {
+export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled, companyId, salesRepId }: Props) {
   const [shortcutOpen, setShortcutOpen] = useState<null | 'simples' | 'entrada'>(null);
   const [simplesDias, setSimplesDias] = useState('');
   const [simplesForma, setSimplesForma] = useState('');
@@ -57,6 +61,34 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
       return (data || []) as Array<{ crm_payment_method: string; erp_payment_description: string }>;
     },
   });
+
+  // Governance: resolve the payment terms rule and corresponding templates
+  const { data: paymentRule } = useResolvePaymentTermsRule({
+    companyId: companyId ?? null,
+    salesRepId: salesRepId ?? null,
+    amount: totalAmount,
+    enabled: totalAmount > 0,
+  });
+  const { data: governanceTemplates = [] } = useQuery({
+    queryKey: ['governance-payment-templates'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('payment_terms_templates')
+        .select('id, name, rank')
+        .eq('is_active', true);
+      return (data || []) as Array<{ id: string; name: string; rank: number }>;
+    },
+  });
+  const suggestedTemplate = paymentRule?.default_template_id
+    ? governanceTemplates.find((t) => t.id === paymentRule.default_template_id)
+    : null;
+  const maxRank = paymentRule?.max_template_rank ?? null;
+  // Try to identify which template the current rows match by max parcela days
+  const currentMaxDias = useMemo(
+    () => (value.length ? Math.max(...value.map((r) => Number(r.dias) || 0)) : 0),
+    [value],
+  );
+
 
   const totalAlocado = useMemo(() => {
     const somaV = value.filter(r => r.tipo === 'V').reduce((s, r) => s + (Number(r.valor) || 0), 0);
@@ -143,6 +175,37 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
             </div>
           )}
         </div>
+
+        {paymentRule && (suggestedTemplate || maxRank != null) && (
+          <div
+            className={cn(
+              'flex items-start gap-2 rounded-md border px-3 py-2 text-xs',
+              maxRank != null && currentMaxDias > 0 && value.length > 0 && currentMaxDias > maxRank * 30 + 7
+                ? 'border-destructive/40 bg-destructive/5 text-destructive'
+                : 'border-muted bg-muted/30 text-muted-foreground',
+            )}
+          >
+            {maxRank != null && currentMaxDias > 0 && currentMaxDias > maxRank * 30 + 7 ? (
+              <ShieldAlert className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            ) : (
+              <ShieldCheck className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="space-y-0.5">
+              <p>
+                <strong>Governança:</strong>{' '}
+                {suggestedTemplate
+                  ? <>Template sugerido: <strong>{suggestedTemplate.name}</strong> (rank {suggestedTemplate.rank}).</>
+                  : 'Sem template sugerido para este nível.'}
+                {maxRank != null && <> Rank máximo permitido: <strong>{maxRank}</strong>.</>}
+              </p>
+              <p className="opacity-75">
+                A regra final será revalidada no servidor ao salvar. Se exceder, o pedido exigirá aprovação.
+              </p>
+            </div>
+          </div>
+        )}
+
+
 
         {shortcutOpen === 'simples' && (
           <div className="border rounded-md p-3 bg-muted/30 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">

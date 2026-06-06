@@ -39,6 +39,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
   const [draft, setDraft] = useState<OrderItemDraft | null>(null);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [productData, setProductData] = useState<any>(null);
+  const [companySalesRepId, setCompanySalesRepId] = useState<string | null>(null);
 
   useEffect(() => {
     if (item && open) {
@@ -55,12 +56,30 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
     }
   }, [item, open]);
 
+  // Fallback: resolve sales_rep_id from the company when not provided by the parent
+  useEffect(() => {
+    if (!open) return;
+    if (salesRepId || !companyId) {
+      setCompanySalesRepId(null);
+      return;
+    }
+    supabase
+      .from('companies')
+      .select('sales_rep_id')
+      .eq('id', companyId)
+      .maybeSingle()
+      .then(({ data }) => setCompanySalesRepId((data as any)?.sales_rep_id ?? null));
+  }, [open, companyId, salesRepId]);
+
+  const effectiveSalesRepId = salesRepId ?? companySalesRepId;
+
   const { data: commissionRule } = useResolveCommissionRule({
     productId: item?.product_id ?? null,
     companyId: companyId ?? null,
-    salesRepId: salesRepId ?? null,
+    salesRepId: effectiveSalesRepId,
     enabled: open && !!item?.product_id,
   });
+
 
   if (!draft || !item) return null;
 
