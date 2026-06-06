@@ -1134,6 +1134,72 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          base: string
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          default_pct: number
+          economic_group_id: string | null
+          id: string
+          is_active: boolean
+          max_pct: number
+          name: string
+          priority: number
+          product_group_id: string | null
+          product_id: string | null
+          product_subgroup_id: string | null
+          sales_rep_id: string | null
+          tenant_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          base?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_pct: number
+          economic_group_id?: string | null
+          id?: string
+          is_active?: boolean
+          max_pct: number
+          name: string
+          priority?: number
+          product_group_id?: string | null
+          product_id?: string | null
+          product_subgroup_id?: string | null
+          sales_rep_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          base?: string
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_pct?: number
+          economic_group_id?: string | null
+          id?: string
+          is_active?: boolean
+          max_pct?: number
+          name?: string
+          priority?: number
+          product_group_id?: string | null
+          product_id?: string | null
+          product_subgroup_id?: string | null
+          sales_rep_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active: boolean | null
@@ -4510,6 +4576,69 @@ export type Database = {
           },
         ]
       }
+      order_approval_requests: {
+        Row: {
+          approved_value: Json | null
+          created_at: string
+          id: string
+          justification: string
+          max_allowed: Json
+          order_id: string
+          order_item_id: string | null
+          request_type: string
+          requested_at: string
+          requested_by: string
+          requested_value: Json
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_value?: Json | null
+          created_at?: string
+          id?: string
+          justification: string
+          max_allowed: Json
+          order_id: string
+          order_item_id?: string | null
+          request_type: string
+          requested_at?: string
+          requested_by: string
+          requested_value: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_value?: Json | null
+          created_at?: string
+          id?: string
+          justification?: string
+          max_allowed?: Json
+          order_id?: string
+          order_item_id?: string | null
+          request_type?: string
+          requested_at?: string
+          requested_by?: string
+          requested_value?: Json
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_approval_rules: {
         Row: {
           created_at: string | null
@@ -4761,6 +4890,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_item_commission_snapshot: {
+        Row: {
+          applied_pct: number | null
+          approval_request_id: string | null
+          base_value: number | null
+          commission_value: number | null
+          created_at: string
+          default_pct: number | null
+          id: string
+          max_pct: number | null
+          needs_approval: boolean
+          order_item_id: string
+          rule_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          applied_pct?: number | null
+          approval_request_id?: string | null
+          base_value?: number | null
+          commission_value?: number | null
+          created_at?: string
+          default_pct?: number | null
+          id?: string
+          max_pct?: number | null
+          needs_approval?: boolean
+          order_item_id: string
+          rule_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          applied_pct?: number | null
+          approval_request_id?: string | null
+          base_value?: number | null
+          commission_value?: number | null
+          created_at?: string
+          default_pct?: number | null
+          id?: string
+          max_pct?: number | null
+          needs_approval?: boolean
+          order_item_id?: string
+          rule_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
       }
       order_item_erp_data: {
         Row: {
@@ -5101,6 +5275,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_payment_terms_snapshot: {
+        Row: {
+          applied_rank: number | null
+          applied_template_id: string | null
+          approval_request_id: string | null
+          created_at: string
+          default_template_id: string | null
+          id: string
+          max_template_rank: number | null
+          needs_approval: boolean
+          order_id: string
+          rule_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          applied_rank?: number | null
+          applied_template_id?: string | null
+          approval_request_id?: string | null
+          created_at?: string
+          default_template_id?: string | null
+          id?: string
+          max_template_rank?: number | null
+          needs_approval?: boolean
+          order_id: string
+          rule_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          applied_rank?: number | null
+          applied_template_id?: string | null
+          approval_request_id?: string | null
+          created_at?: string
+          default_template_id?: string | null
+          id?: string
+          max_template_rank?: number | null
+          needs_approval?: boolean
+          order_id?: string
+          rule_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
       }
       order_status_transitions: {
         Row: {
@@ -5663,6 +5879,157 @@ export type Database = {
           is_active?: boolean | null
           tenant_id?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      payment_terms_rules: {
+        Row: {
+          amount_max: number | null
+          amount_min: number
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          default_template_id: string
+          economic_group_id: string | null
+          id: string
+          is_active: boolean
+          level: number
+          max_template_rank: number
+          name: string
+          priority: number
+          sales_rep_id: string | null
+          tenant_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          amount_max?: number | null
+          amount_min?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_template_id: string
+          economic_group_id?: string | null
+          id?: string
+          is_active?: boolean
+          level: number
+          max_template_rank: number
+          name: string
+          priority?: number
+          sales_rep_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          amount_max?: number | null
+          amount_min?: number
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_template_id?: string
+          economic_group_id?: string | null
+          id?: string
+          is_active?: boolean
+          level?: number
+          max_template_rank?: number
+          name?: string
+          priority?: number
+          sales_rep_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_rules_default_template_id_fkey"
+            columns: ["default_template_id"]
+            isOneToOne: false
+            referencedRelation: "payment_terms_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_terms_template_items: {
+        Row: {
+          created_at: string
+          dias: number
+          id: string
+          parcela: number
+          payment_method_default: string | null
+          percentual: number | null
+          template_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          dias: number
+          id?: string
+          parcela: number
+          payment_method_default?: string | null
+          percentual?: number | null
+          template_id: string
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          dias?: number
+          id?: string
+          parcela?: number
+          payment_method_default?: string | null
+          percentual?: number | null
+          template_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "payment_terms_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_terms_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rank: number
+          tenant_id: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rank: number
+          tenant_id: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rank?: number
+          tenant_id?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
         }
         Relationships: []
       }
@@ -10468,6 +10835,7 @@ export type Database = {
         Returns: boolean
       }
       is_authenticated: { Args: never; Returns: boolean }
+      is_governance_admin: { Args: { _user: string }; Returns: boolean }
       is_tenant_within_access_window: {
         Args: { p_tenant_id: string }
         Returns: boolean
