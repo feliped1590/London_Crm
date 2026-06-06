@@ -786,6 +786,12 @@ export default function Settings() {
               Classificação
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="governance" className="gap-2">
+              <Scale className="h-4 w-4" />
+              Governança Comercial
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
