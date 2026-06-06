@@ -415,7 +415,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         legal_entity_id: legalEntityId || null, ipi_mode: ipiMode, order_type: orderType,
         subtotal_products: orderSubtotalProducts, total_ipi: orderTotalIpi,
         payment_method: legacyMethod, payment_terms: legacyTerms,
-        ...buildLogisticsPayload("", freightType, true, EMPTY_DELIVERY_FIELDS),
+        sale_type: saleType || 'venda_tributada',
+        redespacho_carrier_id: redespachoCarrierId || null,
+        ...buildLogisticsPayload(carrierId, freightType, deliverySameAsCompany, deliveryFields),
       }).select().single();
       if (orderError) throw orderError;
 
