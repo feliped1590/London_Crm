@@ -51,6 +51,8 @@ import { useRecentProducts } from '@/hooks/useRecentProducts';
 import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from './PaymentConditionsEditor';
 import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
+import { OrderGovernanceBanner } from './OrderGovernanceBanner';
+
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
@@ -1561,7 +1563,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                   </p>
                 </div>
               )}
+              {isEditMode && order?.id && <OrderGovernanceBanner orderId={order.id} />}
               {renderOrderForm()}
+
             </TabsContent>
 
             <TabsContent value="approvals" className="space-y-4 mt-4">
@@ -1641,7 +1645,10 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       index={detailItemIndex}
       onUpdate={handleItemDetailUpdate}
       canEdit={canEdit}
+      companyId={companyId || null}
+      salesRepId={(order as any)?.sales_rep_id ?? null}
     />
+
 
     <AlertDialog open={showExitAlert} onOpenChange={setShowExitAlert}>
       <AlertDialogContent>

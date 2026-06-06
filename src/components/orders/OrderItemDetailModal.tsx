@@ -13,6 +13,10 @@ import { formatCurrency } from '@/lib/formatters';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
+import { useResolveCommissionRule } from '@/hooks/useCommercialGovernance';
+import { cn } from '@/lib/utils';
+
+
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
 
@@ -26,9 +30,12 @@ interface OrderItemDetailModalProps {
   index: number;
   onUpdate: (index: number, updatedItem: OrderItemDraft) => void;
   canEdit: boolean;
+  companyId?: string | null;
+  salesRepId?: string | null;
 }
 
-export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit }: OrderItemDetailModalProps) {
+export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit, companyId, salesRepId }: OrderItemDetailModalProps) {
+
   const [draft, setDraft] = useState<OrderItemDraft | null>(null);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
   const [productData, setProductData] = useState<any>(null);
@@ -48,12 +55,25 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
     }
   }, [item, open]);
 
+  const { data: commissionRule } = useResolveCommissionRule({
+    productId: item?.product_id ?? null,
+    companyId: companyId ?? null,
+    salesRepId: salesRepId ?? null,
+    enabled: open && !!item?.product_id,
+  });
+
   if (!draft || !item) return null;
 
   // Item-level lock is no longer a business rule. Editability is controlled by
   // the parent order's lock (passed via `canEdit`).
   const isLocked = false;
   const isEditable = canEdit;
+
+  const maxPct = commissionRule?.max_pct != null ? Number(commissionRule.max_pct) : null;
+  const defaultPct = commissionRule?.default_pct != null ? Number(commissionRule.default_pct) : null;
+  const commissionExceeds = maxPct != null && (draft?.commission_pct ?? 0) > maxPct + 0.0001;
+
+
 
   const updateDraftField = (field: keyof OrderItemDraft, value: any) => {
     if (!isEditable) return;
@@ -237,15 +257,27 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
                 />
               </div>
               <div className="space-y-2">
-                <Label>Comissão %</Label>
+                <Label className={commissionExceeds ? 'text-destructive' : ''}>
+                  Comissão %{commissionExceeds && ' ⚠️'}
+                </Label>
                 <Input
                   type="number" step={0.01}
                   value={draft.commission_pct || ''}
                   onChange={(e) => updateDraftField('commission_pct', Number(e.target.value) || 0)}
                   disabled={!isEditable}
-                  className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+                  className={cn(
+                    !isEditable && 'bg-muted cursor-not-allowed',
+                    commissionExceeds && 'border-destructive focus-visible:ring-destructive',
+                  )}
                 />
+                {commissionRule && (
+                  <p className={cn('text-[10px]', commissionExceeds ? 'text-destructive' : 'text-muted-foreground')}>
+                    Regra: padrão {defaultPct?.toFixed(2)}% · máx {maxPct?.toFixed(2)}%
+                    {commissionExceeds && ' — acima do limite, requer aprovação'}
+                  </p>
+                )}
               </div>
+
             </div>
 
             <div className="p-3 bg-muted/50 rounded-lg">
