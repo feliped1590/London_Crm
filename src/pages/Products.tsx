@@ -2238,32 +2238,28 @@ export default function Products() {
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="tipo">Tipo</SortableHeader>
-                    <TableHead>Família</TableHead>
+                    <SortableHeader field="family_id" filterKey="family_id" filterPlaceholder="Filtrar família...">Família</SortableHeader>
                     <SortableHeader field="sku">Código</SortableHeader>
                     <SortableHeader field="name">Descrição</SortableHeader>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>NCM</TableHead>
-                    <TableHead>Largura</TableHead>
-                    <TableHead>Comprimento</TableHead>
-                    <TableHead>Espessura</TableHead>
+                    <SortableHeader field="unit_measure" filterKey="unit_measure" filterPlaceholder="Filtrar unidade...">Unidade</SortableHeader>
+                    <SortableHeader field="ncm_code" filterKey="ncm_code" filterPlaceholder="Filtrar NCM...">NCM</SortableHeader>
+                    <SortableHeader field="width" filterKey="width" filterPlaceholder="Igual a..." numeric>Largura</SortableHeader>
+                    <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric>Comprimento</SortableHeader>
+                    <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric>Espessura</SortableHeader>
                     <SortableHeader field="updated_at">Última Atualização</SortableHeader>
-                    <TableHead>Status</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                 {products?.map((product) => {
+                  const stop = (e: React.MouseEvent) => e.stopPropagation();
                   return (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        {product.tipo_id ? (
-                          <Badge variant="secondary">
-                            {tipos.items.find((c) => c.id === product.tipo_id)?.label || '—'}
-                          </Badge>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
+                    <TableRow
+                      key={product.id}
+                      className={canEditProducts ? 'cursor-pointer hover:bg-muted/50' : ''}
+                      onClick={canEditProducts ? () => handleEdit(product) : undefined}
+                    >
                       <TableCell>
                         {product.family_id ? (
                           <span className="text-sm">
@@ -2303,19 +2299,14 @@ export default function Products() {
                       <TableCell className="text-sm whitespace-nowrap">
                         {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={product.active ? 'default' : 'outline'}>
-                          {product.active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                      <TableCell onClick={stop}>
                         <ProductSyncBadge
                           productId={product.id}
                           erpProductCode={(product as any).erp_product_code}
                           onProductUpdated={handleProductSyncUpdated}
                         />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={stop}>
                         <div className="flex justify-end gap-1">
                           {canEditProducts && (
                             <ProductSyncButton
@@ -2327,7 +2318,7 @@ export default function Products() {
                           {canCreateProducts && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
+                              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDuplicate(product); }}>
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
@@ -2335,7 +2326,7 @@ export default function Products() {
                           </Tooltip>
                           )}
                           {canEditProducts && (
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(product); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
                           )}
@@ -2343,7 +2334,8 @@ export default function Products() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (confirm('Tem certeza que deseja excluir este produto?')) {
                                   deleteMutation.mutate(product.id);
                                 }
