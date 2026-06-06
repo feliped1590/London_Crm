@@ -192,6 +192,37 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     },
   });
 
+  const { data: carriersList = [] } = useQuery({
+    queryKey: ['carriers-order-dialog', carrierSearchOrder],
+    queryFn: async () => {
+      let q = supabase.from('carriers').select('id, name, trade_name, erp_code').eq('active', true).order('name').limit(50);
+      if (carrierSearchOrder) q = q.ilike('name', `%${carrierSearchOrder}%`);
+      const { data } = await q;
+      return (data || []) as Array<{ id: string; name: string; trade_name: string | null; erp_code: number | null }>;
+    },
+  });
+
+  const { data: selectedCarriers = [] } = useQuery({
+    queryKey: ['carriers-order-dialog-selected', carrierId, redespachoCarrierId],
+    queryFn: async () => {
+      const ids = [carrierId, redespachoCarrierId].filter(Boolean) as string[];
+      if (ids.length === 0) return [];
+      const { data } = await supabase.from('carriers').select('id, name, trade_name, erp_code').in('id', ids);
+      return (data || []) as Array<{ id: string; name: string; trade_name: string | null; erp_code: number | null }>;
+    },
+    enabled: !!(carrierId || redespachoCarrierId),
+  });
+
+  const carrierOptionsOrder = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; trade_name: string | null; erp_code: number | null }>();
+    [...carriersList, ...selectedCarriers].forEach(c => map.set(c.id, c));
+    return Array.from(map.values()).map(c => ({
+      value: c.id,
+      label: (c.trade_name ? `${c.trade_name} (${c.name})` : c.name) + (c.erp_code != null ? ` — ERP ${c.erp_code}` : ' — sem ERP'),
+    }));
+  }, [carriersList, selectedCarriers]);
+
+
   const { data: companiesRaw } = useQuery({
     queryKey: ['companies-search-orders', orderCompanySearch],
     queryFn: async (): Promise<Array<{ id: string; name: string; cnpj: string | null }>> => {
