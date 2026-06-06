@@ -9968,6 +9968,7 @@ export type Database = {
           total_quantity: number
         }[]
       }
+      each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
       enqueue_bulk_company_sync: { Args: never; Returns: Json }
       extract_attribute_value: {
         Args: {

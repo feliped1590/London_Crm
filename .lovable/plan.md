@@ -1,37 +1,78 @@
-## 1. Pedidos – remover status "Desatualizado"
+# Regra global: dados em MAIÚSCULAS
 
-O badge "Desatualizado" aparece quando `orders.updated_at` é maior que `erp_synced_at + 5s` (regra em `OrderSyncStatus.tsx`). Para os pedidos atuais, a diferença vem de edições internas (snapshots, recálculos) que não exigem reenvio ao ERP.
+## Objetivo
+Padronizar todo texto curto do sistema (nomes, descrições, endereços, observações) em letras MAIÚSCULAS — tanto na entrada (digitação) quanto no armazenamento — e normalizar os dados já existentes nas tabelas principais.
 
-**Ação (one-time data fix via migração):**
-- Para todo pedido com `erp_order_id IS NOT NULL` e `updated_at > erp_synced_at`, fazer `UPDATE orders SET erp_synced_at = updated_at` (sem alterar `updated_at` — usar `SET LOCAL session_replication_role = replica` para evitar trigger de touch).
+## Escopo
 
-Resultado: todos os pedidos hoje "Desatualizados" passam a aparecer como "Sincronizado". A lógica do badge continua válida para detectar futuras alterações reais.
+### Campos convertidos para UPPERCASE
+- **Nomes**: `companies.name`, `companies.fantasia`, `contacts.first_name`, `contacts.last_name`, `products.name`, `products.nome_impresso`, `deals.name`, `pipelines.name`, etc.
+- **Descrições / observações**: `products.description`, `companies.notes`, `contacts.notes`, `deals.notes`, `orders.notes`, `order_items.observacao`, `order_items.observacao_pcp`, `order_items.ordem_compra`, `deals.lost_reason`, etc.
+- **Endereço**: `address`, `address_number`, `neighborhood`, `city`, `state`, `complement`
+- **Outros textos curtos**: `industry`, `department`, `job_title`, `inscricao_estadual`, `origin`
 
-## 2. Listagem de Produtos (`src/pages/Products.tsx`)
+### Campos PRESERVADOS (sem uppercase)
+- E-mails (`email`), URLs/sites (`website`, `linkedin_url`, `domain`)
+- Senhas, tokens, chaves de API, IDs externos
+- Documentos só-numéricos: `cnpj`, `cpf`, `phone`, `mobile`, `zip_code`
+- SKU/códigos já gerados automaticamente (já são uppercase)
+- JSON técnico, payloads ERP, logs, custom_fields (chaves)
+- Corpos longos: e-mails enviados (`email_logs.body`), mensagens WhatsApp, conteúdo de bots
+- Arquivos, paths, mime types
 
-CRM trata apenas de produto acabado, então simplificar a tabela:
+## Implementação
 
-**Remover:**
-- Coluna **Tipo** (sempre "PRODUTO ACABADO").
-- Coluna **Status** (já existe filtro Ativos/Inativos).
-- Filtro **"Todos os Tipos"** (Select de `filterTipo`).
-- Estado `filterTipo` e seus usos nas queries (`products`, `products-count`).
+### 1. Camada de entrada (frontend)
+Criar utilitário `src/lib/textCase.ts`:
+- `toUpperSafe(value)` — converte preservando `null`/`undefined`
+- Componente `<UpperInput />` wrapper de `Input` que aplica `toUpperCase()` em `onChange` e mantém posição do cursor
+- Componente `<UpperTextarea />` equivalente
 
-**Manter/ajustar:**
-- Filtro de Status (Ativos/Inativos/Todos) permanece.
-- Manter `SortableHeader` em SKU, Descrição e Última Atualização (já existem) e **adicionar ordenação clicável em todas as demais colunas restantes**: Família, Unidade, NCM, Largura, Comprimento, Espessura. Para isso, estender o tipo `SortField` e habilitar `order(...)` correspondente na query.
-- Cada cabeçalho passa a oferecer um pequeno filtro de texto (popover com `Input`) que aplica `ilike` na query — para colunas numéricas (Largura/Comprimento/Espessura) aceita igualdade numérica; para NCM/Família/Unidade aplica `ilike`. Estado consolidado em um objeto `columnFilters` e enviado ao Supabase junto com o `searchTerm` global.
+Aplicar nos formulários de:
+- `CustomerNew.tsx` / `CustomerDetail.tsx` (campos de nome, endereço, observações)
+- `OrderDialog.tsx` / `OrderItemDetailModal.tsx` (observações, ordem_compra, observacao_pcp)
+- `Products.tsx` (modal de produto: nome, descrição, nome_impresso)
+- `QuickCreateCompanyModal.tsx` / `QuickCreateContactModal.tsx`
+- Demais formulários de Companies, Contacts, Deals, Pipelines, Carriers
 
-**Linha clicável (padrão Clientes):**
-- Adicionar `onClick={() => handleEdit(product)}` e `className="cursor-pointer hover:bg-muted/50"` no `<TableRow>` dos produtos.
-- Garantir `e.stopPropagation()` nos botões de ação (Sync, Duplicar, Editar, Excluir) para não disparar o click da linha.
+Manter `Input` normal para e-mail, telefone, CNPJ/CPF, URLs, senhas.
+
+### 2. Camada de banco (defesa)
+Trigger genérico `enforce_uppercase_text()` aplicado via `BEFORE INSERT OR UPDATE` nas tabelas-alvo, normalizando apenas as colunas listadas (whitelist por tabela). Isso garante consistência mesmo se algum caminho de código esquecer de aplicar o uppercase (ex.: imports CSV, edge functions, integrações).
+
+Tabelas com trigger:
+- `companies`, `contacts`, `products`, `deals`, `orders`, `order_items`, `pipelines`, `carriers`, `tasks` (título/descrição)
+
+### 3. Backfill histórico
+Migration única com `UPDATE` em massa nas tabelas principais, usando `SET LOCAL session_replication_role = replica` para não disparar triggers de sincronização ERP e não marcar registros como "Desatualizado":
+
+- `companies`: name, fantasia, address, neighborhood, city, state, complement, industry, inscricao_estadual, origin, notes
+- `contacts`: first_name, last_name, job_title, department, notes
+- `products`: name, nome_impresso, description (preservando SKU/erp_versao que já são uppercase)
+- `deals`: name, notes, lost_reason
+- `orders`: notes
+- `order_items`: observacao, observacao_pcp, ordem_compra
 
 ## Arquivos afetados
 
-- `supabase/migrations/<novo>.sql` — fix one-time de `erp_synced_at`.
-- `src/pages/Products.tsx` — remover Tipo/Status (coluna + filtro), adicionar sort/filtro por coluna, linha clicável.
+**Novos**
+- `src/lib/textCase.ts`
+- `src/components/ui/upper-input.tsx`
+- `src/components/ui/upper-textarea.tsx`
+- `supabase/migrations/<timestamp>_uppercase_enforcement_and_backfill.sql`
+
+**Editados (formulários — substituir `<Input>`/`<Textarea>` em campos de texto puro)**
+- `src/pages/CustomerNew.tsx`, `CustomerDetail.tsx`, `Products.tsx`, `Pipeline.tsx`, `Carriers.tsx`
+- `src/components/orders/OrderDialog.tsx`, `OrderItemDetailModal.tsx`
+- `src/components/pipeline/QuickCreateCompanyModal.tsx`, `QuickCreateContactModal.tsx`
+- Demais modais de criação/edição de Company/Contact/Deal
+
+## Memória do projeto
+Após implementação, adicionar regra Core em `mem://index.md`:
+> Todos os campos de texto livre (nomes, descrições, endereços, observações) são armazenados e exibidos em MAIÚSCULAS. E-mails, URLs, documentos e senhas preservam o case original.
 
 ## Fora do escopo
-
-- Não mexer em outras telas (orders, customer, etc.).
-- Não alterar regra do badge "Desatualizado" (continua válida para futuras edições reais).
+- E-mails, URLs, telefones, CNPJ/CPF, senhas, tokens
+- Conteúdo de mensagens WhatsApp e corpos de e-mail
+- Custom fields dinâmicos (chaves JSON)
+- Dados de tabelas auxiliares de logs/auditoria

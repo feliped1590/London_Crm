@@ -2,11 +2,59 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, onFocus, ...props }, ref) => {
+/**
+ * Tipos de input que NÃO devem ter o conteúdo convertido para maiúsculas:
+ * e-mails, URLs, senhas, números, telefones, datas, arquivos, busca, cores, etc.
+ * Para campos mascarados (CNPJ/CPF/telefone) use `type="tel"` ou `preserveCase`.
+ */
+const CASE_SENSITIVE_TYPES = new Set([
+  "email",
+  "password",
+  "url",
+  "number",
+  "tel",
+  "date",
+  "datetime-local",
+  "time",
+  "month",
+  "week",
+  "file",
+  "color",
+  "range",
+  "hidden",
+  "search",
+]);
+
+export interface InputProps extends React.ComponentProps<"input"> {
+  /** Quando true, preserva o case original (não força MAIÚSCULAS). */
+  preserveCase?: boolean;
+}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, onFocus, onChange, preserveCase, ...props }, ref) => {
     const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
       e.target.select();
       onFocus?.(e);
+    };
+
+    const shouldUpper =
+      !preserveCase && !CASE_SENSITIVE_TYPES.has((type ?? "text").toLowerCase());
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (shouldUpper && e.target.value && e.target.value !== e.target.value.toUpperCase()) {
+        const el = e.target;
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const upper = el.value.toUpperCase();
+        // Cria evento sintético com valor em maiúsculas
+        el.value = upper;
+        try {
+          if (start !== null && end !== null) el.setSelectionRange(start, end);
+        } catch {
+          /* noop */
+        }
+      }
+      onChange?.(e);
     };
 
     return (
@@ -18,6 +66,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         onFocus={handleFocus}
+        onChange={handleChange}
         {...props}
       />
     );
