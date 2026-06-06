@@ -25,7 +25,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Plus, Search, Package, Edit, Trash2, Filter, DollarSign, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Settings2, Upload, FileUp, AlertTriangle, Copy, Clock, User, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { formatDistanceToNow } from 'date-fns';
@@ -68,8 +69,9 @@ import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
 
-type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at';
+type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at' | 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 type SortDirection = 'asc' | 'desc';
+type ColumnFilterKey = 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 
 type ProductHistoryEntry = {
   id: string;
@@ -116,8 +118,10 @@ export default function Products() {
   const [unlockErpCode, setUnlockErpCode] = useState(false);
   const [unlockDescription, setUnlockDescription] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState<string>('all');
   const [filterActive, setFilterActive] = useState<string>('active');
+  const [columnFilters, setColumnFilters] = useState<Record<ColumnFilterKey, string>>({
+    family_id: '', unit_measure: '', ncm_code: '', width: '', length: '', thickness: '',
+  });
   const [sortField, setSortField] = useState<SortField>('updated_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -429,49 +433,108 @@ export default function Products() {
     setCurrentPage(1);
   };
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead 
-      className="cursor-pointer select-none hover:bg-muted/50 transition-colors"
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center gap-1">
-        {children}
-        {sortField === field ? (
-          sortDirection === 'asc' ? (
-            <ArrowUp className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <ArrowDown className="h-3.5 w-3.5 text-primary" />
-          )
-        ) : (
-          <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-        )}
-      </div>
-    </TableHead>
-  );
+  const familyIdsByFilter = (() => {
+    const term = columnFilters.family_id.trim().toLowerCase();
+    if (!term) return null;
+    return familias.items
+      .filter((f) => (f.label || '').toLowerCase().includes(term))
+      .map((f) => f.id);
+  })();
+
+  const applyCommonFilters = (q: any) => {
+    if (filterActive === 'active') q = q.eq('active', true);
+    else if (filterActive === 'inactive') q = q.eq('active', false);
+
+    if (searchTerm) {
+      for (const raw of tokenizeSearchTerm(searchTerm)) {
+        const t = escapePostgrestOrToken(raw);
+        if (t) q = q.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
+      }
+    }
+
+    if (familyIdsByFilter) {
+      if (familyIdsByFilter.length === 0) q = q.eq('id', '00000000-0000-0000-0000-000000000000');
+      else q = q.in('family_id', familyIdsByFilter);
+    }
+    const um = columnFilters.unit_measure.trim();
+    if (um) q = q.ilike('unit_measure', `%${um}%`);
+    const ncm = columnFilters.ncm_code.trim();
+    if (ncm) q = q.ilike('ncm_code', `%${ncm}%`);
+    for (const dim of ['width', 'length', 'thickness'] as const) {
+      const raw = columnFilters[dim].trim().replace(',', '.');
+      if (raw) {
+        const n = Number(raw);
+        if (!Number.isNaN(n)) q = q.eq(dim, n);
+      }
+    }
+    return q;
+  };
+
+  const SortableHeader = ({ field, children, filterKey, filterPlaceholder, numeric }: {
+    field?: SortField;
+    children: React.ReactNode;
+    filterKey?: ColumnFilterKey;
+    filterPlaceholder?: string;
+    numeric?: boolean;
+  }) => {
+    const isSorted = field && sortField === field;
+    const filterValue = filterKey ? columnFilters[filterKey] : '';
+    const isFiltered = !!filterValue;
+    return (
+      <TableHead className="select-none">
+        <div className="flex items-center gap-1">
+          <div
+            className={field ? 'cursor-pointer hover:text-primary transition-colors flex items-center gap-1' : 'flex items-center gap-1'}
+            onClick={field ? () => handleSort(field) : undefined}
+          >
+            {children}
+            {field && (isSorted ? (
+              sortDirection === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-primary" /> : <ArrowDown className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ))}
+          </div>
+          {filterKey && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className={`h-6 w-6 ${isFiltered ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                  <Filter className="h-3 w-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="start">
+                <div className="flex gap-1">
+                  <Input
+                    autoFocus
+                    value={filterValue}
+                    placeholder={filterPlaceholder || 'Filtrar...'}
+                    inputMode={numeric ? 'decimal' : 'text'}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setColumnFilters((prev) => ({ ...prev, [filterKey]: v }));
+                      setCurrentPage(1);
+                    }}
+                    className="h-8"
+                  />
+                  {isFiltered && (
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setColumnFilters((prev) => ({ ...prev, [filterKey]: '' })); setCurrentPage(1); }}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      </TableHead>
+    );
+  };
 
   // Count query for total
   const { data: totalCount } = useQuery({
-    queryKey: ['products-count', activeLegalEntityId, filterTipo, filterActive, searchTerm],
+    queryKey: ['products-count', activeLegalEntityId, filterActive, searchTerm, columnFilters],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('id', { count: 'exact', head: true });
-
-      if (filterTipo !== 'all') {
-        query = query.eq('tipo_id', filterTipo);
-      }
-      if (filterActive === 'active') {
-        query = query.eq('active', true);
-      } else if (filterActive === 'inactive') {
-        query = query.eq('active', false);
-      }
-      if (searchTerm) {
-        for (const raw of tokenizeSearchTerm(searchTerm)) {
-          const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
-        }
-      }
-
+      let query: any = supabase.from('products').select('id', { count: 'exact', head: true });
+      query = applyCommonFilters(query);
       const { count, error } = await query;
       if (error) throw error;
       return count || 0;
@@ -486,30 +549,15 @@ export default function Products() {
   const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
 
   const { data: products, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['products', activeLegalEntityId, filterTipo, filterActive, searchTerm, sortField, sortDirection, safePage],
+    queryKey: ['products', activeLegalEntityId, filterActive, searchTerm, sortField, sortDirection, safePage, columnFilters],
     queryFn: async () => {
       const orderColumn = sortField === 'tipo' ? 'tipo_id' : sortField;
-      let query = supabase
+      let query: any = supabase
         .from('products')
         .select('*')
         .order(orderColumn, { ascending: sortDirection === 'asc' })
         .range(startIndex, startIndex + ITEMS_PER_PAGE - 1);
-
-      if (filterTipo !== 'all') {
-        query = query.eq('tipo_id', filterTipo);
-      }
-      if (filterActive === 'active') {
-        query = query.eq('active', true);
-      } else if (filterActive === 'inactive') {
-        query = query.eq('active', false);
-      }
-      if (searchTerm) {
-        for (const raw of tokenizeSearchTerm(searchTerm)) {
-          const t = escapePostgrestOrToken(raw);
-          if (t) query = query.or(`name.ilike.%${t}%,sku.ilike.%${t}%,sku_unique.ilike.%${t}%,erp_product_code.ilike.%${t}%,erp_grupo.ilike.%${t}%,erp_subgrupo.ilike.%${t}%,erp_versao.ilike.%${t}%,nome_impresso.ilike.%${t}%`);
-        }
-      }
-
+      query = applyCommonFilters(query);
       const { data, error } = await query;
       if (error) throw error;
       return data as unknown as Product[];
@@ -518,6 +566,7 @@ export default function Products() {
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
+
 
   const { data: productHistory = [], isLoading: isProductHistoryLoading } = useQuery({
     queryKey: ['product-history', editingProduct?.id],
@@ -2131,18 +2180,6 @@ export default function Products() {
                 className="pl-10"
               />
             </div>
-            <Select value={filterTipo} onValueChange={(v) => { setFilterTipo(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-[180px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                {tipos.items.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={filterActive} onValueChange={(v) => { setFilterActive(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
@@ -2201,32 +2238,28 @@ export default function Products() {
               <Table className="min-w-[900px]">
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="tipo">Tipo</SortableHeader>
-                    <TableHead>Família</TableHead>
+                    <SortableHeader field="family_id" filterKey="family_id" filterPlaceholder="Filtrar família...">Família</SortableHeader>
                     <SortableHeader field="sku">Código</SortableHeader>
                     <SortableHeader field="name">Descrição</SortableHeader>
-                    <TableHead>Unidade</TableHead>
-                    <TableHead>NCM</TableHead>
-                    <TableHead>Largura</TableHead>
-                    <TableHead>Comprimento</TableHead>
-                    <TableHead>Espessura</TableHead>
+                    <SortableHeader field="unit_measure" filterKey="unit_measure" filterPlaceholder="Filtrar unidade...">Unidade</SortableHeader>
+                    <SortableHeader field="ncm_code" filterKey="ncm_code" filterPlaceholder="Filtrar NCM...">NCM</SortableHeader>
+                    <SortableHeader field="width" filterKey="width" filterPlaceholder="Igual a..." numeric>Largura</SortableHeader>
+                    <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric>Comprimento</SortableHeader>
+                    <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric>Espessura</SortableHeader>
                     <SortableHeader field="updated_at">Última Atualização</SortableHeader>
-                    <TableHead>Status</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                 {products?.map((product) => {
+                  const stop = (e: React.MouseEvent) => e.stopPropagation();
                   return (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        {product.tipo_id ? (
-                          <Badge variant="secondary">
-                            {tipos.items.find((c) => c.id === product.tipo_id)?.label || '—'}
-                          </Badge>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
+                    <TableRow
+                      key={product.id}
+                      className={canEditProducts ? 'cursor-pointer hover:bg-muted/50' : ''}
+                      onClick={canEditProducts ? () => handleEdit(product) : undefined}
+                    >
                       <TableCell>
                         {product.family_id ? (
                           <span className="text-sm">
@@ -2266,19 +2299,14 @@ export default function Products() {
                       <TableCell className="text-sm whitespace-nowrap">
                         {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={product.active ? 'default' : 'outline'}>
-                          {product.active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                      <TableCell onClick={stop}>
                         <ProductSyncBadge
                           productId={product.id}
                           erpProductCode={(product as any).erp_product_code}
                           onProductUpdated={handleProductSyncUpdated}
                         />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={stop}>
                         <div className="flex justify-end gap-1">
                           {canEditProducts && (
                             <ProductSyncButton
@@ -2290,7 +2318,7 @@ export default function Products() {
                           {canCreateProducts && (
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(product)}>
+                              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleDuplicate(product); }}>
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
@@ -2298,7 +2326,7 @@ export default function Products() {
                           </Tooltip>
                           )}
                           {canEditProducts && (
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEdit(product); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
                           )}
@@ -2306,7 +2334,8 @@ export default function Products() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 if (confirm('Tem certeza que deseja excluir este produto?')) {
                                   deleteMutation.mutate(product.id);
                                 }
