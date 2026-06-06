@@ -1,78 +1,209 @@
-# Regra global: dados em MAIÚSCULAS
+# Governança Comercial — Plano Revisado (pré Fase 1)
 
-## Objetivo
-Padronizar todo texto curto do sistema (nomes, descrições, endereços, observações) em letras MAIÚSCULAS — tanto na entrada (digitação) quanto no armazenamento — e normalizar os dados já existentes nas tabelas principais.
+> Arquitetura aprovada conceitualmente. Ajustes solicitados aplicados abaixo. **Nenhum código nesta etapa.**
 
-## Escopo
+---
 
-### Campos convertidos para UPPERCASE
-- **Nomes**: `companies.name`, `companies.fantasia`, `contacts.first_name`, `contacts.last_name`, `products.name`, `products.nome_impresso`, `deals.name`, `pipelines.name`, etc.
-- **Descrições / observações**: `products.description`, `companies.notes`, `contacts.notes`, `deals.notes`, `orders.notes`, `order_items.observacao`, `order_items.observacao_pcp`, `order_items.ordem_compra`, `deals.lost_reason`, etc.
-- **Endereço**: `address`, `address_number`, `neighborhood`, `city`, `state`, `complement`
-- **Outros textos curtos**: `industry`, `department`, `job_title`, `inscricao_estadual`, `origin`
+## Ajustes aplicados nesta revisão
 
-### Campos PRESERVADOS (sem uppercase)
-- E-mails (`email`), URLs/sites (`website`, `linkedin_url`, `domain`)
-- Senhas, tokens, chaves de API, IDs externos
-- Documentos só-numéricos: `cnpj`, `cpf`, `phone`, `mobile`, `zip_code`
-- SKU/códigos já gerados automaticamente (já são uppercase)
-- JSON técnico, payloads ERP, logs, custom_fields (chaves)
-- Corpos longos: e-mails enviados (`email_logs.body`), mensagens WhatsApp, conteúdo de bots
-- Arquivos, paths, mime types
+1. **Removido `min_pct`** da regra de comissão. Vendedor sempre pode reduzir até 0%. Mantidos apenas `default_pct` e `max_pct`.
+2. **Hierarquia formal** de condições de pagamento detalhada (Seção 3).
+3. **Exceção sem travar o pedido**: pedido continua sendo salvo em `draft`; só não pode avançar para o próximo status até a aprovação. Sem bloqueio em tela.
+4. **Flag global** `allow_exception_request` por tipo de regra (comissão / pagamento) — admin liga/desliga em **Settings → Governança Comercial → Configurações**.
+5. **Validação de templates por nível hierárquico** (rank inteiro) em vez de comparação estrutural parcela-a-parcela.
 
-## Implementação
+---
 
-### 1. Camada de entrada (frontend)
-Criar utilitário `src/lib/textCase.ts`:
-- `toUpperSafe(value)` — converte preservando `null`/`undefined`
-- Componente `<UpperInput />` wrapper de `Input` que aplica `toUpperCase()` em `onChange` e mantém posição do cursor
-- Componente `<UpperTextarea />` equivalente
+## 1. Regra de Comissão (ajustada)
 
-Aplicar nos formulários de:
-- `CustomerNew.tsx` / `CustomerDetail.tsx` (campos de nome, endereço, observações)
-- `OrderDialog.tsx` / `OrderItemDetailModal.tsx` (observações, ordem_compra, observacao_pcp)
-- `Products.tsx` (modal de produto: nome, descrição, nome_impresso)
-- `QuickCreateCompanyModal.tsx` / `QuickCreateContactModal.tsx`
-- Demais formulários de Companies, Contacts, Deals, Pipelines, Carriers
+`commission_rules`:
+- `default_pct` — preenchido automaticamente.
+- `max_pct` — teto.
+- Vendedor pode usar `[0% … max_pct]` livremente.
+- Acima de `max_pct`: campo aceita o valor, marca o item como **"Pendente Aprovação"** (badge laranja), pedido salva normalmente em `draft`. Não pode mudar para o próximo status sem resolver.
 
-Manter `Input` normal para e-mail, telefone, CNPJ/CPF, URLs, senhas.
+## 2. Solicitação de Exceção (sem travar)
 
-### 2. Camada de banco (defesa)
-Trigger genérico `enforce_uppercase_text()` aplicado via `BEFORE INSERT OR UPDATE` nas tabelas-alvo, normalizando apenas as colunas listadas (whitelist por tabela). Isso garante consistência mesmo se algum caminho de código esquecer de aplicar o uppercase (ex.: imports CSV, edge functions, integrações).
+Fluxo novo:
 
-Tabelas com trigger:
-- `companies`, `contacts`, `products`, `deals`, `orders`, `order_items`, `pipelines`, `carriers`, `tasks` (título/descrição)
+```
+Vendedor digita comissão 6% (max=5%)
+        │
+        ▼
+Item salvo com applied_pct=6 + needs_approval=true
+        │
+        ▼
+Pedido permanece em DRAFT (salva sem bloquear)
+        │
+        ▼
+Badge "Pendente aprovação" no item + no header do pedido
+        │
+        ▼
+Ao tentar avançar status (ex.: enviar para aprovação) →
+   se houver itens needs_approval=true E flag allow_exception_request=true:
+      → cria order_approval_request automaticamente
+      → status do pedido = 'pending_commercial_approval'
+   se flag=false:
+      → toast: "Limite excedido. Ajuste para prosseguir."
+      → impede só a transição de status, não o save.
+```
 
-### 3. Backfill histórico
-Migration única com `UPDATE` em massa nas tabelas principais, usando `SET LOCAL session_replication_role = replica` para não disparar triggers de sincronização ERP e não marcar registros como "Desatualizado":
+**Flag por tenant** (`tenant_settings`):
+- `commission_allow_exception` (bool)
+- `payment_terms_allow_exception` (bool)
 
-- `companies`: name, fantasia, address, neighborhood, city, state, complement, industry, inscricao_estadual, origin, notes
-- `contacts`: first_name, last_name, job_title, department, notes
-- `products`: name, nome_impresso, description (preservando SKU/erp_versao que já são uppercase)
-- `deals`: name, notes, lost_reason
-- `orders`: notes
-- `order_items`: observacao, observacao_pcp, ordem_compra
+## 3. Hierarquia de Condições de Pagamento (formal)
 
-## Arquivos afetados
+Resolução por **prioridade absoluta** (primeira regra encontrada vence; faixa de valor sempre obrigatória):
 
-**Novos**
-- `src/lib/textCase.ts`
-- `src/components/ui/upper-input.tsx`
-- `src/components/ui/upper-textarea.tsx`
-- `supabase/migrations/<timestamp>_uppercase_enforcement_and_backfill.sql`
+| Nível | Critério | Match Required |
+|---|---|---|
+| 1 | Cliente específico **+** faixa de valor | `company_id` + `amount` ∈ [`amount_min`, `amount_max`] |
+| 2 | Grupo Econômico **+** faixa de valor | `economic_group_id` + faixa |
+| 3 | Vendedor **+** faixa de valor | `sales_rep_id` + faixa |
+| 4 | Regra Geral **+** faixa de valor | faixa apenas |
 
-**Editados (formulários — substituir `<Input>`/`<Textarea>` em campos de texto puro)**
-- `src/pages/CustomerNew.tsx`, `CustomerDetail.tsx`, `Products.tsx`, `Pipeline.tsx`, `Carriers.tsx`
-- `src/components/orders/OrderDialog.tsx`, `OrderItemDetailModal.tsx`
-- `src/components/pipeline/QuickCreateCompanyModal.tsx`, `QuickCreateContactModal.tsx`
-- Demais modais de criação/edição de Company/Contact/Deal
+Resolver = `ORDER BY level ASC, priority DESC, valid_from DESC LIMIT 1`.
 
-## Memória do projeto
-Após implementação, adicionar regra Core em `mem://index.md`:
-> Todos os campos de texto livre (nomes, descrições, endereços, observações) são armazenados e exibidos em MAIÚSCULAS. E-mails, URLs, documentos e senhas preservam o case original.
+Cada regra aponta para:
+- `default_template_id`
+- `max_template_rank` (int) — usado pelo motor de comparação.
 
-## Fora do escopo
-- E-mails, URLs, telefones, CNPJ/CPF, senhas, tokens
-- Conteúdo de mensagens WhatsApp e corpos de e-mail
-- Custom fields dinâmicos (chaves JSON)
-- Dados de tabelas auxiliares de logs/auditoria
+## 4. Comparação por Rank (substitui comparação estrutural)
+
+Em vez de comparar parcelas, cada template recebe um **`rank` inteiro** definido pelo admin no cadastro:
+
+| Template | Rank |
+|---|---|
+| À vista | 0 |
+| 28 | 1 |
+| 28/35 | 2 |
+| 28/35/42 | 3 |
+| 28/35/42/49 | 4 |
+| 30/60/90 | 3 |
+
+Regra de validação: `template_escolhido.rank ≤ regra.max_template_rank` → permitido.
+
+Vantagens:
+- Lógica de validação trivial (`<=` em inteiro).
+- Admin pode equiparar templates não-padrão (ex.: `30/60/90` no mesmo rank de `28/35/42`).
+- Permite criar novos templates futuramente sem rescrever motor.
+
+`payment_terms_templates` ganha coluna `rank INT NOT NULL` (UNIQUE por `tenant_id`+`rank` não — pode haver empate).
+
+## 5. Tabelas Finais
+
+### `commission_rules`
+```
+id, tenant_id, name, is_active, priority, valid_from, valid_until,
+sales_rep_id?, company_id?, economic_group_id?,
+product_id?, product_group_id?, product_subgroup_id?,
+base ('liquido'|'bruto'), default_pct, max_pct,
+created_by, created_at, updated_at
+```
+
+### `payment_terms_templates`
+```
+id, tenant_id, name, rank, is_active, valid_from, valid_until, created_by
+```
+
+### `payment_terms_template_items`
+```
+id, template_id, parcela, dias, payment_method_default, tipo, percentual
+```
+
+### `payment_terms_rules`
+```
+id, tenant_id, name, level (1|2|3|4), priority, is_active,
+valid_from, valid_until,
+amount_min, amount_max,
+company_id?, economic_group_id?, sales_rep_id?,
+default_template_id, max_template_rank,
+created_by
+```
+
+### `order_item_commission_snapshot` (imutável)
+```
+id, order_item_id, rule_id, default_pct, max_pct,
+applied_pct, base_value, commission_value,
+needs_approval (bool), approval_request_id?, created_at
+```
+
+### `order_payment_terms_snapshot` (imutável)
+```
+id, order_id, rule_id, default_template_id, max_template_rank,
+applied_template_id, applied_rank,
+needs_approval (bool), approval_request_id?, created_at
+```
+
+### `order_approval_requests`
+```
+id, tenant_id, order_id, order_item_id?,
+request_type ('commission'|'payment_terms'),
+requested_by, requested_at, justification,
+requested_value (jsonb), max_allowed (jsonb), rule_id,
+status ('pending'|'approved'|'rejected'),
+reviewed_by?, reviewed_at?, review_notes?, approved_value (jsonb)?
+```
+
+### `tenant_settings` (campos novos)
+```
+commission_allow_exception bool default true,
+payment_terms_allow_exception bool default true
+```
+
+---
+
+## 6. Backend (resumo)
+
+- `resolve_commission_rule(sales_rep, company, product, date)` → `{rule_id, default_pct, max_pct}`
+- `resolve_payment_terms_rule(company, sales_rep, order_amount, date)` → `{rule_id, default_template_id, max_template_rank}`
+- `create_approval_request(...)` — chamada na transição de status, não no save.
+- `review_approval_request(id, decision, notes)` — admin.
+- Trigger snapshot em `order_items` (AFTER) — grava `needs_approval` se exceder.
+- Trigger snapshot em `orders` (AFTER) — grava condição aplicada.
+- **Sem trigger de bloqueio** — bloqueio só na transição de status (RPC dedicada).
+
+## 7. Frontend (resumo)
+
+- Página nova: `Settings → Governança Comercial` com abas: **Regras de Comissão**, **Templates de Pagamento**, **Regras de Pagamento**, **Configurações** (flags), **Solicitações Pendentes**.
+- `OrderItemDetailModal`: preenche `default_pct`, badge laranja se exceder `max_pct`.
+- `PaymentConditionsEditor`: filtro de templates por `rank ≤ max_template_rank`; permite escolher acima → badge laranja.
+- `OrderDialog`: header mostra "X itens / condição pendente aprovação"; botão de avançar status dispara `create_approval_request` quando aplicável.
+- Componente `<NeedsApprovalBadge />` reutilizável.
+
+## 8. Fluxo de Aprovação (revisado)
+
+```
+SAVE PEDIDO ─────────► sempre permitido (draft)
+                       snapshots gravam needs_approval
+
+AVANÇAR STATUS ──────► RPC valida pendências:
+  ├─ nenhuma pendência: avança normal
+  ├─ pendência + flag ON:  cria approval_request + status='pending_commercial_approval'
+  └─ pendência + flag OFF: bloqueia transição com mensagem
+
+APROVAR (admin) ─────► status volta p/ próximo passo do fluxo original
+REJEITAR (admin) ────► status volta p/ 'draft', vendedor ajusta
+```
+
+Auditoria: `order_approval_requests` (append-only) + snapshots imutáveis + `order_audit_log`.
+
+---
+
+## 9. Fases (atualizadas)
+
+| Fase | Objetivo | Complexidade |
+|---|---|---|
+| **1** | Modelagem detalhada + ADR + memory | Baixa |
+| **2** | Migrations (tabelas, RLS, GRANTs, triggers de snapshot, flags em `tenant_settings`) | Alta |
+| **3** | RPCs `resolve_*`, `create_approval_request`, `review_approval_request` | Alta |
+| **4** | Página Governança Comercial (CRUD + flags) | Média |
+| **5** | Integração OrderItemDetailModal, PaymentConditionsEditor, OrderDialog (badges + RPC na transição) | Alta |
+| **6** | Solicitações Pendentes + extensão do `OrderApprovalTimeline` + testes QA | Média |
+
+Compatibilidade: pedidos antigos sem regra cadastrada = comportamento atual (sem bloqueio, sem badges). `orders.payment_terms`/`payment_method` legados continuam sendo gravados para ERP — sem mudança em `order-mapper.ts`.
+
+---
+
+> Pronto para iniciar **Fase 1 — Modelagem detalhada + ADR**.
