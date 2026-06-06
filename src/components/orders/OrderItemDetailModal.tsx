@@ -280,6 +280,19 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
               <p className="text-xs text-muted-foreground text-right">{(draft.observations_pcp || '').length}/{MAX_ITEM_OBSERVATION_LENGTH}</p>
             </div>
 
+            <div className="space-y-2">
+              <Label>OC do Cliente</Label>
+              <Input
+                value={draft.ordem_compra || ''}
+                onChange={(e) => updateDraftField('ordem_compra', e.target.value.replace(/[<>]/g, '').slice(0, 60))}
+                placeholder="Número da Ordem de Compra do cliente"
+                maxLength={60}
+                disabled={!isEditable}
+                className={!isEditable ? 'bg-muted cursor-not-allowed' : ''}
+              />
+              <p className="text-xs text-muted-foreground">Enviado ao ERP no campo <code>ordem_compra</code> das entregas.</p>
+            </div>
+
             {/* Comparison with current product */}
             {hasDifferences && !isLocked && (
               <div className="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg space-y-1">

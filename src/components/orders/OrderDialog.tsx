@@ -406,6 +406,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         description: item.description,
         observations: item.observations || '',
         observations_pcp: item.observations_pcp || '',
+        ordem_compra: item.ordem_compra || '',
         quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
         discount_percent: item.discount_percent || 0, ipi_rate: item.ipi_rate || 0,
         commission_pct: item.commission_pct || 0,
@@ -468,6 +469,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           order_id: newOrder.id, product_id: item.product_id, description: item.description,
           observations: normalizeItemObservation(item.observations),
           observations_pcp: normalizeItemObservation(item.observations_pcp),
+          ordem_compra: (item.ordem_compra || '').trim() || null,
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
@@ -615,6 +617,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           order_id: order.id, product_id: item.product_id, description: item.description,
           observations: normalizeItemObservation(item.observations),
           observations_pcp: normalizeItemObservation(item.observations_pcp),
+          ordem_compra: (item.ordem_compra || '').trim() || null,
           quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal,
           discount_percent: item.discount_percent, ipi_rate: ipiRate, ipi_value: ipiVal,
           subtotal_item: item.subtotal, total_item: totalItem, width: item.width,
@@ -776,6 +779,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           description: item.description,
           observations: normalizeItemObservation(item.observations),
           observations_pcp: normalizeItemObservation(item.observations_pcp),
+          ordem_compra: (item.ordem_compra || '').trim() || null,
           quantity: item.quantity,
           unit_price: item.unit_price,
           subtotal: item.subtotal,
@@ -853,6 +857,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       description: it.description,
       observations: it.observations || '',
       observations_pcp: it.observations_pcp || '',
+      ordem_compra: it.ordem_compra || '',
     });
     const origMap = new Map(originalItems.map(o => [o.id || '', norm(o)]));
     for (const it of items) {

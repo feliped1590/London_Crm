@@ -29,6 +29,7 @@ export interface OrderItemDraft {
   description: string;
   observations?: string;
   observations_pcp?: string;
+  ordem_compra?: string;
   quantity: number;
   unit_price: number;
   subtotal: number;
