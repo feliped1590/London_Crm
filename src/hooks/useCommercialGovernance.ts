@@ -323,12 +323,13 @@ export function useResolveCommissionRule(params: {
     queryKey: ['governance', 'resolve_commission', tenantId, params.salesRepId, params.companyId, params.productId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('resolve_commission_rule', {
-        _tenant_id: tenantId!,
-        _sales_rep_id: params.salesRepId ?? null,
-        _company_id: params.companyId ?? null,
-        _product_id: params.productId!,
-        _at: new Date().toISOString(),
+        _tenant: tenantId!,
+        _sales_rep: params.salesRepId ?? null,
+        _company: params.companyId ?? null,
+        _product: params.productId!,
+        _at: new Date().toISOString().slice(0, 10),
       });
+
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return row || null;
