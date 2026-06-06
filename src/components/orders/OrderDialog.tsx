@@ -486,6 +486,30 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         await persistPaymentConditions('order', newOrder.id, paymentConditions);
       }
 
+      // Persiste Follow-up para Faturamento (entrado via modal antes do submit)
+      const followupTrim = (followupText || '').trim();
+      if (followupTrim) {
+        let erpUserCode: number | null = null;
+        if (user?.id) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('erp_user_code')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          erpUserCode = profile?.erp_user_code ? Number(profile.erp_user_code) : null;
+        }
+        await (supabase as any).from('order_followups').insert({
+          order_id: newOrder.id,
+          tenant_id: (newOrder as any).tenant_id ?? null,
+          sequencia: 1,
+          tipo: 1,
+          texto: followupTrim,
+          created_by: user?.id || null,
+          erp_user_code: erpUserCode,
+        });
+      }
+
+
       await supabase.from('order_audit_log').insert({
         order_id: newOrder.id, field_name: 'created', field_label: 'Pedido criado',
         old_value: null, new_value: `Pedido ${newOrder.number} criado manualmente`,
