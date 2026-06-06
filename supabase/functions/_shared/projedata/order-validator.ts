@@ -164,7 +164,23 @@ export function validateOrderForSync(order: OrderToValidate): OrderValidationRes
         errors.push({ field: `payment_conditions[${idx}].fator`, message: `Parcela ${idx + 1}: valor deve ser maior que zero`, fixHint: 'Preencha o valor da parcela no pedido.' });
         fields.add('payment_terms');
       }
+      if (tipo === 'P' && fator > 100) {
+        errors.push({ field: `payment_conditions[${idx}].fator`, message: `Parcela ${idx + 1}: percentual maior que 100`, fixHint: 'Ajuste o percentual da parcela (0 < % ≤ 100).' });
+        fields.add('payment_terms');
+      }
     });
+    // Soma dos percentuais (parcelas P) deve fechar em 100 (tolerância 0,02)
+    const pParcels = order.payment_conditions.filter(p => (p.tipo ?? 'P') === 'P');
+    if (pParcels.length > 0) {
+      const informed = pParcels.filter(p => Number(p.fator ?? 0) > 0);
+      if (informed.length > 0 && informed.length === pParcels.length) {
+        const sum = pParcels.reduce((acc, p) => acc + Number(p.fator ?? 0), 0);
+        if (Math.abs(sum - 100) > 0.02) {
+          errors.push({ field: 'payment_conditions.fator_sum', message: `Soma dos percentuais das parcelas é ${sum.toFixed(2)}% (esperado 100%)`, fixHint: 'Ajuste os percentuais para somarem exatamente 100.' });
+          fields.add('payment_terms');
+        }
+      }
+    }
   }
 
   return { valid: errors.length === 0, errors, fields: Array.from(fields) };
