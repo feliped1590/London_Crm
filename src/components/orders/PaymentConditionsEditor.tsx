@@ -41,7 +41,7 @@ const NEW_ROW = (parcela: number): PaymentConditionDraft => ({
   percentual: null,
 });
 
-export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled }: Props) {
+export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled, companyId, salesRepId }: Props) {
   const [shortcutOpen, setShortcutOpen] = useState<null | 'simples' | 'entrada'>(null);
   const [simplesDias, setSimplesDias] = useState('');
   const [simplesForma, setSimplesForma] = useState('');
