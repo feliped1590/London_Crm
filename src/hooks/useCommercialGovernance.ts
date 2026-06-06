@@ -416,10 +416,10 @@ export function useOrderGovernanceState(orderId?: string | null) {
 
   const create = useMutation({
     mutationFn: async (args: {
-      kind: 'commission_exception' | 'payment_terms_exception';
+      kind: 'commission' | 'payment_terms';
       justification: string;
-      requested_value?: number | null;
-      max_allowed?: number | null;
+      requested_value?: any;
+      max_allowed?: any;
       rule_id?: string | null;
       order_item_id?: string | null;
     }) => {
@@ -427,7 +427,7 @@ export function useOrderGovernanceState(orderId?: string | null) {
       const { error } = await supabase.rpc('create_commercial_approval_request', {
         _order_id: orderId,
         _order_item_id: args.order_item_id ?? null,
-        _kind: args.kind,
+        _request_type: args.kind,
         _justification: args.justification,
         _requested_value: args.requested_value ?? null,
         _max_allowed: args.max_allowed ?? null,
@@ -435,6 +435,7 @@ export function useOrderGovernanceState(orderId?: string | null) {
       });
       if (error) throw error;
     },
+
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['governance', 'order_requests', orderId] });
       qc.invalidateQueries({ queryKey: QK.pending });
