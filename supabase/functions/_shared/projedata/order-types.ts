@@ -1,7 +1,16 @@
 /**
  * Tipos para integração de Pedidos CRM → ERP Projedata
- * Comando: IMP_PEDIDO_V3
+ * Comando: IMP_PEDIDO_ESPECIFICO
  */
+
+// ─── Follow-up de Faturamento (1 por pedido, replicado em cada item) ────
+
+export interface ProjedataOrderFollowupItem {
+  sequencia_followup: number;   // sempre 1
+  tipo: number;                 // sempre 1
+  texto: string;
+  usuario: number;              // erp_user_code do criador
+}
 
 // ─── Entrega dentro do item ─────────────────────────────────────
 
@@ -25,6 +34,7 @@ export interface ProjedataOrderItem {
   unitario: number;
   versao: string;
   entregas: ProjedataOrderDelivery[];
+  followup_item?: ProjedataOrderFollowupItem[];
 }
 
 // ─── Parcela de pagamento ───────────────────────────────────────
@@ -51,6 +61,8 @@ export interface ProjedataOrder {
   usuario: number;
   vendedor: number;
   frete: string;
+  transportador?: number;       // código ERP da transportadora
+  redespacho?: number;          // código ERP do redespacho (opcional)
   itens: ProjedataOrderItem[];
   pagto: ProjedataOrderPayment[];
 }

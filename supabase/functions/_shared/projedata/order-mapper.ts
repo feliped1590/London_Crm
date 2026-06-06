@@ -1,15 +1,26 @@
 /**
- * Mapeamento CRM → ERP Projedata para IMP_PEDIDO_V3
+ * Mapeamento CRM → ERP Projedata para IMP_PEDIDO_ESPECIFICO
  *
  * Gera o JSON interno do envelope ASDCOMANDO.
  * Todos os tipos seguem o payload validado com o ERP.
  * NENHUM fallback — todos os campos são obrigatórios.
  */
 
-import type { ProjedataOrder, ProjedataOrderItem, ProjedataOrderDelivery, ProjedataOrderPayment } from './order-types.ts';
+import type {
+  ProjedataOrder,
+  ProjedataOrderItem,
+  ProjedataOrderDelivery,
+  ProjedataOrderPayment,
+  ProjedataOrderFollowupItem,
+} from './order-types.ts';
 import { buildEnvelope, serializeEnvelope } from './serializer.ts';
 
 // ─── Tipos de entrada (dados do CRM) ───────────────────────────
+
+export interface CRMOrderFollowup {
+  texto: string;
+  erp_user_code: number;
+}
 
 export interface CRMOrderForSync {
   pedido_terceiro: number;
@@ -23,8 +34,11 @@ export interface CRMOrderForSync {
   erp_fluxo_venda: number;      // obrigatório
   erp_usuario: number;          // obrigatório
   erp_vendedor: number;         // obrigatório
+  erp_transportador?: number | null;  // código ERP da transportadora (opcional)
+  erp_redespacho?: number | null;     // código ERP do redespacho (opcional)
   items: CRMOrderItemForSync[];
   payment_conditions: CRMPaymentCondition[]; // obrigatório (não-vazio)
+  followup?: CRMOrderFollowup | null;        // follow-up do pedido (opcional)
 }
 
 export interface CRMOrderItemForSync {
@@ -52,12 +66,6 @@ export interface CRMPaymentCondition {
 
 // ─── Helpers ────────────────────────────────────────────────────
 
-/**
- * Normaliza CNPJ/CPF para string somente-dígitos, preservando zeros à esquerda.
- * - CNPJ: 14 dígitos (pad com '0' à esquerda se vier com 12-13)
- * - CPF: 11 dígitos (pad com '0' à esquerda se vier com 9-10)
- * Lança erro se o tamanho ficar fora desses intervalos.
- */
 function normalizeCnpjCpf(value: string): string {
   const digits = (value ?? '').replace(/\D/g, '');
   if (digits.length >= 12 && digits.length <= 14) return digits.padStart(14, '0');
@@ -65,24 +73,18 @@ function normalizeCnpjCpf(value: string): string {
   throw new Error(`CNPJ/CPF inválido (esperado 11 ou 14 dígitos): "${value}"`);
 }
 
-/** Converte ISO date para DD/MM/YYYY HH:mm:ss */
 function formatDateERP(isoDate: string): string {
   const d = new Date(isoDate);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-/** Gera pedido_terceiro a partir do código do pedido */
 export function generatePedidoTerceiro(orderNumber: string): number {
   const digits = orderNumber.replace(/\D/g, '');
   if (!digits) throw new Error(`Não foi possível extrair número de: ${orderNumber}`);
   return Number(digits);
 }
 
-/**
- * Parser de condições de pagamento.
- * Converte "28/35/42" + forma de recebimento em array de parcelas.
- */
 export function parsePaymentTerms(
   terms: string,
   formaRecebimento: number
@@ -100,6 +102,16 @@ export function parsePaymentTerms(
 // ─── Mapper principal ───────────────────────────────────────────
 
 export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
+  // Follow-up do pedido (único registro, replicado em cada item por exigência do ERP)
+  const followupArray: ProjedataOrderFollowupItem[] | undefined = order.followup?.texto
+    ? [{
+        sequencia_followup: 1,
+        tipo: 1,
+        texto: order.followup.texto,
+        usuario: order.followup.erp_user_code,
+      }]
+    : undefined;
+
   const itens: ProjedataOrderItem[] = order.items.map((item) => {
     const deliveryDate = item.delivery_date || order.delivery_date || order.order_date;
     const entregas: ProjedataOrderDelivery[] = [{
@@ -111,7 +123,7 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
       quantidade: item.quantity,
     }];
 
-    return {
+    const mapped: ProjedataOrderItem = {
       item: item.erp_product_code,
       seq_item: item.seq,
       tipo_venda: item.tipo_venda,
@@ -121,6 +133,10 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
       versao: item.erp_versao,
       entregas,
     };
+    if (followupArray) {
+      mapped.followup_item = followupArray;
+    }
+    return mapped;
   });
 
   const pagto: ProjedataOrderPayment[] = order.payment_conditions.map(p => {
@@ -131,14 +147,13 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
       parcela: p.parcela,
       tipo,
     };
-    // Apenas tipo 'V' (valor fixo) envia fator. Tipo 'P' = rateio automático do ERP.
     if (tipo === 'V') {
       base.fator = p.fator ?? 0;
     }
     return base;
   });
 
-  return {
+  const result: ProjedataOrder = {
     cpf_cnpj_cliente: normalizeCnpjCpf(order.company_cnpj),
     data_pedido: formatDateERP(order.order_date),
     empresa: order.erp_empresa,
@@ -153,6 +168,15 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
     itens,
     pagto,
   };
+
+  if (order.erp_transportador != null) {
+    result.transportador = order.erp_transportador;
+  }
+  if (order.erp_redespacho != null) {
+    result.redespacho = order.erp_redespacho;
+  }
+
+  return result;
 }
 
 // ─── Serialização final ─────────────────────────────────────────
@@ -174,10 +198,14 @@ export function buildOrderPayload(order: ProjedataOrder): string {
     usuario: order.usuario,
     vendedor: order.vendedor,
     frete: order.frete,
-    itens: order.itens,
-    pagto: order.pagto,
   };
 
-  const envelope = buildEnvelope('IMP_PEDIDO_V3', innerJson);
+  if (order.transportador != null) innerJson.transportador = order.transportador;
+  if (order.redespacho != null) innerJson.redespacho = order.redespacho;
+
+  innerJson.itens = order.itens;
+  innerJson.pagto = order.pagto;
+
+  const envelope = buildEnvelope('IMP_PEDIDO_ESPECIFICO', innerJson);
   return serializeEnvelope(envelope);
 }
