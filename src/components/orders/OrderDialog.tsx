@@ -1860,6 +1860,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       </AlertDialogContent>
     </AlertDialog>
 
+    <GovernancePreflightModal
+      open={preflightOpen}
+      onOpenChange={(o) => { if (!preflightSubmitting) setPreflightOpen(o); }}
+      preflight={preflightResult}
+      allowCommissionException={governanceFlags?.commission_allow_exception ?? true}
+      allowPaymentException={governanceFlags?.payment_terms_allow_exception ?? true}
+      isSubmitting={preflightSubmitting}
+      onReview={() => { setPreflightOpen(false); setPreflightResult(null); }}
+      onRequestAuthorization={handleRequestAuthorization}
+    />
+
+
+
     <Dialog open={followupOpen} onOpenChange={(o) => { if (!createOrderMutation.isPending) setFollowupOpen(o); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
