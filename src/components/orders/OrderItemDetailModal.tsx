@@ -11,6 +11,7 @@ import { Lock, LockOpen, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 import { useResolveCommissionRule } from '@/hooks/useCommercialGovernance';
