@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import { IpiMode } from '@/types/products';
 
 interface UseProductAddOptions {
