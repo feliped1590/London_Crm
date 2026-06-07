@@ -37,6 +37,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { PriceOverrideModal } from '@/components/proposals/PriceOverrideModal';
 import { Order, OrderStatus, OrderType, IpiMode, ipiModeConfig, orderStatusConfig, orderTypeConfig } from '@/types/products';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import { OrderApprovalActions } from './OrderApprovalActions';
 import { OrderApprovalTimeline } from './OrderApprovalTimeline';
 import { OrderHistoryTab } from './OrderHistoryTab';
