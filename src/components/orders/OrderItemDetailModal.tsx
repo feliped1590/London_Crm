@@ -49,7 +49,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
       if (item.product_id) {
         supabase
           .from('products')
-          .select('id, name, sku, unit_price, width_mm, length_mm, thickness_microns, fator_kg, aliquota_ipi')
+          .select('id, name, sku, unit_price, width_mm, length_mm, thickness_microns, fator_kg, aliquota_ipi, ncm:ncm_codes(aliquota_ipi_oficial)')
           .eq('id', item.product_id)
           .maybeSingle()
           .then(({ data }) => setProductData(data));
