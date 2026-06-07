@@ -14,6 +14,8 @@ export interface ProductLookup {
   length?: number | null;
   thickness?: number | null;
   aliquota_ipi?: number | null;
+  ncm?: { aliquota_ipi_oficial?: number | null } | null;
+  ncm_aliquota_ipi_oficial?: number | null;
   fator_kg?: number | null;
   unit_measure?: string | null;
   ficha_tecnica?: any | null;
@@ -43,6 +45,7 @@ export interface OrderItemDraft {
   thickness?: number;
   calculated_price_source?: PriceSource;
   is_locked?: boolean;
+  product?: ProductLookup | any;
 }
 
 /**
