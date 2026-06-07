@@ -4,9 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { TransicaoTributariaPanel } from '@/components/fiscal/TransicaoTributariaPanel';
-import { ImpostoSeletivoManager } from '@/components/fiscal/ImpostoSeletivoManager';
-import { CreditoPresumidoManager } from '@/components/fiscal/CreditoPresumidoManager';
 import { NCMManager } from '@/components/fiscal/NCMManager';
 import { GroupNcmDefaultsManager } from '@/components/fiscal/GroupNcmDefaultsManager';
 import { Label } from '@/components/ui/label';
