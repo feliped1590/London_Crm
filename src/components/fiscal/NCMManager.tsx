@@ -100,7 +100,7 @@ export function NCMManager() {
           query = query.ilike('descricao', `%${term}%`);
         }
       }
-      const { data, error } = await query.limit(200);
+      const { data, error } = await query.limit(5000);
       if (error) throw error;
       return data as NCMRow[];
     },
