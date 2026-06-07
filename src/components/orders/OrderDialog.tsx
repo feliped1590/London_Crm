@@ -334,6 +334,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
             length,
             thickness,
             aliquota_ipi,
+            ncm:ncm_codes(aliquota_ipi_oficial),
             fator_kg,
             unit_measure,
             ficha_tecnica,
