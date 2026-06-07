@@ -530,7 +530,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
                 </div>
               </div>
 
-              <PaymentConditionsEditor value={paymentConditions} onChange={setPaymentConditions} totalAmount={total} />
+              <PaymentConditionsEditor value={paymentConditions} onChange={setPaymentConditions} totalAmount={total} legalEntityId={dealData?.legal_entity_id ?? null} />
 
               {/* IPI Mode */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
