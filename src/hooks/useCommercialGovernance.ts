@@ -37,8 +37,14 @@ export function useCommissionRules() {
     mutationFn: async (payload: any) => {
       if (!tenantId) throw new Error('Tenant não resolvido');
       const { salesRepIds = [], legalEntityIds = [], ...rule } = payload;
+      if (!legalEntityIds.length && rule.is_active !== false) {
+        throw new Error('Selecione ao menos uma entidade jurídica (CNPJ) para a regra ativa.');
+      }
+      const desiredActive = rule.is_active !== false;
       // singular sales_rep_id deprecated — sempre null nas escritas novas
-      const row = { ...rule, sales_rep_id: null, tenant_id: tenantId };
+      // Estratégia: gravamos a regra com is_active=false para não disparar o trigger
+      // deferred antes das junctions existirem; depois sincronizamos e ativamos.
+      const row = { ...rule, sales_rep_id: null, tenant_id: tenantId, is_active: false };
       let ruleId = rule.id as string | undefined;
       if (ruleId) {
         const { error } = await supabase.from('commission_rules').update(row).eq('id', ruleId);
@@ -59,6 +65,10 @@ export function useCommissionRules() {
       if (legalEntityIds.length) {
         const { error } = await supabase.from('commission_rule_legal_entities')
           .insert(legalEntityIds.map((lid: string) => ({ rule_id: ruleId, legal_entity_id: lid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
+      if (desiredActive) {
+        const { error } = await supabase.from('commission_rules').update({ is_active: true }).eq('id', ruleId);
         if (error) throw error;
       }
     },
