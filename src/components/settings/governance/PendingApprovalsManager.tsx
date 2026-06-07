@@ -85,7 +85,7 @@ export function PendingApprovalsManager() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Solicitado</TableHead>
-                <TableHead>Máx. permitido</TableHead>
+                <TableHead>Regra aplicada</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead className="w-32" />
