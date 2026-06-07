@@ -1148,18 +1148,130 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     await createOrderMutation.mutateAsync();
   }, [createOrderMutation]);
 
-  const handleSubmit = () => {
-    // Check portfolio protection before submitting
-    if (!checkAccess()) return;
-    if (!priceValidation.validateBeforeSubmit()) return;
+  // Continuação do submit após validação de governança
+  const proceedAfterPreflight = useCallback(() => {
     if (isEditMode) {
       updateOrderMutation.mutate();
     } else {
-      // Em criação manual, abre modal de Follow-up para Faturamento
       setFollowupText('');
       setFollowupOpen(true);
     }
+  }, [isEditMode, updateOrderMutation]);
+
+  // Cria solicitações de aprovação para as exceções detectadas
+  const createApprovalRequestsForOrder = useCallback(async (
+    orderId: string,
+    pre: PreflightResult,
+    justification: string,
+  ) => {
+    const calls: Promise<any>[] = [];
+    if (pre.commissionExceptions.length > 0) {
+      const requested = { items: pre.commissionExceptions.map((s) => ({ id: s.order_item_id, product_id: s.product_id, applied_pct: s.applied_pct, max_pct: s.max_pct })) };
+      const max = { items: pre.commissionExceptions.map((s) => ({ id: s.order_item_id, product_id: s.product_id, max_pct: s.max_pct })) };
+      calls.push(supabase.rpc('create_commercial_approval_request', {
+        _order_id: orderId,
+        _order_item_id: null,
+        _request_type: 'commission',
+        _justification: justification,
+        _requested_value: requested,
+        _max_allowed: max,
+        _rule_id: pre.commissionExceptions[0].rule_id,
+      }));
+    }
+    if (pre.paymentException) {
+      calls.push(supabase.rpc('create_commercial_approval_request', {
+        _order_id: orderId,
+        _order_item_id: null,
+        _request_type: 'payment_terms',
+        _justification: justification,
+        _requested_value: {
+          applied_template_id: pre.paymentException.applied_template_id,
+          applied_template_name: pre.paymentException.applied_template_name,
+          applied_rank: pre.paymentException.applied_rank,
+          current_max_dias: pre.paymentException.current_max_dias,
+        },
+        _max_allowed: { max_rank: pre.paymentException.max_template_rank },
+        _rule_id: pre.paymentException.rule_id,
+      }));
+    }
+    await Promise.all(calls);
+  }, []);
+
+  const handleRequestAuthorization = useCallback(async (justification: string) => {
+    if (!preflightResult) return;
+    setPreflightSubmitting(true);
+    try {
+      let orderId: string | null = null;
+      if (isEditMode && order) {
+        await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true });
+        orderId = order.id;
+      } else {
+        const created: any = await createOrderMutation.mutateAsync();
+        orderId = created?.id ?? null;
+      }
+      if (orderId) {
+        await createApprovalRequestsForOrder(orderId, preflightResult, justification);
+        toast.success('Pedido salvo e enviado para aprovação');
+        queryClient.invalidateQueries({ queryKey: ['governance', 'pending_requests'] });
+      }
+      setPreflightOpen(false);
+      setPreflightResult(null);
+      if (!isEditMode) {
+        onOpenChange(false);
+        onSuccess?.();
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao solicitar autorização');
+    } finally {
+      setPreflightSubmitting(false);
+    }
+  }, [preflightResult, isEditMode, order, updateOrderMutation, createOrderMutation, createApprovalRequestsForOrder, queryClient, onOpenChange, onSuccess]);
+
+  const handleSubmit = async () => {
+    // Check portfolio protection before submitting
+    if (!checkAccess()) return;
+    if (!priceValidation.validateBeforeSubmit()) return;
+
+    // Preflight de governança comercial (comissão + parcelamento)
+    if (tenantId) {
+      try {
+        const pre = await runGovernancePreflight({
+          tenantId,
+          salesRepId: (order as any)?.sales_rep_id ?? null,
+          companyId: companyId || null,
+          legalEntityId: legalEntityId || null,
+          items: items
+            .filter((i) => i.product_id)
+            .map((i) => ({
+              order_item_id: i.id ?? null,
+              product_id: i.product_id!,
+              description: i.description ?? null,
+              commission_pct: Number(i.commission_pct || 0),
+            })),
+          totalAmount: orderTotal,
+          paymentConditions: paymentConditions.map((c) => ({
+            dias: Number(c.dias) || 0,
+            tipo: c.tipo,
+            percentual: c.percentual ?? null,
+            valor: c.valor ?? null,
+            payment_method: c.payment_method ?? null,
+          })),
+        });
+        if (pre.hasAny) {
+          setPreflightResult(pre);
+          setPreflightOpen(true);
+          return;
+        }
+      } catch (err) {
+        // Preflight não deve bloquear o fluxo em caso de erro de rede; loga e segue.
+        // eslint-disable-next-line no-console
+        console.warn('[governance preflight]', err);
+      }
+    }
+
+    proceedAfterPreflight();
   };
+
 
   const isPending = createOrderMutation.isPending || updateOrderMutation.isPending;
   const priceOverrideProps = priceValidation.getPriceOverrideModalProps();
