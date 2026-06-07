@@ -52,6 +52,10 @@ import { useProductSimpleSearch } from '@/hooks/useProductSearch';
 import { PaymentConditionsEditor, validatePaymentConditions, type PaymentConditionDraft } from './PaymentConditionsEditor';
 import { loadPaymentConditions, persistPaymentConditions } from '@/hooks/usePaymentConditions';
 import { OrderGovernanceBanner } from './OrderGovernanceBanner';
+import { GovernancePreflightModal } from './GovernancePreflightModal';
+import { useActiveTenantId } from '@/hooks/useActiveTenantId';
+import { runGovernancePreflight, useGovernanceFlags, type PreflightResult } from '@/hooks/useCommercialGovernance';
+
 
 
 const MAX_ITEM_OBSERVATION_LENGTH = 1000;
