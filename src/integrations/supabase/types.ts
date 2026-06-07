@@ -570,6 +570,111 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_sales_fact: {
+        Row: {
+          company_id: string | null
+          cost_value: number | null
+          created_at: string
+          discount_value: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
+          gross_value: number | null
+          id: string
+          ipi_value: number | null
+          legal_entity_id: string | null
+          net_value: number | null
+          order_date: string | null
+          order_id: string
+          order_item_id: string
+          order_status: string | null
+          product_family_id: string | null
+          product_group_id: string | null
+          product_id: string | null
+          quantity: number | null
+          sales_rep_id: string | null
+          team_id: string | null
+          tenant_id: string
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id: string
+          order_item_id: string
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id?: string
+          order_item_id?: string
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id?: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_sales_fact_queue: {
+        Row: {
+          action: string
+          enqueued_at: string
+          id: string
+          order_id: string
+          processed_at: string | null
+        }
+        Insert: {
+          action: string
+          enqueued_at?: string
+          id?: string
+          order_id: string
+          processed_at?: string | null
+        }
+        Update: {
+          action?: string
+          enqueued_at?: string
+          id?: string
+          order_id?: string
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       bot_flow_edges: {
         Row: {
           created_at: string
@@ -3123,8 +3228,11 @@ export type Database = {
           execution_legal_entity_id: string | null
           expected_close_date: string | null
           id: string
+          lead_source: string | null
+          lead_source_id: string | null
           legal_entity_id: string
           lost_reason: string | null
+          lost_reason_id: string | null
           name: string
           notes: string | null
           owner_id: string | null
@@ -3147,8 +3255,11 @@ export type Database = {
           execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_source?: string | null
+          lead_source_id?: string | null
           legal_entity_id: string
           lost_reason?: string | null
+          lost_reason_id?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
@@ -3171,8 +3282,11 @@ export type Database = {
           execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_source?: string | null
+          lead_source_id?: string | null
           legal_entity_id?: string
           lost_reason?: string | null
+          lost_reason_id?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
@@ -3215,10 +3329,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "deals_lead_source_id_fkey"
+            columns: ["lead_source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deals_legal_entity_id_fkey"
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lost_reason_id_fkey"
+            columns: ["lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lost_reason_categories"
             referencedColumns: ["id"]
           },
           {
@@ -3860,6 +3988,36 @@ export type Database = {
         }
         Relationships: []
       }
+      forecast_stage_probabilities: {
+        Row: {
+          created_at: string
+          id: string
+          pipeline_id: string | null
+          probability_pct: number
+          stage: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pipeline_id?: string | null
+          probability_pct: number
+          stage: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pipeline_id?: string | null
+          probability_pct?: number
+          stage?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       freight_type_erp_mapping: {
         Row: {
           created_at: string | null
@@ -4172,6 +4330,39 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_sources: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       legal_entities: {
         Row: {
           active: boolean
@@ -4352,6 +4543,42 @@ export type Database = {
           plan_name?: string
           updated_at?: string
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      lost_reason_categories: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          scope: string
+          sort_order: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          scope: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          scope?: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -5105,6 +5332,8 @@ export type Database = {
           erp_status: string | null
           erp_synced_at: string | null
           fator_kg: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_rate: number
           ipi_value: number
@@ -5123,7 +5352,9 @@ export type Database = {
           subtotal_item: number
           tenant_id: string
           thickness: number | null
+          total_cost: number | null
           total_item: number
+          unit_cost: number | null
           unit_price: number
           width: number | null
         }
@@ -5139,6 +5370,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           fator_kg?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -5157,7 +5390,9 @@ export type Database = {
           subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -5173,6 +5408,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           fator_kg?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -5191,7 +5428,9 @@ export type Database = {
           subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -5668,6 +5907,7 @@ export type Database = {
           carrier_id: string | null
           company_id: string | null
           contact_id: string | null
+          cost_value: number | null
           created_at: string
           created_by: string | null
           deal_id: string | null
@@ -5691,6 +5931,8 @@ export type Database = {
           erp_synced_at: string | null
           freight_type: string | null
           freight_value: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           is_locked: boolean
@@ -5730,6 +5972,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
@@ -5753,6 +5996,8 @@ export type Database = {
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           is_locked?: boolean
@@ -5792,6 +6037,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
@@ -5815,6 +6061,8 @@ export type Database = {
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           is_locked?: boolean
@@ -8085,6 +8333,8 @@ export type Database = {
           created_at: string
           description: string
           discount_percent: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_rate: number
           ipi_value: number
@@ -8096,7 +8346,9 @@ export type Database = {
           subtotal: number
           subtotal_item: number
           thickness: number | null
+          total_cost: number | null
           total_item: number
+          unit_cost: number | null
           unit_price: number
           width: number | null
         }
@@ -8105,6 +8357,8 @@ export type Database = {
           created_at?: string
           description: string
           discount_percent?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -8116,7 +8370,9 @@ export type Database = {
           subtotal?: number
           subtotal_item?: number
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -8125,6 +8381,8 @@ export type Database = {
           created_at?: string
           description?: string
           discount_percent?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -8136,7 +8394,9 @@ export type Database = {
           subtotal?: number
           subtotal_item?: number
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -8217,6 +8477,7 @@ export type Database = {
           carrier_id: string | null
           company_id: string | null
           contact_id: string | null
+          cost_value: number | null
           created_at: string
           created_by: string | null
           deal_id: string
@@ -8231,9 +8492,12 @@ export type Database = {
           delivery_terms: string | null
           delivery_zip_code: string | null
           freight_type: string | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string | null
+          lost_reason_id: string | null
           number: string
           observations: string | null
           payment_terms: string | null
@@ -8255,6 +8519,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id: string
@@ -8269,9 +8534,12 @@ export type Database = {
           delivery_terms?: string | null
           delivery_zip_code?: string | null
           freight_type?: string | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
+          lost_reason_id?: string | null
           number: string
           observations?: string | null
           payment_terms?: string | null
@@ -8293,6 +8561,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string
@@ -8307,9 +8576,12 @@ export type Database = {
           delivery_terms?: string | null
           delivery_zip_code?: string | null
           freight_type?: string | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
+          lost_reason_id?: string | null
           number?: string
           observations?: string | null
           payment_terms?: string | null
@@ -8363,6 +8635,13 @@ export type Database = {
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_lost_reason_id_fkey"
+            columns: ["lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lost_reason_categories"
             referencedColumns: ["id"]
           },
           {
@@ -8739,6 +9018,118 @@ export type Database = {
         }
         Relationships: []
       }
+      report_definitions: {
+        Row: {
+          category: string
+          chart_type: string | null
+          code: string
+          created_at: string
+          default_filters: Json
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          required_roles: string[]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          chart_type?: string | null
+          code: string
+          created_at?: string
+          default_filters?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          required_roles?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          chart_type?: string | null
+          code?: string
+          created_at?: string
+          default_filters?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          required_roles?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      report_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          report_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_favorites_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_snapshots: {
+        Row: {
+          filters_used: Json
+          generated_at: string
+          generated_by: string | null
+          id: string
+          json_result: Json
+          report_id: string
+          tenant_id: string | null
+        }
+        Insert: {
+          filters_used?: Json
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          json_result?: Json
+          report_id: string
+          tenant_id?: string | null
+        }
+        Update: {
+          filters_used?: Json
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          json_result?: Json
+          report_id?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_logs: {
         Row: {
           created_at: string
@@ -8848,11 +9239,15 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          legal_entity_id: string | null
           period_end: string
           period_start: string
           period_type: string
+          scope: string
           target_deals: number | null
           target_value: number | null
+          team_id: string | null
+          tenant_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -8860,11 +9255,15 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          legal_entity_id?: string | null
           period_end: string
           period_start: string
           period_type?: string
+          scope?: string
           target_deals?: number | null
           target_value?: number | null
+          team_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -8872,11 +9271,15 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          legal_entity_id?: string | null
           period_end?: string
           period_start?: string
           period_type?: string
+          scope?: string
           target_deals?: number | null
           target_value?: number | null
+          team_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -8922,6 +9325,50 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_team_history: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          legal_entity_id: string | null
+          manager_id: string | null
+          sales_rep_id: string
+          start_date: string
+          team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          sales_rep_id: string
+          start_date?: string
+          team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          sales_rep_id?: string
+          start_date?: string
+          team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_team_history_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -9438,6 +9885,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          legal_entity_id: string | null
+          manager_id: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tenant_access_exceptions: {
         Row: {
@@ -10432,6 +10912,9 @@ export type Database = {
         Returns: Json
       }
       archive_old_sync_records: { Args: { days_old?: number }; Returns: Json }
+      bi_can_see_rep: { Args: { p_rep: string }; Returns: boolean }
+      bi_is_admin_or_dev: { Args: never; Returns: boolean }
+      bi_my_sales_rep_id: { Args: never; Returns: string }
       can_access_legal_entity: {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean
@@ -10857,6 +11340,14 @@ export type Database = {
       }
       get_region_by_state: { Args: { state_code: string }; Returns: string }
       get_sales_rep_name: { Args: { p_sales_rep_id: string }; Returns: string }
+      get_sales_rep_org_at: {
+        Args: { p_ref_date: string; p_sales_rep_id: string }
+        Returns: {
+          legal_entity_id: string
+          manager_id: string
+          team_id: string
+        }[]
+      }
       get_sales_rep_productivity: {
         Args: {
           p_end_date: string
@@ -11042,10 +11533,27 @@ export type Database = {
         Args: { p_company_id?: string }
         Returns: number
       }
+      refresh_bi_sales_fact: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       release_blocked_attributes: {
         Args: { p_product_id: string }
         Returns: number
       }
+      report_clientes_atendidos: { Args: { p_filters?: Json }; Returns: Json }
+      report_conversao: { Args: { p_filters?: Json }; Returns: Json }
+      report_dashboard_executivo: { Args: { p_filters?: Json }; Returns: Json }
+      report_forecast_vendas: { Args: { p_filters?: Json }; Returns: Json }
+      report_metas: { Args: { p_filters?: Json }; Returns: Json }
+      report_perdas_atendimento: { Args: { p_filters?: Json }; Returns: Json }
+      report_perdas_cotacao: { Args: { p_filters?: Json }; Returns: Json }
+      report_pipeline_comercial: { Args: { p_filters?: Json }; Returns: Json }
+      report_rankings: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_cliente: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_entidade: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_produto: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_vendedor: { Args: { p_filters?: Json }; Returns: Json }
       reset_orders: { Args: never; Returns: Json }
       resolve_commission_rule: {
         Args: {
