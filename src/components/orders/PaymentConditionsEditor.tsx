@@ -29,6 +29,7 @@ interface Props {
   disabled?: boolean;
   companyId?: string | null;
   salesRepId?: string | null;
+  legalEntityId?: string | null;
 }
 
 
@@ -41,7 +42,7 @@ const NEW_ROW = (parcela: number): PaymentConditionDraft => ({
   percentual: null,
 });
 
-export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled, companyId, salesRepId }: Props) {
+export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled, companyId, salesRepId, legalEntityId }: Props) {
   const [shortcutOpen, setShortcutOpen] = useState<null | 'simples' | 'entrada'>(null);
   const [simplesDias, setSimplesDias] = useState('');
   const [simplesForma, setSimplesForma] = useState('');
@@ -67,6 +68,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
     companyId: companyId ?? null,
     salesRepId: salesRepId ?? null,
     amount: totalAmount,
+    legalEntityId: legalEntityId ?? null,
     enabled: totalAmount > 0,
   });
   const { data: governanceTemplates = [] } = useQuery({

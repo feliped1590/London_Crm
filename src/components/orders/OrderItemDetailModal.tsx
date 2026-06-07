@@ -32,9 +32,10 @@ interface OrderItemDetailModalProps {
   canEdit: boolean;
   companyId?: string | null;
   salesRepId?: string | null;
+  legalEntityId?: string | null;
 }
 
-export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit, companyId, salesRepId }: OrderItemDetailModalProps) {
+export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate, canEdit, companyId, salesRepId, legalEntityId }: OrderItemDetailModalProps) {
 
   const [draft, setDraft] = useState<OrderItemDraft | null>(null);
   const [showSyncConfirm, setShowSyncConfirm] = useState(false);
@@ -77,6 +78,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
     productId: item?.product_id ?? null,
     companyId: companyId ?? null,
     salesRepId: effectiveSalesRepId,
+    legalEntityId: legalEntityId ?? null,
     enabled: open && !!item?.product_id,
   });
 
