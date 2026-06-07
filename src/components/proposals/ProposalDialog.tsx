@@ -302,7 +302,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     if (!companyFiscalData || items.length === 0) return;
     setItems(prev => prev.map(item => {
       if (!item.product) return item;
-      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? ((item.product as any)?.aliquota_ipi || 0) : 0 };
+      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(item.product) : 0 };
     }));
   }, [companyFiscalData]);
 
