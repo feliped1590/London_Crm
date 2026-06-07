@@ -10,6 +10,55 @@ import { Check, X } from 'lucide-react';
 import { usePendingApprovalRequests } from '@/hooks/useCommercialGovernance';
 import { format } from 'date-fns';
 
+function fmtPct(v: any) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = Number(v);
+  return isNaN(n) ? String(v) : `${n.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`;
+}
+
+function formatRequested(r: any) {
+  const v = r.requested_value ?? {};
+  if (r.request_type === 'commission') {
+    const items: any[] = Array.isArray(v.items) ? v.items : [];
+    if (!items.length) return '—';
+    return (
+      <div className="space-y-0.5">
+        {items.map((it, i) => (
+          <div key={i}>
+            Comissão aplicada: <span className="font-medium">{fmtPct(it.applied_pct)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  // payment
+  const parts: string[] = [];
+  if (v.applied_template_name) parts.push(`Condição: ${v.applied_template_name}`);
+  if (v.current_max_dias != null) parts.push(`Maior prazo: ${v.current_max_dias} dias`);
+  if (v.applied_rank != null) parts.push(`Rank: ${v.applied_rank}`);
+  return parts.length ? parts.join(' · ') : 'Condição fora das regras';
+}
+
+function formatMaxAllowed(r: any) {
+  const v = r.max_allowed ?? {};
+  if (r.request_type === 'commission') {
+    const items: any[] = Array.isArray(v.items) ? v.items : [];
+    if (!items.length) return '—';
+    return (
+      <div className="space-y-0.5">
+        {items.map((it, i) => (
+          <div key={i}>
+            Máx. permitido: <span className="font-medium">{fmtPct(it.max_pct)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (v.max_rank != null) return `Até rank ${v.max_rank} (condições mais curtas)`;
+  if (v.max_dias != null) return `Até ${v.max_dias} dias`;
+  return '—';
+}
+
 export function PendingApprovalsManager() {
   const { requests, isLoading, review } = usePendingApprovalRequests();
   const [open, setOpen] = useState<{ id: string; decision: 'approved' | 'rejected' } | null>(null);
@@ -51,8 +100,8 @@ export function PendingApprovalsManager() {
                   <TableCell className="font-medium">#{r.order?.number ?? '—'}</TableCell>
                   <TableCell>{r.order?.company?.name ?? '—'}</TableCell>
                   <TableCell>{r.request_type === 'commission' ? 'Comissão' : 'Pagamento'}</TableCell>
-                  <TableCell className="text-xs"><pre className="whitespace-pre-wrap">{JSON.stringify(r.requested_value)}</pre></TableCell>
-                  <TableCell className="text-xs"><pre className="whitespace-pre-wrap">{JSON.stringify(r.max_allowed)}</pre></TableCell>
+                  <TableCell className="text-sm">{formatRequested(r)}</TableCell>
+                  <TableCell className="text-sm">{formatMaxAllowed(r)}</TableCell>
                   <TableCell>
                     <Badge variant={r.status === 'pending' ? 'outline' : r.status === 'approved' ? 'default' : 'destructive'}>
                       {r.status}
