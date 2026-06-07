@@ -444,7 +444,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   // --- Mutations ---
-  const createOrderMutation = useMutation({
+  const createOrderMutation = useMutation<any, Error, { skipAutoSync?: boolean } | void>({
     mutationFn: async () => {
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
