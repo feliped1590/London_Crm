@@ -11,6 +11,7 @@ import { Lock, LockOpen, RefreshCw, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/formatters';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import type { OrderItemDraft } from '@/types/documents';
 import { toast } from 'sonner';
 import { useResolveCommissionRule } from '@/hooks/useCommercialGovernance';
@@ -49,7 +50,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
       if (item.product_id) {
         supabase
           .from('products')
-          .select('id, name, sku, unit_price, width_mm, length_mm, thickness_microns, fator_kg, aliquota_ipi')
+          .select('id, name, sku, unit_price, width_mm, length_mm, thickness_microns, fator_kg, aliquota_ipi, ncm:ncm_codes(aliquota_ipi_oficial)')
           .eq('id', item.product_id)
           .maybeSingle()
           .then(({ data }) => setProductData(data));
@@ -144,7 +145,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
         length: productData.length_mm || prev.length,
         thickness: productData.thickness_microns || prev.thickness,
         fator_kg: productData.fator_kg || prev.fator_kg,
-        ipi_rate: productData.aliquota_ipi || prev.ipi_rate,
+        ipi_rate: getEffectiveProductIpiRate(productData) || prev.ipi_rate,
         subtotal: (prev.quantity) * (productData.unit_price || prev.unit_price),
       };
     });

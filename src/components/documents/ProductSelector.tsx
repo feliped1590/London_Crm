@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePricingTables } from '@/hooks/usePricingTables';
 import { useCompanyFiscal } from '@/hooks/useCompanyFiscal';
 import { calculatePackagingPrice } from '@/utils/pricing/packagingPricing';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import { IpiMode } from '@/types/products';
 
 interface UseProductAddOptions {
@@ -58,7 +59,7 @@ export function useProductAdd({ companyId, contactId }: UseProductAddOptions) {
       : true;
     const ipiRate = (ipiMode === 'isento' || !isContribuinteIpi)
       ? 0
-      : (product.aliquota_ipi || 0);
+      : getEffectiveProductIpiRate(product);
 
     return { unitPrice, discountPercent, priceSource, ipiRate };
   }, [companyId, contactId, companyFiscalData, getApplicableTable, calculatePrice]);

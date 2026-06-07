@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Proposal, ProposalItem, Product, ProposalStatus, IpiMode, ipiModeConfig, proposalStatusConfig } from '@/types/products';
@@ -301,7 +302,7 @@ export function ProposalDialog({ open, onOpenChange, dealId, companyId, contactI
     if (!companyFiscalData || items.length === 0) return;
     setItems(prev => prev.map(item => {
       if (!item.product) return item;
-      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? ((item.product as any)?.aliquota_ipi || 0) : 0 };
+      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(item.product) : 0 };
     }));
   }, [companyFiscalData]);
 
