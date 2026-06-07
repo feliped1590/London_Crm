@@ -209,14 +209,33 @@ export function usePaymentRules() {
   const upsert = useMutation({
     mutationFn: async (payload: any) => {
       if (!tenantId) throw new Error('Tenant não resolvido');
-      const row = { ...payload, tenant_id: tenantId };
-      const { error } = payload.id
-        ? await supabase.from('payment_terms_rules').update(row).eq('id', payload.id)
-        : await supabase.from('payment_terms_rules').insert(row);
-      if (error) throw error;
+      const { salesRepIds = [], legalEntityIds = [], ...rule } = payload;
+      const row = { ...rule, sales_rep_id: null, tenant_id: tenantId };
+      let ruleId = rule.id as string | undefined;
+      if (ruleId) {
+        const { error } = await supabase.from('payment_terms_rules').update(row).eq('id', ruleId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('payment_terms_rules').insert(row).select('id').single();
+        if (error) throw error;
+        ruleId = data.id as string;
+      }
+      await supabase.from('payment_terms_rule_sales_reps').delete().eq('rule_id', ruleId);
+      if (salesRepIds.length) {
+        const { error } = await supabase.from('payment_terms_rule_sales_reps')
+          .insert(salesRepIds.map((sid: string) => ({ rule_id: ruleId, sales_rep_id: sid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
+      await supabase.from('payment_terms_rule_legal_entities').delete().eq('rule_id', ruleId);
+      if (legalEntityIds.length) {
+        const { error } = await supabase.from('payment_terms_rule_legal_entities')
+          .insert(legalEntityIds.map((lid: string) => ({ rule_id: ruleId, legal_entity_id: lid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.paymentRules });
+      qc.invalidateQueries({ queryKey: ['governance', 'payment_terms_rule_junctions'] });
       toast.success('Regra salva');
     },
     onError: (e: any) => toast.error(e.message),
@@ -233,6 +252,7 @@ export function usePaymentRules() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return { rules: list.data || [], isLoading: list.isLoading, upsert, remove };
 }
