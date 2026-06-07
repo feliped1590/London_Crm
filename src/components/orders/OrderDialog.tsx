@@ -1254,9 +1254,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     // Preflight de governança comercial (comissão + parcelamento)
     if (tenantId) {
       try {
+        // Sales rep efetivo: pedido > empresa
+        let salesRepId: string | null = (order as any)?.sales_rep_id ?? null;
+        if (!salesRepId && companyId) {
+          const { data: comp } = await supabase
+            .from('companies')
+            .select('sales_rep_id')
+            .eq('id', companyId)
+            .maybeSingle();
+          salesRepId = (comp as any)?.sales_rep_id ?? null;
+        }
         const pre = await runGovernancePreflight({
           tenantId,
-          salesRepId: (order as any)?.sales_rep_id ?? null,
+          salesRepId,
           companyId: companyId || null,
           legalEntityId: legalEntityId || null,
           items: items
