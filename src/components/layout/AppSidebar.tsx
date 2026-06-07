@@ -24,6 +24,7 @@ import {
   DollarSign,
   CalendarCheck,
   SearchCheck,
+  Brain,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -60,6 +61,7 @@ const allNavItems: NavItem[] = [
   { to: '/emails', icon: Mail, label: 'Emails', moduleKey: 'emails' },
   { to: '/prospecting', icon: SearchCheck, label: 'Prospecção', moduleKey: 'prospecting' },
   { to: '/reports', icon: BarChart3, label: 'Dashboard', moduleKey: 'reports' },
+  { to: '/bi', icon: Brain, label: 'Central de BI', moduleKey: 'reports' },
   { to: '/integrations', icon: Plug, label: 'Integrações', moduleKey: 'integrations', devOnly: true },
   { to: '/settings', icon: Settings, label: 'Configurações', moduleKey: 'settings' },
   
