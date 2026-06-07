@@ -47,23 +47,19 @@ type RegraInsert = Database['public']['Tables']['regras_tributacao']['Insert'];
 type BeneficioInsert = Database['public']['Tables']['beneficios_fiscais']['Insert'];
 
 export function FiscalSettingsTab() {
-  const [activeSubTab, setActiveSubTab] = useState('regras');
+  const [activeSubTab, setActiveSubTab] = useState('cadastros');
   
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-xl font-semibold">Fiscal / Tributário</h2>
         <p className="text-sm text-muted-foreground">
-          Gerencie regras de tributação, benefícios fiscais e cadastros auxiliares
+          Gerencie cadastros fiscais auxiliares
         </p>
       </div>
 
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="regras" className="gap-2">
-            <Calculator className="h-4 w-4" />
-            Regras de Tributação
-          </TabsTrigger>
           <TabsTrigger value="ncm-grupos" className="gap-2">
             <FileText className="h-4 w-4" />
             NCM por Grupo
@@ -74,20 +70,16 @@ export function FiscalSettingsTab() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="regras" className="mt-6">
-          <RegrasTributacaoManager />
-        </TabsContent>
-
         <TabsContent value="ncm-grupos" className="mt-6">
           <GroupNcmDefaultsManager />
         </TabsContent>
-
 
         <TabsContent value="cadastros" className="mt-6">
           <CadastrosBaseInfo />
         </TabsContent>
       </Tabs>
     </div>
+
   );
 }
 

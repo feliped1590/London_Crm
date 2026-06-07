@@ -312,7 +312,7 @@ export function NCMManager() {
         <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}</div>
       ) : (
         <Card>
-          <ScrollArea className="max-h-[500px]">
+          <ScrollArea className="max-h-[70vh]">
             <Table>
               <TableHeader>
                 <TableRow>
