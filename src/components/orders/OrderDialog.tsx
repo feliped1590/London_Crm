@@ -659,8 +659,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
 
-      // Auto re-sync em TODA atualização (igual produtos)
-      if (order) {
+      // Auto re-sync em TODA atualização (igual produtos) — salvo skipAutoSync
+      if (order && !opts.skipAutoSync) {
         try {
           const { data: existing } = await supabase
             .from('order_sync_queue')
