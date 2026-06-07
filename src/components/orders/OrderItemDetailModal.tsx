@@ -145,7 +145,7 @@ export function OrderItemDetailModal({ open, onOpenChange, item, index, onUpdate
         length: productData.length_mm || prev.length,
         thickness: productData.thickness_microns || prev.thickness,
         fator_kg: productData.fator_kg || prev.fator_kg,
-        ipi_rate: productData.aliquota_ipi || prev.ipi_rate,
+        ipi_rate: getEffectiveProductIpiRate(productData) || prev.ipi_rate,
         subtotal: (prev.quantity) * (productData.unit_price || prev.unit_price),
       };
     });
