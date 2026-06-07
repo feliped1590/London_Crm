@@ -3123,8 +3123,11 @@ export type Database = {
           execution_legal_entity_id: string | null
           expected_close_date: string | null
           id: string
+          lead_source: string | null
+          lead_source_id: string | null
           legal_entity_id: string
           lost_reason: string | null
+          lost_reason_id: string | null
           name: string
           notes: string | null
           owner_id: string | null
@@ -3147,8 +3150,11 @@ export type Database = {
           execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_source?: string | null
+          lead_source_id?: string | null
           legal_entity_id: string
           lost_reason?: string | null
+          lost_reason_id?: string | null
           name: string
           notes?: string | null
           owner_id?: string | null
@@ -3171,8 +3177,11 @@ export type Database = {
           execution_legal_entity_id?: string | null
           expected_close_date?: string | null
           id?: string
+          lead_source?: string | null
+          lead_source_id?: string | null
           legal_entity_id?: string
           lost_reason?: string | null
+          lost_reason_id?: string | null
           name?: string
           notes?: string | null
           owner_id?: string | null
@@ -3215,10 +3224,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "deals_lead_source_id_fkey"
+            columns: ["lead_source_id"]
+            isOneToOne: false
+            referencedRelation: "lead_sources"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deals_legal_entity_id_fkey"
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lost_reason_id_fkey"
+            columns: ["lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lost_reason_categories"
             referencedColumns: ["id"]
           },
           {
@@ -4172,6 +4195,39 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_sources: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       legal_entities: {
         Row: {
           active: boolean
@@ -4352,6 +4408,42 @@ export type Database = {
           plan_name?: string
           updated_at?: string
           valid_until?: string | null
+        }
+        Relationships: []
+      }
+      lost_reason_categories: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          scope: string
+          sort_order: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          scope: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          scope?: string
+          sort_order?: number
+          tenant_id?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -8234,6 +8326,7 @@ export type Database = {
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string | null
+          lost_reason_id: string | null
           number: string
           observations: string | null
           payment_terms: string | null
@@ -8272,6 +8365,7 @@ export type Database = {
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
+          lost_reason_id?: string | null
           number: string
           observations?: string | null
           payment_terms?: string | null
@@ -8310,6 +8404,7 @@ export type Database = {
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
+          lost_reason_id?: string | null
           number?: string
           observations?: string | null
           payment_terms?: string | null
@@ -8363,6 +8458,13 @@ export type Database = {
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_lost_reason_id_fkey"
+            columns: ["lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lost_reason_categories"
             referencedColumns: ["id"]
           },
           {
@@ -8848,11 +8950,15 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          legal_entity_id: string | null
           period_end: string
           period_start: string
           period_type: string
+          scope: string
           target_deals: number | null
           target_value: number | null
+          team_id: string | null
+          tenant_id: string | null
           updated_at: string | null
           user_id: string
         }
@@ -8860,11 +8966,15 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          legal_entity_id?: string | null
           period_end: string
           period_start: string
           period_type?: string
+          scope?: string
           target_deals?: number | null
           target_value?: number | null
+          team_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -8872,11 +8982,15 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          legal_entity_id?: string | null
           period_end?: string
           period_start?: string
           period_type?: string
+          scope?: string
           target_deals?: number | null
           target_value?: number | null
+          team_id?: string | null
+          tenant_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
