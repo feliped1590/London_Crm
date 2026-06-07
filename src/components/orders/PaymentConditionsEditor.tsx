@@ -68,6 +68,7 @@ export function PaymentConditionsEditor({ value, onChange, totalAmount, disabled
     companyId: companyId ?? null,
     salesRepId: salesRepId ?? null,
     amount: totalAmount,
+    legalEntityId: legalEntityId ?? null,
     enabled: totalAmount > 0,
   });
   const { data: governanceTemplates = [] } = useQuery({
