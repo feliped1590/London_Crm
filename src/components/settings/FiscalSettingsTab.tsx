@@ -64,22 +64,6 @@ export function FiscalSettingsTab() {
             <Calculator className="h-4 w-4" />
             Regras de Tributação
           </TabsTrigger>
-          <TabsTrigger value="beneficios" className="gap-2">
-            <Gift className="h-4 w-4" />
-            Benefícios Fiscais
-          </TabsTrigger>
-          <TabsTrigger value="transicao" className="gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Transição 2026
-          </TabsTrigger>
-          <TabsTrigger value="credito-presumido" className="gap-2">
-            <Percent className="h-4 w-4" />
-            Crédito Presumido
-          </TabsTrigger>
-          <TabsTrigger value="imposto-seletivo" className="gap-2">
-            <Landmark className="h-4 w-4" />
-            Imposto Seletivo
-          </TabsTrigger>
           <TabsTrigger value="ncm-grupos" className="gap-2">
             <FileText className="h-4 w-4" />
             NCM por Grupo
@@ -94,25 +78,10 @@ export function FiscalSettingsTab() {
           <RegrasTributacaoManager />
         </TabsContent>
 
-        <TabsContent value="beneficios" className="mt-6">
-          <BeneficiosFiscaisManager />
-        </TabsContent>
-
-        <TabsContent value="transicao" className="mt-6">
-          <TransicaoTributariaPanel />
-        </TabsContent>
-
-        <TabsContent value="credito-presumido" className="mt-6">
-          <CreditoPresumidoManager />
-        </TabsContent>
-
-        <TabsContent value="imposto-seletivo" className="mt-6">
-          <ImpostoSeletivoManager />
-        </TabsContent>
-
         <TabsContent value="ncm-grupos" className="mt-6">
           <GroupNcmDefaultsManager />
         </TabsContent>
+
 
         <TabsContent value="cadastros" className="mt-6">
           <CadastrosBaseInfo />
