@@ -1273,6 +1273,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         disabled={!canEdit}
         companyId={companyId || null}
         salesRepId={(order as any)?.sales_rep_id ?? null}
+        legalEntityId={legalEntityId || null}
       />
 
       {canEdit && (
