@@ -186,6 +186,7 @@ const App = () => (
                 <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/bi" element={<BICenter />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/pricing" element={<Navigate to="/settings?tab=order-approval" replace />} />
                 <Route path="/prospecting" element={<Prospecting />} />
