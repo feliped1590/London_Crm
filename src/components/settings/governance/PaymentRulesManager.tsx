@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Plus, Pencil, Trash2, Check, ChevronsUpDown, AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { usePaymentRules, usePaymentTemplates } from '@/hooks/useCommercialGovernance';
+import { useActiveTenantId } from '@/hooks/useActiveTenantId';
+import { toast } from 'sonner';
 
 interface Form {
   id?: string;
@@ -29,6 +36,7 @@ interface Form {
 const empty: Form = {
   name: '', level: 4, priority: 0, is_active: true,
   amount_min: 0, amount_max: null,
+  company_id: null, economic_group_id: null, sales_rep_id: null,
   default_template_id: '', max_template_rank: 0,
 };
 
@@ -39,11 +47,111 @@ const LEVEL_LABEL: Record<number, string> = {
   4: '4 — Geral + Faixa',
 };
 
+interface Option { value: string; label: string; hint?: string }
+
+function ComboSelect({
+  options, value, onChange, placeholder, emptyText, disabled,
+}: {
+  options: Option[];
+  value: string | null | undefined;
+  onChange: (v: string | null) => void;
+  placeholder: string;
+  emptyText: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground')}
+        >
+          <span className="truncate">{selected ? selected.label : placeholder}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar..." />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {options.map((o) => (
+                <CommandItem
+                  key={o.value}
+                  value={`${o.label} ${o.hint ?? ''}`}
+                  onSelect={() => { onChange(o.value); setOpen(false); }}
+                >
+                  <Check className={cn('mr-2 h-4 w-4', value === o.value ? 'opacity-100' : 'opacity-0')} />
+                  <div className="flex flex-col">
+                    <span>{o.label}</span>
+                    {o.hint && <span className="text-xs text-muted-foreground">{o.hint}</span>}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function PaymentRulesManager() {
   const { rules, isLoading, upsert, remove } = usePaymentRules();
   const { templates } = usePaymentTemplates();
+  const { data: tenantId } = useActiveTenantId();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(empty);
+
+  const { data: companies = [] } = useQuery({
+    queryKey: ['gov_companies', tenantId],
+    enabled: !!tenantId && open && form.level === 1,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, cnpj')
+        .eq('tenant_id', tenantId!)
+        .order('name')
+        .limit(500);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: ecoGroups = [] } = useQuery({
+    queryKey: ['gov_eco_groups', tenantId],
+    enabled: !!tenantId && open && form.level === 2,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('economic_groups')
+        .select('id, name, cnpj_root')
+        .eq('tenant_id', tenantId!)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: salesReps = [] } = useQuery({
+    queryKey: ['gov_sales_reps', tenantId],
+    enabled: !!tenantId && open && form.level === 3,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales_reps')
+        .select('id, name')
+        .eq('tenant_id', tenantId!)
+        .eq('active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const openNew = () => { setForm(empty); setOpen(true); };
   const openEdit = (r: any) => {
@@ -56,11 +164,37 @@ export function PaymentRulesManager() {
     setOpen(true);
   };
 
+  // Reset target IDs when level changes
+  useEffect(() => {
+    setForm((f) => ({
+      ...f,
+      company_id: f.level === 1 ? f.company_id : null,
+      economic_group_id: f.level === 2 ? f.economic_group_id : null,
+      sales_rep_id: f.level === 3 ? f.sales_rep_id : null,
+    }));
+  }, [form.level]);
+
+  const targetError = useMemo(() => {
+    if (form.level === 1 && !form.company_id) return 'Selecione o cliente.';
+    if (form.level === 2 && !form.economic_group_id) return 'Selecione o grupo econômico.';
+    if (form.level === 3 && !form.sales_rep_id) return 'Selecione o vendedor.';
+    return null;
+  }, [form]);
+
+  const canSave = !!form.name.trim() && !!form.default_template_id && !targetError;
+
   const handleSave = async () => {
-    if (!form.name.trim() || !form.default_template_id) return;
+    if (!canSave) {
+      if (targetError) toast.error(targetError);
+      return;
+    }
     const payload = { ...form, amount_max: form.amount_max ?? null };
-    await upsert.mutateAsync(payload);
-    setOpen(false);
+    try {
+      await upsert.mutateAsync(payload);
+      setOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao salvar regra');
+    }
   };
 
   return (
@@ -139,6 +273,44 @@ export function PaymentRulesManager() {
                 <Input type="number" value={form.priority} onChange={(e) => setForm({ ...form, priority: Number(e.target.value) })} />
               </div>
             </div>
+
+            {form.level === 1 && (
+              <div className="space-y-1">
+                <Label>Cliente *</Label>
+                <ComboSelect
+                  placeholder="Selecione o cliente"
+                  emptyText="Nenhum cliente encontrado"
+                  value={form.company_id}
+                  onChange={(v) => setForm({ ...form, company_id: v })}
+                  options={companies.map((c: any) => ({ value: c.id, label: c.name, hint: c.cnpj || undefined }))}
+                />
+              </div>
+            )}
+            {form.level === 2 && (
+              <div className="space-y-1">
+                <Label>Grupo Econômico *</Label>
+                <ComboSelect
+                  placeholder="Selecione o grupo"
+                  emptyText="Nenhum grupo encontrado"
+                  value={form.economic_group_id}
+                  onChange={(v) => setForm({ ...form, economic_group_id: v })}
+                  options={ecoGroups.map((g: any) => ({ value: g.id, label: g.name, hint: g.cnpj_root || undefined }))}
+                />
+              </div>
+            )}
+            {form.level === 3 && (
+              <div className="space-y-1">
+                <Label>Vendedor *</Label>
+                <ComboSelect
+                  placeholder="Selecione o vendedor"
+                  emptyText="Nenhum vendedor encontrado"
+                  value={form.sales_rep_id}
+                  onChange={(v) => setForm({ ...form, sales_rep_id: v })}
+                  options={salesReps.map((s: any) => ({ value: s.id, label: s.name }))}
+                />
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label>Valor mínimo (R$)</Label>
@@ -169,9 +341,14 @@ export function PaymentRulesManager() {
                   onChange={(e) => setForm({ ...form, max_template_rank: Number(e.target.value) })} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Para níveis 1/2/3 preencha respectivamente cliente / grupo econômico / vendedor (seletores serão habilitados em fase futura).
-            </p>
+
+            {targetError && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                {targetError}
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
               <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
               <Label>Ativa</Label>
@@ -179,7 +356,9 @@ export function PaymentRulesManager() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!form.name.trim() || !form.default_template_id}>Salvar</Button>
+            <Button onClick={handleSave} disabled={!canSave || upsert.isPending}>
+              {upsert.isPending ? 'Salvando…' : 'Salvar'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
