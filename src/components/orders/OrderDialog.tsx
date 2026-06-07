@@ -1287,9 +1287,27 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           })),
         });
         if (pre.hasAny) {
-          setPreflightResult(pre);
-          setPreflightOpen(true);
-          return;
+          // Se já existem aprovações para este pedido, suprimir exceções já aprovadas
+          let filtered = pre;
+          if (isEditMode && (order as any)?.id) {
+            const { data: approved } = await supabase
+              .from('order_approval_requests')
+              .select('request_type')
+              .eq('order_id', (order as any).id)
+              .eq('status', 'approved');
+            const approvedKinds = new Set((approved ?? []).map((a: any) => a.request_type));
+            filtered = {
+              ...pre,
+              commissionExceptions: approvedKinds.has('commission') ? [] : pre.commissionExceptions,
+              paymentException: approvedKinds.has('payment_terms') ? null : pre.paymentException,
+            } as PreflightResult;
+            filtered.hasAny = filtered.commissionExceptions.length > 0 || !!filtered.paymentException;
+          }
+          if (filtered.hasAny) {
+            setPreflightResult(filtered);
+            setPreflightOpen(true);
+            return;
+          }
         }
       } catch (err) {
         // Preflight não deve bloquear o fluxo em caso de erro de rede; loga e segue.
