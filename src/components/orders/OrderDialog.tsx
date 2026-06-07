@@ -413,7 +413,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (!order) return [];
       const { data, error } = await supabase
         .from('order_items')
-        .select('*, product:products(sku, erp_product_code, fator_kg, unit_measure)')
+        .select('*, product:products(id, sku, erp_product_code, name, tipo_id, unit_price, width, length, thickness, aliquota_ipi, fator_kg, unit_measure, ficha_tecnica, ncm:ncm_codes(aliquota_ipi_oficial))')
         .eq('order_id', order.id)
         .order('sort_order');
       if (error) throw error;
@@ -430,6 +430,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         unit_measure: item.unit_measure ?? item.product?.unit_measure ?? '',
         width: item.width || undefined, length: item.length || undefined, thickness: item.thickness || undefined,
         is_locked: item.is_locked || false,
+        product: item.product || null,
       }));
     },
     enabled: !!order?.id && open,
@@ -1015,11 +1016,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (!companyFiscalData || items.length === 0) return;
     setItems(prev => prev.map(item => {
       if (!item.product_id) return item;
-      const product = products?.find(p => p.id === item.product_id);
+      const product =
+        linkedCompanyProducts.find(p => p.id === item.product_id) ||
+        products?.find(p => p.id === item.product_id) ||
+        item.product;
       if (!product) return item;
-      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(product) : 0 };
+      const nextIpiRate = companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(product) : 0;
+      return { ...item, product, ipi_rate: nextIpiRate };
     }));
-  }, [companyFiscalData]);
+  }, [companyFiscalData, linkedCompanyProducts, products, items.length, setItems]);
 
   // --- Handlers ---
   const addProductById = useCallback((productId: string, productData?: any) => {
@@ -1037,7 +1042,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       width: eff.width || undefined,
       length: eff.length || undefined,
       thickness: eff.thickness || undefined,
-      calculated_price_source: priceSource, is_locked: false,
+      calculated_price_source: priceSource, is_locked: false, product,
     });
     addRecent(product.id);
     setSelectedProductId('');
