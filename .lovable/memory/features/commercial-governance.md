@@ -22,6 +22,9 @@ Dois motores complementares aplicados a Pedidos (e Propostas, fase futura):
 ## Hierarquia comissão (mais específico vence)
 vendedor+cliente+produto → vendedor+produto → cliente+produto → vendedor+grupo → vendedor → cliente/grupo → produto/subgrupo/grupo → geral.
 
+**Comissão padrão por vendedor** = regra nível 5 em `commission_rules` (`sales_rep_id` preenchido, demais escopos nulos). Sem schema dedicado. UI tem atalho "Padrão por vendedor" + banner de cobertura no `CommissionRulesManager` (lista vendedores ativos sem regra padrão).
+
+
 ## Hierarquia pagamento (nível + faixa de valor obrigatória)
 1=cliente, 2=grupo econômico, 3=vendedor, 4=geral. `ORDER BY level ASC, priority DESC LIMIT 1`.
 
