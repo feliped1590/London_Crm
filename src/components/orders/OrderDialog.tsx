@@ -444,7 +444,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   });
 
   // --- Mutations ---
-  const createOrderMutation = useMutation({
+  const createOrderMutation = useMutation<any, Error, { skipAutoSync?: boolean } | void>({
     mutationFn: async () => {
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
       if (!companyId && !contactId) throw new Error('Selecione uma empresa ou contato');
@@ -533,27 +533,33 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       });
       return newOrder;
     },
-    onSuccess: async (newOrder: any) => {
+    onSuccess: async (newOrder: any, variables) => {
+      const skipAutoSync = !!(variables && (variables as any).skipAutoSync);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Pedido criado — enviando ao ERP em segundo plano');
+      if (skipAutoSync) {
+        toast.success('Pedido criado — aguardando aprovação de governança');
+      } else {
+        toast.success('Pedido criado — enviando ao ERP em segundo plano');
+        // Auto-disparo de sincronização (igual aos produtos)
+        try {
+          await (supabase as any).from('order_sync_queue').insert({
+            order_id: newOrder.id,
+            status: 'pending',
+            attempt_count: 0,
+            error_message: null,
+            next_retry_at: null,
+            validation_errors: null,
+            validation_fields: null,
+          });
+          queryClient.invalidateQueries({ queryKey: ['order_sync_status', newOrder.id] });
+          supabase.functions.invoke('process-order-sync', { body: { order_id: newOrder.id } }).catch(() => {});
+        } catch {}
+      }
 
-      // Auto-disparo de sincronização (igual aos produtos)
-      try {
-        await (supabase as any).from('order_sync_queue').insert({
-          order_id: newOrder.id,
-          status: 'pending',
-          attempt_count: 0,
-          error_message: null,
-          next_retry_at: null,
-          validation_errors: null,
-          validation_fields: null,
-        });
-        queryClient.invalidateQueries({ queryKey: ['order_sync_status', newOrder.id] });
-        supabase.functions.invoke('process-order-sync', { body: { order_id: newOrder.id } }).catch(() => {});
-      } catch {}
-
-      onOpenChange(false);
-      onSuccess?.();
+      if (!skipAutoSync) {
+        onOpenChange(false);
+        onSuccess?.();
+      }
     },
     onError: (error: Error) => {
       const message = error?.message || '';
@@ -586,7 +592,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (auditLogs.length > 0) await supabase.from('order_audit_log').insert(auditLogs);
   };
 
-  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean } | void>({
+  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean; skipAutoSync?: boolean } | void>({
     mutationFn: async () => {
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
@@ -653,8 +659,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['order_items_for_edit', order?.id] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
 
-      // Auto re-sync em TODA atualização (igual produtos)
-      if (order) {
+      // Auto re-sync em TODA atualização (igual produtos) — salvo skipAutoSync
+      if (order && !opts.skipAutoSync) {
         try {
           const { data: existing } = await supabase
             .from('order_sync_queue')
@@ -1204,23 +1210,35 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     try {
       let orderId: string | null = null;
       if (isEditMode && order) {
-        await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true });
+        await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true, skipAutoSync: true });
         orderId = order.id;
       } else {
-        const created: any = await createOrderMutation.mutateAsync();
+        const created: any = await createOrderMutation.mutateAsync({ skipAutoSync: true });
         orderId = created?.id ?? null;
       }
       if (orderId) {
         await createApprovalRequestsForOrder(orderId, preflightResult, justification);
+        // Safety net: bloqueia qualquer entrada residual da fila enquanto aprovação está pendente
+        try {
+          await (supabase as any).from('order_sync_queue')
+            .update({
+              status: 'permanent_failure',
+              error_message: 'Aguardando aprovação de governança',
+              next_retry_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('order_id', orderId)
+            .in('status', ['pending','blocked_validation','processing','error','failed']);
+        } catch {}
         toast.success('Pedido salvo e enviado para aprovação');
         queryClient.invalidateQueries({ queryKey: ['governance', 'pending_requests'] });
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status', orderId] });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       }
       setPreflightOpen(false);
       setPreflightResult(null);
-      if (!isEditMode) {
-        onOpenChange(false);
-        onSuccess?.();
-      }
+      onOpenChange(false);
+      onSuccess?.();
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao solicitar autorização');
     } finally {
@@ -1236,9 +1254,19 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     // Preflight de governança comercial (comissão + parcelamento)
     if (tenantId) {
       try {
+        // Sales rep efetivo: pedido > empresa
+        let salesRepId: string | null = (order as any)?.sales_rep_id ?? null;
+        if (!salesRepId && companyId) {
+          const { data: comp } = await supabase
+            .from('companies')
+            .select('sales_rep_id')
+            .eq('id', companyId)
+            .maybeSingle();
+          salesRepId = (comp as any)?.sales_rep_id ?? null;
+        }
         const pre = await runGovernancePreflight({
           tenantId,
-          salesRepId: (order as any)?.sales_rep_id ?? null,
+          salesRepId,
           companyId: companyId || null,
           legalEntityId: legalEntityId || null,
           items: items
