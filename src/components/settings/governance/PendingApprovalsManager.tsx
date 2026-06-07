@@ -51,8 +51,8 @@ export function PendingApprovalsManager() {
                   <TableCell className="font-medium">#{r.order?.number ?? '—'}</TableCell>
                   <TableCell>{r.order?.company?.name ?? '—'}</TableCell>
                   <TableCell>{r.request_type === 'commission' ? 'Comissão' : 'Pagamento'}</TableCell>
-                  <TableCell className="text-xs"><pre className="whitespace-pre-wrap">{JSON.stringify(r.requested_value)}</pre></TableCell>
-                  <TableCell className="text-xs"><pre className="whitespace-pre-wrap">{JSON.stringify(r.max_allowed)}</pre></TableCell>
+                  <TableCell className="text-sm">{formatRequested(r)}</TableCell>
+                  <TableCell className="text-sm">{formatMaxAllowed(r)}</TableCell>
                   <TableCell>
                     <Badge variant={r.status === 'pending' ? 'outline' : r.status === 'approved' ? 'default' : 'destructive'}>
                       {r.status}
