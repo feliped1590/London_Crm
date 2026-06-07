@@ -8,13 +8,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, UserPlus, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
-import { useCommissionRules } from '@/hooks/useCommercialGovernance';
+import { Plus, Pencil, Trash2, UserPlus, AlertTriangle, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import {
+  useCommissionRules,
+  useCommissionRuleJunctions,
+  useAllCommissionRuleJunctions,
+} from '@/hooks/useCommercialGovernance';
 import { useActiveTenantId } from '@/hooks/useActiveTenantId';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ComboSelect } from './_ComboSelect';
+import { MultiComboSelect } from './_MultiComboSelect';
 
 interface Form {
   id?: string;
@@ -24,36 +29,50 @@ interface Form {
   base: 'liquido' | 'bruto';
   default_pct: number;
   max_pct: number;
-  sales_rep_id?: string | null;
   company_id?: string | null;
   product_id?: string | null;
   product_group_id?: string | null;
   product_subgroup_id?: string | null;
+  salesRepIds: string[];
+  legalEntityIds: string[];
 }
 
 const empty: Form = {
   name: '', is_active: true, priority: 0, base: 'liquido',
   default_pct: 0, max_pct: 0,
-  sales_rep_id: null, company_id: null, product_id: null,
+  company_id: null, product_id: null,
   product_group_id: null, product_subgroup_id: null,
+  salesRepIds: [], legalEntityIds: [],
 };
 
 export function CommissionRulesManager() {
   const { rules, isLoading, upsert, remove } = useCommissionRules();
   const { data: tenantId } = useActiveTenantId();
+  const { data: allJunctions = {} } = useAllCommissionRuleJunctions();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(empty);
   const [coverageOpen, setCoverageOpen] = useState(false);
+  const { data: editJunctions } = useCommissionRuleJunctions(form.id);
 
   const { data: salesReps = [] } = useQuery({
     queryKey: ['gov_sales_reps_all', tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sales_reps')
-        .select('id, name, active')
-        .eq('tenant_id', tenantId!)
-        .order('name');
+        .from('sales_reps').select('id, name, active')
+        .eq('tenant_id', tenantId!).order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: legalEntities = [] } = useQuery({
+    queryKey: ['gov_legal_entities', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('legal_entities').select('id, name, cnpj')
+        .eq('tenant_id', tenantId!).eq('active', true).order('name');
       if (error) throw error;
       return data || [];
     },
@@ -64,11 +83,8 @@ export function CommissionRulesManager() {
     enabled: !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, cnpj')
-        .eq('tenant_id', tenantId!)
-        .order('name')
-        .limit(500);
+        .from('companies').select('id, name, cnpj')
+        .eq('tenant_id', tenantId!).order('name').limit(500);
       if (error) throw error;
       return data || [];
     },
@@ -79,10 +95,7 @@ export function CommissionRulesManager() {
     enabled: !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select('id, name, sku')
-        .order('name')
-        .limit(500);
+        .from('products').select('id, name, sku').order('name').limit(500);
       if (error) throw error;
       return data || [];
     },
@@ -93,11 +106,8 @@ export function CommissionRulesManager() {
     enabled: !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('product_groups')
-        .select('id, label, value')
-        .eq('tenant_id', tenantId!)
-        .eq('is_active', true)
-        .order('label');
+        .from('product_groups').select('id, label')
+        .eq('tenant_id', tenantId!).eq('is_active', true).order('label');
       if (error) throw error;
       return data || [];
     },
@@ -108,24 +118,31 @@ export function CommissionRulesManager() {
     enabled: !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('product_subgroups')
-        .select('id, label, value')
-        .eq('tenant_id', tenantId!)
-        .eq('is_active', true)
-        .order('label');
+        .from('product_subgroups').select('id, label')
+        .eq('tenant_id', tenantId!).eq('is_active', true).order('label');
       if (error) throw error;
       return data || [];
     },
   });
 
+  // hidratar junctions ao editar
+  useEffect(() => {
+    if (editJunctions && form.id) {
+      setForm((f) => ({ ...f, salesRepIds: editJunctions.salesRepIds, legalEntityIds: editJunctions.legalEntityIds }));
+    }
+  }, [editJunctions, form.id]);
+
+  // Vendedores sem regra padrão = sem nenhuma regra ativa de escopo só-vendedor
   const repsWithoutDefault = useMemo(() => {
-    const repsWithDefault = new Set(
-      (rules as any[])
-        .filter((r) => r.is_active && r.sales_rep_id && !r.company_id && !r.product_id && !r.product_group_id && !r.product_subgroup_id && !r.economic_group_id)
-        .map((r) => r.sales_rep_id),
-    );
+    const repsWithDefault = new Set<string>();
+    (rules as any[]).filter((r) => r.is_active).forEach((r) => {
+      const j = allJunctions[r.id];
+      if (!j || j.salesRepIds.length === 0) return;
+      const onlyRep = !r.company_id && !r.product_id && !r.product_group_id && !r.product_subgroup_id && !r.economic_group_id;
+      if (onlyRep) j.salesRepIds.forEach((id) => repsWithDefault.add(id));
+    });
     return (salesReps as any[]).filter((s) => s.active && !repsWithDefault.has(s.id));
-  }, [rules, salesReps]);
+  }, [rules, allJunctions, salesReps]);
 
   const openNew = () => { setForm(empty); setOpen(true); };
 
@@ -135,7 +152,9 @@ export function CommissionRulesManager() {
       ...empty,
       name: rep ? `Padrão ${rep.name}` : '',
       priority: 10,
-      sales_rep_id: repId ?? null,
+      salesRepIds: repId ? [repId] : [],
+      // default: aplicar a todas as entidades ativas
+      legalEntityIds: (legalEntities as any[]).map((le) => le.id),
     });
     setOpen(true);
   };
@@ -144,28 +163,22 @@ export function CommissionRulesManager() {
     setForm({
       id: r.id, name: r.name, is_active: r.is_active, priority: r.priority,
       base: r.base, default_pct: Number(r.default_pct), max_pct: Number(r.max_pct),
-      sales_rep_id: r.sales_rep_id, company_id: r.company_id, product_id: r.product_id,
+      company_id: r.company_id, product_id: r.product_id,
       product_group_id: r.product_group_id, product_subgroup_id: r.product_subgroup_id,
+      salesRepIds: [], legalEntityIds: [], // hidratado pelo useEffect
     });
     setOpen(true);
   };
 
-  // Detect potential duplicate level-5 active rule for same sales_rep
-  const duplicateRepDefaultWarning = useMemo(() => {
-    if (!form.sales_rep_id || form.company_id || form.product_id || form.product_group_id || form.product_subgroup_id) return null;
-    if (!form.is_active) return null;
-    const dup = (rules as any[]).find((r) =>
-      r.is_active &&
-      r.sales_rep_id === form.sales_rep_id &&
-      !r.company_id && !r.product_id && !r.product_group_id && !r.product_subgroup_id && !r.economic_group_id &&
-      r.id !== form.id,
-    );
-    return dup ? `Já existe uma regra padrão ativa para este vendedor ("${dup.name}").` : null;
-  }, [form, rules]);
+  const targetError = useMemo(() => {
+    if (form.legalEntityIds.length === 0) return 'Selecione ao menos uma entidade jurídica.';
+    return null;
+  }, [form]);
+
+  const canSave = !!form.name.trim() && form.max_pct >= form.default_pct && !targetError;
 
   const handleSave = async () => {
-    if (!form.name.trim()) return;
-    if (form.max_pct < form.default_pct) return;
+    if (!canSave) { if (targetError) toast.error(targetError); return; }
     try {
       await upsert.mutateAsync(form);
       setOpen(false);
@@ -175,8 +188,14 @@ export function CommissionRulesManager() {
   };
 
   const scopeChips = (r: any) => {
+    const j = allJunctions[r.id] || { salesRepIds: [], legalEntityIds: [] };
     const chips: string[] = [];
-    if (r.sales_rep_id) chips.push(`Vendedor: ${(salesReps as any[]).find((s) => s.id === r.sales_rep_id)?.name || '—'}`);
+    if (j.salesRepIds.length === 1) {
+      const s = (salesReps as any[]).find((x) => x.id === j.salesRepIds[0]);
+      chips.push(`Vendedor: ${s?.name || '—'}`);
+    } else if (j.salesRepIds.length > 1) {
+      chips.push(`${j.salesRepIds.length} vendedores`);
+    }
     if (r.company_id) chips.push('Cliente');
     if (r.product_id) chips.push('Produto');
     if (r.product_group_id) chips.push('Grupo');
@@ -195,7 +214,7 @@ export function CommissionRulesManager() {
         <div>
           <CardTitle>Regras de Comissão</CardTitle>
           <CardDescription>
-            Define <code>default_pct</code> (sugerido) e <code>max_pct</code> (teto) por hierarquia. Vendedor pode usar [0…max_pct] livre. Mais específico vence.
+            Define <code>default_pct</code> (sugerido) e <code>max_pct</code> (teto). Vendedor pode usar [0…max_pct] livre. Mais específico vence.
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -222,12 +241,7 @@ export function CommissionRulesManager() {
             {coverageOpen && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {repsWithoutDefault.map((s: any) => (
-                  <Button
-                    key={s.id}
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openDefaultForRep(s.id)}
-                  >
+                  <Button key={s.id} size="sm" variant="outline" onClick={() => openDefaultForRep(s.id)}>
                     <Plus className="h-3 w-3 mr-1" />{s.name}
                   </Button>
                 ))}
@@ -242,6 +256,7 @@ export function CommissionRulesManager() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Escopo</TableHead>
+                <TableHead>Entidades</TableHead>
                 <TableHead>Base</TableHead>
                 <TableHead>Default %</TableHead>
                 <TableHead>Max %</TableHead>
@@ -252,25 +267,29 @@ export function CommissionRulesManager() {
             </TableHeader>
             <TableBody>
               {rules.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
               )}
-              {(rules as any[]).map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell>{scopeChips(r)}</TableCell>
-                  <TableCell>{r.base}</TableCell>
-                  <TableCell>{Number(r.default_pct).toFixed(2)}%</TableCell>
-                  <TableCell>{Number(r.max_pct).toFixed(2)}%</TableCell>
-                  <TableCell>{r.priority}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.is_active ? 'default' : 'secondary'}>{r.is_active ? 'Ativa' : 'Inativa'}</Badge>
-                  </TableCell>
-                  <TableCell className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => remove.mutate(r.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {(rules as any[]).map((r) => {
+                const j = allJunctions[r.id] || { salesRepIds: [], legalEntityIds: [] };
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell>{scopeChips(r)}</TableCell>
+                    <TableCell><Badge variant="outline">{j.legalEntityIds.length} entidade(s)</Badge></TableCell>
+                    <TableCell>{r.base}</TableCell>
+                    <TableCell>{Number(r.default_pct).toFixed(2)}%</TableCell>
+                    <TableCell>{Number(r.max_pct).toFixed(2)}%</TableCell>
+                    <TableCell>{r.priority}</TableCell>
+                    <TableCell>
+                      <Badge variant={r.is_active ? 'default' : 'secondary'}>{r.is_active ? 'Ativa' : 'Inativa'}</Badge>
+                    </TableCell>
+                    <TableCell className="flex gap-1">
+                      <Button size="icon" variant="ghost" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" onClick={() => remove.mutate(r.id)}><Trash2 className="h-4 w-4" /></Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -279,7 +298,7 @@ export function CommissionRulesManager() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{form.id ? 'Editar regra' : 'Nova regra de comissão'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
             <div className="space-y-1">
               <Label>Nome</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -314,54 +333,67 @@ export function CommissionRulesManager() {
             </div>
 
             <div className="border-t pt-3">
-              <p className="text-sm font-medium mb-2">Escopo (todos opcionais — vazio = regra geral do tenant)</p>
-              <div className="grid grid-cols-2 gap-3">
+              <p className="text-sm font-medium mb-2">Escopo (vazio = aplica a todos)</p>
+              <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Vendedor</Label>
-                  <ComboSelect
+                  <Label className="text-xs">Vendedores</Label>
+                  <MultiComboSelect
                     placeholder="Qualquer vendedor"
-                    value={form.sales_rep_id}
-                    onChange={(v) => setForm({ ...form, sales_rep_id: v })}
+                    values={form.salesRepIds}
+                    onChange={(v) => setForm({ ...form, salesRepIds: v })}
                     options={(salesReps as any[]).map((s) => ({ value: s.id, label: s.name }))}
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Cliente</Label>
-                  <ComboSelect
-                    placeholder="Qualquer cliente"
-                    value={form.company_id}
-                    onChange={(v) => setForm({ ...form, company_id: v })}
-                    options={(companies as any[]).map((c) => ({ value: c.id, label: c.name, hint: c.cnpj || undefined }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Produto</Label>
-                  <ComboSelect
-                    placeholder="Qualquer produto"
-                    value={form.product_id}
-                    onChange={(v) => setForm({ ...form, product_id: v })}
-                    options={(products as any[]).map((p) => ({ value: p.id, label: p.name, hint: p.sku || undefined }))}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Grupo de produto</Label>
-                  <ComboSelect
-                    placeholder="Qualquer grupo"
-                    value={form.product_group_id}
-                    onChange={(v) => setForm({ ...form, product_group_id: v })}
-                    options={(groups as any[]).map((g) => ({ value: g.id, label: g.label }))}
-                  />
-                </div>
-                <div className="space-y-1 col-span-2">
-                  <Label className="text-xs">Subgrupo de produto</Label>
-                  <ComboSelect
-                    placeholder="Qualquer subgrupo"
-                    value={form.product_subgroup_id}
-                    onChange={(v) => setForm({ ...form, product_subgroup_id: v })}
-                    options={(subgroups as any[]).map((g) => ({ value: g.id, label: g.label }))}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Cliente</Label>
+                    <ComboSelect
+                      placeholder="Qualquer cliente"
+                      value={form.company_id}
+                      onChange={(v) => setForm({ ...form, company_id: v })}
+                      options={(companies as any[]).map((c) => ({ value: c.id, label: c.name, hint: c.cnpj || undefined }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Produto</Label>
+                    <ComboSelect
+                      placeholder="Qualquer produto"
+                      value={form.product_id}
+                      onChange={(v) => setForm({ ...form, product_id: v })}
+                      options={(products as any[]).map((p) => ({ value: p.id, label: p.name, hint: p.sku || undefined }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Grupo de produto</Label>
+                    <ComboSelect
+                      placeholder="Qualquer grupo"
+                      value={form.product_group_id}
+                      onChange={(v) => setForm({ ...form, product_group_id: v })}
+                      options={(groups as any[]).map((g) => ({ value: g.id, label: g.label }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Subgrupo</Label>
+                    <ComboSelect
+                      placeholder="Qualquer subgrupo"
+                      value={form.product_subgroup_id}
+                      onChange={(v) => setForm({ ...form, product_subgroup_id: v })}
+                      options={(subgroups as any[]).map((g) => ({ value: g.id, label: g.label }))}
+                    />
+                  </div>
                 </div>
               </div>
+            </div>
+
+            <div className="border-t pt-3">
+              <Label>Entidades jurídicas (CNPJs) *</Label>
+              <p className="text-xs text-muted-foreground mb-2">Esta regra valerá somente para as entidades selecionadas.</p>
+              <MultiComboSelect
+                placeholder="Selecione ao menos uma entidade"
+                values={form.legalEntityIds}
+                onChange={(v) => setForm({ ...form, legalEntityIds: v })}
+                options={(legalEntities as any[]).map((le) => ({ value: le.id, label: le.name, hint: le.cnpj || undefined }))}
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -371,19 +403,16 @@ export function CommissionRulesManager() {
             {form.max_pct < form.default_pct && (
               <p className="text-sm text-destructive">Max % deve ser ≥ Default %.</p>
             )}
-            {duplicateRepDefaultWarning && (
-              <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-2 text-sm">
-                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5" />
-                <span>{duplicateRepDefaultWarning}</span>
+            {targetError && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                {targetError}
               </div>
             )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button
-              onClick={handleSave}
-              disabled={!form.name.trim() || form.max_pct < form.default_pct || upsert.isPending}
-            >
+            <Button onClick={handleSave} disabled={!canSave || upsert.isPending}>
               {upsert.isPending ? 'Salvando…' : 'Salvar'}
             </Button>
           </DialogFooter>
