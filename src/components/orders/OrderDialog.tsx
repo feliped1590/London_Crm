@@ -167,6 +167,14 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const [followupText, setFollowupText] = useState('');
   const [carrierSearchOrder, setCarrierSearchOrder] = useState('');
 
+  // Preflight de governança comercial
+  const { data: tenantId } = useActiveTenantId();
+  const { flags: governanceFlags } = useGovernanceFlags();
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
+  const [preflightSubmitting, setPreflightSubmitting] = useState(false);
+
+
   // Shared hooks
   const {
     resolveProductPricing, autoFillFromCompany, linkedPricingTable,
