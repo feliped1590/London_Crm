@@ -46,60 +46,6 @@ const LEVEL_LABEL: Record<number, string> = {
   4: '4 — Geral + Faixa',
 };
 
-interface Option { value: string; label: string; hint?: string }
-
-function ComboSelect({
-  options, value, onChange, placeholder, emptyText, disabled,
-}: {
-  options: Option[];
-  value: string | null | undefined;
-  onChange: (v: string | null) => void;
-  placeholder: string;
-  emptyText: string;
-  disabled?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const selected = options.find((o) => o.value === value);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          disabled={disabled}
-          className={cn('w-full justify-between font-normal', !selected && 'text-muted-foreground')}
-        >
-          <span className="truncate">{selected ? selected.label : placeholder}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Buscar..." />
-          <CommandList>
-            <CommandEmpty>{emptyText}</CommandEmpty>
-            <CommandGroup>
-              {options.map((o) => (
-                <CommandItem
-                  key={o.value}
-                  value={`${o.label} ${o.hint ?? ''}`}
-                  onSelect={() => { onChange(o.value); setOpen(false); }}
-                >
-                  <Check className={cn('mr-2 h-4 w-4', value === o.value ? 'opacity-100' : 'opacity-0')} />
-                  <div className="flex flex-col">
-                    <span>{o.label}</span>
-                    {o.hint && <span className="text-xs text-muted-foreground">{o.hint}</span>}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
 
 export function PaymentRulesManager() {
   const { rules, isLoading, upsert, remove } = usePaymentRules();
