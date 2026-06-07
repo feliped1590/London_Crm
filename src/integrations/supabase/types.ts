@@ -1134,6 +1134,78 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rule_legal_entities: {
+        Row: {
+          created_at: string
+          legal_entity_id: string
+          rule_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          legal_entity_id: string
+          rule_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          legal_entity_id?: string
+          rule_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rule_legal_entities_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rule_legal_entities_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_rule_sales_reps: {
+        Row: {
+          created_at: string
+          rule_id: string
+          sales_rep_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          rule_id: string
+          sales_rep_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          rule_id?: string
+          sales_rep_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rule_sales_reps_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rule_sales_reps_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rules: {
         Row: {
           base: string
@@ -5881,6 +5953,78 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      payment_terms_rule_legal_entities: {
+        Row: {
+          created_at: string
+          legal_entity_id: string
+          rule_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          legal_entity_id: string
+          rule_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          legal_entity_id?: string
+          rule_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_rule_legal_entities_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_terms_rule_legal_entities_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_terms_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_terms_rule_sales_reps: {
+        Row: {
+          created_at: string
+          rule_id: string
+          sales_rep_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          rule_id: string
+          sales_rep_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          rule_id?: string
+          sales_rep_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_terms_rule_sales_reps_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_terms_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_terms_rule_sales_reps_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_terms_rules: {
         Row: {
@@ -10892,6 +11036,7 @@ export type Database = {
         Args: {
           _at?: string
           _company: string
+          _legal_entity?: string
           _product: string
           _sales_rep: string
           _tenant: string
@@ -10908,6 +11053,7 @@ export type Database = {
           _amount: number
           _at?: string
           _company: string
+          _legal_entity?: string
           _sales_rep: string
           _tenant: string
         }

@@ -36,14 +36,35 @@ export function useCommissionRules() {
   const upsert = useMutation({
     mutationFn: async (payload: any) => {
       if (!tenantId) throw new Error('Tenant não resolvido');
-      const row = { ...payload, tenant_id: tenantId };
-      const { error } = payload.id
-        ? await supabase.from('commission_rules').update(row).eq('id', payload.id)
-        : await supabase.from('commission_rules').insert(row);
-      if (error) throw error;
+      const { salesRepIds = [], legalEntityIds = [], ...rule } = payload;
+      // singular sales_rep_id deprecated — sempre null nas escritas novas
+      const row = { ...rule, sales_rep_id: null, tenant_id: tenantId };
+      let ruleId = rule.id as string | undefined;
+      if (ruleId) {
+        const { error } = await supabase.from('commission_rules').update(row).eq('id', ruleId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('commission_rules').insert(row).select('id').single();
+        if (error) throw error;
+        ruleId = data.id as string;
+      }
+      // sync junctions
+      await supabase.from('commission_rule_sales_reps').delete().eq('rule_id', ruleId);
+      if (salesRepIds.length) {
+        const { error } = await supabase.from('commission_rule_sales_reps')
+          .insert(salesRepIds.map((sid: string) => ({ rule_id: ruleId, sales_rep_id: sid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
+      await supabase.from('commission_rule_legal_entities').delete().eq('rule_id', ruleId);
+      if (legalEntityIds.length) {
+        const { error } = await supabase.from('commission_rule_legal_entities')
+          .insert(legalEntityIds.map((lid: string) => ({ rule_id: ruleId, legal_entity_id: lid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.commissionRules });
+      qc.invalidateQueries({ queryKey: ['governance', 'commission_rule_junctions'] });
       toast.success('Regra salva');
     },
     onError: (e: any) => toast.error(e.message),
@@ -60,6 +81,7 @@ export function useCommissionRules() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return { rules: list.data || [], isLoading: list.isLoading, upsert, remove };
 }
@@ -187,14 +209,33 @@ export function usePaymentRules() {
   const upsert = useMutation({
     mutationFn: async (payload: any) => {
       if (!tenantId) throw new Error('Tenant não resolvido');
-      const row = { ...payload, tenant_id: tenantId };
-      const { error } = payload.id
-        ? await supabase.from('payment_terms_rules').update(row).eq('id', payload.id)
-        : await supabase.from('payment_terms_rules').insert(row);
-      if (error) throw error;
+      const { salesRepIds = [], legalEntityIds = [], ...rule } = payload;
+      const row = { ...rule, sales_rep_id: null, tenant_id: tenantId };
+      let ruleId = rule.id as string | undefined;
+      if (ruleId) {
+        const { error } = await supabase.from('payment_terms_rules').update(row).eq('id', ruleId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('payment_terms_rules').insert(row).select('id').single();
+        if (error) throw error;
+        ruleId = data.id as string;
+      }
+      await supabase.from('payment_terms_rule_sales_reps').delete().eq('rule_id', ruleId);
+      if (salesRepIds.length) {
+        const { error } = await supabase.from('payment_terms_rule_sales_reps')
+          .insert(salesRepIds.map((sid: string) => ({ rule_id: ruleId, sales_rep_id: sid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
+      await supabase.from('payment_terms_rule_legal_entities').delete().eq('rule_id', ruleId);
+      if (legalEntityIds.length) {
+        const { error } = await supabase.from('payment_terms_rule_legal_entities')
+          .insert(legalEntityIds.map((lid: string) => ({ rule_id: ruleId, legal_entity_id: lid, tenant_id: tenantId })));
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK.paymentRules });
+      qc.invalidateQueries({ queryKey: ['governance', 'payment_terms_rule_junctions'] });
       toast.success('Regra salva');
     },
     onError: (e: any) => toast.error(e.message),
@@ -211,6 +252,7 @@ export function usePaymentRules() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   return { rules: list.data || [], isLoading: list.isLoading, upsert, remove };
 }
@@ -310,17 +352,94 @@ export function usePendingApprovalRequests() {
   return { requests: list.data || [], isLoading: list.isLoading, review };
 }
 
+// ---------- Rule junctions (sales reps + legal entities) ----------
+export function useCommissionRuleJunctions(ruleId?: string | null) {
+  return useQuery({
+    queryKey: ['governance', 'commission_rule_junctions', ruleId],
+    queryFn: async () => {
+      if (!ruleId) return { salesRepIds: [] as string[], legalEntityIds: [] as string[] };
+      const [{ data: srs }, { data: les }] = await Promise.all([
+        supabase.from('commission_rule_sales_reps').select('sales_rep_id').eq('rule_id', ruleId),
+        supabase.from('commission_rule_legal_entities').select('legal_entity_id').eq('rule_id', ruleId),
+      ]);
+      return {
+        salesRepIds: (srs || []).map((r: any) => r.sales_rep_id),
+        legalEntityIds: (les || []).map((r: any) => r.legal_entity_id),
+      };
+    },
+    enabled: !!ruleId,
+  });
+}
+
+export function usePaymentRuleJunctions(ruleId?: string | null) {
+  return useQuery({
+    queryKey: ['governance', 'payment_terms_rule_junctions', ruleId],
+    queryFn: async () => {
+      if (!ruleId) return { salesRepIds: [] as string[], legalEntityIds: [] as string[] };
+      const [{ data: srs }, { data: les }] = await Promise.all([
+        supabase.from('payment_terms_rule_sales_reps').select('sales_rep_id').eq('rule_id', ruleId),
+        supabase.from('payment_terms_rule_legal_entities').select('legal_entity_id').eq('rule_id', ruleId),
+      ]);
+      return {
+        salesRepIds: (srs || []).map((r: any) => r.sales_rep_id),
+        legalEntityIds: (les || []).map((r: any) => r.legal_entity_id),
+      };
+    },
+    enabled: !!ruleId,
+  });
+}
+
+// Pré-carrega contagens para a listagem (1 query por tabela)
+export function useAllCommissionRuleJunctions() {
+  const { data: tenantId } = useActiveTenantId();
+  return useQuery({
+    queryKey: ['governance', 'commission_rule_junctions', 'all', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return {} as Record<string, { salesRepIds: string[]; legalEntityIds: string[] }>;
+      const [{ data: srs }, { data: les }] = await Promise.all([
+        supabase.from('commission_rule_sales_reps').select('rule_id, sales_rep_id').eq('tenant_id', tenantId),
+        supabase.from('commission_rule_legal_entities').select('rule_id, legal_entity_id').eq('tenant_id', tenantId),
+      ]);
+      const map: Record<string, { salesRepIds: string[]; legalEntityIds: string[] }> = {};
+      (srs || []).forEach((r: any) => { (map[r.rule_id] ||= { salesRepIds: [], legalEntityIds: [] }).salesRepIds.push(r.sales_rep_id); });
+      (les || []).forEach((r: any) => { (map[r.rule_id] ||= { salesRepIds: [], legalEntityIds: [] }).legalEntityIds.push(r.legal_entity_id); });
+      return map;
+    },
+    enabled: !!tenantId,
+  });
+}
+
+export function useAllPaymentRuleJunctions() {
+  const { data: tenantId } = useActiveTenantId();
+  return useQuery({
+    queryKey: ['governance', 'payment_terms_rule_junctions', 'all', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return {} as Record<string, { salesRepIds: string[]; legalEntityIds: string[] }>;
+      const [{ data: srs }, { data: les }] = await Promise.all([
+        supabase.from('payment_terms_rule_sales_reps').select('rule_id, sales_rep_id').eq('tenant_id', tenantId),
+        supabase.from('payment_terms_rule_legal_entities').select('rule_id, legal_entity_id').eq('tenant_id', tenantId),
+      ]);
+      const map: Record<string, { salesRepIds: string[]; legalEntityIds: string[] }> = {};
+      (srs || []).forEach((r: any) => { (map[r.rule_id] ||= { salesRepIds: [], legalEntityIds: [] }).salesRepIds.push(r.sales_rep_id); });
+      (les || []).forEach((r: any) => { (map[r.rule_id] ||= { salesRepIds: [], legalEntityIds: [] }).legalEntityIds.push(r.legal_entity_id); });
+      return map;
+    },
+    enabled: !!tenantId,
+  });
+}
+
 // ---------- Resolvers (per-order/item context) ----------
 export function useResolveCommissionRule(params: {
   salesRepId?: string | null;
   companyId?: string | null;
   productId?: string | null;
+  legalEntityId?: string | null;
   enabled?: boolean;
 }) {
   const { data: tenantId } = useActiveTenantId();
   const enabled = (params.enabled ?? true) && !!tenantId && !!params.productId;
   return useQuery({
-    queryKey: ['governance', 'resolve_commission', tenantId, params.salesRepId, params.companyId, params.productId],
+    queryKey: ['governance', 'resolve_commission', tenantId, params.salesRepId, params.companyId, params.productId, params.legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('resolve_commission_rule', {
         _tenant: tenantId!,
@@ -328,7 +447,8 @@ export function useResolveCommissionRule(params: {
         _company: params.companyId ?? null,
         _product: params.productId!,
         _at: new Date().toISOString().slice(0, 10),
-      });
+        _legal_entity: params.legalEntityId ?? null,
+      } as any);
 
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -342,12 +462,13 @@ export function useResolvePaymentTermsRule(params: {
   companyId?: string | null;
   salesRepId?: string | null;
   amount: number;
+  legalEntityId?: string | null;
   enabled?: boolean;
 }) {
   const { data: tenantId } = useActiveTenantId();
   const enabled = (params.enabled ?? true) && !!tenantId && params.amount > 0;
   return useQuery({
-    queryKey: ['governance', 'resolve_payment', tenantId, params.companyId, params.salesRepId, params.amount],
+    queryKey: ['governance', 'resolve_payment', tenantId, params.companyId, params.salesRepId, params.amount, params.legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('resolve_payment_terms_rule', {
         _tenant: tenantId!,
@@ -355,7 +476,8 @@ export function useResolvePaymentTermsRule(params: {
         _sales_rep: params.salesRepId ?? null,
         _amount: params.amount,
         _at: new Date().toISOString().slice(0, 10),
-      });
+        _legal_entity: params.legalEntityId ?? null,
+      } as any);
 
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
@@ -364,6 +486,7 @@ export function useResolvePaymentTermsRule(params: {
     enabled,
   });
 }
+
 
 // ---------- Order-scoped governance state ----------
 export function useOrderGovernanceState(orderId?: string | null) {

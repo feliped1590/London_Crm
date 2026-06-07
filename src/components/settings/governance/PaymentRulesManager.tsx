@@ -11,11 +11,16 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { usePaymentRules, usePaymentTemplates } from '@/hooks/useCommercialGovernance';
+import {
+  usePaymentRules,
+  usePaymentTemplates,
+  usePaymentRuleJunctions,
+  useAllPaymentRuleJunctions,
+} from '@/hooks/useCommercialGovernance';
 import { useActiveTenantId } from '@/hooks/useActiveTenantId';
 import { toast } from 'sonner';
 import { ComboSelect } from './_ComboSelect';
-
+import { MultiComboSelect } from './_MultiComboSelect';
 
 interface Form {
   id?: string;
@@ -27,25 +32,26 @@ interface Form {
   amount_max: number | null;
   company_id?: string | null;
   economic_group_id?: string | null;
-  sales_rep_id?: string | null;
   default_template_id: string;
   max_template_rank: number;
+  salesRepIds: string[];
+  legalEntityIds: string[];
 }
 
 const empty: Form = {
   name: '', level: 4, priority: 0, is_active: true,
   amount_min: 0, amount_max: null,
-  company_id: null, economic_group_id: null, sales_rep_id: null,
+  company_id: null, economic_group_id: null,
   default_template_id: '', max_template_rank: 0,
+  salesRepIds: [], legalEntityIds: [],
 };
 
 const LEVEL_LABEL: Record<number, string> = {
   1: '1 — Cliente + Faixa',
   2: '2 — Grupo Econômico + Faixa',
-  3: '3 — Vendedor + Faixa',
+  3: '3 — Vendedor(es) + Faixa',
   4: '4 — Geral + Faixa',
 };
-
 
 export function PaymentRulesManager() {
   const { rules, isLoading, upsert, remove } = usePaymentRules();
@@ -53,17 +59,16 @@ export function PaymentRulesManager() {
   const { data: tenantId } = useActiveTenantId();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(empty);
+  const { data: allJunctions = {} } = useAllPaymentRuleJunctions();
+  const { data: editJunctions } = usePaymentRuleJunctions(form.id);
 
   const { data: companies = [] } = useQuery({
     queryKey: ['gov_companies', tenantId],
     enabled: !!tenantId && open && form.level === 1,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('companies')
-        .select('id, name, cnpj')
-        .eq('tenant_id', tenantId!)
-        .order('name')
-        .limit(500);
+        .from('companies').select('id, name, cnpj')
+        .eq('tenant_id', tenantId!).order('name').limit(500);
       if (error) throw error;
       return data || [];
     },
@@ -74,68 +79,78 @@ export function PaymentRulesManager() {
     enabled: !!tenantId && open && form.level === 2,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('economic_groups')
-        .select('id, name, cnpj_root')
-        .eq('tenant_id', tenantId!)
-        .order('name');
+        .from('economic_groups').select('id, name, cnpj_root')
+        .eq('tenant_id', tenantId!).order('name');
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: salesReps = [] } = useQuery({
-    queryKey: ['gov_sales_reps', tenantId],
-    enabled: !!tenantId && open && form.level === 3,
+    queryKey: ['gov_sales_reps_all', tenantId],
+    enabled: !!tenantId && open,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sales_reps')
-        .select('id, name')
-        .eq('tenant_id', tenantId!)
-        .eq('active', true)
-        .order('name');
+        .from('sales_reps').select('id, name')
+        .eq('tenant_id', tenantId!).eq('active', true).order('name');
       if (error) throw error;
       return data || [];
     },
   });
+
+  const { data: legalEntities = [] } = useQuery({
+    queryKey: ['gov_legal_entities', tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('legal_entities').select('id, name, cnpj')
+        .eq('tenant_id', tenantId!).eq('active', true).order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  useEffect(() => {
+    if (editJunctions && form.id) {
+      setForm((f) => ({ ...f, salesRepIds: editJunctions.salesRepIds, legalEntityIds: editJunctions.legalEntityIds }));
+    }
+  }, [editJunctions, form.id]);
 
   const openNew = () => { setForm(empty); setOpen(true); };
   const openEdit = (r: any) => {
     setForm({
       id: r.id, name: r.name, level: r.level, priority: r.priority, is_active: r.is_active,
       amount_min: Number(r.amount_min), amount_max: r.amount_max != null ? Number(r.amount_max) : null,
-      company_id: r.company_id, economic_group_id: r.economic_group_id, sales_rep_id: r.sales_rep_id,
+      company_id: r.company_id, economic_group_id: r.economic_group_id,
       default_template_id: r.default_template_id, max_template_rank: r.max_template_rank,
+      salesRepIds: [], legalEntityIds: [], // hidratado pelo useEffect acima
     });
     setOpen(true);
   };
 
-  // Reset target IDs when level changes
   useEffect(() => {
     setForm((f) => ({
       ...f,
       company_id: f.level === 1 ? f.company_id : null,
       economic_group_id: f.level === 2 ? f.economic_group_id : null,
-      sales_rep_id: f.level === 3 ? f.sales_rep_id : null,
+      salesRepIds: f.level === 3 ? f.salesRepIds : [],
     }));
   }, [form.level]);
 
   const targetError = useMemo(() => {
     if (form.level === 1 && !form.company_id) return 'Selecione o cliente.';
     if (form.level === 2 && !form.economic_group_id) return 'Selecione o grupo econômico.';
-    if (form.level === 3 && !form.sales_rep_id) return 'Selecione o vendedor.';
+    if (form.level === 3 && form.salesRepIds.length === 0) return 'Selecione ao menos um vendedor.';
+    if (form.legalEntityIds.length === 0) return 'Selecione ao menos uma entidade jurídica.';
     return null;
   }, [form]);
 
   const canSave = !!form.name.trim() && !!form.default_template_id && !targetError;
 
   const handleSave = async () => {
-    if (!canSave) {
-      if (targetError) toast.error(targetError);
-      return;
-    }
-    const payload = { ...form, amount_max: form.amount_max ?? null };
+    if (!canSave) { if (targetError) toast.error(targetError); return; }
     try {
-      await upsert.mutateAsync(payload);
+      await upsert.mutateAsync({ ...form, amount_max: form.amount_max ?? null });
       setOpen(false);
     } catch (e: any) {
       toast.error(e?.message || 'Erro ao salvar regra');
@@ -148,7 +163,7 @@ export function PaymentRulesManager() {
         <div>
           <CardTitle>Regras de Condição de Pagamento</CardTitle>
           <CardDescription>
-            Hierarquia: 1=Cliente, 2=Grupo Econômico, 3=Vendedor, 4=Geral. Sempre combinada com faixa de valor.
+            Hierarquia: 1=Cliente, 2=Grupo Econômico, 3=Vendedor(es), 4=Geral. Sempre combinada com faixa de valor e entidade(s) jurídica(s).
           </CardDescription>
         </div>
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-2" />Nova regra</Button>
@@ -161,7 +176,9 @@ export function PaymentRulesManager() {
                 <TableHead>Nível</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Faixa</TableHead>
-                <TableHead>Template Default</TableHead>
+                <TableHead>Vendedores</TableHead>
+                <TableHead>Entidades</TableHead>
+                <TableHead>Template</TableHead>
                 <TableHead>Max Rank</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-24" />
@@ -169,10 +186,11 @@ export function PaymentRulesManager() {
             </TableHeader>
             <TableBody>
               {rules.length === 0 && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">Nenhuma regra.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">Nenhuma regra.</TableCell></TableRow>
               )}
               {rules.map((r: any) => {
                 const tpl = templates.find((t: any) => t.id === r.default_template_id);
+                const j = allJunctions[r.id] || { salesRepIds: [], legalEntityIds: [] };
                 return (
                   <TableRow key={r.id}>
                     <TableCell>{LEVEL_LABEL[r.level]}</TableCell>
@@ -180,6 +198,8 @@ export function PaymentRulesManager() {
                     <TableCell>
                       R$ {Number(r.amount_min).toLocaleString('pt-BR')} – {r.amount_max ? `R$ ${Number(r.amount_max).toLocaleString('pt-BR')}` : '∞'}
                     </TableCell>
+                    <TableCell>{r.level === 3 ? <Badge variant="outline">{j.salesRepIds.length} vendedor(es)</Badge> : <span className="text-muted-foreground text-xs">—</span>}</TableCell>
+                    <TableCell><Badge variant="outline">{j.legalEntityIds.length} entidade(s)</Badge></TableCell>
                     <TableCell>{tpl?.name || '—'}</TableCell>
                     <TableCell>{r.max_template_rank}</TableCell>
                     <TableCell><Badge variant={r.is_active ? 'default' : 'secondary'}>{r.is_active ? 'Ativa' : 'Inativa'}</Badge></TableCell>
@@ -196,9 +216,9 @@ export function PaymentRulesManager() {
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>{form.id ? 'Editar regra' : 'Nova regra de pagamento'}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
             <div className="space-y-1">
               <Label>Nome</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -223,8 +243,7 @@ export function PaymentRulesManager() {
               <div className="space-y-1">
                 <Label>Cliente *</Label>
                 <ComboSelect
-                  placeholder="Selecione o cliente"
-                  emptyText="Nenhum cliente encontrado"
+                  placeholder="Selecione o cliente" emptyText="Nenhum cliente encontrado"
                   value={form.company_id}
                   onChange={(v) => setForm({ ...form, company_id: v })}
                   options={companies.map((c: any) => ({ value: c.id, label: c.name, hint: c.cnpj || undefined }))}
@@ -235,8 +254,7 @@ export function PaymentRulesManager() {
               <div className="space-y-1">
                 <Label>Grupo Econômico *</Label>
                 <ComboSelect
-                  placeholder="Selecione o grupo"
-                  emptyText="Nenhum grupo encontrado"
+                  placeholder="Selecione o grupo" emptyText="Nenhum grupo encontrado"
                   value={form.economic_group_id}
                   onChange={(v) => setForm({ ...form, economic_group_id: v })}
                   options={ecoGroups.map((g: any) => ({ value: g.id, label: g.name, hint: g.cnpj_root || undefined }))}
@@ -245,12 +263,11 @@ export function PaymentRulesManager() {
             )}
             {form.level === 3 && (
               <div className="space-y-1">
-                <Label>Vendedor *</Label>
-                <ComboSelect
-                  placeholder="Selecione o vendedor"
-                  emptyText="Nenhum vendedor encontrado"
-                  value={form.sales_rep_id}
-                  onChange={(v) => setForm({ ...form, sales_rep_id: v })}
+                <Label>Vendedores *</Label>
+                <MultiComboSelect
+                  placeholder="Selecione os vendedores"
+                  values={form.salesRepIds}
+                  onChange={(v) => setForm({ ...form, salesRepIds: v })}
                   options={salesReps.map((s: any) => ({ value: s.id, label: s.name }))}
                 />
               </div>
@@ -285,6 +302,17 @@ export function PaymentRulesManager() {
                 <Input type="number" min="0" value={form.max_template_rank}
                   onChange={(e) => setForm({ ...form, max_template_rank: Number(e.target.value) })} />
               </div>
+            </div>
+
+            <div className="border-t pt-3">
+              <Label>Entidades jurídicas (CNPJs) *</Label>
+              <p className="text-xs text-muted-foreground mb-2">Esta regra valerá somente para as entidades selecionadas.</p>
+              <MultiComboSelect
+                placeholder="Selecione ao menos uma entidade"
+                values={form.legalEntityIds}
+                onChange={(v) => setForm({ ...form, legalEntityIds: v })}
+                options={(legalEntities as any[]).map((le) => ({ value: le.id, label: le.name, hint: le.cnpj || undefined }))}
+              />
             </div>
 
             {targetError && (
