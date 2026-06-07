@@ -570,6 +570,111 @@ export type Database = {
         }
         Relationships: []
       }
+      bi_sales_fact: {
+        Row: {
+          company_id: string | null
+          cost_value: number | null
+          created_at: string
+          discount_value: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
+          gross_value: number | null
+          id: string
+          ipi_value: number | null
+          legal_entity_id: string | null
+          net_value: number | null
+          order_date: string | null
+          order_id: string
+          order_item_id: string
+          order_status: string | null
+          product_family_id: string | null
+          product_group_id: string | null
+          product_id: string | null
+          quantity: number | null
+          sales_rep_id: string | null
+          team_id: string | null
+          tenant_id: string
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id: string
+          order_item_id: string
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id?: string
+          order_item_id?: string
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id?: string
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bi_sales_fact_queue: {
+        Row: {
+          action: string
+          enqueued_at: string
+          id: string
+          order_id: string
+          processed_at: string | null
+        }
+        Insert: {
+          action: string
+          enqueued_at?: string
+          id?: string
+          order_id: string
+          processed_at?: string | null
+        }
+        Update: {
+          action?: string
+          enqueued_at?: string
+          id?: string
+          order_id?: string
+          processed_at?: string | null
+        }
+        Relationships: []
+      }
       bot_flow_edges: {
         Row: {
           created_at: string
@@ -3883,6 +3988,36 @@ export type Database = {
         }
         Relationships: []
       }
+      forecast_stage_probabilities: {
+        Row: {
+          created_at: string
+          id: string
+          pipeline_id: string | null
+          probability_pct: number
+          stage: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pipeline_id?: string | null
+          probability_pct: number
+          stage: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pipeline_id?: string | null
+          probability_pct?: number
+          stage?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       freight_type_erp_mapping: {
         Row: {
           created_at: string | null
@@ -5197,6 +5332,8 @@ export type Database = {
           erp_status: string | null
           erp_synced_at: string | null
           fator_kg: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_rate: number
           ipi_value: number
@@ -5215,7 +5352,9 @@ export type Database = {
           subtotal_item: number
           tenant_id: string
           thickness: number | null
+          total_cost: number | null
           total_item: number
+          unit_cost: number | null
           unit_price: number
           width: number | null
         }
@@ -5231,6 +5370,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           fator_kg?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -5249,7 +5390,9 @@ export type Database = {
           subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -5265,6 +5408,8 @@ export type Database = {
           erp_status?: string | null
           erp_synced_at?: string | null
           fator_kg?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -5283,7 +5428,9 @@ export type Database = {
           subtotal_item?: number
           tenant_id?: string
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -5760,6 +5907,7 @@ export type Database = {
           carrier_id: string | null
           company_id: string | null
           contact_id: string | null
+          cost_value: number | null
           created_at: string
           created_by: string | null
           deal_id: string | null
@@ -5783,6 +5931,8 @@ export type Database = {
           erp_synced_at: string | null
           freight_type: string | null
           freight_value: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           is_locked: boolean
@@ -5822,6 +5972,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
@@ -5845,6 +5996,8 @@ export type Database = {
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           is_locked?: boolean
@@ -5884,6 +6037,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string | null
@@ -5907,6 +6061,8 @@ export type Database = {
           erp_synced_at?: string | null
           freight_type?: string | null
           freight_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           is_locked?: boolean
@@ -8177,6 +8333,8 @@ export type Database = {
           created_at: string
           description: string
           discount_percent: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_rate: number
           ipi_value: number
@@ -8188,7 +8346,9 @@ export type Database = {
           subtotal: number
           subtotal_item: number
           thickness: number | null
+          total_cost: number | null
           total_item: number
+          unit_cost: number | null
           unit_price: number
           width: number | null
         }
@@ -8197,6 +8357,8 @@ export type Database = {
           created_at?: string
           description: string
           discount_percent?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -8208,7 +8370,9 @@ export type Database = {
           subtotal?: number
           subtotal_item?: number
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -8217,6 +8381,8 @@ export type Database = {
           created_at?: string
           description?: string
           discount_percent?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_rate?: number
           ipi_value?: number
@@ -8228,7 +8394,9 @@ export type Database = {
           subtotal?: number
           subtotal_item?: number
           thickness?: number | null
+          total_cost?: number | null
           total_item?: number
+          unit_cost?: number | null
           unit_price?: number
           width?: number | null
         }
@@ -8309,6 +8477,7 @@ export type Database = {
           carrier_id: string | null
           company_id: string | null
           contact_id: string | null
+          cost_value: number | null
           created_at: string
           created_by: string | null
           deal_id: string
@@ -8323,6 +8492,8 @@ export type Database = {
           delivery_terms: string | null
           delivery_zip_code: string | null
           freight_type: string | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
           id: string
           ipi_mode: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id: string | null
@@ -8348,6 +8519,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id: string
@@ -8362,6 +8534,8 @@ export type Database = {
           delivery_terms?: string | null
           delivery_zip_code?: string | null
           freight_type?: string | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
@@ -8387,6 +8561,7 @@ export type Database = {
           carrier_id?: string | null
           company_id?: string | null
           contact_id?: string | null
+          cost_value?: number | null
           created_at?: string
           created_by?: string | null
           deal_id?: string
@@ -8401,6 +8576,8 @@ export type Database = {
           delivery_terms?: string | null
           delivery_zip_code?: string | null
           freight_type?: string | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
           id?: string
           ipi_mode?: Database["public"]["Enums"]["ipi_mode"]
           legal_entity_id?: string | null
@@ -9040,6 +9217,50 @@ export type Database = {
           },
         ]
       }
+      sales_team_history: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          legal_entity_id: string | null
+          manager_id: string | null
+          sales_rep_id: string
+          start_date: string
+          team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          sales_rep_id: string
+          start_date?: string
+          team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          sales_rep_id?: string
+          start_date?: string
+          team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_team_history_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segmentos: {
         Row: {
           created_at: string | null
@@ -9552,6 +9773,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          legal_entity_id: string | null
+          manager_id: string | null
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          legal_entity_id?: string | null
+          manager_id?: string | null
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tenant_access_exceptions: {
         Row: {
@@ -10971,6 +11225,14 @@ export type Database = {
       }
       get_region_by_state: { Args: { state_code: string }; Returns: string }
       get_sales_rep_name: { Args: { p_sales_rep_id: string }; Returns: string }
+      get_sales_rep_org_at: {
+        Args: { p_ref_date: string; p_sales_rep_id: string }
+        Returns: {
+          legal_entity_id: string
+          manager_id: string
+          team_id: string
+        }[]
+      }
       get_sales_rep_productivity: {
         Args: {
           p_end_date: string
@@ -11155,6 +11417,10 @@ export type Database = {
       recompute_company_lifecycle: {
         Args: { p_company_id?: string }
         Returns: number
+      }
+      refresh_bi_sales_fact: {
+        Args: { p_order_id: string }
+        Returns: undefined
       }
       release_blocked_attributes: {
         Args: { p_product_id: string }
