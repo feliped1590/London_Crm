@@ -345,7 +345,19 @@ export function usePendingApprovalRequests() {
         .eq('tenant_id', tenantId)
         .order('requested_at', { ascending: false });
       if (error) throw error;
-      return data || [];
+      const rows = data || [];
+
+      // Resolve rule names (polymorphic rule_id: commission_rules | payment_terms_rules)
+      const commIds = Array.from(new Set(rows.filter((r: any) => r.request_type === 'commission' && r.rule_id).map((r: any) => r.rule_id)));
+      const payIds = Array.from(new Set(rows.filter((r: any) => r.request_type === 'payment_terms' && r.rule_id).map((r: any) => r.rule_id)));
+      const [commRules, payRules] = await Promise.all([
+        commIds.length ? supabase.from('commission_rules').select('id, name').in('id', commIds) : Promise.resolve({ data: [] as any[] }),
+        payIds.length ? supabase.from('payment_terms_rules').select('id, name').in('id', payIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const nameMap: Record<string, string> = {};
+      (commRules.data || []).forEach((r: any) => { nameMap[r.id] = r.name; });
+      (payRules.data || []).forEach((r: any) => { nameMap[r.id] = r.name; });
+      return rows.map((r: any) => ({ ...r, rule_name: r.rule_id ? (nameMap[r.rule_id] ?? null) : null }));
     },
     enabled: !!tenantId,
   });
