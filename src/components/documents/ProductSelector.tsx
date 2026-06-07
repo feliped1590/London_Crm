@@ -59,7 +59,7 @@ export function useProductAdd({ companyId, contactId }: UseProductAddOptions) {
       : true;
     const ipiRate = (ipiMode === 'isento' || !isContribuinteIpi)
       ? 0
-      : (product.aliquota_ipi || 0);
+      : getEffectiveProductIpiRate(product);
 
     return { unitPrice, discountPercent, priceSource, ipiRate };
   }, [companyId, contactId, companyFiscalData, getApplicableTable, calculatePrice]);
