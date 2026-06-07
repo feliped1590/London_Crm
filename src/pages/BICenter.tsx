@@ -166,6 +166,7 @@ export default function BICenter() {
               data={report.data}
               isLoading={report.isLoading}
               error={report.error}
+              chartType={active.chart_type}
             />
           </>
         ) : (
