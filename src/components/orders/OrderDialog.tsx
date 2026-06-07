@@ -592,7 +592,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (auditLogs.length > 0) await supabase.from('order_audit_log').insert(auditLogs);
   };
 
-  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean } | void>({
+  const updateOrderMutation = useMutation<unknown, Error, { silent?: boolean; keepOpen?: boolean; skipAutoSync?: boolean } | void>({
     mutationFn: async () => {
       if (!order) throw new Error('Pedido não encontrado');
       if (items.length === 0) throw new Error('Adicione pelo menos um item ao pedido');
