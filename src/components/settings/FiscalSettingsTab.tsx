@@ -954,57 +954,10 @@ function BeneficiosFiscaisManager() {
 // =============================================================================
 
 function CadastrosBaseInfo() {
-  const [activeSection, setActiveSection] = useState<'ncm' | 'overview'>('ncm');
-
   return (
     <div className="space-y-6">
       <NCMManager />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Calculator className="h-4 w-4" />
-              CST / CSOSN
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Definidos nas regras de tributação. CST para Lucro Presumido/Real, CSOSN para Simples Nacional.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              CFOP
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              Definido automaticamente pelas regras de tributação com base no tipo de operação e UFs.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              Próximos Passos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-xs text-muted-foreground space-y-1">
-              <li>• Integração IBPT</li>
-              <li>• Serialização XML NF-e</li>
-              <li>• Relatórios SPED</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
+
