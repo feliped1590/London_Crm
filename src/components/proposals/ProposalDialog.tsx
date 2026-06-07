@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { calculateIpiValue, calculateItemTotal } from '@/utils/pricing/ipiCalculations';
+import { getEffectiveProductIpiRate } from '@/utils/pricing/ipiRate';
 import { useDocumentItems } from '@/hooks/useDocumentItems';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { Proposal, ProposalItem, Product, ProposalStatus, IpiMode, ipiModeConfig, proposalStatusConfig } from '@/types/products';
