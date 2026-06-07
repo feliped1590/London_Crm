@@ -1014,7 +1014,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   useEffect(() => {
     if (!companyFiscalData || items.length === 0) return;
-    setItems(prev => prev.map(item => {
+    setItems(prev => {
+      let changed = false;
+      const next = prev.map(item => {
       if (!item.product_id) return item;
       const product =
         linkedCompanyProducts.find(p => p.id === item.product_id) ||
@@ -1022,8 +1024,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         item.product;
       if (!product) return item;
       const nextIpiRate = companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(product) : 0;
+      if ((item.ipi_rate || 0) === nextIpiRate && item.product === product) return item;
+      changed = true;
       return { ...item, product, ipi_rate: nextIpiRate };
-    }));
+      });
+      return changed ? next : prev;
+    });
   }, [companyFiscalData, linkedCompanyProducts, products, items.length, setItems]);
 
   // --- Handlers ---
