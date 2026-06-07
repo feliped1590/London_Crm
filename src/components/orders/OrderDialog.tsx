@@ -1164,7 +1164,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     pre: PreflightResult,
     justification: string,
   ) => {
-    const calls: Promise<any>[] = [];
+    const calls: Array<PromiseLike<any>> = [];
     if (pre.commissionExceptions.length > 0) {
       const requested = { items: pre.commissionExceptions.map((s) => ({ id: s.order_item_id, product_id: s.product_id, applied_pct: s.applied_pct, max_pct: s.max_pct })) };
       const max = { items: pre.commissionExceptions.map((s) => ({ id: s.order_item_id, product_id: s.product_id, max_pct: s.max_pct })) };
@@ -1173,8 +1173,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         _order_item_id: null,
         _request_type: 'commission',
         _justification: justification,
-        _requested_value: requested,
-        _max_allowed: max,
+        _requested_value: requested as any,
+        _max_allowed: max as any,
         _rule_id: pre.commissionExceptions[0].rule_id,
       }));
     }
@@ -1189,12 +1189,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           applied_template_name: pre.paymentException.applied_template_name,
           applied_rank: pre.paymentException.applied_rank,
           current_max_dias: pre.paymentException.current_max_dias,
-        },
-        _max_allowed: { max_rank: pre.paymentException.max_template_rank },
+        } as any,
+        _max_allowed: { max_rank: pre.paymentException.max_template_rank } as any,
         _rule_id: pre.paymentException.rule_id,
       }));
     }
     await Promise.all(calls);
+
   }, []);
 
   const handleRequestAuthorization = useCallback(async (justification: string) => {
