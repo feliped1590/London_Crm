@@ -533,27 +533,33 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       });
       return newOrder;
     },
-    onSuccess: async (newOrder: any) => {
+    onSuccess: async (newOrder: any, variables) => {
+      const skipAutoSync = !!(variables && (variables as any).skipAutoSync);
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-      toast.success('Pedido criado — enviando ao ERP em segundo plano');
+      if (skipAutoSync) {
+        toast.success('Pedido criado — aguardando aprovação de governança');
+      } else {
+        toast.success('Pedido criado — enviando ao ERP em segundo plano');
+        // Auto-disparo de sincronização (igual aos produtos)
+        try {
+          await (supabase as any).from('order_sync_queue').insert({
+            order_id: newOrder.id,
+            status: 'pending',
+            attempt_count: 0,
+            error_message: null,
+            next_retry_at: null,
+            validation_errors: null,
+            validation_fields: null,
+          });
+          queryClient.invalidateQueries({ queryKey: ['order_sync_status', newOrder.id] });
+          supabase.functions.invoke('process-order-sync', { body: { order_id: newOrder.id } }).catch(() => {});
+        } catch {}
+      }
 
-      // Auto-disparo de sincronização (igual aos produtos)
-      try {
-        await (supabase as any).from('order_sync_queue').insert({
-          order_id: newOrder.id,
-          status: 'pending',
-          attempt_count: 0,
-          error_message: null,
-          next_retry_at: null,
-          validation_errors: null,
-          validation_fields: null,
-        });
-        queryClient.invalidateQueries({ queryKey: ['order_sync_status', newOrder.id] });
-        supabase.functions.invoke('process-order-sync', { body: { order_id: newOrder.id } }).catch(() => {});
-      } catch {}
-
-      onOpenChange(false);
-      onSuccess?.();
+      if (!skipAutoSync) {
+        onOpenChange(false);
+        onSuccess?.();
+      }
     },
     onError: (error: Error) => {
       const message = error?.message || '';
