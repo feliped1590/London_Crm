@@ -1210,23 +1210,35 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     try {
       let orderId: string | null = null;
       if (isEditMode && order) {
-        await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true });
+        await updateOrderMutation.mutateAsync({ keepOpen: true, silent: true, skipAutoSync: true });
         orderId = order.id;
       } else {
-        const created: any = await createOrderMutation.mutateAsync();
+        const created: any = await createOrderMutation.mutateAsync({ skipAutoSync: true });
         orderId = created?.id ?? null;
       }
       if (orderId) {
         await createApprovalRequestsForOrder(orderId, preflightResult, justification);
+        // Safety net: bloqueia qualquer entrada residual da fila enquanto aprovação está pendente
+        try {
+          await (supabase as any).from('order_sync_queue')
+            .update({
+              status: 'permanent_failure',
+              error_message: 'Aguardando aprovação de governança',
+              next_retry_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('order_id', orderId)
+            .in('status', ['pending','blocked_validation','processing','error','failed']);
+        } catch {}
         toast.success('Pedido salvo e enviado para aprovação');
         queryClient.invalidateQueries({ queryKey: ['governance', 'pending_requests'] });
+        queryClient.invalidateQueries({ queryKey: ['order_sync_status', orderId] });
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
       }
       setPreflightOpen(false);
       setPreflightResult(null);
-      if (!isEditMode) {
-        onOpenChange(false);
-        onSuccess?.();
-      }
+      onOpenChange(false);
+      onSuccess?.();
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao solicitar autorização');
     } finally {
