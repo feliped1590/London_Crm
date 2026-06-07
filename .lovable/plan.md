@@ -1,123 +1,65 @@
-## Objetivo
+# Diagnóstico — IPI não destacado no item do pedido
 
-1. Permitir **múltiplos vendedores** numa mesma regra (comissão e pagamento).
-2. Permitir **vincular regra a uma ou mais entidades jurídicas** (obrigatório ≥1).
+## Causa raiz
 
-A regra continua única em `commission_rules` / `payment_terms_rules`. Vendedores e entidades viram **tabelas de vínculo (junctions)**, igual ao padrão já usado em `pipeline_legal_entities`.
+Apesar de NCM tributado, cliente "Contribuinte de IPI" e pedido em modo "Destacar IPI", a linha do produto sai sem IPI porque **o cadastro do produto está com `aliquota_ipi = NULL`**.
 
-## Modelagem (migration)
+Confirmado no banco:
+- `products.aliquota_ipi` está **NULL em todos** os produtos com NCM `39173290` (inclusive `1-1-LB-TR-58-400-150`).
+- `ncm_codes.aliquota_ipi_oficial` também está **NULL** para o NCM `39173290` (TIPI não foi importado/preenchido para esse código).
 
-### Novas tabelas
+No `OrderDialog.tsx` (linha 1018 e 1026), na hora de inserir um item:
 
-```text
-commission_rule_sales_reps           payment_terms_rule_sales_reps
- - rule_id (FK commission_rules)      - rule_id (FK payment_terms_rules)
- - sales_rep_id (FK sales_reps)       - sales_rep_id (FK sales_reps)
- - tenant_id                          - tenant_id
- PK (rule_id, sales_rep_id)           PK (rule_id, sales_rep_id)
-
-commission_rule_legal_entities       payment_terms_rule_legal_entities
- - rule_id                            - rule_id
- - legal_entity_id (FK legal_entities)- legal_entity_id
- - tenant_id                          - tenant_id
- PK (rule_id, legal_entity_id)        PK (rule_id, legal_entity_id)
+```ts
+ipi_rate = companyFiscalData.contribuinte_ipi
+  ? (product.aliquota_ipi || 0)   // ← cai pra 0
+  : 0;
 ```
 
-- RLS: read por tenant; write por `is_governance_admin`.
-- GRANTs `authenticated` + `service_role`.
+Como `aliquota_ipi` vem `null`, o `|| 0` zera. O modo "Destacar" só pinta a coluna se `ipi_rate > 0`; daí o item aparece sem IPI mesmo com tudo configurado.
 
-### Colunas legadas
+Resumo: as três condições do usuário (NCM tributado / cliente contribuinte / modo destacar) **estão corretas na UI, mas o dado que alimenta o cálculo (`product.aliquota_ipi`) está vazio**. Hoje o sistema não tem fallback automático do NCM para o produto.
 
-- `commission_rules.sales_rep_id` e `payment_terms_rules.sales_rep_id` ficam **deprecated** (nullable). Resolver para de usá-las. UI deixa de gravá-las. Coluna mantida por compatibilidade/auditoria. Drop futuro.
+---
 
-### Backfill (idempotente, dentro da migration)
+## Plano de correção
 
-- Para cada regra existente com `sales_rep_id NOT NULL` → insere 1 linha na junction de vendedores.
-- Para cada regra existente → insere N linhas na junction de entidades, **uma para cada `legal_entity` ativa do tenant da regra** (preserva comportamento atual de "vale para tudo").
+### 1. Fonte da verdade: NCM → Produto (fallback automático)
 
-### Integridade
+Quando o produto não tiver `aliquota_ipi` definida, usar a alíquota do NCM (`ncm_codes.aliquota_ipi_oficial`).
 
-- Trigger `BEFORE INSERT/UPDATE` em `commission_rules` e `payment_terms_rules`: se `is_active=true` exige ≥1 vínculo em entidades jurídicas (verifica via `EXISTS`).
-- Validação **client-side** também exige ≥1 entidade antes de salvar (UX).
-- Trigger em `*_rule_legal_entities` `BEFORE DELETE`: bloqueia se sobrar 0 vínculos para regra ativa.
+**Onde aplicar:**
+- `OrderDialog.tsx` linha 1018 e `addProductItem` (linha 1026): trocar `(product.aliquota_ipi || 0)` por `(product.aliquota_ipi ?? ncm.aliquota_ipi_oficial ?? 0)`.
+- Mesma lógica em `ProposalDialog` (espelho).
+- Incluir o JOIN/leitura de `ncm_codes` no `useCompanyProducts` e no `useProductSearch` (campo `aliquota_ipi_oficial`), ou consultar via `ncm_id` ao montar o item.
 
-## Resolvers
+### 2. Auto-preenchimento na classificação do produto
 
-`resolve_commission_rule(_tenant, _sales_rep, _company, _product, _at, **_legal_entity uuid**)`
-`resolve_payment_terms_rule(_tenant, _company, _sales_rep, _amount, _at, **_legal_entity uuid**)`
+Quando o admin seleciona/troca o NCM no cadastro do produto e o produto está com `aliquota_ipi` vazio, sugerir/copiar a `aliquota_ipi_oficial` do NCM (com aviso "valor herdado do NCM, pode ser sobrescrito").
 
-Adicionam:
+- Local: `NCMSelector.tsx` + `FiscalSuggestionsCard.tsx`.
 
-```sql
-AND EXISTS (
-  SELECT 1 FROM commission_rule_legal_entities x
-  WHERE x.rule_id = r.id AND x.legal_entity_id = _legal_entity
-)
-AND (
-  NOT EXISTS (SELECT 1 FROM commission_rule_sales_reps s WHERE s.rule_id = r.id)
-  OR EXISTS (SELECT 1 FROM commission_rule_sales_reps s
-             WHERE s.rule_id = r.id AND s.sales_rep_id = _sales_rep)
-)
-```
+### 3. Preencher a TIPI faltante
 
-Especificidade (CASE) substitui o peso de `sales_rep_id` por:
-```
-+ (CASE WHEN EXISTS (SELECT 1 FROM commission_rule_sales_reps WHERE rule_id = r.id) THEN 1 ELSE 0 END)
-```
+O NCM `39173290` (e provavelmente vários outros) está sem `aliquota_ipi_oficial`. Duas ações:
 
-`_legal_entity` é **obrigatório** no resolver (sem default NULL).
+- **Curto prazo:** permitir edição manual da alíquota no `NCMManager.tsx` (já existe a coluna; revisar se está editável e populada).
+- **Médio prazo:** rodar/agendar `import-ncm-tipi` para popular a tabela oficial. Conferir se a fonte do TIPI usada na função traz esse capítulo 3917.
 
-## RPCs derivadas
+### 4. Indicador visual no item (opcional, mas evita confusão)
 
-Atualizar `create_commercial_approval_request` (em `20260606231630_*.sql` linhas 115 e 170) para resolver passando `orders.legal_entity_id`. Sem mudança de assinatura externa — o legal_entity vem do `orders` que já está em escopo.
+Na linha do item, quando `ipiMode = 'destacar'` mas `ipi_rate = 0`, exibir um badge sutil "IPI 0% — verifique cadastro do produto/NCM" para o vendedor enxergar o motivo antes de fechar o pedido.
 
-## Frontend
+---
 
-### Hooks
-- `useResolveCommissionRule` / `useResolvePaymentTermsRule` passam novo arg `legalEntityId` (já presente em `OrderDialog`/`OrderItemDetailModal` via `order.legal_entity_id`). Sem nova prop UX para o vendedor.
+## O que NÃO muda
 
-### CommissionRulesManager + PaymentRulesManager
-- Substituir o `ComboSelect` único de vendedor por **multi-select de vendedores** (componente novo `_MultiComboSelect.tsx` baseado em `Command` + chips). Em payment, aparece só quando `level=3`.
-- Adicionar **multi-select de entidades jurídicas** (obrigatório ≥1). Hint visual quando vazio + bloqueio do botão Salvar.
-- Persistência: após `upsert` da regra, sincroniza as duas junctions (delete-then-insert no escopo do `rule_id`).
-- Listagem: coluna "Entidades" mostra contagem (`3 entidades` com tooltip listando) e "Vendedores" mostra "Todos" / "N vendedores".
-- Atalho **"Padrão por vendedor"** vira **multi-select pré-preenchido com 1 vendedor**, mas admin pode adicionar mais. Banner de cobertura considera a junction.
+- Lógica de `calculateIpiValue` / `calculateItemTotal` continua igual.
+- Toggle "Contribuinte de IPI" no cliente continua sobrescrevendo (se cliente não é contribuinte → 0, mesmo com NCM tributado).
+- Itens já salvos no pedido **não** são recalculados automaticamente (snapshot mantém o `ipi_rate` gravado no momento da inclusão); o usuário precisa remover e re-adicionar o item após o cadastro ser corrigido — ou abrimos uma ação "Recalcular IPI dos itens" no modal, se você quiser.
 
-### Tipos
-- `types.ts` é auto-gerado — sai pela migration.
+---
 
-## QA
+## Pergunta antes de implementar
 
-- `scripts/qa/governance-multi-select.sql` cobrindo:
-  - Regra com 2 vendedores resolve para os 2 e não para um terceiro.
-  - Regra sem vínculo de vendedor (= todos) resolve para qualquer um.
-  - Regra restrita a `legal_entity_id=A` não aparece para `B`.
-  - Especificidade: regra `vendedor+produto` vence regra só `vendedor`.
-  - Backfill: regras antigas resolvem para todas as entidades do tenant.
-
-## Compatibilidade & Riscos
-
-| Risco | Mitigação |
-|---|---|
-| Pedidos antigos sem `legal_entity_id` no contexto do resolver | Fallback: se `_legal_entity IS NULL`, ignora filtro de entidade (comportamento legado). |
-| Regra ativa fica sem entidade após delete na junction | Trigger bloqueia. |
-| Performance do EXISTS em listagens | Índices `(rule_id)` e `(legal_entity_id, rule_id)` nas junctions. |
-| Duplicidade de regra "padrão por vendedor" agora pode coexistir em vários reps | Aviso UI continua válido por (rule_id, sales_rep_id). |
-
-## Memória
-
-Atualizar `mem://features/commercial-governance`:
-- Vendedores via junction `commission_rule_sales_reps` / `payment_terms_rule_sales_reps`.
-- Entidades jurídicas obrigatórias (≥1) via junction. Filtro no resolver.
-- Coluna singular `sales_rep_id` deprecated.
-
-## Entregáveis
-
-1. **Migration única**: 4 junctions + GRANTs + RLS + triggers de integridade + backfill + alteração dos 2 resolvers.
-2. `_MultiComboSelect.tsx` reutilizável.
-3. `CommissionRulesManager.tsx` e `PaymentRulesManager.tsx` adaptados.
-4. `useCommercialGovernance.ts`: persistência das junctions + nova assinatura dos resolvers.
-5. `scripts/qa/governance-multi-select.sql`.
-6. Memória atualizada.
-
-Sem alteração em ERP, snapshots ou fluxo de aprovação.
+Quer que eu **inclua o passo 4** (badge de aviso na linha) e a **ação "Recalcular IPI"** no pedido, ou prefere só o fallback NCM→Produto (passos 1 e 2) por enquanto?
