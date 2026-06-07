@@ -598,3 +598,160 @@ export function useOrderGovernanceState(orderId?: string | null) {
   };
 }
 
+// ---------- Preflight: validar comissão e parcelamento ANTES de salvar ----------
+export interface PreflightItemInput {
+  order_item_id?: string | null;
+  product_id: string;
+  description?: string | null;
+  commission_pct: number;
+}
+
+export interface PreflightPaymentConditionInput {
+  dias: number;
+  tipo: 'V' | 'P';
+  percentual?: number | null;
+  valor?: number | null;
+  payment_method?: string | null;
+}
+
+export interface CommissionExceptionResult {
+  order_item_id?: string | null;
+  product_id: string;
+  description?: string | null;
+  applied_pct: number;
+  max_pct: number;
+  rule_id: string;
+}
+
+export interface PaymentExceptionResult {
+  rule_id: string;
+  applied_template_id: string | null;
+  applied_template_name: string | null;
+  applied_rank: number | null;
+  max_template_rank: number | null;
+  default_template_id: string | null;
+  current_max_dias: number;
+}
+
+export interface PreflightResult {
+  commissionExceptions: CommissionExceptionResult[];
+  paymentException: PaymentExceptionResult | null;
+  hasAny: boolean;
+}
+
+export async function runGovernancePreflight(params: {
+  tenantId: string;
+  salesRepId: string | null | undefined;
+  companyId: string | null | undefined;
+  legalEntityId: string | null | undefined;
+  items: PreflightItemInput[];
+  totalAmount: number;
+  paymentConditions: PreflightPaymentConditionInput[];
+  at?: string;
+}): Promise<PreflightResult> {
+  const at = params.at || new Date().toISOString().slice(0, 10);
+  const tenantId = params.tenantId;
+
+  // 1) Comissão por item (dedup por product_id)
+  const commissionExceptions: CommissionExceptionResult[] = [];
+  const uniqProducts = Array.from(new Set(params.items.map((i) => i.product_id).filter(Boolean)));
+  const resolvedByProduct = new Map<string, any>();
+  await Promise.all(
+    uniqProducts.map(async (pid) => {
+      const { data, error } = await supabase.rpc('resolve_commission_rule', {
+        _tenant: tenantId,
+        _sales_rep: params.salesRepId ?? null,
+        _company: params.companyId ?? null,
+        _product: pid,
+        _at: at,
+        _legal_entity: params.legalEntityId ?? null,
+      } as any);
+      if (error) return;
+      resolvedByProduct.set(pid, Array.isArray(data) ? data[0] : data);
+    }),
+  );
+  for (const it of params.items) {
+    const rule = resolvedByProduct.get(it.product_id);
+    if (!rule || rule.max_pct == null || rule.rule_id == null) continue;
+    const applied = Number(it.commission_pct || 0);
+    const max = Number(rule.max_pct);
+    if (applied > max + 1e-9) {
+      commissionExceptions.push({
+        order_item_id: it.order_item_id ?? null,
+        product_id: it.product_id,
+        description: it.description ?? null,
+        applied_pct: applied,
+        max_pct: max,
+        rule_id: rule.rule_id,
+      });
+    }
+  }
+
+  // 2) Parcelamento: identificar template "aplicado" via templates+items
+  let paymentException: PaymentExceptionResult | null = null;
+  if (params.companyId && params.totalAmount > 0 && params.paymentConditions.length > 0) {
+    const { data: payRuleData } = await supabase.rpc('resolve_payment_terms_rule', {
+      _tenant: tenantId,
+      _company: params.companyId,
+      _sales_rep: params.salesRepId ?? null,
+      _amount: params.totalAmount,
+      _at: at,
+      _legal_entity: params.legalEntityId ?? null,
+    } as any);
+    const payRule: any = Array.isArray(payRuleData) ? payRuleData[0] : payRuleData;
+    if (payRule?.rule_id && payRule?.max_template_rank != null) {
+      const currentMaxDias = Math.max(0, ...params.paymentConditions.map((c) => Number(c.dias) || 0));
+
+      const { data: tpls } = await supabase
+        .from('payment_terms_templates')
+        .select('id, name, rank, payment_terms_template_items(dias)')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('rank', { ascending: true });
+
+      const currentDiasSet = [...params.paymentConditions.map((c) => Number(c.dias) || 0)]
+        .sort((a, b) => a - b)
+        .join(',');
+
+      let appliedTpl: any = null;
+      for (const t of (tpls || []) as any[]) {
+        const diasArr = (t.payment_terms_template_items || [])
+          .map((i: any) => Number(i.dias) || 0)
+          .sort((a: number, b: number) => a - b)
+          .join(',');
+        if (diasArr === currentDiasSet) { appliedTpl = t; break; }
+      }
+      if (!appliedTpl) {
+        for (const t of (tpls || []) as any[]) {
+          const items = (t.payment_terms_template_items || []) as Array<{ dias: number }>;
+          const maxDias = items.length ? Math.max(...items.map((i) => Number(i.dias) || 0)) : 0;
+          if (maxDias >= currentMaxDias) { appliedTpl = t; break; }
+        }
+      }
+
+      const appliedRank: number | null = appliedTpl ? Number(appliedTpl.rank) : null;
+      const exceeds =
+        appliedRank == null ? currentMaxDias > 0 : appliedRank > Number(payRule.max_template_rank);
+
+      if (exceeds) {
+        paymentException = {
+          rule_id: payRule.rule_id,
+          applied_template_id: appliedTpl?.id ?? null,
+          applied_template_name: appliedTpl?.name ?? null,
+          applied_rank: appliedRank,
+          max_template_rank: Number(payRule.max_template_rank),
+          default_template_id: payRule.default_template_id ?? null,
+          current_max_dias: currentMaxDias,
+        };
+      }
+    }
+  }
+
+  return {
+    commissionExceptions,
+    paymentException,
+    hasAny: commissionExceptions.length > 0 || paymentException !== null,
+  };
+}
+
+
