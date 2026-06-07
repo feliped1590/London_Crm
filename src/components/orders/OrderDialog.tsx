@@ -1017,7 +1017,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       if (!item.product_id) return item;
       const product = products?.find(p => p.id === item.product_id);
       if (!product) return item;
-      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? (product.aliquota_ipi || 0) : 0 };
+      return { ...item, ipi_rate: companyFiscalData.contribuinte_ipi ? getEffectiveProductIpiRate(product) : 0 };
     }));
   }, [companyFiscalData]);
 
