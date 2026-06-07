@@ -47,7 +47,7 @@ type RegraInsert = Database['public']['Tables']['regras_tributacao']['Insert'];
 type BeneficioInsert = Database['public']['Tables']['beneficios_fiscais']['Insert'];
 
 export function FiscalSettingsTab() {
-  const [activeSubTab, setActiveSubTab] = useState('regras');
+  const [activeSubTab, setActiveSubTab] = useState('cadastros');
   
   return (
     <div className="space-y-6">
