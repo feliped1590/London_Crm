@@ -9018,6 +9018,118 @@ export type Database = {
         }
         Relationships: []
       }
+      report_definitions: {
+        Row: {
+          category: string
+          chart_type: string | null
+          code: string
+          created_at: string
+          default_filters: Json
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          required_roles: string[]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          chart_type?: string | null
+          code: string
+          created_at?: string
+          default_filters?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          required_roles?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          chart_type?: string | null
+          code?: string
+          created_at?: string
+          default_filters?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          required_roles?: string[]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      report_favorites: {
+        Row: {
+          created_at: string
+          id: string
+          report_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_favorites_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_snapshots: {
+        Row: {
+          filters_used: Json
+          generated_at: string
+          generated_by: string | null
+          id: string
+          json_result: Json
+          report_id: string
+          tenant_id: string | null
+        }
+        Insert: {
+          filters_used?: Json
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          json_result?: Json
+          report_id: string
+          tenant_id?: string | null
+        }
+        Update: {
+          filters_used?: Json
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          json_result?: Json
+          report_id?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_snapshots_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_definitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_logs: {
         Row: {
           created_at: string
@@ -10800,6 +10912,9 @@ export type Database = {
         Returns: Json
       }
       archive_old_sync_records: { Args: { days_old?: number }; Returns: Json }
+      bi_can_see_rep: { Args: { p_rep: string }; Returns: boolean }
+      bi_is_admin_or_dev: { Args: never; Returns: boolean }
+      bi_my_sales_rep_id: { Args: never; Returns: string }
       can_access_legal_entity: {
         Args: { p_legal_entity_id: string; p_user_id: string }
         Returns: boolean
@@ -11426,6 +11541,19 @@ export type Database = {
         Args: { p_product_id: string }
         Returns: number
       }
+      report_clientes_atendidos: { Args: { p_filters?: Json }; Returns: Json }
+      report_conversao: { Args: { p_filters?: Json }; Returns: Json }
+      report_dashboard_executivo: { Args: { p_filters?: Json }; Returns: Json }
+      report_forecast_vendas: { Args: { p_filters?: Json }; Returns: Json }
+      report_metas: { Args: { p_filters?: Json }; Returns: Json }
+      report_perdas_atendimento: { Args: { p_filters?: Json }; Returns: Json }
+      report_perdas_cotacao: { Args: { p_filters?: Json }; Returns: Json }
+      report_pipeline_comercial: { Args: { p_filters?: Json }; Returns: Json }
+      report_rankings: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_cliente: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_entidade: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_produto: { Args: { p_filters?: Json }; Returns: Json }
+      report_vendas_vendedor: { Args: { p_filters?: Json }; Returns: Json }
       reset_orders: { Args: never; Returns: Json }
       resolve_commission_rule: {
         Args: {
