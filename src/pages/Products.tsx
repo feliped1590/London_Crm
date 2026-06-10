@@ -2130,6 +2130,7 @@ export default function Products() {
                             newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(next));
                           }
                           if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                          else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                           setFormData(newData);
                         }}
                       />
