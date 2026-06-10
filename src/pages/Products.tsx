@@ -2026,6 +2026,7 @@ export default function Products() {
                                 }
                                 newData.sku = recalcularSku(newData);
                                 if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                                 setFormData(newData);
                               }}
                               placeholder="Em milímetros"
