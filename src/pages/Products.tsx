@@ -1281,7 +1281,8 @@ export default function Products() {
     }
     applyProductToForm(data as Product);
     setSelectedVersionId(versionId);
-    setIsAutoDescription(false);
+    setIsAutoDescription(isProductNameAuto(principal));
+
     setUnlockErpCode(false);
   };
 
