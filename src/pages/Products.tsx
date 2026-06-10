@@ -415,6 +415,34 @@ export default function Products() {
     return [base, data.erp_versao].filter(Boolean).join(' ');
   };
 
+  // Normaliza para comparação case/whitespace-insensitive
+  const normalizeForCompare = (s: string | null | undefined) =>
+    (s || '').trim().toUpperCase().replace(/\s+/g, ' ');
+
+  // Detecta se a descrição atual de um produto carregado ainda é a auto-gerada.
+  // Quando true, mudanças em dimensão/sanfona devem regerar o nome automaticamente.
+  const isProductNameAuto = (product: Product): boolean => {
+    const generated = recalcularDescricao({
+      family_id: product.family_id,
+      grupo_id: product.grupo_id,
+      subgrupo_id: product.subgrupo_id,
+      class_id: product.class_id,
+      nome_impresso: (product as any).nome_impresso || '',
+      erp_versao: product.erp_versao || '',
+    } as any);
+    return normalizeForCompare(product.name) === normalizeForCompare(generated);
+  };
+
+  // Quando a descrição NÃO é auto-gerada mas ainda contém o erp_versao anterior
+  // literal, troca somente esse token pelo novo. Evita exigir que o usuário
+  // limpe/regenere o campo manualmente após mudar uma dimensão.
+  const replaceVersionInName = (name: string, prev: string, next: string): string => {
+    if (!name || !prev || !next || prev === next) return name;
+    const escaped = prev.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return name.replace(new RegExp(escaped, 'gi'), next);
+  };
+
+
   // Recalcula o fator milheiro quando os valores mudam
   const recalcularFatorMilheiro = (data: typeof formData) => {
     if (data.fator_kg && data.width && data.length && data.thickness) {
@@ -1253,7 +1281,8 @@ export default function Products() {
     }
     applyProductToForm(data as Product);
     setSelectedVersionId(versionId);
-    setIsAutoDescription(false);
+    setIsAutoDescription(isProductNameAuto(data as Product));
+
     setUnlockErpCode(false);
   };
 
@@ -1277,7 +1306,8 @@ export default function Products() {
     setSelectedVersionId(principal.id);
     setIsDialogOpen(true);
     setFormTab('geral');
-    setIsAutoDescription(false);
+    setIsAutoDescription(isProductNameAuto(principal));
+
     setUnlockErpCode(false);
   };
 
@@ -1870,6 +1900,7 @@ export default function Products() {
                         }
                         newData.sku = recalcularSku(newData);
                         if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                        else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                         setFormData(newData);
                       };
                       return (
@@ -1902,6 +1933,7 @@ export default function Products() {
                                       }
                                       newData.sku = recalcularSku(newData);
                                       if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                      else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                                       setFormData(newData);
                                     }
                                   }}
@@ -1968,6 +2000,7 @@ export default function Products() {
                               }
                               newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                               setFormData(newData);
                             }}
                             placeholder="Em milímetros"
@@ -1993,6 +2026,7 @@ export default function Products() {
                                 }
                                 newData.sku = recalcularSku(newData);
                                 if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                                 setFormData(newData);
                               }}
                               placeholder="Em milímetros"
@@ -2022,6 +2056,7 @@ export default function Products() {
                               }
                               newData.sku = recalcularSku(newData);
                               if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                               setFormData(newData);
                             }}
                             placeholder="Ex.: 0,120"
@@ -2095,6 +2130,7 @@ export default function Products() {
                             newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(next));
                           }
                           if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                          else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                           setFormData(newData);
                         }}
                       />
