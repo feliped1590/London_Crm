@@ -1306,7 +1306,8 @@ export default function Products() {
     setSelectedVersionId(principal.id);
     setIsDialogOpen(true);
     setFormTab('geral');
-    setIsAutoDescription(false);
+    setIsAutoDescription(isProductNameAuto(principal));
+
     setUnlockErpCode(false);
   };
 
