@@ -315,24 +315,60 @@ function CatalogTab({ tenantId, items, loading, onChanged }: {
 
 // ─────────────────────────── MAPEAMENTO ───────────────────────────
 const CRM_PATH_PRESETS: { label: string; source: 'ficha_tecnica' | 'product_column' | 'derived'; path: string }[] = [
+  // Derivados
   { label: 'Tipo Solda — derivado do Subgrupo (apenas Saco/Stand Up)', source: 'derived', path: 'tipo_solda' },
+
+  // Produto (colunas)
   { label: 'Largura (mm) — produto', source: 'product_column', path: 'width' },
   { label: 'Comprimento (mm) — produto', source: 'product_column', path: 'length' },
   { label: 'Espessura (mm) — produto', source: 'product_column', path: 'thickness' },
   { label: 'Peso (kg) — produto', source: 'product_column', path: 'weight' },
   { label: 'Fator KG — produto', source: 'product_column', path: 'fator_kg' },
   { label: 'Fator milheiro — produto', source: 'product_column', path: 'fator_milheiro' },
+
+  // Stand Up
   { label: 'Stand Up — Distância do picote', source: 'ficha_tecnica', path: 'stand_up.distancia_picote' },
   { label: 'Stand Up — Distância do zíper', source: 'ficha_tecnica', path: 'stand_up.distancia_ziper' },
+
+  // Sanfona
+  { label: 'Sanfona — Ativa', source: 'ficha_tecnica', path: 'sanfona.ativa' },
+  { label: 'Sanfona — Local (Lateral/Fundo)', source: 'ficha_tecnica', path: 'sanfona.local' },
+  { label: 'Sanfona — Valor (mm)', source: 'ficha_tecnica', path: 'sanfona.valor' },
+
+  // Embalagem
+  { label: 'Embalagem — Tipo (Fardo/Caixa)', source: 'ficha_tecnica', path: 'embalagem.tipo' },
   { label: 'Embalagem — Quantidade', source: 'ficha_tecnica', path: 'embalagem.quantidade' },
+
+  // Acessórios
+  { label: 'Acessório 1 — ID', source: 'ficha_tecnica', path: 'acessorios.0.accessory_id' },
+  { label: 'Acessório 1 — Valor', source: 'ficha_tecnica', path: 'acessorios.0.valor' },
+  { label: 'Acessório 2 — ID', source: 'ficha_tecnica', path: 'acessorios.1.accessory_id' },
+  { label: 'Acessório 2 — Valor', source: 'ficha_tecnica', path: 'acessorios.1.valor' },
+
+  // Bobina
+  { label: 'Bobina — Tipo de tubete (PVC/Papelão/Ferro)', source: 'ficha_tecnica', path: 'bobina.tubete_tipo' },
+  { label: 'Bobina — Diâmetro do tubete (pol)', source: 'ficha_tecnica', path: 'bobina.tubete_diametro' },
+  { label: 'Bobina — Descontar tubo', source: 'ficha_tecnica', path: 'bobina.descontar_tubo' },
   { label: 'Bobina — Peso por bobina', source: 'ficha_tecnica', path: 'bobina.peso_bobina' },
   { label: 'Bobina — Diâmetro', source: 'ficha_tecnica', path: 'bobina.diametro_bobina' },
   { label: 'Bobina — Metragem', source: 'ficha_tecnica', path: 'bobina.metragem_bobina' },
   { label: 'Bobina — Emendas', source: 'ficha_tecnica', path: 'bobina.emendas_por_bobina' },
+  { label: 'Bobina — Sentido de embobinamento', source: 'ficha_tecnica', path: 'bobina.sentido_embobinamento' },
+
+  // Impressão
+  { label: 'Impressão — Tipo (Interna/Externa)', source: 'ficha_tecnica', path: 'impressao.tipo' },
+  { label: 'Impressão — Local (Frente/Verso)', source: 'ficha_tecnica', path: 'impressao.local' },
   { label: 'Impressão — Quantidade de cores', source: 'ficha_tecnica', path: 'impressao.qtd_cores' },
   { label: 'Impressão — Repetição lateral', source: 'ficha_tecnica', path: 'impressao.repeticao_lateral' },
   { label: 'Impressão — Repetição longitudinal', source: 'ficha_tecnica', path: 'impressao.repeticao_longitudinal' },
   { label: 'Impressão — Passo', source: 'ficha_tecnica', path: 'impressao.passo' },
+  { label: 'Impressão — Diâmetro do cilindro (mm)', source: 'ficha_tecnica', path: 'impressao.cilindro_id' },
+  { label: 'Impressão — Máquina', source: 'ficha_tecnica', path: 'impressao.maquina_id' },
+  { label: 'Impressão — Cameron (Sim/Não/Duplo)', source: 'ficha_tecnica', path: 'impressao.cameron' },
+  { label: 'Impressão — Fotocélula (Sim/Não/Dupla)', source: 'ficha_tecnica', path: 'impressao.fotocelula' },
+
+  // Observações
+  { label: 'Observações', source: 'ficha_tecnica', path: 'observacoes' },
 ];
 
 function MappingTab({ tenantId, catalog, items, loading, onChanged }: {
