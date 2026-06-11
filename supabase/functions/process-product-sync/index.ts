@@ -275,16 +275,20 @@ Deno.serve(async (req) => {
           throw new Error(`ERP sincronizou, mas falhou ao gravar código no CRM: ${productUpdateError.message}`);
         }
 
-        // Liberar atributos bloqueados (produto agora tem erp_product_code) e disparar drain
+        // Liberar atributos bloqueados (produto agora tem erp_product_code),
+        // enfileirar TODOS os atributos mapeados (cada sync de produto re-envia tudo)
+        // e disparar drain.
         try {
           await supabase.rpc('release_blocked_attributes', { p_product_id: item.product_id });
+          await supabase.rpc('enqueue_all_product_attributes', { p_product_id: item.product_id });
           // Fire-and-forget: processa atributos pendentes deste produto
           supabase.functions
             .invoke('process-attribute-sync', { body: { product_id: item.product_id } })
             .catch((e: unknown) => console.warn('[process-product-sync] drain atributos falhou:', e));
         } catch (e) {
-          console.warn('[process-product-sync] release_blocked_attributes falhou:', e);
+          console.warn('[process-product-sync] enqueue/release atributos falhou:', e);
         }
+
 
 
 
