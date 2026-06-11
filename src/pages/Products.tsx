@@ -769,13 +769,15 @@ export default function Products() {
     },
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      const versionsKey = (updatedProduct as any).parent_product_id ?? updatedProduct.id;
+      queryClient.invalidateQueries({ queryKey: ['product-versions', versionsKey] });
       recordProductInteraction({ entityId: updatedProduct.id, tenantId: updatedProduct.tenant_id, interactionType: 'update' });
-      toast.success('Produto atualizado!');
+      toast.success('Produto atualizado! Sincronização com ERP enfileirada.');
       resetForm();
     },
     onError: (error: any) => {
       const duplicateMessage = getDuplicateErrorMessage(error);
-      toast.error(duplicateMessage || 'Erro ao atualizar produto', { duration: 8000 });
+      toast.error(duplicateMessage || error?.message || 'Erro ao atualizar produto', { duration: 8000 });
     },
   });
 
