@@ -10990,6 +10990,10 @@ export type Database = {
         }[]
       }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      enqueue_all_product_attributes: {
+        Args: { p_product_id: string }
+        Returns: number
+      }
       enqueue_bulk_company_sync: { Args: never; Returns: Json }
       extract_attribute_value: {
         Args: {
