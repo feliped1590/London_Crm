@@ -488,7 +488,7 @@ export default function Customers() {
         </div>
       </div>
 
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <div className="relative flex-1 min-w-0">
