@@ -606,7 +606,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
       {/* Recent Deals and Tasks */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Recent Deals */}
-        <Card>
+        <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Negócios Recentes</CardTitle>
             <CardDescription>Últimas oportunidades criadas</CardDescription>
