@@ -354,13 +354,14 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     trend?: "up" | "down" | null;
     href?: string;
   }) => (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="relative overflow-hidden border-border-subtle shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200">
+      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-brand" />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="font-display text-xl sm:text-2xl font-semibold tabular-nums">{value}</div>
         {description && (
           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
             {trend === "up" && <ArrowUpRight className="h-3 w-3 text-success" />}
