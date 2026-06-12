@@ -261,7 +261,7 @@ export default function Orders() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)]">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="relative flex-1 min-w-0">
