@@ -2233,7 +2233,7 @@ export default function Products() {
       </Card>
 
       {recentProducts.length > 0 && (
-        <Card>
+        <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-4 w-4 text-primary" />
