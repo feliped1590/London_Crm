@@ -2206,7 +2206,7 @@ export default function Products() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
