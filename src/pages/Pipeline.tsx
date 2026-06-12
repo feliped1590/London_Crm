@@ -504,20 +504,20 @@ export default function Pipeline() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
-          <p className="text-sm text-muted-foreground">Gerencie suas oportunidades de negócio</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Pipeline de Vendas</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Gerencie suas oportunidades de negócio</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <PipelineSelector value={selectedPipelineId} onChange={setSelectedPipelineId} legalEntityId={effectiveLegalEntityId} />
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Atualizar</span>
           </Button>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'kanban' | 'list')} className="bg-muted rounded-lg p-1">
-            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" className="gap-1.5 px-3">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'kanban' | 'list')} className="bg-surface-elevated border border-border-subtle rounded-lg p-0.5">
+            <ToggleGroupItem value="kanban" aria-label="Visualização Kanban" className="gap-1.5 px-3 h-8 data-[state=on]:bg-card data-[state=on]:shadow-[var(--shadow-xs)] data-[state=on]:text-primary">
               <LayoutGrid className="h-4 w-4" /><span className="hidden sm:inline">Kanban</span>
             </ToggleGroupItem>
-            <ToggleGroupItem value="list" aria-label="Visualização Lista" className="gap-1.5 px-3">
+            <ToggleGroupItem value="list" aria-label="Visualização Lista" className="gap-1.5 px-3 h-8 data-[state=on]:bg-card data-[state=on]:shadow-[var(--shadow-xs)] data-[state=on]:text-primary">
               <List className="h-4 w-4" /><span className="hidden sm:inline">Lista</span>
             </ToggleGroupItem>
           </ToggleGroup>
