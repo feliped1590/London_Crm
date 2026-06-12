@@ -426,8 +426,8 @@ export default function Customers() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Clientes</h1>
-          <p className="text-sm text-muted-foreground">Gerencie sua carteira de clientes</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Clientes</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Gerencie sua carteira de clientes</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {isDeveloper && (
