@@ -66,7 +66,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         supabase.from('companies').select('id, name, city, cnpj').or(`name.ilike.${pattern},cnpj.ilike.${pattern}`).limit(5),
         supabase.from('contacts').select('id, first_name, last_name, email, company:companies(name)').or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`).limit(5),
         supabase.from('deals').select('id, name, value, company:companies(name)').ilike('name', pattern).limit(5),
-        supabase.from('orders').select('id, order_number, total_value, company:companies(name)').or(`order_number.ilike.${pattern}`).limit(5),
+        supabase.from('orders').select('id, number, total_value, company:companies(name)').or(`number.ilike.${pattern}`).limit(5),
         supabase.from('products').select('id, name, sku').or(`name.ilike.${pattern},sku.ilike.${pattern}`).limit(5),
         supabase.from('profiles').select('user_id, full_name, email').or(`full_name.ilike.${pattern},email.ilike.${pattern}`).limit(5),
       ]);
@@ -75,7 +75,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       (companies.data || []).forEach((c: any) => next.push({ id: c.id, kind: 'company', title: c.name, subtitle: c.city || c.cnpj || undefined, to: `/customers/${c.id}` }));
       (contacts.data || []).forEach((c: any) => next.push({ id: c.id, kind: 'contact', title: `${c.first_name} ${c.last_name || ''}`.trim(), subtitle: c.company?.name || c.email || undefined, to: `/contacts?search=${encodeURIComponent(c.first_name)}` }));
       (deals.data || []).forEach((d: any) => next.push({ id: d.id, kind: 'deal', title: d.name, subtitle: d.company?.name || (d.value ? `R$ ${Number(d.value).toLocaleString('pt-BR')}` : undefined), to: `/pipeline?deal=${d.id}` }));
-      (orders.data || []).forEach((o: any) => next.push({ id: o.id, kind: 'order', title: `Pedido #${o.order_number ?? o.id.slice(0, 8)}`, subtitle: o.company?.name || (o.total_value ? `R$ ${Number(o.total_value).toLocaleString('pt-BR')}` : undefined), to: `/orders?id=${o.id}` }));
+      (orders.data || []).forEach((o: any) => next.push({ id: o.id, kind: 'order', title: `Pedido #${o.number ?? o.id.slice(0, 8)}`, subtitle: o.company?.name || (o.total_value ? `R$ ${Number(o.total_value).toLocaleString('pt-BR')}` : undefined), to: `/orders?id=${o.id}` }));
       (products.data || []).forEach((p: any) => next.push({ id: p.id, kind: 'product', title: p.name, subtitle: p.sku || undefined, to: `/products?id=${p.id}` }));
       (profiles.data || []).forEach((u: any) => next.push({ id: u.user_id, kind: 'user', title: u.full_name || u.email, subtitle: u.email || undefined, to: `/settings?user=${u.user_id}` }));
 
