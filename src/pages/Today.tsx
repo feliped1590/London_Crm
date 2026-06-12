@@ -65,7 +65,7 @@ export default function Today() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground flex items-center gap-2">
             <GreetingIcon className="h-7 w-7 text-yellow-500" />
             {greeting.text}, {formattedName}! 👋
           </h1>
@@ -76,7 +76,7 @@ export default function Today() {
         </div>
         
         {activeTab === 'meu-dia' && upcomingTasks.tomorrow + upcomingTasks.nextWeek > 0 && (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
