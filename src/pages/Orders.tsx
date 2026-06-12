@@ -244,13 +244,17 @@ export default function Orders() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {getStatusStats().map((stat) => (
-          <Card key={stat.status}>
+          <Card
+            key={stat.status}
+            className="relative overflow-hidden border-border-subtle shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-brand" />
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2 gap-2">
                 <Badge className={cn(stat.color, "text-xs")}>{stat.label}</Badge>
-                <span className="text-xl sm:text-2xl font-bold">{stat.count}</span>
+                <span className="text-xl sm:text-2xl font-display font-semibold tabular-nums">{stat.count}</span>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">{formatCurrency(stat.value)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate tabular-nums">{formatCurrency(stat.value)}</p>
             </CardContent>
           </Card>
         ))}
