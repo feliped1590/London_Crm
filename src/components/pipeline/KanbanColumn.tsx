@@ -164,7 +164,7 @@ export function KanbanColumn({
         </div>
       </ScrollArea>
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/30 rounded-b-lg">
+        <div className="flex items-center justify-between px-3 py-1.5 border-t border-border-subtle rounded-b-xl">
           <Button
             variant="ghost"
             size="icon"
