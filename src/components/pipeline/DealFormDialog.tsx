@@ -87,6 +87,28 @@ export function DealFormDialog({
   getContactInfo,
 }: DealFormDialogProps) {
   const navigate = useNavigate();
+
+  // Regra: todo NOVO negócio cai obrigatoriamente na 1ª etapa do funil (Prospecção).
+  // Auto-preenche o pipeline_stage_id assim que o diálogo abre e as etapas estão carregadas.
+  useEffect(() => {
+    if (!isOpen || editingDeal) return;
+    if (!stageRows || stageRows.length === 0) return;
+    const firstRow = stageRows[0];
+    const currentStageId = (formData as any).pipeline_stage_id;
+    if (currentStageId === firstRow.id) return;
+    const next: Partial<TablesInsert<'deals'>> = {
+      ...formData,
+      pipeline_stage_id: firstRow.id,
+    };
+    if (firstRow.stage) {
+      (next as any).stage = firstRow.stage;
+    } else {
+      delete (next as any).stage;
+    }
+    setFormData(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingDeal, stageRows]);
+
   const renderFormFields = (isEditing: boolean) => (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2">
