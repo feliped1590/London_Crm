@@ -8,32 +8,45 @@ export default {
     container: {
       center: true,
       padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
+      screens: { "2xl": "1400px" },
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        display: ['Space Grotesk', 'DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       boxShadow: {
-        xs: '0 1px 2px 0 hsl(var(--foreground) / 0.04)',
-        sm: '0 1px 3px 0 hsl(var(--foreground) / 0.06), 0 1px 2px -1px hsl(var(--foreground) / 0.04)',
-        DEFAULT: '0 2px 6px -1px hsl(var(--foreground) / 0.08), 0 1px 3px -1px hsl(var(--foreground) / 0.05)',
-        md: '0 4px 12px -2px hsl(var(--foreground) / 0.10), 0 2px 4px -2px hsl(var(--foreground) / 0.06)',
-        lg: '0 12px 28px -8px hsl(var(--foreground) / 0.14), 0 4px 10px -4px hsl(var(--foreground) / 0.08)',
-        xl: '0 24px 48px -12px hsl(var(--foreground) / 0.18)',
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        glow: 'var(--shadow-glow)',
       },
       colors: {
         border: "hsl(var(--border))",
+        "border-subtle": "hsl(var(--border-subtle))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          elevated: "hsl(var(--surface-elevated))",
+        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
+          active: "hsl(var(--primary-active))",
         },
+        "accent-brand": {
+          DEFAULT: "hsl(var(--accent-brand))",
+          foreground: "hsl(var(--accent-brand-foreground))",
+        },
+        highlight: "hsl(var(--highlight))",
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -67,6 +80,7 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+          muted: "hsl(var(--sidebar-muted))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
@@ -90,14 +104,19 @@ export default {
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
+        sm: "var(--radius-sm)",
         md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius)",
+        xl: "var(--radius-lg)",
+        "2xl": "var(--radius-xl)",
       },
       transitionDuration: {
-        fast: "150ms",
-        base: "200ms",
-        slow: "280ms",
+        fast: "120ms",
+        base: "180ms",
+        slow: "260ms",
+      },
+      transitionTimingFunction: {
+        out: "cubic-bezier(0.2, 0.8, 0.2, 1)",
       },
       keyframes: {
         "accordion-down": {
@@ -117,19 +136,17 @@ export default {
           to: { opacity: "1" },
         },
         "scale-in": {
-          from: { transform: "scale(0.95)", opacity: "0" },
+          from: { transform: "scale(0.96)", opacity: "0" },
           to: { transform: "scale(1)", opacity: "1" },
         },
-        shimmer: {
-          "100%": { transform: "translateX(100%)" },
-        },
+        shimmer: { "100%": { transform: "translateX(100%)" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
-        "fade-in": "fade-in 0.2s ease-out",
-        "scale-in": "scale-in 0.2s ease-out",
+        "fade-in": "fade-in 0.18s cubic-bezier(0.2,0.8,0.2,1)",
+        "scale-in": "scale-in 0.18s cubic-bezier(0.2,0.8,0.2,1)",
         shimmer: "shimmer 2s infinite",
       },
     },
