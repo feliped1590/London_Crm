@@ -585,7 +585,7 @@ export default function Tasks() {
         <TaskCalendar onCreateTask={handleCreateFromCalendar} onEditTask={handleEdit} />
       ) : (
         /* List View */
-        <Card>
+        <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
           <CardHeader>
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
