@@ -239,31 +239,35 @@ export default function Auth() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background bg-gradient-mesh">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/10 p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background bg-gradient-mesh p-4 relative overflow-hidden">
+      {/* Decorative orbs */}
+      <div className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-gradient-brand opacity-20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-gradient-brand-soft opacity-20 blur-3xl" />
+
+      <div className="w-full max-w-md relative">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden mb-4 ring-1 ring-border-subtle shadow-[var(--shadow-md)]">
             <img src="/images/logo-qualyvac.jpeg" alt="Qualyvac" className="w-full h-full object-cover" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">
-            CRM <span className="text-primary">Qualyvac Group</span>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            CRM <span className="text-gradient-brand">Qualyvac Group</span>
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm">
             Sistema de gestão de relacionamento com clientes
           </p>
         </div>
 
-        <Card className="shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle>Entrar</CardTitle>
+        <Card className="surface-glass border-border-subtle shadow-[var(--shadow-xl)]">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="font-display text-xl">Entrar</CardTitle>
             <CardDescription>
               Acesse sua conta para continuar
             </CardDescription>
@@ -295,7 +299,11 @@ export default function Auth() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-brand hover:opacity-95 shadow-[var(--shadow-md)] transition-all"
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -309,7 +317,7 @@ export default function Auth() {
           </form>
         </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
+        <p className="text-center text-xs text-muted-foreground mt-6">
           Ao continuar, você concorda com nossos Termos de Serviço e Política de Privacidade.
         </p>
       </div>

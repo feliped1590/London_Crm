@@ -63,20 +63,24 @@ export function DailySummary({ summary, upcomingTasks, isLoading }: DailySummary
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {items.map((item, index) => (
-        <Card key={index} className={cn("border-0 shadow-sm", item.bgColor)}>
+        <Card
+          key={index}
+          className="group relative overflow-hidden border-border-subtle bg-card hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200"
+        >
+          <div className={cn("absolute inset-x-0 top-0 h-0.5", item.color.replace('text-', 'bg-'))} />
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className={cn("p-2 rounded-lg", item.bgColor)}>
+            <div className="flex items-start gap-3">
+              <div className={cn("p-2 rounded-lg ring-1 ring-border-subtle", item.bgColor)}>
                 <item.icon className={cn("h-5 w-5", item.color)} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
-                <p className={cn("text-lg font-bold", item.color)}>{item.value}</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{item.label}</p>
+                <p className="text-xl font-display font-semibold tabular-nums text-foreground mt-0.5">{item.value}</p>
                 {item.subtitle && (
                   <p className="text-xs text-muted-foreground">{item.subtitle}</p>
                 )}
                 {item.progress !== undefined && (
-                  <Progress value={Math.min(item.progress, 100)} className="h-1.5 mt-1" />
+                  <Progress value={Math.min(item.progress, 100)} className="h-1.5 mt-2" />
                 )}
               </div>
             </div>
