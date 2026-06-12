@@ -279,7 +279,7 @@ export default function Contacts() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Contatos</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Contatos</h1>
           <p className="text-sm text-muted-foreground">Gerencie seus contatos e leads</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
