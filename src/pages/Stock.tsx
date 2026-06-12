@@ -155,7 +155,7 @@ function StockMoveTab() {
   };
 
   return (
-    <Card>
+    <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
       <CardHeader><CardTitle className="text-lg">Nova Movimentação</CardTitle></CardHeader>
       <CardContent className="space-y-4 max-w-xl">
         <div>
@@ -323,7 +323,7 @@ export default function Stock() {
       <div className="flex items-center gap-3">
         <Warehouse className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Estoque</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Estoque</h1>
           <p className="text-sm text-muted-foreground">Controle de saldo por produto e empresa</p>
         </div>
       </div>
