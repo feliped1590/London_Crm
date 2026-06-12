@@ -217,7 +217,7 @@ export default function Orders() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Pedidos</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Pedidos</h1>
           <p className="text-sm text-muted-foreground">Gerencie os pedidos de venda</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -244,20 +244,24 @@ export default function Orders() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {getStatusStats().map((stat) => (
-          <Card key={stat.status}>
+          <Card
+            key={stat.status}
+            className="relative overflow-hidden border-border-subtle shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-brand" />
             <CardContent className="pt-4">
               <div className="flex items-center justify-between mb-2 gap-2">
                 <Badge className={cn(stat.color, "text-xs")}>{stat.label}</Badge>
-                <span className="text-xl sm:text-2xl font-bold">{stat.count}</span>
+                <span className="text-xl sm:text-2xl font-display font-semibold tabular-nums">{stat.count}</span>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground truncate">{formatCurrency(stat.value)}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate tabular-nums">{formatCurrency(stat.value)}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)]">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="relative flex-1 min-w-0">
@@ -309,7 +313,7 @@ export default function Orders() {
       </Card>
 
       {/* Orders Table */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
