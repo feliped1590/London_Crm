@@ -155,7 +155,7 @@ function StockMoveTab() {
   };
 
   return (
-    <Card>
+    <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
       <CardHeader><CardTitle className="text-lg">Nova Movimentação</CardTitle></CardHeader>
       <CardContent className="space-y-4 max-w-xl">
         <div>
