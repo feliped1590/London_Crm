@@ -76,7 +76,7 @@ export default function Today() {
         </div>
         
         {activeTab === 'meu-dia' && upcomingTasks.tomorrow + upcomingTasks.nextWeek > 0 && (
-          <Card className="border-dashed">
+          <Card className="border-dashed border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
             <CardContent className="py-3 px-4">
               <div className="flex items-center gap-4 text-sm">
                 <div className="flex items-center gap-2">
