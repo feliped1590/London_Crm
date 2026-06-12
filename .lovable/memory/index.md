@@ -14,6 +14,7 @@ Todo texto livre (nomes, descrições, endereços, observações) é armazenado 
 Versões de produto: v1=pai (parent_product_id NULL), v2+=filhos. ERP recebe `codigo=pai.erp_product_code` e `versao=String(versao_numero)`. `erp_versao_codigo` é o identificador; `erp_versao` é só descritivo dimensional.
 
 ## Memories
+- [Sales Goals Attribution](mem://features/sales-goals-attribution) — Metas medidas por pedidos (não deals), atribuídas por sales_rep via orders/company
 - [Role-Based Access Control](mem://auth/role-based-access-control) — Admin, Sales, Support, Dev, Ops profiles and granular stage permissions
 - [Licensing Model](mem://business/licensing-model) — Backend limit of 25 active users on 'professional' plan
 - [WhatsApp Access](mem://security/whatsapp-access-control) — RLS on instances: users see own chats, Admins see all

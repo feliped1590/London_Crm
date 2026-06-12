@@ -85,26 +85,48 @@ export function useSalesGoals(userId?: string) {
         } as GoalProgress;
       }
 
-      // Fetch won deals within the goal period.
-      // Fallback to updated_at when closed_at is NULL (legacy deals or paths that
-      // bypassed the closed_at trigger).
+      // Goal achievement is measured by ORDERS (pedidos), not deals.
+      // Attribution: orders for the user's mapped sales_rep, either via
+      // orders.sales_rep_id or via the customer's company.sales_rep_id.
+      // This ensures orders placed by delegated users (carteira gerida)
+      // still count toward the owning sales rep's goal.
       const start = currentGoal.period_start;
-      const end = currentGoal.period_end;
-      const { data: deals, error } = await supabase
-        .from('deals')
-        .select('id, value, closed_at, updated_at')
-        .eq('owner_id', targetUserId)
-        .eq('stage', 'fechado_ganho')
-        .or(
-          `and(closed_at.gte.${start},closed_at.lte.${end}),` +
-          `and(closed_at.is.null,updated_at.gte.${start},updated_at.lte.${end})`
-        );
+      const end = currentGoal.period_end + 'T23:59:59.999Z';
 
+      const { data: usrRows } = await supabase
+        .from('user_sales_reps')
+        .select('sales_rep_id')
+        .eq('user_id', targetUserId);
+      const repIds = (usrRows ?? []).map((r) => r.sales_rep_id).filter(Boolean);
 
-      if (error) throw error;
+      let companyIds: string[] = [];
+      if (repIds.length > 0) {
+        const { data: comps } = await supabase
+          .from('companies')
+          .select('id')
+          .in('sales_rep_id', repIds);
+        companyIds = (comps ?? []).map((c) => c.id);
+      }
 
-      const currentValue = (deals || []).reduce((sum, d) => sum + Number(d.value || 0), 0);
-      const currentDeals = deals?.length || 0;
+      const orParts: string[] = [];
+      if (repIds.length > 0) orParts.push(`sales_rep_id.in.(${repIds.join(',')})`);
+      if (companyIds.length > 0) orParts.push(`company_id.in.(${companyIds.join(',')})`);
+
+      let orders: Array<{ total_value: number | null }> = [];
+      if (orParts.length > 0) {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, total_value, created_at, status, sales_rep_id, company_id')
+          .neq('status', 'cancelado')
+          .gte('created_at', start)
+          .lte('created_at', end)
+          .or(orParts.join(','));
+        if (error) throw error;
+        orders = data ?? [];
+      }
+
+      const currentValue = orders.reduce((sum, o) => sum + Number(o.total_value || 0), 0);
+      const currentDeals = orders.length;
 
       const valueProgress = currentGoal.target_value > 0 
         ? Math.min(100, (currentValue / currentGoal.target_value) * 100)
