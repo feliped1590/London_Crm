@@ -1416,7 +1416,7 @@ export default function Products() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Produtos</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">Produtos</h1>
           <p className="text-sm text-muted-foreground">Catálogo de itens de embalagem</p>
         </div>
       </div>
@@ -2206,7 +2206,7 @@ export default function Products() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -2233,7 +2233,7 @@ export default function Products() {
       </Card>
 
       {recentProducts.length > 0 && (
-        <Card>
+        <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-4 w-4 text-primary" />
@@ -2264,7 +2264,7 @@ export default function Products() {
       )}
 
       {/* Products Table */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
