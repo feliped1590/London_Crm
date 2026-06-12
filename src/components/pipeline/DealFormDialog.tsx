@@ -132,6 +132,7 @@ export function DealFormDialog({
         <Label htmlFor="stage">Etapa</Label>
         <Select
           value={(formData as any).pipeline_stage_id || ''}
+          disabled={!isEditing}
           onValueChange={(v) => {
             const row = stageRows.find(s => s.id === v);
             const nextFormData: Partial<TablesInsert<'deals'>> = {
@@ -159,6 +160,11 @@ export function DealFormDialog({
             ))}
           </SelectContent>
         </Select>
+        {!isEditing && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Novos negócios entram automaticamente na primeira etapa do funil.
+          </p>
+        )}
       </div>
       <div>
         <Label htmlFor="probability">Probabilidade (%)</Label>
