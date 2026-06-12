@@ -670,7 +670,7 @@ export default function Customers() {
                     return (
                       <TableRow
                         key={customer.id}
-                        className="cursor-pointer hover:bg-muted/50"
+                        className="cursor-pointer"
                         onClick={() => handleOpenCustomer(customer)}
                       >
                         <TableCell>
