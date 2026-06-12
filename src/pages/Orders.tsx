@@ -313,7 +313,7 @@ export default function Orders() {
       </Card>
 
       {/* Orders Table */}
-      <Card>
+      <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
