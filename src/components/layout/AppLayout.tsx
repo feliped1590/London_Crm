@@ -1,6 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { Menu, Search } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -8,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
 import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
-import { CommandPalette } from '@/components/layout/CommandPalette';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { useSessionGuard } from '@/hooks/useSessionGuard';
@@ -23,19 +21,6 @@ export function AppLayout() {
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
   const { isDeveloper } = useModulePermissions();
-  const [commandOpen, setCommandOpen] = useState(false);
-
-  // Cmd/Ctrl + K → open command palette
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setCommandOpen(o => !o);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   return (
     <div
@@ -64,9 +49,7 @@ export function AppLayout() {
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setCommandOpen(true)} aria-label="Buscar">
-              <Search className="h-4 w-4" />
-            </Button>
+            <LegalEntitySelector />
             <ThemeToggle />
           </div>
         </header>
@@ -87,19 +70,6 @@ export function AppLayout() {
         {/* Desktop Header */}
         {!isMobile && (
           <header className="surface-glass sticky top-0 z-20 h-14 px-6 flex items-center gap-4">
-            <button
-              onClick={() => setCommandOpen(true)}
-              className={cn(
-                "flex items-center gap-2 h-9 px-3 rounded-lg text-sm",
-                "bg-surface-elevated/60 hover:bg-surface-elevated border border-border-subtle hover:border-border",
-                "text-muted-foreground hover:text-foreground transition-colors min-w-[280px] max-w-md flex-1",
-              )}
-            >
-              <Search className="h-4 w-4 shrink-0" />
-              <span className="flex-1 text-left">Buscar clientes, pedidos, produtos…</span>
-              <span className="kbd ml-auto">⌘ K</span>
-            </button>
-
             <div className="ml-auto flex items-center gap-2">
               <LegalEntitySelector />
               <ThemeToggle />
@@ -114,8 +84,6 @@ export function AppLayout() {
 
       {alertData && <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />}
       {isDeveloper && <AIChatWidget />}
-
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </div>
   );
 }
