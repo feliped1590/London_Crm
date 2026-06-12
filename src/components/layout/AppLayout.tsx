@@ -69,9 +69,12 @@ export function AppLayout() {
       <div className={cn("flex flex-col min-w-0", !isMobile && "min-h-screen")}>
         {/* Desktop Header */}
         {!isMobile && (
-          <header className="surface-glass sticky top-0 z-20 h-14 px-6 flex items-center gap-4">
-            <div className="ml-auto flex items-center gap-2">
+          <header className="surface-glass sticky top-0 z-20 h-14 px-6 grid grid-cols-3 items-center gap-4">
+            <div />
+            <div className="flex justify-center">
               <LegalEntitySelector />
+            </div>
+            <div className="flex justify-end items-center gap-2">
               <ThemeToggle />
             </div>
           </header>
