@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AppInitializer } from "@/components/AppInitializer";
@@ -155,6 +156,7 @@ const App = () => (
         <AppInitializer>
           <RealtimeSync />
           <ErrorBoundary>
+            <ThemeProvider>
             <SidebarProvider>
               <TooltipProvider>
               <Toaster />
@@ -202,6 +204,7 @@ const App = () => (
               </Suspense>
             </TooltipProvider>
             </SidebarProvider>
+            </ThemeProvider>
           </ErrorBoundary>
         </AppInitializer>
       </AuthProvider>
