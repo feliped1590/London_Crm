@@ -658,7 +658,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         </Card>
 
         {/* Upcoming Tasks */}
-        <Card>
+        <Card className="border-border-subtle shadow-[var(--shadow-sm)] overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Próximas Tarefas</CardTitle>
             <CardDescription>Atividades pendentes</CardDescription>
