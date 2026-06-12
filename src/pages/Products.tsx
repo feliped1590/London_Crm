@@ -1709,7 +1709,7 @@ export default function Products() {
                         onValueChange={(v) => {
                           const updated = { ...formData, family_id: v === 'none' ? undefined : v };
                           updated.sku = recalcularSku(updated);
-                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          if (!unlockDescription) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
                       >
@@ -1789,7 +1789,7 @@ export default function Products() {
                                 }
                               }
                               updated.sku = recalcularSku(updated);
-                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              if (!unlockDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
                           >
@@ -1820,7 +1820,7 @@ export default function Products() {
                                   onValueChange={(v) => {
                                     const updated = { ...formData, subgrupo_id: v === 'none' ? undefined : v };
                                     updated.sku = recalcularSku(updated);
-                                    if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                                    if (!unlockDescription) updated.name = recalcularDescricao(updated);
                                     setFormData(updated);
                                   }}
                                 >
@@ -1855,7 +1855,7 @@ export default function Products() {
                             onChange={(v) => {
                               const updated = { ...formData, class_id: v || undefined };
                               updated.sku = recalcularSku(updated);
-                              if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                              if (!unlockDescription) updated.name = recalcularDescricao(updated);
                               setFormData(updated);
                             }}
                           />
@@ -1871,7 +1871,7 @@ export default function Products() {
                         value={formData.nome_impresso}
                         onChange={(e) => {
                           const updated = { ...formData, nome_impresso: e.target.value };
-                          if (isAutoDescription) updated.name = recalcularDescricao(updated);
+                          if (!unlockDescription) updated.name = recalcularDescricao(updated);
                           setFormData(updated);
                         }}
                         placeholder="Ex: BONGOS BIFINHO CARNE 65G"
@@ -1901,7 +1901,7 @@ export default function Products() {
                           newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(nextFicha));
                         }
                         newData.sku = recalcularSku(newData);
-                        if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                        if (!unlockDescription) newData.name = recalcularDescricao(newData);
                         else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                         setFormData(newData);
                       };
@@ -1934,7 +1934,7 @@ export default function Products() {
                                         newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(nextFicha));
                                       }
                                       newData.sku = recalcularSku(newData);
-                                      if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                      if (!unlockDescription) newData.name = recalcularDescricao(newData);
                                       else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                                       setFormData(newData);
                                     }
@@ -2001,7 +2001,7 @@ export default function Products() {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                               }
                               newData.sku = recalcularSku(newData);
-                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              if (!unlockDescription) newData.name = recalcularDescricao(newData);
                               else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                               setFormData(newData);
                             }}
@@ -2027,7 +2027,7 @@ export default function Products() {
                                   newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                                 }
                                 newData.sku = recalcularSku(newData);
-                                if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                                if (!unlockDescription) newData.name = recalcularDescricao(newData);
                                 else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                                 setFormData(newData);
                               }}
@@ -2057,7 +2057,7 @@ export default function Products() {
                                 newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(newData.ficha_tecnica));
                               }
                               newData.sku = recalcularSku(newData);
-                              if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                              if (!unlockDescription) newData.name = recalcularDescricao(newData);
                               else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                               setFormData(newData);
                             }}
@@ -2131,7 +2131,7 @@ export default function Products() {
                           if (hasAutoDimensions(prof)) {
                             newData.erp_versao = tryGenerateErpVersion(prof, newData.width, newData.length, newData.thickness, extractGusset(next));
                           }
-                          if (isAutoDescription) newData.name = recalcularDescricao(newData);
+                          if (!unlockDescription) newData.name = recalcularDescricao(newData);
                           else newData.name = replaceVersionInName(newData.name, formData.erp_versao, newData.erp_versao);
                           setFormData(newData);
                         }}
