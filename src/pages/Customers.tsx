@@ -352,7 +352,7 @@ export default function Customers() {
 
   const SortableHeader = ({ field, children, className }: { field: SortField; children: React.ReactNode; className?: string }) => (
     <TableHead
-      className={cn("cursor-pointer select-none hover:bg-muted/50 transition-colors", className)}
+      className={cn("cursor-pointer select-none hover:text-foreground transition-colors", className)}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center gap-1">
