@@ -98,6 +98,24 @@ export function useQuickQuoteMutations(dealId: string) {
     qc.invalidateQueries({ queryKey: ['quick_quotes', 'deal', dealId] });
   };
 
+  /** Lê o próximo número disponível de quick_quote_sequences
+   *  para o par (tenant_id, legal_entity_id). Como o trigger do banco
+   *  atualmente não consegue fazer UPSERT nesta tabela (RLS),
+   *  geramos o número no cliente. */
+  const fetchNextQuoteNumber = async (
+    tId: string,
+    legalId: string,
+  ): Promise<string> => {
+    const { data, error } = await supabase
+      .from('quick_quote_sequences' as any)
+      .select('last_number')
+      .eq('tenant_id', tId)
+      .eq('legal_entity_id', legalId)
+      .maybeSingle();
+    const next = ((data as any)?.last_number ?? 0) + 1;
+    return `ORC-${String(next).padStart(6, '0')}`;
+  };
+
   const create = useMutation({
     mutationFn: async (payload: {
       legal_entity_id: string;
@@ -115,6 +133,11 @@ export function useQuickQuoteMutations(dealId: string) {
     }) => {
       if (!tenantId) throw new Error('Tenant ativo não identificado.');
       if (!user?.id) throw new Error('Usuário não autenticado.');
+
+      // Gera o número localmente para evitar a UPSERT do trigger em
+      // quick_quote_sequences (que está bloqueada pela RLS atual).
+      const number = await fetchNextQuoteNumber(tenantId, payload.legal_entity_id);
+
       const { data, error } = await supabase
         .from('quick_quotes' as any)
         .insert({
@@ -123,6 +146,7 @@ export function useQuickQuoteMutations(dealId: string) {
           deal_id: dealId,
           created_by: user.id,
           status: 'draft',
+          number,
         })
         .select('*')
         .single();
