@@ -90,6 +90,7 @@ export function AppLayout() {
       </div>
 
       {alertData && <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />}
+      <NotificationToast />
       {isDeveloper && <AIChatWidget />}
     </div>
   );
