@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -563,8 +563,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       }
 
       if (!skipAutoSync) {
+        orderDraft.clear();
         onOpenChange(false);
         onSuccess?.();
+      } else {
+        orderDraft.clear();
       }
     },
     onError: (error: Error) => {
@@ -704,8 +707,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       if (!opts.silent) toast.success('Pedido salvo — enviando ao ERP em segundo plano');
       if (!opts.keepOpen) {
+        orderDraft.clear();
         onOpenChange(false);
         onSuccess?.();
+      } else {
+        orderDraft.clear();
       }
     },
     onError: (error: Error) => {
@@ -745,6 +751,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
       toast.success('Pedido bloqueado com sucesso');
+      orderDraft.clear();
       onOpenChange(false);
       onSuccess?.();
     },
@@ -901,6 +908,67 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     if (JSON.stringify(cur) !== JSON.stringify(originalSnapshot)) return true;
     return itemsChanged();
   }, [originalSnapshot, buildCurrentSnapshot, itemsChanged, items.length]);
+
+  // -------- Workspace v1: rascunho persistido --------
+  type OrderDraftData = {
+    snap: OrderSnapshot;
+    items: OrderItemDraft[];
+    paymentConditions: PaymentConditionDraft[];
+  };
+  const draftContext = open
+    ? (isEditMode && order ? `orders:${order.id}` : 'orders:new')
+    : null;
+  const currentDraftData = useMemo<OrderDraftData>(() => ({
+    snap: buildCurrentSnapshot(),
+    items,
+    paymentConditions,
+  }), [buildCurrentSnapshot, items, paymentConditions]);
+  const draftEnabled = open && !isOrderLocked && canEdit && (!isEditMode || existingOrderItems !== undefined);
+  const orderDraft = useFormDraft<OrderDraftData>({
+    context: draftContext,
+    enabled: draftEnabled,
+    baseline: order?.updated_at ? { updatedAt: order.updated_at } : null,
+    title: isEditMode ? `Pedido ${order?.number ?? ''}` : 'Novo pedido',
+    buildSnapshot: () => currentDraftData,
+    applyDraft: (data) => {
+      try {
+        const s = data?.snap;
+        if (s) {
+          setCompanyId(s.companyId || '');
+          setContactId(s.contactId || '');
+          setDeliveryDate(s.deliveryDate ? new Date(`${s.deliveryDate}T00:00:00`) : undefined);
+          setObservations(s.observations || '');
+          setLegalEntityId(s.legalEntityId || '');
+          setIpiMode((s.ipiMode as IpiMode) || 'destacar');
+          setOrderType((s.orderType as OrderType) || 'Novo/Alteração');
+          setPaymentMethod(s.paymentMethod || '');
+          setPaymentTerms(s.paymentTerms || '');
+          setDealId(s.dealId || '');
+          setCarrierId(s.carrierId || '');
+          setFreightType(s.freightType || '');
+          setDeliverySameAsCompany(!!s.deliverySameAsCompany);
+          setDeliveryFields(s.deliveryFields || EMPTY_DELIVERY_FIELDS);
+          setSaleType(s.saleType || 'venda_tributada');
+          setRedespachoCarrierId(s.redespachoCarrierId || '');
+        }
+        if (Array.isArray(data?.items)) setItems(data.items);
+        if (Array.isArray(data?.paymentConditions)) setPaymentConditions(data.paymentConditions);
+      } catch (err) {
+        console.warn('[OrderDialog] applyDraft falhou', err);
+      }
+    },
+  });
+  const draftDataJson = JSON.stringify(currentDraftData);
+  const prevDraftJsonRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) { prevDraftJsonRef.current = null; return; }
+    if (!orderDraft.decided) return;
+    if (prevDraftJsonRef.current === null) { prevDraftJsonRef.current = draftDataJson; return; }
+    if (prevDraftJsonRef.current !== draftDataJson) {
+      prevDraftJsonRef.current = draftDataJson;
+      orderDraft.markDirty();
+    }
+  }, [open, orderDraft.decided, draftDataJson, orderDraft]);
 
   const handleLockClick = useCallback(() => {
     if (hasUnsavedChanges()) {
@@ -1828,6 +1896,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         open={advancedSearchOpen}
         onOpenChange={setAdvancedSearchOpen}
         onSelect={(product) => addProductById(product.id, product)}
+      />
+
+      <DraftRestoreDialog
+        open={orderDraft.restorePending}
+        conflict={orderDraft.restoreConflict}
+        savedAt={orderDraft.draftSavedAt}
+        title={isEditMode ? `Você tem um rascunho deste pedido` : 'Você tem um rascunho de novo pedido'}
+        onRestore={orderDraft.acceptRestore}
+        onDiscard={orderDraft.discardRestore}
       />
     </Dialog>
 

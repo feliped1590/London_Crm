@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
 import { prefetchTopRoutesIdle } from "@/lib/routePrefetch";
+import { clearAllDrafts } from "@/workspace/drafts";
 
 
 // Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
@@ -120,11 +121,13 @@ function AuthStateListener() {
           console.log('User signed out - Clearing React Query cache + persisted cache');
           qc.clear();
           window.localStorage.removeItem('CRM_QUERY_CACHE');
+          clearAllDrafts();
           previousUserIdRef.current = null;
         } else if (event === 'SIGNED_IN' && previousUserId !== currentUserId) {
           console.log('New user signed in - Clearing React Query cache + persisted cache');
           qc.clear();
           window.localStorage.removeItem('CRM_QUERY_CACHE');
+          clearAllDrafts();
           previousUserIdRef.current = currentUserId;
         }
       }
