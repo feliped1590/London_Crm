@@ -707,8 +707,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
       if (!opts.silent) toast.success('Pedido salvo — enviando ao ERP em segundo plano');
       if (!opts.keepOpen) {
+        orderDraft.clear();
         onOpenChange(false);
         onSuccess?.();
+      } else {
+        orderDraft.clear();
       }
     },
     onError: (error: Error) => {
