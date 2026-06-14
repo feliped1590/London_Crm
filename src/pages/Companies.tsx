@@ -516,7 +516,7 @@ export default function Companies() {
                   const syncStatus = getSyncStatus(company);
                   return (
                     <TableRow key={company.id}>
-                      <TableCell>
+                      <TableCell className="sticky-col-start">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Building2 className="h-5 w-5" />
@@ -540,20 +540,20 @@ export default function Companies() {
                           <span className="text-sm font-mono">{formatCNPJ((company as any).cnpj)}</span>
                         ) : '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {getNomeById.atividade(company.atividade_id) && (
                           <Badge variant="secondary">
                             {getNomeById.atividade(company.atividade_id)}
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <DealStageBadges deals={company.deals || []} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
                         <PricingTableBadge entityType="company" entityId={company.id} compact />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         <div className="space-y-1">
                           {company.email && (
                             <div className="flex items-center gap-1 text-sm">
@@ -569,7 +569,7 @@ export default function Companies() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -593,7 +593,7 @@ export default function Companies() {
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right sticky-col-end">
                         <div className="flex justify-end gap-1">
                           <TooltipProvider>
                             <Tooltip>
