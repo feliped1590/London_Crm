@@ -578,6 +578,15 @@ export default function CustomerDetail() {
           }}
         />
       )}
+
+      <DraftRestoreDialog
+        open={customerDetailDraft.restorePending}
+        conflict={customerDetailDraft.restoreConflict}
+        savedAt={customerDetailDraft.draftSavedAt}
+        title={`Você tem um rascunho de ${displayName}`}
+        onRestore={customerDetailDraft.acceptRestore}
+        onDiscard={customerDetailDraft.discardRestore}
+      />
     </div>
   );
 }
