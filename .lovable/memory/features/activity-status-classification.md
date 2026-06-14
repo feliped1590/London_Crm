@@ -1,32 +1,32 @@
 ---
 name: Activity Status Classification
-description: Eixo Ativo/Inativo/Perdido aplicado APENAS a clientes (customer_active); leads/prospects ficam fora desse eixo. Cards do dashboard mutuamente exclusivos somando 100%.
+description: Eixo Ativo/Inativo/Perdido aplicado APENAS a clientes (customer_active); thresholds vêm de lifecycle_config. Baseline universal 01/04/2026 substitui created_at como fallback de última interação.
 type: feature
 ---
 
 ## Regra
 
-`activity_status` (enum: ativo, inativo, perdido) só é calculado para empresas com `lifecycle_stage = 'customer_active'`. Para lead/prospect fica `NULL`.
+`activity_status` (enum: ativo, inativo, perdido) só é calculado para `lifecycle_stage = 'customer_active'`. Lead/prospect ficam `NULL`.
 
-Thresholds (baseado em `company_activity_summary.last_interaction_at`):
-- ativo: ≤ 6 meses
-- inativo: entre 6 e 12 meses
-- perdido: > 12 meses
-- Sem interação real: usa `companies.created_at` como fallback no `recompute_company_lifecycle`
+Thresholds vêm de `lifecycle_config` (default 180/365 dias). Fallback quando não há interação real: `companies.lifecycle_baseline_at` (universalmente fixado em **2026-04-01** no saneamento de 14/06/2026). NÃO usa mais `created_at`.
 
-## Fonte de última interação
+## Saneamento 14/06/2026
 
-View `company_activity_summary.last_interaction_at` = GREATEST de: activities, tasks (created/completed), email_logs, whatsapp_messages outbound, deals, deal_stage_history, orders, proposals, entity_notes (company/contact/deal). **Não inclui mais `lifecycle_baseline_at`** — removido para evitar que todos apareçam como ativos artificialmente.
+Limpeza única aplicada na base:
+- Customer Active sem pedido → rebaixado para Lead
+- Prospect sem deal → rebaixado para Lead
+- Lead com deal aberto em pipeline 'sales' → promovido para Prospect
+- Lead/Prospect com pedido → promovido para Customer Active
+- `lifecycle_baseline_at = 2026-04-01` em 100% das empresas
+
+Resultado: customer_active = exatamente quem tem pedido.
 
 ## Dashboard
 
-Os 5 cards do LifecyclePanel são mutuamente exclusivos e somam 100%:
-Leads + Prospects + Clientes Ativos + Clientes Inativos + Clientes Perdidos.
-
-`get_activity_status_counts()` filtra por `lifecycle_stage = 'customer_active'`.
+5 cards do LifecyclePanel mutuamente exclusivos: Leads + Prospects + Ativos + Inativos + Perdidos = 100%. `get_activity_status_counts()` filtra `lifecycle_stage = 'customer_active'`.
 
 ## Automação
 
-- Cron diário 03:00 BRT roda `recompute_company_lifecycle(NULL)`.
-- Triggers AFTER INSERT em orders, activities, entity_notes promovem cliente para ativo imediatamente (sem efeito em lead/prospect).
-- Mudanças logadas em `company_audit_log` com `origem_alteracao = 'SYSTEM_LIFECYCLE'`.
+- Cron diário recompute_company_lifecycle(NULL).
+- Triggers AFTER INSERT em deals (lead→prospect) e orders (lead/prospect→customer_active).
+- Mudanças logadas em `company_audit_log`.
