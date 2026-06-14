@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw, Lock } from 'lucide-react';
+import { Search, ShoppingCart, Building2, Calendar, Plus, Edit, RefreshCw, FileText, Loader2, Truck, RefreshCcw, Lock, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
 import { OrderSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -60,6 +61,22 @@ export default function Orders() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Pedido excluído com sucesso');
+      setDeletingOrder(null);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao excluir pedido: ${err.message}`);
+    },
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
@@ -491,6 +508,17 @@ export default function Orders() {
                                  <FileText className="h-4 w-4" />
                                )}
                              </Button>
+                             {isAdmin && !(order as any).erp_order_id && (
+                               <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 onClick={() => setDeletingOrder(order)}
+                                 title="Excluir pedido"
+                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                               >
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                             )}
                            </div>
                          </TableCell>
                        </TableRow>
@@ -542,6 +570,31 @@ export default function Orders() {
           queryClient.invalidateQueries({ queryKey: ['orders'] });
         }}
       />
+
+      <AlertDialog open={!!deletingOrder} onOpenChange={(open) => !open && setDeletingOrder(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pedido {deletingOrder?.number ?? ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O pedido e todos os seus itens, anexos e histórico serão removidos permanentemente.
+              Disponível apenas para pedidos que ainda não foram sincronizados com o ERP.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteOrderMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteOrderMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deletingOrder) deleteOrderMutation.mutate(deletingOrder.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteOrderMutation.isPending ? 'Excluindo...' : 'Excluir pedido'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
