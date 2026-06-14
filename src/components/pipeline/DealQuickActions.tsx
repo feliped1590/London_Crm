@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { WHATSAPP_ENABLED } from '@/config/features';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Deal = Tables<'deals'>;
