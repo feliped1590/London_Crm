@@ -13,7 +13,7 @@ export const AVAILABLE_CARDS: CardDefinition[] = [
   { key: 'top_setor', label: 'Clientes por Setor', icon: 'Building2' },
   { key: 'top_segmento', label: 'Segmento com mais clientes', icon: 'Layers' },
   { key: 'top_atividade', label: 'Atividade com mais clientes', icon: 'Activity' },
-  { key: 'active_clients', label: 'Clientes ativos (30 dias)', icon: 'TrendingUp' },
+  { key: 'active_clients', label: 'Clientes ativos', icon: 'TrendingUp' },
   { key: 'open_deals', label: 'Negócios em aberto', icon: 'Handshake' },
 ];
 
@@ -82,7 +82,7 @@ export function useDashboardCards() {
         },
         active_clients: {
           value: String(m.active_clients || 0),
-          subtitle: 'Últimos 30 dias',
+          subtitle: 'Com pedido e dentro da janela ativa',
         },
         open_deals: {
           value: String(m.open_deals_count || 0),
