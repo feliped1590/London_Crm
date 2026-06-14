@@ -25,6 +25,7 @@ interface CRMOrder {
   total_value: number | null;
   created_at: string;
   delivery_date: string | null;
+  erp_order_id: string | number | null;
 }
 
 interface ERPOrder {
@@ -35,6 +36,20 @@ interface ERPOrder {
   data_emissao: string | null;
   data_entrega: string | null;
 }
+
+const ORDER_DIALOG_COLUMNS = `
+  id, number, status, order_type, total_value,
+  payment_method, payment_terms, delivery_date, observations, freight_type,
+  freight_value, is_locked, locked_at, locked_by, created_at, updated_at,
+  delivery_same_as_company, delivery_city, delivery_state,
+  legal_entity_id, company_id, contact_id, proposal_id, carrier_id, redespacho_carrier_id, sale_type, deal_id,
+  sales_rep_id, erp_order_id, erp_synced_at, created_by,
+  company:companies(id, name),
+  contact:contacts(id, first_name, last_name),
+  proposal:proposals(id, number),
+  carrier:carriers!orders_carrier_id_fkey(id, name, trade_name),
+  deal:deals(id, name, pipeline_stage:pipeline_stages(id, name))
+`;
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   draft: { label: 'Rascunho', variant: 'outline' },
@@ -49,13 +64,15 @@ const statusLabels: Record<string, { label: string; variant: 'default' | 'second
 export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = true }: CustomerOrdersTabProps) {
   const queryClient = useQueryClient();
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+
   // Buscar pedidos CRM (tabela orders)
   const { data: crmOrders, isLoading: loadingCrm } = useQuery({
     queryKey: ['customer-orders-crm', companyId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, number, status, total_value, created_at, delivery_date')
+        .select('id, number, status, total_value, created_at, delivery_date, erp_order_id')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
@@ -70,48 +87,54 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
     queryKey: ['customer-orders-erp', cnpj],
     queryFn: async () => {
       if (!cnpj) return [];
-
-      // Primeiro buscar o client_id no ERP pelo CNPJ
       const cleanCnpj = cnpj.replace(/\D/g, '');
       const { data: client, error: clientError } = await supabase
         .from('crm_clients')
         .select('id')
         .eq('cnpj_cpf', cleanCnpj)
         .maybeSingle();
-
       if (clientError || !client) return [];
-
-      // Buscar pedidos vinculados ao cliente ERP
       const { data: orders, error: ordersError } = await supabase
         .from('crm_orders')
         .select('id, numero_pedido, situacao, valor_total, data_emissao, data_entrega')
         .eq('client_id', client.id)
         .order('data_emissao', { ascending: false });
-
       if (ordersError) throw ordersError;
       return orders as ERPOrder[];
     },
     enabled: source === 'erp' && !!cnpj,
   });
 
+  // Buscar pedido completo para edição (apenas CRM)
+  const { data: editingOrder } = useQuery({
+    queryKey: ['customer-order-edit', editingOrderId],
+    queryFn: async () => {
+      if (!editingOrderId) return null;
+      const { data, error } = await supabase
+        .from('orders')
+        .select(ORDER_DIALOG_COLUMNS)
+        .eq('id', editingOrderId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!editingOrderId,
+  });
+
   const isLoading = loadingCrm || loadingErp;
   const orders = source === 'crm' ? crmOrders : erpOrders;
 
-  // Calcular totais
   const totalOrders = orders?.length || 0;
   const totalValue = orders?.reduce((acc, order) => {
-    const value = source === 'crm' 
-      ? (order as CRMOrder).total_value 
+    const value = source === 'crm'
+      ? (order as CRMOrder).total_value
       : (order as ERPOrder).valor_total;
     return acc + (value || 0);
   }, 0) || 0;
 
   const formatCurrency = (value: number | null) => {
     if (value === null || value === undefined) return '-';
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -181,8 +204,8 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                 Histórico de Pedidos
               </CardTitle>
               <CardDescription>
-                {source === 'crm' 
-                  ? 'Pedidos registrados no CRM'
+                {source === 'crm'
+                  ? 'Pedidos registrados no CRM — clique na linha para editar'
                   : 'Pedidos sincronizados do ERP Iniflex'
                 }
               </CardDescription>
@@ -206,6 +229,7 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
               <TableHeader>
                 <TableRow>
                   <TableHead>Número</TableHead>
+                  <TableHead>Cód. ERP</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead>Entrega</TableHead>
                   <TableHead>Status</TableHead>
@@ -215,8 +239,15 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
               <TableBody>
                 {source === 'crm'
                   ? (orders as CRMOrder[]).map((order) => (
-                      <TableRow key={order.id}>
+                      <TableRow
+                        key={order.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setEditingOrderId(order.id)}
+                      >
                         <TableCell className="font-medium">{order.number}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {order.erp_order_id || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell>{formatDate(order.created_at)}</TableCell>
                         <TableCell>{formatDate(order.delivery_date)}</TableCell>
                         <TableCell>
@@ -233,6 +264,9 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
                           {order.numero_pedido || '-'}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {order.numero_pedido || <span className="text-muted-foreground">—</span>}
                         </TableCell>
                         <TableCell>{formatDate(order.data_emissao)}</TableCell>
                         <TableCell>{formatDate(order.data_entrega)}</TableCell>
@@ -259,6 +293,19 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
         preSelectedCompanyId={companyId}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+        }}
+      />
+
+      {/* Edit Order Dialog */}
+      <OrderDialog
+        open={!!editingOrderId && !!editingOrder}
+        onOpenChange={(open) => {
+          if (!open) setEditingOrderId(null);
+        }}
+        order={editingOrder as any}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+          queryClient.invalidateQueries({ queryKey: ['customer-order-edit', editingOrderId] });
         }}
       />
     </div>

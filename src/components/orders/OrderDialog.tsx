@@ -1681,7 +1681,9 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isEditMode ? <Edit className="h-5 w-5" /> : <ShoppingCart className="h-5 w-5" />}
-            {isEditMode ? `Editar Pedido ${order?.number}` : 'Novo Pedido'}
+            {isEditMode
+              ? `Editar Pedido ${order?.number}${(order as any)?.erp_order_id ? ` · ERP ${(order as any).erp_order_id}` : ''}`
+              : 'Novo Pedido'}
             {isOrderLocked && (
               <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300">
                 <Lock className="h-3 w-3 mr-1" />Bloqueado

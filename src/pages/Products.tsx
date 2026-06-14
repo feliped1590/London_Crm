@@ -2285,6 +2285,7 @@ export default function Products() {
                     <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric>Comprimento</SortableHeader>
                     <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric>Espessura</SortableHeader>
                     <SortableHeader field="updated_at">Última Atualização</SortableHeader>
+                    <TableHead>Cód. ERP</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
@@ -2336,6 +2337,11 @@ export default function Products() {
                       <TableCell className="text-sm">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
                         {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs" onClick={stop}>
+                        {(product as any).erp_product_code
+                          ? <span className="font-medium">{(product as any).erp_product_code}</span>
+                          : <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell onClick={stop}>
                         <ProductSyncBadge
