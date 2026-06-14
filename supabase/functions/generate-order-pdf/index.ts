@@ -177,6 +177,43 @@ serve(async (req) => {
       console.error("Error fetching items:", itemsError);
     }
 
+    // =========================================================================
+    // IMAGENS DOS ITENS — primeira imagem por produto (file_attachments)
+    // Falhas são silenciosas: PDF nunca quebra por causa de imagens.
+    // =========================================================================
+    const productImageMap = new Map<string, string>();
+    try {
+      const productIds = Array.from(
+        new Set(
+          (items || [])
+            .map((it: any) => it.product?.id || it.product_id)
+            .filter((id: any) => isValidUUID(id))
+        )
+      );
+
+      if (productIds.length > 0) {
+        const { data: attachments } = await supabase
+          .from('file_attachments')
+          .select('entity_id, bucket, object_path, mime_type, created_at')
+          .eq('entity_type', 'product')
+          .eq('module', 'produtos')
+          .ilike('mime_type', 'image/%')
+          .in('entity_id', productIds)
+          .order('created_at', { ascending: true });
+
+        for (const att of attachments || []) {
+          if (!att?.entity_id || !att?.object_path || !att?.bucket) continue;
+          if (productImageMap.has(att.entity_id)) continue; // mantém a 1ª (mais antiga)
+          try {
+            const { data: pub } = supabase.storage.from(att.bucket).getPublicUrl(att.object_path);
+            if (pub?.publicUrl) productImageMap.set(att.entity_id, pub.publicUrl);
+          } catch (_e) { /* ignora anexo inválido */ }
+        }
+      }
+    } catch (imgErr) {
+      console.error('Image lookup failed (non-fatal)', { code: (imgErr as any)?.code });
+    }
+
     // Fetch carrier if present
     let carrierData: any = null;
     if (order.carrier_id) {
@@ -309,6 +346,36 @@ serve(async (req) => {
       </tr>
     `}).join("");
 
+    // Imagens por item (uma por item, na ordem da tabela). Mesmo produto em
+    // múltiplos itens renderiza em cada item para manter coerência com a numeração.
+    const escapeAttr = (s: string) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const itemsWithImages = itemsData
+      .map((item: any, index: number) => {
+        const pid = item.product?.id || item.product_id;
+        const url = pid ? productImageMap.get(pid) : undefined;
+        if (!url) return null;
+        const label = item.description || item.product?.name || '-';
+        return { index, label, url };
+      })
+      .filter(Boolean) as Array<{ index: number; label: string; url: string }>;
+
+    const itemImagesHtml = itemsWithImages.length === 0 ? '' : `
+        <div class="section">
+          <div class="section-title">Imagens dos Itens</div>
+          <div class="item-images-grid">
+            ${itemsWithImages.map((it) => `
+              <div class="item-image-card">
+                <div class="item-image-label"><span class="item-num">Item ${String(it.index + 1).padStart(2, '0')}</span> — ${escapeAttr(it.label)}</div>
+                <div class="item-image-wrap">
+                  <img src="${escapeAttr(it.url)}" alt="${escapeAttr(it.label)}" onerror="this.parentNode.parentNode.style.display='none'" />
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+    `;
+
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -417,6 +484,33 @@ serve(async (req) => {
             text-align: center; font-size: 9px; color: #718096;
           }
           .footer strong { color: #2d3748; font-size: 10px; }
+
+          /* Imagens dos Itens */
+          .item-images-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+          .item-image-card {
+            flex: 0 0 auto;
+            border: 1px solid #e2e8f0; border-radius: 4px;
+            padding: 8px; background: #fff;
+            page-break-inside: avoid;
+            width: 300px;
+          }
+          .item-image-card .item-image-label {
+            font-size: 10px; color: #4a5568; margin-bottom: 6px;
+            font-weight: 600;
+          }
+          .item-image-card .item-image-label .item-num {
+            color: #2d3748; font-weight: 700;
+          }
+          .item-image-card .item-image-wrap {
+            display: flex; align-items: center; justify-content: center;
+            background: #f7fafc; border-radius: 3px;
+            width: 100%; height: 220px; overflow: hidden;
+          }
+          .item-image-card img {
+            max-width: 100%; max-height: 100%;
+            width: auto; height: auto;
+            object-fit: contain;
+          }
         </style>
       </head>
       <body>
@@ -574,6 +668,8 @@ serve(async (req) => {
         </div>
         ` : ""}
 
+        ${itemImagesHtml}
+
         <!-- ACEITE DO CLIENTE -->
         <div class="acceptance">
           <div class="acceptance-title">Aceite do Cliente</div>
@@ -602,9 +698,37 @@ serve(async (req) => {
           <br/>
           <span style="font-size: 8px;">Para dúvidas, entre em contato conosco. &nbsp;|&nbsp; Documento gerado em ${todayBR}</span>
         </div>
+
+        <script>
+          // Aguarda todas as imagens carregarem (ou falharem) antes de imprimir,
+          // para evitar que o diálogo de impressão abra com placeholders.
+          (function () {
+            var printed = false;
+            function triggerPrint() {
+              if (printed) return;
+              printed = true;
+              try { window.focus(); window.print(); } catch (e) {}
+            }
+            window.addEventListener('load', function () {
+              var imgs = Array.from(document.images || []);
+              if (imgs.length === 0) { setTimeout(triggerPrint, 150); return; }
+              var pending = imgs.filter(function (i) { return !i.complete; });
+              if (pending.length === 0) { setTimeout(triggerPrint, 150); return; }
+              var remaining = pending.length;
+              var done = function () { remaining--; if (remaining <= 0) setTimeout(triggerPrint, 150); };
+              pending.forEach(function (img) {
+                img.addEventListener('load', done, { once: true });
+                img.addEventListener('error', done, { once: true });
+              });
+              // Fallback: nunca trava o usuário — 6s máximo de espera.
+              setTimeout(triggerPrint, 6000);
+            });
+          })();
+        </script>
       </body>
       </html>
     `;
+
 
     // =========================================================================
     // AUDIT LOG

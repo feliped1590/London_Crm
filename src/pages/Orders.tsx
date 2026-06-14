@@ -190,7 +190,8 @@ export default function Orders() {
           printWindow.document.write(data.html);
           printWindow.document.close();
           printWindow.focus();
-          setTimeout(() => printWindow.print(), 500);
+          // O HTML gerado dispara window.print() após o carregamento das imagens
+          // (com fallback de 6s). Não chamar print() aqui evita imprimir antes das imagens.
         } else {
           toast.error('Pop-up bloqueado. Permita pop-ups para gerar o PDF.');
         }
