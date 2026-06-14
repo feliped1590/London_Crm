@@ -207,18 +207,30 @@ export function LegalEntityPermissionsManager() {
                   <TableHead>Nome Fantasia</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Código ERP</TableHead>
+                  <TableHead>Integração Pedidos</TableHead>
                   <TableHead>Padrão</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allEntitiesFull.map((entity) => (
+                {allEntitiesFull.map((entity) => {
+                  const orderEnabled = (entity as any).order_erp_enabled ?? true;
+                  const orderEndpoint = (entity as any).order_erp_endpoint as string | null;
+                  const orderBadge = !orderEnabled
+                    ? { label: 'Desativada', variant: 'destructive' as const }
+                    : orderEndpoint
+                      ? { label: 'Endpoint próprio', variant: 'default' as const }
+                      : { label: 'Padrão (global)', variant: 'secondary' as const };
+                  return (
                   <TableRow key={entity.id} className={!entity.active ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">{entity.name}</TableCell>
                     <TableCell>{entity.trade_name || '—'}</TableCell>
                     <TableCell className="font-mono text-sm">{formatCNPJ(entity.cnpj)}</TableCell>
                     <TableCell>{entity.erp_company_code || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={orderBadge.variant}>{orderBadge.label}</Badge>
+                    </TableCell>
                     <TableCell>
                       {entity.active && (
                         <Switch
