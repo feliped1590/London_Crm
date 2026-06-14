@@ -75,7 +75,7 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, number, status, total_value, created_at, delivery_date, erp_order_id')
+        .select('id, number, status, total_value, created_at, updated_at, delivery_date, erp_order_id, erp_synced_at')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
