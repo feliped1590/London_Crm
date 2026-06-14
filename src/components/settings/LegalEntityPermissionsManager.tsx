@@ -74,6 +74,9 @@ export function LegalEntityPermissionsManager() {
             cnpj: cnpjDigits,
             erp_company_code: entityForm.erp_company_code || null,
             trade_name: entityForm.trade_name || null,
+            order_erp_endpoint: entityForm.order_erp_endpoint.trim() || null,
+            order_erp_token_secret_name: entityForm.order_erp_token_secret_name.trim() || null,
+            order_erp_enabled: entityForm.order_erp_enabled,
           })
           .eq('id', editingEntityId);
         if (error) throw error;
@@ -85,6 +88,9 @@ export function LegalEntityPermissionsManager() {
             cnpj: cnpjDigits,
             erp_company_code: entityForm.erp_company_code || null,
             trade_name: entityForm.trade_name || null,
+            order_erp_endpoint: entityForm.order_erp_endpoint.trim() || null,
+            order_erp_token_secret_name: entityForm.order_erp_token_secret_name.trim() || null,
+            order_erp_enabled: entityForm.order_erp_enabled,
             tenant_id: tenantId,
           });
         if (error) {
@@ -157,6 +163,9 @@ export function LegalEntityPermissionsManager() {
       cnpj: formatCNPJ(entity.cnpj),
       erp_company_code: entity.erp_company_code || '',
       trade_name: entity.trade_name || '',
+      order_erp_endpoint: (entity as any).order_erp_endpoint || '',
+      order_erp_token_secret_name: (entity as any).order_erp_token_secret_name || '',
+      order_erp_enabled: (entity as any).order_erp_enabled ?? true,
     });
     setIsEntityDialogOpen(true);
   };
