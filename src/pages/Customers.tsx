@@ -656,6 +656,7 @@ export default function Customers() {
                       </SortableHeader>
                       <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
                       <TableHead>IPI</TableHead>
+                      <TableHead>Cód. ERP</TableHead>
                       <TableHead>ERP</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
