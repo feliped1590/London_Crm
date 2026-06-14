@@ -751,6 +751,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
       toast.success('Pedido bloqueado com sucesso');
+      orderDraft.clear();
       onOpenChange(false);
       onSuccess?.();
     },
