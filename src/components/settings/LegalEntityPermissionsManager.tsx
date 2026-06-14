@@ -283,7 +283,8 @@ export function LegalEntityPermissionsManager() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
