@@ -668,7 +668,7 @@ serve(async (req) => {
         </div>
         ` : ""}
 
-
+        ${itemImagesHtml}
 
         <!-- ACEITE DO CLIENTE -->
         <div class="acceptance">
