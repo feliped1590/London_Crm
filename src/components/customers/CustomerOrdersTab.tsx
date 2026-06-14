@@ -236,7 +236,9 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                   <TableHead>Data</TableHead>
                   <TableHead>Entrega</TableHead>
                   <TableHead>Status</TableHead>
+                  {source === 'crm' && <TableHead>Sync ERP</TableHead>}
                   <TableHead className="text-right">Valor</TableHead>
+                  {source === 'crm' && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -258,8 +260,28 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                             {statusLabels[order.status]?.label || order.status}
                           </Badge>
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <OrderSyncBadge
+                            orderId={order.id}
+                            erpOrderId={order.erp_order_id as any}
+                            erpSyncedAt={order.erp_synced_at}
+                            updatedAt={order.updated_at}
+                          />
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(order.total_value)}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <OrderSyncButton
+                            orderId={order.id}
+                            orderNumber={order.number}
+                            erpOrderId={order.erp_order_id as any}
+                            onSyncTriggered={() => {
+                              queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+                              queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                              queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))
