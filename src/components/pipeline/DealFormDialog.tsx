@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign, ShoppingCart } from 'lucide-react';
+import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign, ShoppingCart, Receipt } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
+import { QuickQuoteList } from '@/components/quick-quotes/QuickQuoteList';
 import { DealHistoryTab } from '@/components/pipeline/DealHistoryTab';
 import { DealOrdersTab } from '@/components/pipeline/DealOrdersTab';
 import { DealParticipants } from '@/components/pipeline/DealParticipants';
@@ -313,11 +314,15 @@ export function DealFormDialog({
 
         {editingDeal ? (
           <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className={`grid w-full ${WHATSAPP_ENABLED ? 'grid-cols-8' : 'grid-cols-7'}`}>
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="notas" className="flex items-center gap-2">
                 <StickyNote className="h-4 w-4" />
                 <span className="hidden sm:inline">Notas</span>
+              </TabsTrigger>
+              <TabsTrigger value="orcamentos" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                <span className="hidden sm:inline">Orçamentos</span>
               </TabsTrigger>
               <TabsTrigger value="propostas" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -402,6 +407,14 @@ export function DealFormDialog({
 
             <TabsContent value="notas" className="flex-1 overflow-auto mt-4">
               <QuickNotes entityType="deal" entityId={editingDeal.id} />
+            </TabsContent>
+
+            <TabsContent value="orcamentos" className="flex-1 overflow-auto mt-4">
+              <QuickQuoteList
+                dealId={editingDeal.id}
+                defaultLegalEntityId={(editingDeal as any).legal_entity_id ?? effectiveLegalEntityId ?? null}
+                defaultCompanyId={editingDeal.company_id}
+              />
             </TabsContent>
 
             <TabsContent value="propostas" className="flex-1 overflow-auto mt-4">
