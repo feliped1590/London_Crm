@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { RefreshCw, Save, Clock, ArrowRight, ShieldAlert } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { LostCustomersReleaseQueue } from './LostCustomersReleaseQueue';
+import { LostCustomersReleaseQueue } from '@/components/settings/LostCustomersReleaseQueue';
 
 type LifecycleConfig = {
   id: string;
