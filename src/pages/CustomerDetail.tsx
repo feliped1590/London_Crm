@@ -233,6 +233,7 @@ export default function CustomerDetail() {
       {
         onSuccess: () => {
           setIsEditing(false);
+          customerDetailDraft.clear();
           if (customer?.id) {
             recordCustomerInteraction({
               entityId: customer.id,
@@ -244,6 +245,47 @@ export default function CustomerDetail() {
       },
     );
   };
+
+  // -------- Workspace v1: rascunho persistido (Editar Cliente) --------
+  const isErpForDraft = customer?.source === 'erp';
+  type CustomerDetailDraftData = {
+    companyForm: typeof companyForm;
+    customFieldsData: Record<string, unknown>;
+  };
+  const customerDetailDraftData = useMemo<CustomerDetailDraftData>(() => ({
+    companyForm,
+    customFieldsData,
+  }), [companyForm, customFieldsData]);
+  const customerDetailDraft = useFormDraft<CustomerDetailDraftData>({
+    context: id ? `customers:${id}` : null,
+    enabled: !!id && isEditing && !isErpForDraft,
+    baseline: (customer as any)?.updated_at ? { updatedAt: (customer as any).updated_at } : null,
+    title: customer?.fantasia || customer?.name || 'Cliente',
+    buildSnapshot: () => customerDetailDraftData,
+    applyDraft: (data) => {
+      try {
+        if (data?.companyForm) setCompanyForm(data.companyForm);
+        if (data?.customFieldsData) setCustomFieldsData(data.customFieldsData);
+        setIsEditing(true);
+      } catch (err) {
+        console.warn('[CustomerDetail] applyDraft falhou', err);
+      }
+    },
+  });
+  const customerDetailDraftJson = JSON.stringify(customerDetailDraftData);
+  const prevCustomerDetailDraftJsonRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isEditing) { prevCustomerDetailDraftJsonRef.current = null; return; }
+    if (!customerDetailDraft.decided) return;
+    if (prevCustomerDetailDraftJsonRef.current === null) {
+      prevCustomerDetailDraftJsonRef.current = customerDetailDraftJson;
+      return;
+    }
+    if (prevCustomerDetailDraftJsonRef.current !== customerDetailDraftJson) {
+      prevCustomerDetailDraftJsonRef.current = customerDetailDraftJson;
+      customerDetailDraft.markDirty();
+    }
+  }, [isEditing, customerDetailDraftJson, customerDetailDraft.decided, customerDetailDraft]);
 
   // Access control - resolve before early returns to satisfy Rules of Hooks
   const customerSalesRepId = customer && customer.source === 'crm' ? (customer as any).sales_rep_id : null;
