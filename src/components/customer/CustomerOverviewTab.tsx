@@ -190,7 +190,7 @@ export function CustomerOverviewTab({
             </div>
             <div>
               <Label htmlFor="inscricao_estadual">Inscrição Estadual <span className="text-destructive">*</span></Label>
-              <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })} disabled={!isEditing || isErpCustomer} required />
+              <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value.replace(/\D/g, '').slice(0, 14) })} inputMode="numeric" maxLength={14} disabled={!isEditing || isErpCustomer} required />
             </div>
             <div>
               <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>

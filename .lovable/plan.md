@@ -1,67 +1,33 @@
-# Auditoria de Responsividade — Listas Principais
-
 ## Objetivo
-Tornar as telas **Produtos**, **Clientes** e **Pedidos** confortáveis em desktops 1440x900 com zoom do navegador até **150%** (equivalente a uma viewport efetiva de ~960px). Hoje o conteúdo quebra, colunas se espremem (ex.: SKU em coluna única empilhado verticalmente) e o usuário precisa reduzir o zoom.
 
-## Diagnóstico atual
-- Tabelas usam largura fixa de coluna implícita — colunas com texto curto (SKU, código) recebem largura mínima e o texto quebra letra-a-letra.
-- Não há coluna fixa (sticky) na esquerda; ao rolar horizontalmente, perde-se a referência da linha.
-- Padding/fonte são constantes — não há "modo compacto" em zoom alto.
-- Algumas colunas secundárias (Iniflex, Pedido ERP, Logística com badge) ocupam espaço mesmo quando não há prioridade.
+Impedir que o campo **Inscrição Estadual** (IE) aceite espaços, pontos, traços ou qualquer caractere não numérico — inclusive ao colar valores copiados de outros sistemas. Isso evita falhas na sincronização com o ERP, que exige apenas dígitos.
 
-## Estratégia (combinação das três)
+## Comportamento esperado
 
-### 1. Densidade automática
-Criar utilitário `useResponsiveDensity()` que observa `window.innerWidth` (já com zoom aplicado, pois zoom reduz a viewport CSS):
-- `>= 1280px` → densidade **comfortable** (padding/fonte atuais)
-- `960–1279px` → densidade **compact** (padding reduzido, fonte 13px, badges menores)
-- `< 960px` → densidade **dense** + ativa ocultação de colunas
+- Digitação: caracteres não numéricos são ignorados em tempo real.
+- Colagem (Ctrl+V): o valor colado é limpo automaticamente, mantendo apenas os dígitos. Ex.: `ISE 123.456.789-0` → `1234567890`.
+- Limite: 14 dígitos (máximo prático de IE no Brasil).
+- Fallback `ISENTO` (aplicado no submit em `CustomerNew` quando o campo está vazio) continua funcionando — a limpeza só atua sobre o que o usuário digita/cola.
 
-Aplicar via classe no `<Table>` raiz (`data-density="compact"`) e tokens em `index.css` controlando `--row-py`, `--row-px`, `--cell-fs`.
+## Escopo (somente frontend)
 
-### 2. Ocultação progressiva de colunas
-Definir prioridade por coluna em cada lista. Colunas baixa prioridade recebem `hidden xl:table-cell` / `hidden 2xl:table-cell`. Prioridades:
+Dois pontos de entrada do campo:
 
-**Produtos**
-- Sempre: SKU, Descrição, Preço, Ações
-- Esconde primeiro: Grupo, Unidade, NCM, dimensões individuais (L/C/E)
-- Adicionar tooltip/expand row para colunas ocultas
+1. `**src/pages/CustomerNew.tsx**` (linha ~707) — Input no cadastro novo.
+2. `**src/components/customer/CustomerOverviewTab.tsx**` (linha ~193) — Input na edição do cliente.
 
-**Clientes (Companies)**
-- Sempre: Empresa, CNPJ, Responsável, Ações
-- Esconde primeiro: Iniflex, Tabela de Preço, Setor, Contato
+Em ambos, substituir o `onChange` atual por uma versão que aplica `value.replace(/\D/g, '').slice(0, 14)` antes de atualizar o estado. Isso cobre digitação e colagem (o evento `onChange` dispara após o paste).
 
-**Pedidos**
-- Sempre: Número, Empresa, Status, Sinc. ERP, Ações
-- Esconde primeiro: Tipo, Logística (badge), Pedido ERP
+Adicionar também `inputMode="numeric"` e `maxLength={14}` para melhor UX em mobile e feedback visual no desktop.
 
-### 3. Scroll horizontal com coluna fixa
-Quando densidade = dense e ainda houver overflow:
-- Wrap `<Table>` em container `overflow-x-auto`
-- Primeira coluna (Empresa/SKU/Número) recebe `sticky left-0 bg-card z-10` com sombra sutil à direita.
-- Última coluna de Ações fica `sticky right-0` para permanecer acessível.
+## Fora de escopo
 
-## Componentes a criar
-- `src/hooks/useResponsiveDensity.ts` — retorna `'comfortable' | 'compact' | 'dense'`.
-- `src/components/ui/responsive-table.tsx` — wrapper sobre `Table` que injeta `data-density`, container com overflow e sticky.
-- Tokens CSS em `src/index.css` (bloco `@layer components`):
-  ```css
-  [data-density="compact"] td, [data-density="compact"] th { @apply py-2 px-3 text-[13px]; }
-  [data-density="dense"]   td, [data-density="dense"] th   { @apply py-1.5 px-2 text-[12px]; }
-  ```
-
-## Arquivos a editar
-1. `src/index.css` — tokens de densidade + sticky helper.
-2. `src/hooks/useResponsiveDensity.ts` — novo.
-3. `src/components/ui/responsive-table.tsx` — novo wrapper.
-4. `src/pages/Products.tsx` — aplicar wrapper, marcar prioridade nas `<TableHead>`/`<TableCell>` (classes `hidden xl:table-cell`), encolher célula SKU (`whitespace-nowrap` + `min-w-[120px]`).
-5. `src/pages/Companies.tsx` — idem para colunas Iniflex/Setor/Tabela.
-6. `src/pages/Orders.tsx` — idem para Tipo/Logística/Pedido ERP, manter Status e Sinc. ERP sempre visíveis.
+- Backend / edge functions / validador — já tratam IE como string e não exigem alteração; a limpeza no frontend é suficiente para garantir que nada "sujo" chegue ao banco.
+- Importações em massa (`ImportCompanies`, `enrich-companies-batch`) — fluxo separado, com sua própria normalização.
+- Campo IE de Carriers / outros cadastros — não mencionados no pedido.
 
 ## Validação
-- Testar nas resoluções: 1440x900 @100%, 1440x900 @125%, 1440x900 @150% (~960px efetivos).
-- Critérios: nenhum texto quebrando letra-a-letra; coluna identificadora sempre visível; ações alcançáveis sem scroll horizontal completo; sem scroll horizontal indevido até 1280px.
 
-## Fora do escopo (próxima rodada, se aprovado)
-- Pipeline, Dashboard, Hoje, modais de edição, formulários longos.
-- Refactor para virtualização (TanStack Virtual) — só se a densidade não resolver listas muito longas.
+- 1440x900, abrir cliente existente, colar `ISE 123.456.789-0` no campo IE → deve aparecer `1234567890`.
+- Digitar letras/símbolos → nada é inserido.
+- Salvar e confirmar que o valor persistido contém apenas dígitos.
