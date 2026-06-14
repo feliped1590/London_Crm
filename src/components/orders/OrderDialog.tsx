@@ -197,6 +197,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     getItemIpiValue, getItemTotal,
   } = useDocumentItems<OrderItemDraft>({ ipiMode, calculateItemSubtotal: orderItemSubtotal });
 
+  // Peso previsto por item: (largura × comprimento × espessura) / 1000 × quantidade
+  const getItemWeight = useCallback((item: OrderItemDraft) => {
+    const w = Number(item.width) || 0;
+    const l = Number(item.length) || 0;
+    const t = Number(item.thickness) || 0;
+    const qty = Number(item.quantity) || 0;
+    if (w <= 0 || l <= 0 || t <= 0 || qty <= 0) return 0;
+    return ((w * l * t) / 1000) * qty;
+  }, []);
+  const orderTotalWeight = useMemo(
+    () => items.reduce((sum, it) => sum + getItemWeight(it), 0),
+    [items, getItemWeight],
+  );
+
   // --- Queries ---
   const [orderCompanySearch, setOrderCompanySearch] = useState('');
 
