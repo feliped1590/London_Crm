@@ -35,6 +35,8 @@ import { TransferRequestModal } from '@/components/customers/TransferRequestModa
 import { CustomerReviewAlertDialog } from '@/components/customers/CustomerReviewAlertDialog';
 import { toast } from 'sonner';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { useFormDraft } from '@/workspace/useFormDraft';
+import { DraftRestoreDialog } from '@/workspace/DraftRestoreDialog';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
