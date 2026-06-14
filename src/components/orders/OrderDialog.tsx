@@ -110,6 +110,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
 
   const isEditMode = !!order;
+  const [customerEditOpen, setCustomerEditOpen] = useState(false);
 
   // Entity-level lock is now the source of truth.
   // canEdit = false when the order is locked (only status changes via approval flow allowed)
