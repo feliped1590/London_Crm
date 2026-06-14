@@ -59,9 +59,17 @@ export function useDashboardCards() {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_card_metrics');
-      if (error) throw error;
-      const m = data as any;
+      const [{ data: rpcData, error: rpcError }, { count: newClientsCount, error: newClientsError }] =
+        await Promise.all([
+          supabase.rpc('get_dashboard_card_metrics'),
+          supabase
+            .from('companies')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        ]);
+      if (rpcError) throw rpcError;
+      if (newClientsError) throw newClientsError;
+      const m = rpcData as any;
 
       return {
         total_clients: {
@@ -81,7 +89,7 @@ export function useDashboardCards() {
           subtitle: m.top_atividade_count ? `${m.top_atividade_count} clientes` : 'Sem dados',
         },
         new_clients_30d: {
-          value: String(m.new_clients_30d || 0),
+          value: String(newClientsCount || 0),
           subtitle: 'Cadastrados nos últimos 30 dias',
         },
         open_deals: {
