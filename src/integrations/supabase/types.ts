@@ -4546,6 +4546,48 @@ export type Database = {
         }
         Relationships: []
       }
+      lifecycle_config: {
+        Row: {
+          active_days: number
+          created_at: string
+          id: string
+          inactive_days: number
+          lead_to_prospect_trigger: string
+          lost_release_requires_confirmation: boolean
+          lost_releases_portfolio: boolean
+          prospect_to_customer_trigger: string
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active_days?: number
+          created_at?: string
+          id?: string
+          inactive_days?: number
+          lead_to_prospect_trigger?: string
+          lost_release_requires_confirmation?: boolean
+          lost_releases_portfolio?: boolean
+          prospect_to_customer_trigger?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active_days?: number
+          created_at?: string
+          id?: string
+          inactive_days?: number
+          lead_to_prospect_trigger?: string
+          lost_release_requires_confirmation?: boolean
+          lost_releases_portfolio?: boolean
+          prospect_to_customer_trigger?: string
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       lost_reason_categories: {
         Row: {
           code: string
@@ -6816,6 +6858,70 @@ export type Database = {
             columns: ["legal_entity_id"]
             isOneToOne: false
             referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_release_queue: {
+        Row: {
+          company_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          flagged_at: string
+          id: string
+          notes: string | null
+          previous_sales_rep_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          flagged_at?: string
+          id?: string
+          notes?: string | null
+          previous_sales_rep_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          flagged_at?: string
+          id?: string
+          notes?: string | null
+          previous_sales_rep_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_release_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_release_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "portfolio_release_queue_previous_sales_rep_id_fkey"
+            columns: ["previous_sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
             referencedColumns: ["id"]
           },
         ]
@@ -11003,6 +11109,7 @@ export type Database = {
         }
         Returns: string
       }
+      flag_lost_customers_for_release: { Args: never; Returns: number }
       force_replace_session: {
         Args: {
           p_device_info?: string

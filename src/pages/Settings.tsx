@@ -45,6 +45,7 @@ import { TransferApprovalsManager } from '@/components/settings/TransferApproval
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
 import { ClassificacaoManager } from '@/components/settings/ClassificacaoManager';
+import { LifecycleConfigManager } from '@/components/settings/LifecycleConfigManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -792,6 +793,12 @@ export default function Settings() {
               Governança Comercial
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="lifecycle" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Ciclo de Vida
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
@@ -1250,6 +1257,13 @@ export default function Settings() {
             <CommercialGovernanceTab />
           </TabsContent>
         )}
+
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="lifecycle" className="mt-6 space-y-6">
+            <LifecycleConfigManager />
+          </TabsContent>
+        )}
+
 
 
 
