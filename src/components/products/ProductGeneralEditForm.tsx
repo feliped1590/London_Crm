@@ -449,7 +449,7 @@ export function ProductGeneralEditForm({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
