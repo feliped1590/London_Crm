@@ -20,6 +20,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit columns used by the list (avoids `select('*')` payload).
