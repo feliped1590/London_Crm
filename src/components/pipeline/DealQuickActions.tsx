@@ -128,18 +128,20 @@ export function DealQuickActions({ deal, onWhatsAppClick }: DealQuickActionsProp
     <>
       <div className="flex items-center gap-2 flex-wrap">
         {/* WhatsApp Button */}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleWhatsAppClick}
-          disabled={!hasWhatsApp}
-          className="gap-2"
-          title={hasWhatsApp ? 'Enviar WhatsApp' : 'Contato sem telefone'}
-        >
-          <MessageCircle className="h-4 w-4 text-green-600" />
-          <span className="hidden sm:inline">WhatsApp</span>
-        </Button>
+        {WHATSAPP_ENABLED && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleWhatsAppClick}
+            disabled={!hasWhatsApp}
+            className="gap-2"
+            title={hasWhatsApp ? 'Enviar WhatsApp' : 'Contato sem telefone'}
+          >
+            <MessageCircle className="h-4 w-4 text-green-600" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </Button>
+        )}
 
         {/* Create Task Button */}
         <Button
