@@ -628,6 +628,7 @@ export default function Companies() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
           <ServerPagination
             page={page}
