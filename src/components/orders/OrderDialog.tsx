@@ -21,6 +21,7 @@ import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderItemDetailModal } from './OrderItemDetailModal';
+import { InlineCustomerEditSheet } from './InlineCustomerEditSheet';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -109,6 +110,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
   const { accessibleEntities, activeLegalEntityId, hasEntities: hasLegalEntities } = useLegalEntities();
 
   const isEditMode = !!order;
+  const [customerEditOpen, setCustomerEditOpen] = useState(false);
 
   // Entity-level lock is now the source of truth.
   // canEdit = false when the order is locked (only status changes via approval flow allowed)
@@ -1425,7 +1427,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
       <div className="space-y-2">
-        <Label>Empresa</Label>
+        <div className="flex items-center justify-between">
+          <Label>Empresa</Label>
+          {companyId && (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0 text-xs"
+              onClick={() => setCustomerEditOpen(true)}
+            >
+              <Edit className="h-3 w-3 mr-1" /> Editar cliente
+            </Button>
+          )}
+        </div>
         <SearchableSelect
           options={(companies || []).map(c => ({ value: c.id, label: c.cnpj ? `${c.name} — ${formatCNPJ(c.cnpj)}` : c.name }))}
           value={companyId || null}
@@ -1434,6 +1449,12 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
           disabled={!canEdit} onSearchChange={setOrderCompanySearch}
         />
       </div>
+      <InlineCustomerEditSheet
+        companyId={companyId}
+        open={customerEditOpen}
+        onOpenChange={setCustomerEditOpen}
+      />
+
 
       {/* Vínculo opcional ao negócio (Fase 2) + Data de Entrega lado a lado */}
       <div className="grid grid-cols-2 gap-4">
