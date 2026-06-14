@@ -199,10 +199,9 @@ export function useQuickQuoteMutations(dealId: string) {
 
 /** Gera/abre PDF do orçamento em nova aba e (opcional) marca como enviado. */
 export async function openQuickQuotePdf(quoteId: string, opts?: { markSent?: boolean }) {
-  const projectRef = 'lusyhkizwoihixcvcgap';
+  const baseUrl = import.meta.env.VITE_SUPABASE_URL as string;
   const session = (await supabase.auth.getSession()).data.session;
-  const url = `https://${projectRef}.supabase.co/functions/v1/generate-quick-quote-pdf`;
-  const res = await fetch(url, {
+  const res = await fetch(`${baseUrl}/functions/v1/generate-quick-quote-pdf`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
