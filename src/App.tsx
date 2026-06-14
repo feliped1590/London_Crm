@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
 import { prefetchTopRoutesIdle } from "@/lib/routePrefetch";
+import { clearAllDrafts } from "@/workspace/drafts";
 
 
 // Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
