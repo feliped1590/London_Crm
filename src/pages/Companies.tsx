@@ -49,6 +49,7 @@ export default function Companies() {
   const { canAccessBySalesRep } = useSalesRepAccess();
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
+  const density = useResponsiveDensity();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 350);
   const [page, setPage] = useState(1);
@@ -486,27 +487,28 @@ export default function Companies() {
               <p className="text-muted-foreground">Comece adicionando sua primeira empresa.</p>
             </div>
           ) : (
-            <Table>
+            <div className="table-responsive">
+            <Table data-density={density} className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Empresa</TableHead>
+                  <TableHead className="sticky-col-start">Empresa</TableHead>
                   <TableHead>CNPJ</TableHead>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>
+                  <TableHead className="hidden xl:table-cell">Setor</TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     <div className="flex items-center gap-1">
                       <TrendingUp className="h-3.5 w-3.5" />
                       Funil
                     </div>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="hidden 2xl:table-cell">
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-3.5 w-3.5" />
                       Tabela Preços
                     </div>
                   </TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Iniflex</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="hidden xl:table-cell">Contato</TableHead>
+                  <TableHead className="hidden md:table-cell">Iniflex</TableHead>
+                  <TableHead className="text-right sticky-col-end">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
