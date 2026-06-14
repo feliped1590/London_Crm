@@ -1897,6 +1897,15 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         onOpenChange={setAdvancedSearchOpen}
         onSelect={(product) => addProductById(product.id, product)}
       />
+
+      <DraftRestoreDialog
+        open={orderDraft.restorePending}
+        conflict={orderDraft.restoreConflict}
+        savedAt={orderDraft.draftSavedAt}
+        title={isEditMode ? `Você tem um rascunho deste pedido` : 'Você tem um rascunho de novo pedido'}
+        onRestore={orderDraft.acceptRestore}
+        onDiscard={orderDraft.discardRestore}
+      />
     </Dialog>
 
     <OrderItemDetailModal
