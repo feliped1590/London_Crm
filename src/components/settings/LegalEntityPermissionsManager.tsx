@@ -20,9 +20,15 @@ interface EntityFormData {
   cnpj: string;
   erp_company_code: string;
   trade_name: string;
+  order_erp_endpoint: string;
+  order_erp_token_secret_name: string;
+  order_erp_enabled: boolean;
 }
 
-const emptyForm: EntityFormData = { name: '', cnpj: '', erp_company_code: '', trade_name: '' };
+const emptyForm: EntityFormData = {
+  name: '', cnpj: '', erp_company_code: '', trade_name: '',
+  order_erp_endpoint: '', order_erp_token_secret_name: '', order_erp_enabled: true,
+};
 
 export function LegalEntityPermissionsManager() {
   const queryClient = useQueryClient();
