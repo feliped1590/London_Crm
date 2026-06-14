@@ -177,6 +177,43 @@ serve(async (req) => {
       console.error("Error fetching items:", itemsError);
     }
 
+    // =========================================================================
+    // IMAGENS DOS ITENS — primeira imagem por produto (file_attachments)
+    // Falhas são silenciosas: PDF nunca quebra por causa de imagens.
+    // =========================================================================
+    const productImageMap = new Map<string, string>();
+    try {
+      const productIds = Array.from(
+        new Set(
+          (items || [])
+            .map((it: any) => it.product?.id || it.product_id)
+            .filter((id: any) => isValidUUID(id))
+        )
+      );
+
+      if (productIds.length > 0) {
+        const { data: attachments } = await supabase
+          .from('file_attachments')
+          .select('entity_id, bucket, object_path, mime_type, created_at')
+          .eq('entity_type', 'product')
+          .eq('module', 'produtos')
+          .ilike('mime_type', 'image/%')
+          .in('entity_id', productIds)
+          .order('created_at', { ascending: true });
+
+        for (const att of attachments || []) {
+          if (!att?.entity_id || !att?.object_path || !att?.bucket) continue;
+          if (productImageMap.has(att.entity_id)) continue; // mantém a 1ª (mais antiga)
+          try {
+            const { data: pub } = supabase.storage.from(att.bucket).getPublicUrl(att.object_path);
+            if (pub?.publicUrl) productImageMap.set(att.entity_id, pub.publicUrl);
+          } catch (_e) { /* ignora anexo inválido */ }
+        }
+      }
+    } catch (imgErr) {
+      console.error('Image lookup failed (non-fatal)', { code: (imgErr as any)?.code });
+    }
+
     // Fetch carrier if present
     let carrierData: any = null;
     if (order.carrier_id) {
