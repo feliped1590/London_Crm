@@ -793,6 +793,12 @@ export default function Settings() {
               Governança Comercial
             </TabsTrigger>
           )}
+          {(isAdmin || isDeveloper) && (
+            <TabsTrigger value="lifecycle" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Ciclo de Vida
+            </TabsTrigger>
+          )}
           {isDeveloper && (
             <TabsTrigger value="ai-assistant" className="gap-2">
               <Bot className="h-4 w-4" />
