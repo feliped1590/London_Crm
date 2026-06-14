@@ -409,6 +409,14 @@ export function DealFormDialog({
               <QuickNotes entityType="deal" entityId={editingDeal.id} />
             </TabsContent>
 
+            <TabsContent value="orcamentos" className="flex-1 overflow-auto mt-4">
+              <QuickQuoteList
+                dealId={editingDeal.id}
+                defaultLegalEntityId={(editingDeal as any).legal_entity_id ?? effectiveLegalEntityId ?? null}
+                defaultCompanyId={editingDeal.company_id}
+              />
+            </TabsContent>
+
             <TabsContent value="propostas" className="flex-1 overflow-auto mt-4">
               <ProposalsList
                 dealId={editingDeal.id}
