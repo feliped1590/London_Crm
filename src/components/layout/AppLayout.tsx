@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { AIChatWidget } from '@/components/ai-assistant/AIChatWidget';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { NotificationToast } from '@/components/notifications/NotificationToast';
 import { LegalEntitySelector } from '@/components/layout/LegalEntitySelector';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { useSidebar } from '@/contexts/SidebarContext';
@@ -49,6 +51,7 @@ export function AppLayout() {
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
             <LegalEntitySelector />
             <ThemeToggle />
           </div>
@@ -75,6 +78,7 @@ export function AppLayout() {
               <LegalEntitySelector />
             </div>
             <div className="flex justify-end items-center gap-2">
+              <NotificationBell />
               <ThemeToggle />
             </div>
           </header>
@@ -86,6 +90,7 @@ export function AppLayout() {
       </div>
 
       {alertData && <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />}
+      <NotificationToast />
       {isDeveloper && <AIChatWidget />}
     </div>
   );
