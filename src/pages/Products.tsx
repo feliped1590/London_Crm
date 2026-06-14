@@ -91,6 +91,7 @@ export default function Products() {
   const { tipos, grupos, subgrupos, familias, classes, unitMeasures } = useProductLookups();
   const { linksByGroup } = useGroupSubgroupLinks();
   const { isAdmin, can } = useModulePermissions();
+  const density = useResponsiveDensity();
   const canCreateProducts = can('products', PermissionAction.Create);
   const canEditProducts = can('products', PermissionAction.Edit);
   const canDeleteProducts = can('products', PermissionAction.Delete);
