@@ -263,6 +263,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // 4b. Resolver endpoint/token/empresa pela entidade jurídica do pedido.
+        // Erros aqui são tratados como blocked_validation (não consomem retries).
+        const erpCfg = await resolveOrderErpConfig(supabase, order.legal_entity_id);
+        const endpointHost = (() => { try { return new URL(erpCfg.endpoint).host; } catch { return erpCfg.endpoint; } })();
+        console.log(`[process-order-sync] [legal_entity=${erpCfg.legalEntityName} | endpoint=${endpointHost} | empresa=${erpCfg.empresa} | source=${erpCfg.source}]`);
+
         console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType}→${typeMapping!.erp_flow_code}, vendedor=${sellerName} (erp:${erpVendedor}), frete=${crmFreightType}→${freightMapping!.erp_freight_code}, pagto=${crmPaymentMethod}→${paymentMapping?.erp_payment_code ?? '?'}, parcelas=${paymentTermsStr}, sale_type=${orderSaleType}→${orderTipoVendaCode}, transp=${carrierErpCode}, redesp=${redespachoErpCode}, followup=${followup ? 'sim' : 'não'}`);
 
         // 5. Montar payload
