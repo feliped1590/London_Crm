@@ -61,6 +61,22 @@ export default function Orders() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await supabase.from('orders').delete().eq('id', orderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Pedido excluído com sucesso');
+      setDeletingOrder(null);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+    onError: (err: any) => {
+      toast.error(`Erro ao excluir pedido: ${err.message}`);
+    },
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
 
