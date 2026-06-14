@@ -13,7 +13,7 @@ export const AVAILABLE_CARDS: CardDefinition[] = [
   { key: 'top_setor', label: 'Clientes por Setor', icon: 'Building2' },
   { key: 'top_segmento', label: 'Segmento com mais clientes', icon: 'Layers' },
   { key: 'top_atividade', label: 'Atividade com mais clientes', icon: 'Activity' },
-  { key: 'active_clients', label: 'Clientes ativos', icon: 'TrendingUp' },
+  { key: 'active_clients', label: 'Novos clientes (30 dias)', icon: 'UserPlus' },
   { key: 'open_deals', label: 'Negócios em aberto', icon: 'Handshake' },
 ];
 
@@ -59,9 +59,17 @@ export function useDashboardCards() {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_card_metrics');
-      if (error) throw error;
-      const m = data as any;
+      const [{ data: rpcData, error: rpcError }, { count: newClientsCount, error: newClientsError }] =
+        await Promise.all([
+          supabase.rpc('get_dashboard_card_metrics'),
+          supabase
+            .from('companies')
+            .select('id', { count: 'exact', head: true })
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        ]);
+      if (rpcError) throw rpcError;
+      if (newClientsError) throw newClientsError;
+      const m = rpcData as any;
 
       return {
         total_clients: {
@@ -81,8 +89,8 @@ export function useDashboardCards() {
           subtitle: m.top_atividade_count ? `${m.top_atividade_count} clientes` : 'Sem dados',
         },
         active_clients: {
-          value: String(m.active_clients || 0),
-          subtitle: 'Com pedido e dentro da janela ativa',
+          value: String(newClientsCount || 0),
+          subtitle: 'Cadastrados nos últimos 30 dias',
         },
         open_deals: {
           value: String(m.open_deals_count || 0),
