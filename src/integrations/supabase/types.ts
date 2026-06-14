@@ -4831,36 +4831,57 @@ export type Database = {
       }
       notifications: {
         Row: {
+          action_url: string | null
           created_at: string
+          created_by: string | null
           id: string
           is_read: boolean
+          legal_entity_id: string | null
           link: string | null
           message: string
           metadata: Json | null
+          origin_id: string | null
+          origin_module: string | null
+          read_at: string | null
+          status: string
           tenant_id: string | null
           title: string
           type: string
           user_id: string
         }
         Insert: {
+          action_url?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_read?: boolean
+          legal_entity_id?: string | null
           link?: string | null
           message: string
           metadata?: Json | null
+          origin_id?: string | null
+          origin_module?: string | null
+          read_at?: string | null
+          status?: string
           tenant_id?: string | null
           title: string
           type?: string
           user_id: string
         }
         Update: {
+          action_url?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           is_read?: boolean
+          legal_entity_id?: string | null
           link?: string | null
           message?: string
           metadata?: Json | null
+          origin_id?: string | null
+          origin_module?: string | null
+          read_at?: string | null
+          status?: string
           tenant_id?: string | null
           title?: string
           type?: string
@@ -11017,6 +11038,7 @@ export type Database = {
         Args: { p_request_id: string; p_review_note?: string }
         Returns: Json
       }
+      archive_notification: { Args: { p_id: string }; Returns: undefined }
       archive_old_sync_records: { Args: { days_old?: number }; Returns: Json }
       bi_can_see_rep: { Args: { p_rep: string }; Returns: boolean }
       bi_is_admin_or_dev: { Args: never; Returns: boolean }
@@ -11101,6 +11123,22 @@ export type Database = {
         Returns: number
       }
       enqueue_bulk_company_sync: { Args: never; Returns: Json }
+      enqueue_notification: {
+        Args: {
+          p_action_url?: string
+          p_created_by?: string
+          p_legal_entity_id?: string
+          p_message: string
+          p_metadata?: Json
+          p_origin_id?: string
+          p_origin_module?: string
+          p_tenant_id: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       extract_attribute_value: {
         Args: {
           p_path: string
@@ -11551,6 +11589,7 @@ export type Database = {
         }[]
       }
       get_tenant_timezone: { Args: { p_tenant_id: string }; Returns: string }
+      get_unread_notification_count: { Args: never; Returns: number }
       get_user_module_permissions: {
         Args: { _user_id: string }
         Returns: {
@@ -11621,6 +11660,8 @@ export type Database = {
         Args: { p_nome: string; p_tenant: string; p_uf: string }
         Returns: number
       }
+      mark_all_notifications_read: { Args: never; Returns: number }
+      mark_notification_read: { Args: { p_id: string }; Returns: undefined }
       next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
       normalize_city_name: { Args: { p_text: string }; Returns: string }
       process_stock_movement: {
