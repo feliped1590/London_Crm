@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
+import { resolveOrderErpConfig, isOrderErpConfigError } from '../_shared/erp/order-endpoint-resolver.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,10 +42,30 @@ Deno.serve(async (req) => {
     const ctx = await loadOrderForValidation(supabase, orderId, queueEntry?.pedido_terceiro);
     const validation = validateOrderForSync(ctx.toValidate);
 
+    // Pré-valida também o endpoint/token/empresa resolvidos pela entidade jurídica
+    // (somente pedidos). Falha aqui é adicionada como pendência estruturada.
+    const extraErrors: any[] = [...validation.errors];
+    const extraFields = new Set<string>(validation.fields);
+    try {
+      await resolveOrderErpConfig(supabase, ctx.order.legal_entity_id);
+    } catch (cfgErr) {
+      if (isOrderErpConfigError(cfgErr)) {
+        extraErrors.push({
+          field: cfgErr.field,
+          message: cfgErr.message,
+          fixHint: cfgErr.fixHint,
+          fixRoute: cfgErr.fixRoute,
+        });
+        extraFields.add(cfgErr.field);
+      } else {
+        throw cfgErr;
+      }
+    }
+
     return jsonResponse({
-      valid: validation.valid,
-      errors: validation.errors,
-      fields: validation.fields,
+      valid: extraErrors.length === 0,
+      errors: extraErrors,
+      fields: Array.from(extraFields),
       order_number: ctx.order.number,
     });
   } catch (error) {
