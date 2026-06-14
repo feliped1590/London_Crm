@@ -56,6 +56,9 @@ import { OrderGovernanceBanner } from './OrderGovernanceBanner';
 import { GovernancePreflightModal } from './GovernancePreflightModal';
 import { useActiveTenantId } from '@/hooks/useActiveTenantId';
 import { runGovernancePreflight, useGovernanceFlags, type PreflightResult } from '@/hooks/useCommercialGovernance';
+import { useFormDraft } from '@/workspace/useFormDraft';
+import { DraftRestoreDialog } from '@/workspace/DraftRestoreDialog';
+
 
 
 
