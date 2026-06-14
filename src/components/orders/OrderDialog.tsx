@@ -1597,6 +1597,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 <TableHead className="w-32">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-28">Fator KG</TableHead>
+                <TableHead className="w-24 text-right">Peso (kg)</TableHead>
                 <TableHead className="w-28 text-right">Subtotal</TableHead>
                 {ipiMode !== 'isento' && (
                   <>
