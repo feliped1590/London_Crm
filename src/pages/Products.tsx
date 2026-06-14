@@ -500,18 +500,19 @@ export default function Products() {
     return q;
   };
 
-  const SortableHeader = ({ field, children, filterKey, filterPlaceholder, numeric }: {
+  const SortableHeader = ({ field, children, filterKey, filterPlaceholder, numeric, className }: {
     field?: SortField;
     children: React.ReactNode;
     filterKey?: ColumnFilterKey;
     filterPlaceholder?: string;
     numeric?: boolean;
+    className?: string;
   }) => {
     const isSorted = field && sortField === field;
     const filterValue = filterKey ? columnFilters[filterKey] : '';
     const isFiltered = !!filterValue;
     return (
-      <TableHead className="select-none">
+      <TableHead className={cn("select-none", className)}>
         <div className="flex items-center gap-1">
           <div
             className={field ? 'cursor-pointer hover:text-primary transition-colors flex items-center gap-1' : 'flex items-center gap-1'}
