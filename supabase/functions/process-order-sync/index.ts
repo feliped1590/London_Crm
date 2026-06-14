@@ -224,7 +224,6 @@ Deno.serve(async (req) => {
                 paymentMapping, paymentTermsStr, paymentConditions, saleTypeMap,
                 orderSaleType, orderTipoVendaCode,
                 carrierErpCode, redespachoErpCode, followup, toValidate } = ctx;
-
         // 4. Pré-validar (defesa em profundidade)
         const validation = validateOrderForSync(toValidate);
 
