@@ -563,8 +563,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       }
 
       if (!skipAutoSync) {
+        orderDraft.clear();
         onOpenChange(false);
         onSuccess?.();
+      } else {
+        orderDraft.clear();
       }
     },
     onError: (error: Error) => {
