@@ -223,22 +223,41 @@ export function useQuickQuoteMutations(dealId: string) {
 
 /** Gera/abre PDF do orçamento em nova aba e (opcional) marca como enviado. */
 export async function openQuickQuotePdf(quoteId: string, opts?: { markSent?: boolean }) {
-  const baseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-  const session = (await supabase.auth.getSession()).data.session;
-  const res = await fetch(`${baseUrl}/functions/v1/generate-quick-quote-pdf`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session?.access_token || ''}`,
-    },
-    body: JSON.stringify({ quote_id: quoteId, mark_sent: !!opts?.markSent }),
-  });
-  if (!res.ok) {
-    toast.error('Falha ao gerar PDF do orçamento');
+  // Abrir a janela SÍNCRONO, dentro do clique, para não ser bloqueada por popup blocker.
+  const popup = window.open('', '_blank');
+  if (!popup) {
+    toast.error('Pop-up bloqueado. Permita pop-ups para gerar o PDF.');
     return;
   }
-  const html = await res.text();
-  const blob = new Blob([html], { type: 'text/html' });
-  const blobUrl = URL.createObjectURL(blob);
-  window.open(blobUrl, '_blank');
+  popup.document.write('<p style="font-family:sans-serif;padding:20px;">Gerando orçamento…</p>');
+
+  try {
+    const baseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const session = (await supabase.auth.getSession()).data.session;
+    const res = await fetch(`${baseUrl}/functions/v1/generate-quick-quote-pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token || ''}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+      },
+      body: JSON.stringify({ quote_id: quoteId, mark_sent: !!opts?.markSent }),
+    });
+    if (!res.ok) {
+      const errTxt = await res.text().catch(() => '');
+      console.error('quick-quote-pdf failed', res.status, errTxt);
+      popup.close();
+      toast.error('Falha ao gerar PDF do orçamento');
+      return;
+    }
+    const html = await res.text();
+    popup.document.open();
+    popup.document.write(html);
+    popup.document.close();
+    popup.focus();
+  } catch (e) {
+    console.error('openQuickQuotePdf error', e);
+    popup.close();
+    toast.error('Erro ao gerar PDF do orçamento');
+  }
 }
