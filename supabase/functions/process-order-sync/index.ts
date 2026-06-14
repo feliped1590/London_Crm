@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
           freight_type: freightMapping!.erp_freight_code,
           delivery_date: order.delivery_date,
           company_cnpj: company.cnpj,
-          erp_empresa: Number(legalEntity.erp_company_code),
+          erp_empresa: erpCfg.empresa,
           erp_fluxo_venda: typeMapping!.erp_flow_code,
           erp_usuario: erpUsuario,
           erp_vendedor: erpVendedor,
@@ -314,12 +314,12 @@ Deno.serve(async (req) => {
 
         console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro})`);
 
-        // 6. Enviar ao ERP
-        const response = await fetch(apiUrl!, {
+        // 6. Enviar ao ERP (endpoint/token resolvidos pela entidade jurídica do pedido)
+        const response = await fetch(erpCfg.endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiToken}`,
+            'Authorization': `Bearer ${erpCfg.token}`,
           },
           body: payload,
         });
