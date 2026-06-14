@@ -1258,6 +1258,13 @@ export default function Settings() {
           </TabsContent>
         )}
 
+        {(isAdmin || isDeveloper) && (
+          <TabsContent value="lifecycle" className="mt-6 space-y-6">
+            <LifecycleConfigManager />
+          </TabsContent>
+        )}
+
+
 
 
 
