@@ -17,7 +17,12 @@ export const WHATSAPP_ENABLED = false;
  * controlada em produção, é possível sobrescrever via localStorage:
  *   localStorage.setItem('workspace_tabs_enabled', 'true' | 'false')
  */
-const DEFAULT_WORKSPACE_TABS_ENABLED = true;
+// DESATIVADO temporariamente: a v1 do Workspace aninhava MemoryRouter dentro
+// do BrowserRouter, o que o react-router v6 proíbe ("You cannot render a
+// <Router> inside another <Router>"). Mantemos a flag para reativar quando a
+// arquitetura for refeita sem Router aninhado. Override via localStorage
+// continua funcionando para testes locais.
+const DEFAULT_WORKSPACE_TABS_ENABLED = false;
 
 export function isWorkspaceTabsEnabled(): boolean {
   if (typeof window === 'undefined') return DEFAULT_WORKSPACE_TABS_ENABLED;
