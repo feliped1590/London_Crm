@@ -1665,6 +1665,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         disabled={!canEdit}
                       />
                     </TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {itemWeight > 0
+                        ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(itemWeight)} kg`
+                        : '—'}
+                    </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
                       <>
