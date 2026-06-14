@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { WHATSAPP_ENABLED } from '@/config/features';
 import {
   Pagination,
   PaginationContent,
