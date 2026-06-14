@@ -335,10 +335,12 @@ export function DealFormDialog({
                 <History className="h-4 w-4" />
                 <span className="hidden sm:inline">Histórico</span>
               </TabsTrigger>
-              <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">WhatsApp</span>
-              </TabsTrigger>
+              {WHATSAPP_ENABLED && (
+                <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="dados" className="flex-1 overflow-auto mt-4">
