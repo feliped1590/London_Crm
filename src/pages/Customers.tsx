@@ -712,6 +712,11 @@ export default function Customers() {
                             <Badge variant="secondary" className="bg-muted text-muted-foreground">Não</Badge>
                           )}
                         </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {(customer as any).erp_code
+                            ? <span className="font-medium">{(customer as any).erp_code}</span>
+                            : <span className="text-muted-foreground">—</span>}
+                        </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-1">
                             <CompanySyncBadge companyId={customer.id} erpCode={(customer as any).erp_code} />
