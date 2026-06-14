@@ -8881,6 +8881,259 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_quote_items: {
+        Row: {
+          class_id: string | null
+          converted_product_id: string | null
+          created_at: string
+          description: string
+          family_id: string | null
+          grupo_id: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          quote_id: string
+          sort_order: number
+          subgrupo_id: string | null
+          tipo_id: string | null
+          total_price: number
+          unit: string | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          class_id?: string | null
+          converted_product_id?: string | null
+          created_at?: string
+          description: string
+          family_id?: string | null
+          grupo_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          quote_id: string
+          sort_order?: number
+          subgrupo_id?: string | null
+          tipo_id?: string | null
+          total_price?: number
+          unit?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string | null
+          converted_product_id?: string | null
+          created_at?: string
+          description?: string
+          family_id?: string | null
+          grupo_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          quote_id?: string
+          sort_order?: number
+          subgrupo_id?: string | null
+          tipo_id?: string | null
+          total_price?: number
+          unit?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_quote_items_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "product_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quote_items_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quote_items_grupo_id_fkey"
+            columns: ["grupo_id"]
+            isOneToOne: false
+            referencedRelation: "product_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quick_quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quote_items_subgrupo_id_fkey"
+            columns: ["subgrupo_id"]
+            isOneToOne: false
+            referencedRelation: "product_subgroups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quote_items_tipo_id_fkey"
+            columns: ["tipo_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quick_quote_sequences: {
+        Row: {
+          last_number: number
+          legal_entity_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          last_number?: number
+          legal_entity_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          last_number?: number
+          legal_entity_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quick_quotes: {
+        Row: {
+          approved_at: string | null
+          client_cnpj: string | null
+          client_contact: string | null
+          client_email: string | null
+          client_name: string
+          client_notes: string | null
+          client_phone: string | null
+          company_id: string | null
+          contact_id: string | null
+          converted_at: string | null
+          converted_company_id: string | null
+          converted_proposal_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string
+          delivery_terms_free: string | null
+          id: string
+          legal_entity_id: string
+          number: string | null
+          observations: string | null
+          payment_terms_free: string | null
+          rejected_at: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["quick_quote_status"]
+          tenant_id: string
+          total_value: number
+          updated_at: string
+          validity_date: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          client_cnpj?: string | null
+          client_contact?: string | null
+          client_email?: string | null
+          client_name: string
+          client_notes?: string | null
+          client_phone?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          converted_at?: string | null
+          converted_company_id?: string | null
+          converted_proposal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id: string
+          delivery_terms_free?: string | null
+          id?: string
+          legal_entity_id: string
+          number?: string | null
+          observations?: string | null
+          payment_terms_free?: string | null
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["quick_quote_status"]
+          tenant_id: string
+          total_value?: number
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          client_cnpj?: string | null
+          client_contact?: string | null
+          client_email?: string | null
+          client_name?: string
+          client_notes?: string | null
+          client_phone?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          converted_at?: string | null
+          converted_company_id?: string | null
+          converted_proposal_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string
+          delivery_terms_free?: string | null
+          id?: string
+          legal_entity_id?: string
+          number?: string | null
+          observations?: string | null
+          payment_terms_free?: string | null
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["quick_quote_status"]
+          tenant_id?: string
+          total_value?: number
+          updated_at?: string
+          validity_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quick_quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "company_activity_summary"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "quick_quotes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quotes_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quick_quotes_legal_entity_id_fkey"
+            columns: ["legal_entity_id"]
+            isOneToOne: false
+            referencedRelation: "legal_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regras_tributacao: {
         Row: {
           ano_vigencia_fim: number | null
@@ -11960,6 +12213,13 @@ export type Database = {
         | "recusada"
         | "expirada"
       prospecting_result_status: "new" | "saved" | "discarded"
+      quick_quote_status:
+        | "draft"
+        | "sent"
+        | "approved"
+        | "rejected"
+        | "expired"
+        | "converted"
       regime_incidencia_cbs_ibs:
         | "normal"
         | "aliquota_zero"
@@ -12242,6 +12502,14 @@ export const Constants = {
         "expirada",
       ],
       prospecting_result_status: ["new", "saved", "discarded"],
+      quick_quote_status: [
+        "draft",
+        "sent",
+        "approved",
+        "rejected",
+        "expired",
+        "converted",
+      ],
       regime_incidencia_cbs_ibs: [
         "normal",
         "aliquota_zero",
