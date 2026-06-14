@@ -78,6 +78,7 @@ export function AppLayout() {
               <LegalEntitySelector />
             </div>
             <div className="flex justify-end items-center gap-2">
+              <NotificationBell />
               <ThemeToggle />
             </div>
           </header>
