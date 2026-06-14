@@ -25,6 +25,7 @@ import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 // queryCacheManager helpers are no longer needed: server-side pagination uses
 // invalidateQueries / setQueriesData directly.
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit column list used by the table + edit form. Avoids `select('*')`
