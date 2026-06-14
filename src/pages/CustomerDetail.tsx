@@ -513,6 +513,27 @@ export default function CustomerDetail() {
           currentSalesRepName={ownerSalesRep.name}
         />
       )}
+
+      {/* Review Alert Dialog (90 days policy) */}
+      {customer.source === 'crm' && (
+        <CustomerReviewAlertDialog
+          open={showReviewAlert}
+          customerName={displayName}
+          lastReviewedLabel={formatReviewDate(customer.last_reviewed_at)}
+          canEdit={canEdit}
+          isMarking={markAsReviewedMutation.isPending}
+          onClose={() => setShowReviewAlert(false)}
+          onReviewNow={() => {
+            setShowReviewAlert(false);
+            setIsEditing(true);
+          }}
+          onMarkReviewed={() => {
+            markAsReviewedMutation.mutate(undefined, {
+              onSuccess: () => setShowReviewAlert(false),
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
