@@ -428,14 +428,16 @@ export function DealFormDialog({
               <DealHistoryTab dealId={editingDeal.id} />
             </TabsContent>
 
-            <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4 flex flex-col gap-4">
-              <UnderDevelopmentBanner compact title="Em Desenvolvimento" />
-              <DealWhatsAppChat
-                contactId={editingDeal.contact_id}
-                contactPhone={getContactPhone(editingDeal.contact_id)}
-                contactName={getContactName(editingDeal.contact_id)}
-              />
-            </TabsContent>
+            {WHATSAPP_ENABLED && (
+              <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4 flex flex-col gap-4">
+                <UnderDevelopmentBanner compact title="Em Desenvolvimento" />
+                <DealWhatsAppChat
+                  contactId={editingDeal.contact_id}
+                  contactPhone={getContactPhone(editingDeal.contact_id)}
+                  contactName={getContactName(editingDeal.contact_id)}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
