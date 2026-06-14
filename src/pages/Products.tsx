@@ -2338,6 +2338,11 @@ export default function Products() {
                       <TableCell className="text-sm whitespace-nowrap">
                         {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
                       </TableCell>
+                      <TableCell className="font-mono text-xs" onClick={stop}>
+                        {(product as any).erp_product_code
+                          ? <span className="font-medium">{(product as any).erp_product_code}</span>
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
                       <TableCell onClick={stop}>
                         <ProductSyncBadge
                           productId={product.id}
