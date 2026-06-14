@@ -570,6 +570,31 @@ export default function Orders() {
           queryClient.invalidateQueries({ queryKey: ['orders'] });
         }}
       />
+
+      <AlertDialog open={!!deletingOrder} onOpenChange={(open) => !open && setDeletingOrder(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pedido {deletingOrder?.number ?? ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O pedido e todos os seus itens, anexos e histórico serão removidos permanentemente.
+              Disponível apenas para pedidos que ainda não foram sincronizados com o ERP.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteOrderMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteOrderMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deletingOrder) deleteOrderMutation.mutate(deletingOrder.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteOrderMutation.isPending ? 'Excluindo...' : 'Excluir pedido'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
