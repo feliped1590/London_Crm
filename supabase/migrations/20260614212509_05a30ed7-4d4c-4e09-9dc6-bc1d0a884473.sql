@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.uq_legal_entities_tenant_erp_code;
