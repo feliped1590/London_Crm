@@ -346,6 +346,36 @@ serve(async (req) => {
       </tr>
     `}).join("");
 
+    // Imagens por item (uma por item, na ordem da tabela). Mesmo produto em
+    // múltiplos itens renderiza em cada item para manter coerência com a numeração.
+    const escapeAttr = (s: string) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const itemsWithImages = itemsData
+      .map((item: any, index: number) => {
+        const pid = item.product?.id || item.product_id;
+        const url = pid ? productImageMap.get(pid) : undefined;
+        if (!url) return null;
+        const label = item.description || item.product?.name || '-';
+        return { index, label, url };
+      })
+      .filter(Boolean) as Array<{ index: number; label: string; url: string }>;
+
+    const itemImagesHtml = itemsWithImages.length === 0 ? '' : `
+        <div class="section">
+          <div class="section-title">Imagens dos Itens</div>
+          <div class="item-images-grid">
+            ${itemsWithImages.map((it) => `
+              <div class="item-image-card">
+                <div class="item-image-label"><span class="item-num">Item ${String(it.index + 1).padStart(2, '0')}</span> — ${escapeAttr(it.label)}</div>
+                <div class="item-image-wrap">
+                  <img src="${escapeAttr(it.url)}" alt="${escapeAttr(it.label)}" onerror="this.parentNode.parentNode.style.display='none'" />
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+    `;
+
+
     const html = `
       <!DOCTYPE html>
       <html>
