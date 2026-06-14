@@ -328,8 +328,49 @@ export function LegalEntityPermissionsManager() {
               <Input
                 value={entityForm.erp_company_code}
                 onChange={(e) => setEntityForm(prev => ({ ...prev, erp_company_code: e.target.value }))}
-                placeholder="Código da empresa no ERP (opcional)"
+                placeholder="Código da empresa no ERP (ex.: 1, 2)"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Usado como <code>empresa</code> no payload de pedidos enviado ao ERP.
+              </p>
+            </div>
+
+            <div className="border-t pt-4 mt-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Integração de Pedidos (ERP)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Configuração específica para envio de pedidos. Não afeta clientes, produtos ou atributos.
+                  </p>
+                </div>
+                <Switch
+                  checked={entityForm.order_erp_enabled}
+                  onCheckedChange={(v) => setEntityForm(prev => ({ ...prev, order_erp_enabled: v }))}
+                />
+              </div>
+              <div>
+                <Label>Endpoint do ERP (pedidos)</Label>
+                <Input
+                  value={entityForm.order_erp_endpoint}
+                  onChange={(e) => setEntityForm(prev => ({ ...prev, order_erp_endpoint: e.target.value }))}
+                  placeholder="https://iniflex.exemplo.com.br/api/v1/runtime/endpoint/integracao/iniflex/json"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Em branco = usa o endpoint padrão global (Novafix).
+                </p>
+              </div>
+              <div>
+                <Label>Nome do Secret do Token</Label>
+                <Input
+                  value={entityForm.order_erp_token_secret_name}
+                  onChange={(e) => setEntityForm(prev => ({ ...prev, order_erp_token_secret_name: e.target.value }))}
+                  placeholder="Ex.: PROJEDATA_TOKEN_MARTINAPACK"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cadastre o valor do token em Configurações → Secrets com exatamente este nome.
+                  Em branco = usa o token padrão global.
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>
