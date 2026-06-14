@@ -696,9 +696,69 @@ serve(async (req) => {
           <br/>
           <span style="font-size: 8px;">Para dúvidas, entre em contato conosco. &nbsp;|&nbsp; Documento gerado em ${todayBR}</span>
         </div>
+        ` : ""}
+
+        ${itemImagesHtml}
+
+        <!-- ACEITE DO CLIENTE -->
+        <div class="acceptance">
+          <div class="acceptance-title">Aceite do Cliente</div>
+          <p style="font-size: 10px; color: #4a5568; margin-bottom: 10px;">
+            Declaro que li e concordo com todas as condições descritas neste pedido de venda.
+          </p>
+          <div class="acceptance-grid">
+            <div class="acceptance-field">
+              <div class="acceptance-line">Assinatura do Responsável</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Carimbo da Empresa</div>
+            </div>
+            <div class="acceptance-field">
+              <div class="acceptance-line">Data: ____/____/________</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RODAPÉ -->
+        <div class="footer">
+          <strong>${emitter?.name || 'Empresa'}</strong>
+          ${emitter?.cnpj ? ` &nbsp;|&nbsp; CNPJ: ${emitter.cnpj}` : ''}
+          ${emitter?.phone ? ` &nbsp;|&nbsp; Tel: ${emitter.phone}` : ''}
+          ${emitter?.email ? ` &nbsp;|&nbsp; ${emitter.email}` : ''}
+          <br/>
+          <span style="font-size: 8px;">Para dúvidas, entre em contato conosco. &nbsp;|&nbsp; Documento gerado em ${todayBR}</span>
+        </div>
+
+        <script>
+          // Aguarda todas as imagens carregarem (ou falharem) antes de imprimir,
+          // para evitar que o diálogo de impressão abra com placeholders.
+          (function () {
+            var printed = false;
+            function triggerPrint() {
+              if (printed) return;
+              printed = true;
+              try { window.focus(); window.print(); } catch (e) {}
+            }
+            window.addEventListener('load', function () {
+              var imgs = Array.from(document.images || []);
+              if (imgs.length === 0) { setTimeout(triggerPrint, 150); return; }
+              var pending = imgs.filter(function (i) { return !i.complete; });
+              if (pending.length === 0) { setTimeout(triggerPrint, 150); return; }
+              var remaining = pending.length;
+              var done = function () { remaining--; if (remaining <= 0) setTimeout(triggerPrint, 150); };
+              pending.forEach(function (img) {
+                img.addEventListener('load', done, { once: true });
+                img.addEventListener('error', done, { once: true });
+              });
+              // Fallback: nunca trava o usuário — 6s máximo de espera.
+              setTimeout(triggerPrint, 6000);
+            });
+          })();
+        </script>
       </body>
       </html>
     `;
+
 
     // =========================================================================
     // AUDIT LOG
