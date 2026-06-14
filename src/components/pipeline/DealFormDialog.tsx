@@ -314,11 +314,15 @@ export function DealFormDialog({
 
         {editingDeal ? (
           <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className={`grid w-full ${WHATSAPP_ENABLED ? 'grid-cols-8' : 'grid-cols-7'}`}>
               <TabsTrigger value="dados">Dados</TabsTrigger>
               <TabsTrigger value="notas" className="flex items-center gap-2">
                 <StickyNote className="h-4 w-4" />
                 <span className="hidden sm:inline">Notas</span>
+              </TabsTrigger>
+              <TabsTrigger value="orcamentos" className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                <span className="hidden sm:inline">Orçamentos</span>
               </TabsTrigger>
               <TabsTrigger value="propostas" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
