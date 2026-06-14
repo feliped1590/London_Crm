@@ -1630,20 +1630,39 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 return (
                   <TableRow key={index}>
                     <TableCell>
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
-                      >
-                        <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
-                        <p className="font-medium">{item.description}</p>
-                        {(item.observations || item.observations_pcp) && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
-                            {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
-                          </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          className="cursor-pointer hover:underline flex-1 min-w-0"
+                          onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
+                        >
+                          <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
+                          <p className="font-medium">{item.description}</p>
+                          {(item.observations || item.observations_pcp) && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
+                              {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
+                            </div>
+                          )}
+                        </div>
+                        {canEdit && item.product_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            title="Editar produto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProductEditId(item.product_id!);
+                              setProductEditOpen(true);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <NumberInput
