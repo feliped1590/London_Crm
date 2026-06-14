@@ -17,6 +17,7 @@ import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
+import { WHATSAPP_ENABLED } from '@/config/features';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
@@ -334,10 +335,12 @@ export function DealFormDialog({
                 <History className="h-4 w-4" />
                 <span className="hidden sm:inline">Histórico</span>
               </TabsTrigger>
-              <TabsTrigger value="whatsapp" className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">WhatsApp</span>
-              </TabsTrigger>
+              {WHATSAPP_ENABLED && (
+                <TabsTrigger value="whatsapp" className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="dados" className="flex-1 overflow-auto mt-4">
@@ -425,14 +428,16 @@ export function DealFormDialog({
               <DealHistoryTab dealId={editingDeal.id} />
             </TabsContent>
 
-            <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4 flex flex-col gap-4">
-              <UnderDevelopmentBanner compact title="Em Desenvolvimento" />
-              <DealWhatsAppChat
-                contactId={editingDeal.contact_id}
-                contactPhone={getContactPhone(editingDeal.contact_id)}
-                contactName={getContactName(editingDeal.contact_id)}
-              />
-            </TabsContent>
+            {WHATSAPP_ENABLED && (
+              <TabsContent value="whatsapp" className="flex-1 overflow-hidden mt-4 flex flex-col gap-4">
+                <UnderDevelopmentBanner compact title="Em Desenvolvimento" />
+                <DealWhatsAppChat
+                  contactId={editingDeal.contact_id}
+                  contactPhone={getContactPhone(editingDeal.contact_id)}
+                  contactName={getContactName(editingDeal.contact_id)}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">

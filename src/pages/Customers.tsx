@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
+import { WHATSAPP_ENABLED } from '@/config/features';
 import {
   Pagination,
   PaginationContent,
@@ -736,14 +737,16 @@ export default function Customers() {
                                 </TooltipTrigger>
                                 <TooltipContent>Editar</TooltipContent>
                               </Tooltip>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={(e) => handleOpenWhatsApp(customer, e)} disabled={!phone}>
-                                    <MessageCircle className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>{phone ? 'Abrir WhatsApp' : 'Sem telefone'}</TooltipContent>
-                              </Tooltip>
+                              {WHATSAPP_ENABLED && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={(e) => handleOpenWhatsApp(customer, e)} disabled={!phone}>
+                                      <MessageCircle className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{phone ? 'Abrir WhatsApp' : 'Sem telefone'}</TooltipContent>
+                                </Tooltip>
+                              )}
                               {isAdmin && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
