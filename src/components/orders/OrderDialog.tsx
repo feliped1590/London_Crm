@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrderItemDetailModal } from './OrderItemDetailModal';
 import { InlineCustomerEditSheet } from './InlineCustomerEditSheet';
+import { InlineProductEditSheet } from './InlineProductEditSheet';
 import type { OrderItemDraft, ProductLookup } from '@/types/documents';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/lib/formatters';
@@ -111,6 +112,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
 
   const isEditMode = !!order;
   const [customerEditOpen, setCustomerEditOpen] = useState(false);
+  const [productEditOpen, setProductEditOpen] = useState(false);
+  const [productEditId, setProductEditId] = useState<string | null>(null);
 
   // Entity-level lock is now the source of truth.
   // canEdit = false when the order is locked (only status changes via approval flow allowed)
@@ -1468,6 +1471,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         open={customerEditOpen}
         onOpenChange={setCustomerEditOpen}
       />
+      <InlineProductEditSheet
+        productId={productEditId}
+        open={productEditOpen}
+        onOpenChange={(o) => { setProductEditOpen(o); if (!o) setProductEditId(null); }}
+      />
+
+
 
 
       {/* Vínculo opcional ao negócio (Fase 2) + Data de Entrega lado a lado */}
@@ -1620,20 +1630,39 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 return (
                   <TableRow key={index}>
                     <TableCell>
-                      <div
-                        className="cursor-pointer hover:underline"
-                        onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
-                      >
-                        <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
-                        <p className="font-medium">{item.description}</p>
-                        {(item.observations || item.observations_pcp) && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
-                            {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
-                          </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          className="cursor-pointer hover:underline flex-1 min-w-0"
+                          onClick={() => { setDetailItemIndex(index); setDetailModalOpen(true); }}
+                        >
+                          <p className="text-xs text-muted-foreground font-mono">{item.product_code || product?.sku || ''}</p>
+                          <p className="font-medium">{item.description}</p>
+                          {(item.observations || item.observations_pcp) && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.observations && <Badge variant="outline" className="text-[10px]">Obs.</Badge>}
+                              {item.observations_pcp && <Badge variant="outline" className="text-[10px]">PCP</Badge>}
+                            </div>
+                          )}
+                        </div>
+                        {canEdit && item.product_id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            title="Editar produto"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProductEditId(item.product_id!);
+                              setProductEditOpen(true);
+                            }}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <NumberInput
