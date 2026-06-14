@@ -359,6 +359,7 @@ export default function CustomerNew() {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['customers-paginated'] });
       recordCustomerInteraction({ entityId: company.id, tenantId: company.tenant_id, interactionType: 'create' });
+      customerDraft.clear();
       toast.success('Cliente criado com sucesso!');
       navigate(`/customers/${company.id}`);
     },
@@ -370,6 +371,52 @@ export default function CustomerNew() {
       setIsSubmitting(false);
     },
   });
+
+  // -------- Workspace v1: rascunho persistido (Novo Cliente) --------
+  type CustomerNewDraftData = {
+    step: number;
+    customerType: CustomerType;
+    companyForm: typeof companyForm;
+    contactForm: typeof contactForm;
+    selectedLegalEntityId: string | null;
+    selectedSalesRepId: string | null;
+  };
+  const customerDraftData = useMemo<CustomerNewDraftData>(() => ({
+    step,
+    customerType,
+    companyForm,
+    contactForm,
+    selectedLegalEntityId,
+    selectedSalesRepId,
+  }), [step, customerType, companyForm, contactForm, selectedLegalEntityId, selectedSalesRepId]);
+  const customerDraft = useFormDraft<CustomerNewDraftData>({
+    context: 'customers:new',
+    enabled: true,
+    title: 'Novo cliente',
+    buildSnapshot: () => customerDraftData,
+    applyDraft: (data) => {
+      try {
+        if (typeof data?.step === 'number') setStep(data.step);
+        if (data?.customerType) setCustomerType(data.customerType);
+        if (data?.companyForm) setCompanyForm(data.companyForm);
+        if (data?.contactForm) setContactForm(data.contactForm);
+        if ('selectedLegalEntityId' in (data || {})) setSelectedLegalEntityId(data.selectedLegalEntityId ?? null);
+        if ('selectedSalesRepId' in (data || {})) setSelectedSalesRepId(data.selectedSalesRepId ?? null);
+      } catch (err) {
+        console.warn('[CustomerNew] applyDraft falhou', err);
+      }
+    },
+  });
+  const customerDraftJson = JSON.stringify(customerDraftData);
+  const prevCustomerDraftJsonRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!customerDraft.decided) return;
+    if (prevCustomerDraftJsonRef.current === null) { prevCustomerDraftJsonRef.current = customerDraftJson; return; }
+    if (prevCustomerDraftJsonRef.current !== customerDraftJson) {
+      prevCustomerDraftJsonRef.current = customerDraftJson;
+      customerDraft.markDirty();
+    }
+  }, [customerDraftJson, customerDraft.decided, customerDraft]);
 
   const validateCnpjField = (): boolean => {
     if (customerType !== 'PJ') return true;
