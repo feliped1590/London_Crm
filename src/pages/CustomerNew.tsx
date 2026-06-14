@@ -1001,6 +1001,14 @@ export default function CustomerNew() {
           </Card>
         </form>
       )}
+
+      <DraftRestoreDialog
+        open={customerDraft.restorePending}
+        savedAt={customerDraft.draftSavedAt}
+        title="Você tem um rascunho de novo cliente"
+        onRestore={customerDraft.acceptRestore}
+        onDiscard={customerDraft.discardRestore}
+      />
     </div>
   );
 }
