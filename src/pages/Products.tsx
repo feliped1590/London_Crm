@@ -2285,6 +2285,7 @@ export default function Products() {
                     <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric>Comprimento</SortableHeader>
                     <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric>Espessura</SortableHeader>
                     <SortableHeader field="updated_at">Última Atualização</SortableHeader>
+                    <TableHead>Cód. ERP</TableHead>
                     <TableHead>ERP</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
