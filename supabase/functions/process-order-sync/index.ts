@@ -395,7 +395,7 @@ Deno.serve(async (req) => {
           console.log(`[process-order-sync] orders atualizado com sucesso`);
         }
 
-        // Log detalhado
+        // Log detalhado (com rastreio de endpoint/empresa usados)
         const parsedPayload = JSON.parse(payload);
         await supabase.from('order_sync_log').insert({
           order_id: queueItem.order_id,
@@ -405,6 +405,9 @@ Deno.serve(async (req) => {
           status: 'success',
           request_payload: parsedPayload,
           response_payload: toLogPayload(parsedResult),
+          legal_entity_id: erpCfg.legalEntityId,
+          endpoint_used: erpCfg.endpoint,
+          empresa_used: erpCfg.empresa,
         });
 
         // Observabilidade centralizada com TODOS os mapeamentos
@@ -453,6 +456,47 @@ Deno.serve(async (req) => {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         console.error(`[process-order-sync] Erro no pedido ${queueItem.order_id}:`, errorMsg);
+
+        // 4b-bis. Erros de configuração ERP da entidade jurídica → blocked_validation
+        // (não consomem retries, geram pendência clara para correção em /settings).
+        if (isOrderErpConfigError(error)) {
+          await supabase
+            .from('order_sync_queue')
+            .update({
+              status: 'blocked_validation',
+              attempt_count: 0,
+              error_message: errorMsg,
+              next_retry_at: null,
+              validation_errors: [{
+                field: error.field,
+                message: errorMsg,
+                fixHint: error.fixHint,
+                fixRoute: error.fixRoute,
+              }],
+              validation_fields: [error.field],
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
+
+          await supabase
+            .from('orders')
+            .update({ erp_sync_status: 'blocked_validation' })
+            .eq('id', queueItem.order_id);
+
+          await supabase.from('order_sync_log').insert({
+            order_id: queueItem.order_id,
+            queue_item_id: queueItem.id,
+            pedido_terceiro: queueItem.pedido_terceiro,
+            direction: 'crm_to_erp',
+            status: 'blocked_validation',
+            error_message: `${error.field}: ${errorMsg}`,
+          });
+
+          errorCount++;
+          results.push({ order_id: queueItem.order_id, status: 'blocked_validation', error: errorMsg });
+          continue;
+        }
+
 
         if (isPermanentOrderSyncError(errorMsg)) {
           await supabase
