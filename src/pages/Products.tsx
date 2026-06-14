@@ -2277,21 +2277,21 @@ export default function Products() {
           ) : products && products.length > 0 ? (
             <ProductSyncProvider ids={(products ?? []).map((p: any) => p.id)}>
             <div className="table-responsive">
-              <Table className="min-w-[900px]">
+              <Table className="min-w-[760px]" data-density={density}>
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader field="family_id" filterKey="family_id" filterPlaceholder="Filtrar família...">Família</SortableHeader>
-                    <SortableHeader field="sku">Código</SortableHeader>
+                    <SortableHeader field="family_id" filterKey="family_id" filterPlaceholder="Filtrar família..." className="hidden xl:table-cell">Família</SortableHeader>
+                    <SortableHeader field="sku" className="sticky-col-start">Código</SortableHeader>
                     <SortableHeader field="name">Descrição</SortableHeader>
-                    <SortableHeader field="unit_measure" filterKey="unit_measure" filterPlaceholder="Filtrar unidade...">Unidade</SortableHeader>
-                    <SortableHeader field="ncm_code" filterKey="ncm_code" filterPlaceholder="Filtrar NCM...">NCM</SortableHeader>
-                    <SortableHeader field="width" filterKey="width" filterPlaceholder="Igual a..." numeric>Largura</SortableHeader>
-                    <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric>Comprimento</SortableHeader>
-                    <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric>Espessura</SortableHeader>
-                    <SortableHeader field="updated_at">Última Atualização</SortableHeader>
-                    <TableHead>Cód. ERP</TableHead>
+                    <SortableHeader field="unit_measure" filterKey="unit_measure" filterPlaceholder="Filtrar unidade..." className="hidden lg:table-cell">Unidade</SortableHeader>
+                    <SortableHeader field="ncm_code" filterKey="ncm_code" filterPlaceholder="Filtrar NCM..." className="hidden 2xl:table-cell">NCM</SortableHeader>
+                    <SortableHeader field="width" filterKey="width" filterPlaceholder="Igual a..." numeric className="hidden xl:table-cell">Largura</SortableHeader>
+                    <SortableHeader field="length" filterKey="length" filterPlaceholder="Igual a..." numeric className="hidden xl:table-cell">Comprimento</SortableHeader>
+                    <SortableHeader field="thickness" filterKey="thickness" filterPlaceholder="Igual a..." numeric className="hidden 2xl:table-cell">Espessura</SortableHeader>
+                    <SortableHeader field="updated_at" className="hidden 2xl:table-cell">Última Atualização</SortableHeader>
+                    <TableHead className="hidden lg:table-cell">Cód. ERP</TableHead>
                     <TableHead>ERP</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right sticky-col-end">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2303,14 +2303,14 @@ export default function Products() {
                       className={canEditProducts ? 'cursor-pointer hover:bg-muted/50' : ''}
                       onClick={canEditProducts ? () => handleEdit(product) : undefined}
                     >
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {product.family_id ? (
                           <span className="text-sm">
                             {familias.items.find((f) => f.id === product.family_id)?.label || '—'}
                           </span>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </TableCell>
-                      <TableCell className="font-mono font-medium">
+                      <TableCell className="font-mono font-medium sticky-col-start whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span>{product.sku}</span>
                           {((product as any).versao_numero ?? 1) > 1 && (
@@ -2326,8 +2326,8 @@ export default function Products() {
                           {product.name}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{product.unit_measure || '—'}</TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm hidden lg:table-cell">{product.unit_measure || '—'}</TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
                         {product.ncm_code ? (
                           <Badge variant="outline" className="font-mono text-xs">
                             {product.ncm_code}
@@ -2336,13 +2336,13 @@ export default function Products() {
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{product.width ? `${product.width}` : '—'}</TableCell>
-                      <TableCell className="text-sm">{product.length ? `${product.length}` : '—'}</TableCell>
-                      <TableCell className="text-sm">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">
+                      <TableCell className="text-sm hidden xl:table-cell">{product.width ? `${product.width}` : '—'}</TableCell>
+                      <TableCell className="text-sm hidden xl:table-cell">{product.length ? `${product.length}` : '—'}</TableCell>
+                      <TableCell className="text-sm hidden 2xl:table-cell">{product.thickness ? `${product.thickness}` : '—'}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap hidden 2xl:table-cell">
                         {product.updated_at ? formatDistanceToNow(new Date(product.updated_at), { addSuffix: true, locale: ptBR }) : '—'}
                       </TableCell>
-                      <TableCell className="font-mono text-xs" onClick={stop}>
+                      <TableCell className="font-mono text-xs hidden lg:table-cell" onClick={stop}>
                         {(product as any).erp_product_code
                           ? <span className="font-medium">{(product as any).erp_product_code}</span>
                           : <span className="text-muted-foreground">—</span>}
@@ -2354,7 +2354,7 @@ export default function Products() {
                           onProductUpdated={handleProductSyncUpdated}
                         />
                       </TableCell>
-                      <TableCell className="text-right" onClick={stop}>
+                      <TableCell className="text-right sticky-col-end" onClick={stop}>
                         <div className="flex justify-end gap-1">
                           {canEditProducts && (
                             <ProductSyncButton
