@@ -454,6 +454,33 @@ serve(async (req) => {
             text-align: center; font-size: 9px; color: #718096;
           }
           .footer strong { color: #2d3748; font-size: 10px; }
+
+          /* Imagens dos Itens */
+          .item-images-grid { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+          .item-image-card {
+            flex: 0 0 auto;
+            border: 1px solid #e2e8f0; border-radius: 4px;
+            padding: 8px; background: #fff;
+            page-break-inside: avoid;
+            width: 300px;
+          }
+          .item-image-card .item-image-label {
+            font-size: 10px; color: #4a5568; margin-bottom: 6px;
+            font-weight: 600;
+          }
+          .item-image-card .item-image-label .item-num {
+            color: #2d3748; font-weight: 700;
+          }
+          .item-image-card .item-image-wrap {
+            display: flex; align-items: center; justify-content: center;
+            background: #f7fafc; border-radius: 3px;
+            width: 100%; height: 220px; overflow: hidden;
+          }
+          .item-image-card img {
+            max-width: 100%; max-height: 100%;
+            width: auto; height: auto;
+            object-fit: contain;
+          }
         </style>
       </head>
       <body>
