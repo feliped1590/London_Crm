@@ -1707,7 +1707,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
       {items.length > 0 && (
-        <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} />
+        <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} totalWeight={orderTotalWeight} />
       )}
 
 
