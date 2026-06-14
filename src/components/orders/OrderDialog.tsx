@@ -1616,6 +1616,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
+                const itemWeight = getItemWeight(item);
                 return (
                   <TableRow key={index}>
                     <TableCell>
