@@ -17,6 +17,7 @@ import { DealWhatsAppChat } from '@/components/pipeline/DealWhatsAppChat';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { UnderDevelopmentBanner } from '@/components/UnderDevelopmentBanner';
 import { DealQuickActions } from '@/components/pipeline/DealQuickActions';
+import { WHATSAPP_ENABLED } from '@/config/features';
 import { SearchableSelect, type SearchableSelectOption } from '@/components/ui/searchable-select';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { formatCNPJ } from '@/lib/cpfCnpjMask';
