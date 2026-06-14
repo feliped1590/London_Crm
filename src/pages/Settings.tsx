@@ -45,6 +45,7 @@ import { TransferApprovalsManager } from '@/components/settings/TransferApproval
 import { ResetOrdersManager } from '@/components/settings/ResetOrdersManager';
 import { AccessWindowManager } from '@/components/settings/AccessWindowManager';
 import { ClassificacaoManager } from '@/components/settings/ClassificacaoManager';
+import { LifecycleConfigManager } from '@/components/settings/LifecycleConfigManager';
 
 import PricingTablesContent from '@/pages/PricingTables';
 import type { Tables, TablesInsert } from '@/integrations/supabase/types';
