@@ -20,9 +20,15 @@ interface EntityFormData {
   cnpj: string;
   erp_company_code: string;
   trade_name: string;
+  order_erp_endpoint: string;
+  order_erp_token_secret_name: string;
+  order_erp_enabled: boolean;
 }
 
-const emptyForm: EntityFormData = { name: '', cnpj: '', erp_company_code: '', trade_name: '' };
+const emptyForm: EntityFormData = {
+  name: '', cnpj: '', erp_company_code: '', trade_name: '',
+  order_erp_endpoint: '', order_erp_token_secret_name: '', order_erp_enabled: true,
+};
 
 export function LegalEntityPermissionsManager() {
   const queryClient = useQueryClient();
@@ -68,6 +74,9 @@ export function LegalEntityPermissionsManager() {
             cnpj: cnpjDigits,
             erp_company_code: entityForm.erp_company_code || null,
             trade_name: entityForm.trade_name || null,
+            order_erp_endpoint: entityForm.order_erp_endpoint.trim() || null,
+            order_erp_token_secret_name: entityForm.order_erp_token_secret_name.trim() || null,
+            order_erp_enabled: entityForm.order_erp_enabled,
           })
           .eq('id', editingEntityId);
         if (error) throw error;
@@ -79,6 +88,9 @@ export function LegalEntityPermissionsManager() {
             cnpj: cnpjDigits,
             erp_company_code: entityForm.erp_company_code || null,
             trade_name: entityForm.trade_name || null,
+            order_erp_endpoint: entityForm.order_erp_endpoint.trim() || null,
+            order_erp_token_secret_name: entityForm.order_erp_token_secret_name.trim() || null,
+            order_erp_enabled: entityForm.order_erp_enabled,
             tenant_id: tenantId,
           });
         if (error) {
@@ -151,6 +163,9 @@ export function LegalEntityPermissionsManager() {
       cnpj: formatCNPJ(entity.cnpj),
       erp_company_code: entity.erp_company_code || '',
       trade_name: entity.trade_name || '',
+      order_erp_endpoint: (entity as any).order_erp_endpoint || '',
+      order_erp_token_secret_name: (entity as any).order_erp_token_secret_name || '',
+      order_erp_enabled: (entity as any).order_erp_enabled ?? true,
     });
     setIsEntityDialogOpen(true);
   };
@@ -192,18 +207,30 @@ export function LegalEntityPermissionsManager() {
                   <TableHead>Nome Fantasia</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Código ERP</TableHead>
+                  <TableHead>Integração Pedidos</TableHead>
                   <TableHead>Padrão</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[120px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allEntitiesFull.map((entity) => (
+                {allEntitiesFull.map((entity) => {
+                  const orderEnabled = (entity as any).order_erp_enabled ?? true;
+                  const orderEndpoint = (entity as any).order_erp_endpoint as string | null;
+                  const orderBadge = !orderEnabled
+                    ? { label: 'Desativada', variant: 'destructive' as const }
+                    : orderEndpoint
+                      ? { label: 'Endpoint próprio', variant: 'default' as const }
+                      : { label: 'Padrão (global)', variant: 'secondary' as const };
+                  return (
                   <TableRow key={entity.id} className={!entity.active ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">{entity.name}</TableCell>
                     <TableCell>{entity.trade_name || '—'}</TableCell>
                     <TableCell className="font-mono text-sm">{formatCNPJ(entity.cnpj)}</TableCell>
                     <TableCell>{entity.erp_company_code || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant={orderBadge.variant}>{orderBadge.label}</Badge>
+                    </TableCell>
                     <TableCell>
                       {entity.active && (
                         <Switch
@@ -256,7 +283,8 @@ export function LegalEntityPermissionsManager() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -300,8 +328,49 @@ export function LegalEntityPermissionsManager() {
               <Input
                 value={entityForm.erp_company_code}
                 onChange={(e) => setEntityForm(prev => ({ ...prev, erp_company_code: e.target.value }))}
-                placeholder="Código da empresa no ERP (opcional)"
+                placeholder="Código da empresa no ERP (ex.: 1, 2)"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Usado como <code>empresa</code> no payload de pedidos enviado ao ERP.
+              </p>
+            </div>
+
+            <div className="border-t pt-4 mt-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-base">Integração de Pedidos (ERP)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Configuração específica para envio de pedidos. Não afeta clientes, produtos ou atributos.
+                  </p>
+                </div>
+                <Switch
+                  checked={entityForm.order_erp_enabled}
+                  onCheckedChange={(v) => setEntityForm(prev => ({ ...prev, order_erp_enabled: v }))}
+                />
+              </div>
+              <div>
+                <Label>Endpoint do ERP (pedidos)</Label>
+                <Input
+                  value={entityForm.order_erp_endpoint}
+                  onChange={(e) => setEntityForm(prev => ({ ...prev, order_erp_endpoint: e.target.value }))}
+                  placeholder="https://iniflex.exemplo.com.br/api/v1/runtime/endpoint/integracao/iniflex/json"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Em branco = usa o endpoint padrão global (Novafix).
+                </p>
+              </div>
+              <div>
+                <Label>Nome do Secret do Token</Label>
+                <Input
+                  value={entityForm.order_erp_token_secret_name}
+                  onChange={(e) => setEntityForm(prev => ({ ...prev, order_erp_token_secret_name: e.target.value }))}
+                  placeholder="Ex.: PROJEDATA_TOKEN_MARTINAPACK"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cadastre o valor do token em Configurações → Secrets com exatamente este nome.
+                  Em branco = usa o token padrão global.
+                </p>
+              </div>
             </div>
           </div>
           <DialogFooter>

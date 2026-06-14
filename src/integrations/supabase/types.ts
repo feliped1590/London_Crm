@@ -4378,6 +4378,9 @@ export type Database = {
           is_headquarters: boolean
           logo_url: string | null
           name: string
+          order_erp_enabled: boolean
+          order_erp_endpoint: string | null
+          order_erp_token_secret_name: string | null
           phone: string | null
           regime_tributario: string | null
           state: string | null
@@ -4399,6 +4402,9 @@ export type Database = {
           is_headquarters?: boolean
           logo_url?: string | null
           name: string
+          order_erp_enabled?: boolean
+          order_erp_endpoint?: string | null
+          order_erp_token_secret_name?: string | null
           phone?: string | null
           regime_tributario?: string | null
           state?: string | null
@@ -4420,6 +4426,9 @@ export type Database = {
           is_headquarters?: boolean
           logo_url?: string | null
           name?: string
+          order_erp_enabled?: boolean
+          order_erp_endpoint?: string | null
+          order_erp_token_secret_name?: string | null
           phone?: string | null
           regime_tributario?: string | null
           state?: string | null
@@ -5753,8 +5762,11 @@ export type Database = {
         Row: {
           created_at: string
           direction: string
+          empresa_used: number | null
+          endpoint_used: string | null
           error_message: string | null
           id: string
+          legal_entity_id: string | null
           order_id: string
           pedido_terceiro: number | null
           queue_item_id: string | null
@@ -5765,8 +5777,11 @@ export type Database = {
         Insert: {
           created_at?: string
           direction?: string
+          empresa_used?: number | null
+          endpoint_used?: string | null
           error_message?: string | null
           id?: string
+          legal_entity_id?: string | null
           order_id: string
           pedido_terceiro?: number | null
           queue_item_id?: string | null
@@ -5777,8 +5792,11 @@ export type Database = {
         Update: {
           created_at?: string
           direction?: string
+          empresa_used?: number | null
+          endpoint_used?: string | null
           error_message?: string | null
           id?: string
+          legal_entity_id?: string | null
           order_id?: string
           pedido_terceiro?: number | null
           queue_item_id?: string | null

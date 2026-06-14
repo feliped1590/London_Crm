@@ -14,6 +14,7 @@ import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { resolveOrderErpConfig, isOrderErpConfigError } from '../_shared/erp/order-endpoint-resolver.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
 
@@ -44,12 +45,8 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  const apiUrl = Deno.env.get('PROJEDATA_API_URL');
-  const apiToken = Deno.env.get('PROJEDATA_API_TOKEN');
-
-  if (!apiUrl || !apiToken) {
-    return errorResponse(500, 'PROJEDATA_API_URL e PROJEDATA_API_TOKEN não configurados');
-  }
+  // Endpoint e token são resolvidos POR PEDIDO via resolveOrderErpConfig (escopo:
+  // apenas pedidos). Outras integrações continuam usando env vars globais.
 
   try {
     // Parse request body for optional order_id (manual sync)
@@ -227,7 +224,6 @@ Deno.serve(async (req) => {
                 paymentMapping, paymentTermsStr, paymentConditions, saleTypeMap,
                 orderSaleType, orderTipoVendaCode,
                 carrierErpCode, redespachoErpCode, followup, toValidate } = ctx;
-
         // 4. Pré-validar (defesa em profundidade)
         const validation = validateOrderForSync(toValidate);
 
@@ -267,6 +263,12 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // 4b. Resolver endpoint/token/empresa pela entidade jurídica do pedido.
+        // Erros aqui são tratados como blocked_validation (não consomem retries).
+        const erpCfg = await resolveOrderErpConfig(supabase, order.legal_entity_id);
+        const endpointHost = (() => { try { return new URL(erpCfg.endpoint).host; } catch { return erpCfg.endpoint; } })();
+        console.log(`[process-order-sync] [legal_entity=${erpCfg.legalEntityName} | endpoint=${endpointHost} | empresa=${erpCfg.empresa} | source=${erpCfg.source}]`);
+
         console.log(`[process-order-sync] Contexto: user=${userName} (erp:${erpUsuario}), tipo=${crmOrderType}→${typeMapping!.erp_flow_code}, vendedor=${sellerName} (erp:${erpVendedor}), frete=${crmFreightType}→${freightMapping!.erp_freight_code}, pagto=${crmPaymentMethod}→${paymentMapping?.erp_payment_code ?? '?'}, parcelas=${paymentTermsStr}, sale_type=${orderSaleType}→${orderTipoVendaCode}, transp=${carrierErpCode}, redesp=${redespachoErpCode}, followup=${followup ? 'sim' : 'não'}`);
 
         // 5. Montar payload
@@ -278,7 +280,7 @@ Deno.serve(async (req) => {
           freight_type: freightMapping!.erp_freight_code,
           delivery_date: order.delivery_date,
           company_cnpj: company.cnpj,
-          erp_empresa: Number(legalEntity.erp_company_code),
+          erp_empresa: erpCfg.empresa,
           erp_fluxo_venda: typeMapping!.erp_flow_code,
           erp_usuario: erpUsuario,
           erp_vendedor: erpVendedor,
@@ -312,12 +314,12 @@ Deno.serve(async (req) => {
 
         console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro})`);
 
-        // 6. Enviar ao ERP
-        const response = await fetch(apiUrl!, {
+        // 6. Enviar ao ERP (endpoint/token resolvidos pela entidade jurídica do pedido)
+        const response = await fetch(erpCfg.endpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiToken}`,
+            'Authorization': `Bearer ${erpCfg.token}`,
           },
           body: payload,
         });
@@ -393,7 +395,7 @@ Deno.serve(async (req) => {
           console.log(`[process-order-sync] orders atualizado com sucesso`);
         }
 
-        // Log detalhado
+        // Log detalhado (com rastreio de endpoint/empresa usados)
         const parsedPayload = JSON.parse(payload);
         await supabase.from('order_sync_log').insert({
           order_id: queueItem.order_id,
@@ -403,6 +405,9 @@ Deno.serve(async (req) => {
           status: 'success',
           request_payload: parsedPayload,
           response_payload: toLogPayload(parsedResult),
+          legal_entity_id: erpCfg.legalEntityId,
+          endpoint_used: erpCfg.endpoint,
+          empresa_used: erpCfg.empresa,
         });
 
         // Observabilidade centralizada com TODOS os mapeamentos
@@ -451,6 +456,47 @@ Deno.serve(async (req) => {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
         console.error(`[process-order-sync] Erro no pedido ${queueItem.order_id}:`, errorMsg);
+
+        // 4b-bis. Erros de configuração ERP da entidade jurídica → blocked_validation
+        // (não consomem retries, geram pendência clara para correção em /settings).
+        if (isOrderErpConfigError(error)) {
+          await supabase
+            .from('order_sync_queue')
+            .update({
+              status: 'blocked_validation',
+              attempt_count: 0,
+              error_message: errorMsg,
+              next_retry_at: null,
+              validation_errors: [{
+                field: error.field,
+                message: errorMsg,
+                fixHint: error.fixHint,
+                fixRoute: error.fixRoute,
+              }],
+              validation_fields: [error.field],
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', queueItem.id);
+
+          await supabase
+            .from('orders')
+            .update({ erp_sync_status: 'blocked_validation' })
+            .eq('id', queueItem.order_id);
+
+          await supabase.from('order_sync_log').insert({
+            order_id: queueItem.order_id,
+            queue_item_id: queueItem.id,
+            pedido_terceiro: queueItem.pedido_terceiro,
+            direction: 'crm_to_erp',
+            status: 'blocked_validation',
+            error_message: `${error.field}: ${errorMsg}`,
+          });
+
+          errorCount++;
+          results.push({ order_id: queueItem.order_id, status: 'blocked_validation', error: errorMsg });
+          continue;
+        }
+
 
         if (isPermanentOrderSyncError(errorMsg)) {
           await supabase
