@@ -32,6 +32,7 @@ import { AttachmentManager } from '@/components/attachments/AttachmentManager';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Json } from '@/integrations/supabase/types';
 import { TransferRequestModal } from '@/components/customers/TransferRequestModal';
+import { CustomerReviewAlertDialog } from '@/components/customers/CustomerReviewAlertDialog';
 import { toast } from 'sonner';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
 
@@ -53,8 +54,17 @@ export default function CustomerDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [showReviewAlert, setShowReviewAlert] = useState(false);
   const queryClient = useQueryClient();
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
+
+  useEffect(() => {
+    if (customer?.source === 'crm' && isReviewOverdue(customer.last_reviewed_at)) {
+      setShowReviewAlert(true);
+    } else {
+      setShowReviewAlert(false);
+    }
+  }, [customer?.id, customer?.source, customer?.last_reviewed_at]);
 
   useEffect(() => {
     if (customer?.id && customer.source === 'crm') {
@@ -501,6 +511,27 @@ export default function CustomerDetail() {
           companyName={displayName}
           currentSalesRepId={customerSalesRepId}
           currentSalesRepName={ownerSalesRep.name}
+        />
+      )}
+
+      {/* Review Alert Dialog (90 days policy) */}
+      {customer.source === 'crm' && (
+        <CustomerReviewAlertDialog
+          open={showReviewAlert}
+          customerName={displayName}
+          lastReviewedLabel={formatReviewDate(customer.last_reviewed_at)}
+          canEdit={canEdit}
+          isMarking={markAsReviewedMutation.isPending}
+          onClose={() => setShowReviewAlert(false)}
+          onReviewNow={() => {
+            setShowReviewAlert(false);
+            setIsEditing(true);
+          }}
+          onMarkReviewed={() => {
+            markAsReviewedMutation.mutate(undefined, {
+              onSuccess: () => setShowReviewAlert(false),
+            });
+          }}
         />
       )}
     </div>

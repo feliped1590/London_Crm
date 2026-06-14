@@ -374,9 +374,9 @@ export function useCustomerDetail(id: string | undefined) {
   const isReviewOverdue = (lastReviewedAt: string | null | undefined): boolean => {
     if (!lastReviewedAt) return true;
     const lastReview = new Date(lastReviewedAt);
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    return lastReview < sixMonthsAgo;
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    return lastReview < ninetyDaysAgo;
   };
 
   const formatReviewDate = (dateString: string | null | undefined): string => {
