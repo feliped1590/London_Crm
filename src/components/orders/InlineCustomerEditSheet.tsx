@@ -1,6 +1,4 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
 import { CompanyQuickEditForm } from './CompanyQuickEditForm';
 
 interface InlineCustomerEditSheetProps {
@@ -12,26 +10,17 @@ interface InlineCustomerEditSheetProps {
 /**
  * Painel lateral que abre o formulário enxuto de edição do cliente sem sair
  * do OrderDialog. Carrega apenas os campos editáveis (Informações, Logística
- * Padrão e Endereço). Para o cadastro completo, usar "Abrir em nova aba".
+ * Padrão e Endereço).
  */
 export function InlineCustomerEditSheet({ companyId, open, onOpenChange }: InlineCustomerEditSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-[720px] p-0 flex flex-col gap-0">
-        <SheetHeader className="px-4 py-3 border-b flex-row items-center justify-between space-y-0">
-          <div className="space-y-1">
-            <SheetTitle>Editar cliente</SheetTitle>
-            <SheetDescription className="text-xs">
-              As alterações ficam disponíveis no pedido após salvar.
-            </SheetDescription>
-          </div>
-          {companyId && (
-            <Button asChild size="sm" variant="ghost">
-              <a href={`/customers/${companyId}`} target="_blank" rel="noreferrer">
-                <ExternalLink className="h-4 w-4 mr-1" /> Abrir em nova aba
-              </a>
-            </Button>
-          )}
+        <SheetHeader className="px-4 py-3 border-b space-y-1">
+          <SheetTitle>Editar cliente</SheetTitle>
+          <SheetDescription className="text-xs">
+            As alterações ficam disponíveis no pedido após salvar.
+          </SheetDescription>
         </SheetHeader>
         {companyId ? (
           <CompanyQuickEditForm
