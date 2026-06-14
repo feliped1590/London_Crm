@@ -19,7 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
 import { prefetchTopRoutesIdle } from "@/lib/routePrefetch";
-import { WorkspacePilotPage } from "@/workspace/WorkspacePilotPage";
+
 
 // Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
 import Auth from "./pages/Auth";
@@ -173,14 +173,14 @@ const App = () => (
               <Route element={<LegalEntityGuard><AppLayout /></LegalEntityGuard>}>
                 <Route path="/today" element={<Today />} />
                 <Route path="/dashboard" element={<Navigate to="/today?tab=visao-geral" replace />} />
-                <Route path="/customers" element={<WorkspacePilotPage Fallback={Customers} />} />
-                <Route path="/customers/new" element={<WorkspacePilotPage Fallback={CustomerNew} />} />
-                <Route path="/customers/:id" element={<WorkspacePilotPage Fallback={CustomerDetail} />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/customers/new" element={<CustomerNew />} />
+                <Route path="/customers/:id" element={<CustomerDetail />} />
                 <Route path="/companies" element={<Companies />} />
                 <Route path="/contacts" element={<Contacts />} />
                 <Route path="/pipeline" element={<Pipeline />} />
                 <Route path="/products" element={<Products />} />
-                <Route path="/orders" element={<WorkspacePilotPage Fallback={Orders} />} />
+                <Route path="/orders" element={<Orders />} />
                 <Route path="/stock" element={<Stock />} />
                 <Route path="/carriers" element={<Carriers />} />
                 <Route path="/tasks" element={<Tasks />} />
