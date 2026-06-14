@@ -25,8 +25,10 @@ interface CRMOrder {
   status: string;
   total_value: number | null;
   created_at: string;
+  updated_at: string | null;
   delivery_date: string | null;
   erp_order_id: string | number | null;
+  erp_synced_at: string | null;
 }
 
 interface ERPOrder {
