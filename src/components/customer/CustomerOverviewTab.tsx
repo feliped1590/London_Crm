@@ -189,8 +189,27 @@ export function CustomerOverviewTab({
               <p className="text-xs text-muted-foreground mt-1">Preencha manualmente se o sistema não retornou</p>
             </div>
             <div>
-              <Label htmlFor="inscricao_estadual">Inscrição Estadual <span className="text-destructive">*</span></Label>
-              <Input id="inscricao_estadual" value={companyForm.inscricao_estadual} onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value.replace(/\D/g, '').slice(0, 14) })} inputMode="numeric" maxLength={14} disabled={!isEditing || isErpCustomer} required />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="inscricao_estadual">Inscrição Estadual <span className="text-destructive">*</span></Label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Switch
+                    checked={companyForm.inscricao_estadual === 'ISENTO'}
+                    onCheckedChange={(checked) => setCompanyForm({ ...companyForm, inscricao_estadual: checked ? 'ISENTO' : '' })}
+                    disabled={!isEditing || isErpCustomer}
+                  />
+                  Isento
+                </label>
+              </div>
+              <Input
+                id="inscricao_estadual"
+                value={companyForm.inscricao_estadual}
+                onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value.replace(/\D/g, '').slice(0, 14) })}
+                inputMode="numeric"
+                maxLength={14}
+                disabled={!isEditing || isErpCustomer || companyForm.inscricao_estadual === 'ISENTO'}
+                placeholder={companyForm.inscricao_estadual === 'ISENTO' ? 'ISENTO' : 'Somente números'}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
