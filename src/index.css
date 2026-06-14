@@ -390,6 +390,57 @@
   .app-main { min-width: 0; padding: var(--content-padding); }
   .layout-transition { transition: all 0.2s ease; }
 
+  /* ===== Densidade adaptativa de tabelas (responsividade + zoom) ===== */
+  [data-density="compact"] th,
+  [data-density="compact"] td {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+    font-size: 13px;
+  }
+  [data-density="compact"] th { height: 2.25rem; }
+  [data-density="compact"] .density-badge,
+  [data-density="compact"] [data-density-badge] { font-size: 10px; padding: 1px 6px; }
+
+  [data-density="dense"] th,
+  [data-density="dense"] td {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    font-size: 12px;
+  }
+  [data-density="dense"] th { height: 2rem; }
+  [data-density="dense"] .density-badge,
+  [data-density="dense"] [data-density-badge] { font-size: 10px; padding: 0 5px; }
+  [data-density="dense"] .h-10 { height: 2rem; width: 2rem; }
+  [data-density="dense"] .w-10 { width: 2rem; }
+
+  /* Sticky helpers para colunas fixas em tabelas com scroll horizontal */
+  .sticky-col-start {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: hsl(var(--card));
+    box-shadow: 1px 0 0 0 hsl(var(--border-subtle));
+  }
+  .sticky-col-end {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background-color: hsl(var(--card));
+    box-shadow: -1px 0 0 0 hsl(var(--border-subtle));
+  }
+  tr:hover .sticky-col-start,
+  tr:hover .sticky-col-end {
+    background-color: hsl(var(--surface-elevated));
+  }
+  thead .sticky-col-start,
+  thead .sticky-col-end {
+    background-color: hsl(var(--surface-elevated));
+  }
+
   /* Keyboard shortcut chip */
   .kbd {
     display: inline-flex;

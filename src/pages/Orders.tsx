@@ -20,6 +20,7 @@ import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit columns used by the list (avoids `select('*')` payload).
@@ -47,6 +48,7 @@ export default function Orders() {
   const queryClient = useQueryClient();
   const { isAdmin, can } = useModulePermissions();
   const { activeLegalEntityId, isContextReady } = useLegalEntities();
+  const density = useResponsiveDensity();
   const canCreateOrders = can('orders', PermissionAction.Create);
   const canEditOrders = can('orders', PermissionAction.Edit);
   const [searchTerm, setSearchTerm] = useState('');
@@ -322,20 +324,20 @@ export default function Orders() {
            ) : filteredOrders && filteredOrders.length > 0 ? (
              <OrderSyncProvider ids={visibleOrderIds}>
              <div className="table-responsive">
-               <Table className="min-w-[900px]">
+               <Table className="min-w-[760px]" data-density={density}>
                  <TableHeader>
                    <TableRow>
-                     <TableHead>Número</TableHead>
-                     <TableHead>Tipo</TableHead>
+                     <TableHead className="sticky-col-start">Número</TableHead>
+                     <TableHead className="hidden xl:table-cell">Tipo</TableHead>
                      <TableHead>Empresa</TableHead>
-                     <TableHead>Logística</TableHead>
+                     <TableHead className="hidden 2xl:table-cell">Logística</TableHead>
                      <TableHead>Status</TableHead>
-                     <TableHead>Pedido ERP</TableHead>
+                     <TableHead className="hidden xl:table-cell">Pedido ERP</TableHead>
                      <TableHead>Sinc. ERP</TableHead>
-                    <TableHead>Entrega Prevista</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Data Criação</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="hidden lg:table-cell">Entrega Prevista</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
+                    <TableHead className="hidden 2xl:table-cell">Data Criação</TableHead>
+                    <TableHead className="text-right sticky-col-end">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
@@ -346,7 +348,7 @@ export default function Orders() {
 
                      return (
                        <TableRow key={order.id}>
-                         <TableCell className="font-mono font-medium">
+                         <TableCell className="font-mono font-medium sticky-col-start">
                            <div className="flex items-center gap-1.5">
                              {(order as any).is_locked && (
                                <Tooltip>
@@ -359,7 +361,7 @@ export default function Orders() {
                              {order.number}
                            </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden xl:table-cell">
                             {(() => {
                               const ot = (order as any).order_type as OrderType || 'Novo/Alteração';
                               const cfg = orderTypeConfig[ot] || orderTypeConfig['Novo/Alteração'];
@@ -388,7 +390,7 @@ export default function Orders() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden 2xl:table-cell">
                             {(carrierName || freightType) ? (
                               <TooltipProvider>
                                 <Tooltip>
@@ -429,7 +431,7 @@ export default function Orders() {
                               {orderStatusConfig[order.status].label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-sm hidden xl:table-cell">
                             {(order as any).erp_order_id ? (
                               <span className="font-medium">{(order as any).erp_order_id}</span>
                             ) : (
@@ -444,7 +446,7 @@ export default function Orders() {
                               updatedAt={(order as any).updated_at}
                             />
                           </TableCell>
-                         <TableCell>
+                         <TableCell className="hidden lg:table-cell">
                            {order.delivery_date && (
                              <div className="flex items-center gap-2">
                                <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -452,9 +454,9 @@ export default function Orders() {
                              </div>
                            )}
                          </TableCell>
-                         <TableCell className="font-medium">{formatCurrency(order.total_value || 0)}</TableCell>
-                         <TableCell className="text-muted-foreground">{formatDate(order.created_at)}</TableCell>
-                          <TableCell className="text-right">
+                         <TableCell className="font-medium hidden md:table-cell">{formatCurrency(order.total_value || 0)}</TableCell>
+                         <TableCell className="text-muted-foreground hidden 2xl:table-cell">{formatDate(order.created_at)}</TableCell>
+                          <TableCell className="text-right sticky-col-end">
                             <div className="flex items-center justify-end gap-1">
                               <OrderSyncButton
                                 orderId={order.id}

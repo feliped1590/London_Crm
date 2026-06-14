@@ -25,6 +25,7 @@ import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 // queryCacheManager helpers are no longer needed: server-side pagination uses
 // invalidateQueries / setQueriesData directly.
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
 
 // Explicit column list used by the table + edit form. Avoids `select('*')`
@@ -48,6 +49,7 @@ export default function Companies() {
   const { canAccessBySalesRep } = useSalesRepAccess();
   const queryClient = useQueryClient();
   const { getNomeById } = useClassificacao();
+  const density = useResponsiveDensity();
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 350);
   const [page, setPage] = useState(1);
@@ -485,27 +487,28 @@ export default function Companies() {
               <p className="text-muted-foreground">Comece adicionando sua primeira empresa.</p>
             </div>
           ) : (
-            <Table>
+            <div className="table-responsive">
+            <Table data-density={density} className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Empresa</TableHead>
+                  <TableHead className="sticky-col-start">Empresa</TableHead>
                   <TableHead>CNPJ</TableHead>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>
+                  <TableHead className="hidden xl:table-cell">Setor</TableHead>
+                  <TableHead className="hidden lg:table-cell">
                     <div className="flex items-center gap-1">
                       <TrendingUp className="h-3.5 w-3.5" />
                       Funil
                     </div>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="hidden 2xl:table-cell">
                     <div className="flex items-center gap-1">
                       <DollarSign className="h-3.5 w-3.5" />
                       Tabela Preços
                     </div>
                   </TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Iniflex</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="hidden xl:table-cell">Contato</TableHead>
+                  <TableHead className="hidden md:table-cell">Iniflex</TableHead>
+                  <TableHead className="text-right sticky-col-end">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -513,7 +516,7 @@ export default function Companies() {
                   const syncStatus = getSyncStatus(company);
                   return (
                     <TableRow key={company.id}>
-                      <TableCell>
+                      <TableCell className="sticky-col-start">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Building2 className="h-5 w-5" />
@@ -537,20 +540,20 @@ export default function Companies() {
                           <span className="text-sm font-mono">{formatCNPJ((company as any).cnpj)}</span>
                         ) : '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         {getNomeById.atividade(company.atividade_id) && (
                           <Badge variant="secondary">
                             {getNomeById.atividade(company.atividade_id)}
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <DealStageBadges deals={company.deals || []} />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
                         <PricingTableBadge entityType="company" entityId={company.id} compact />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden xl:table-cell">
                         <div className="space-y-1">
                           {company.email && (
                             <div className="flex items-center gap-1 text-sm">
@@ -566,7 +569,7 @@ export default function Companies() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -590,7 +593,7 @@ export default function Companies() {
                           </Tooltip>
                         </TooltipProvider>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right sticky-col-end">
                         <div className="flex justify-end gap-1">
                           <TooltipProvider>
                             <Tooltip>
@@ -625,6 +628,7 @@ export default function Companies() {
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
           <ServerPagination
             page={page}

@@ -1,93 +1,67 @@
+# Auditoria de Responsividade — Listas Principais
 
-# Saneamento do Ciclo de Vida – Baseline 01/04/2026
+## Objetivo
+Tornar as telas **Produtos**, **Clientes** e **Pedidos** confortáveis em desktops 1440x900 com zoom do navegador até **150%** (equivalente a uma viewport efetiva de ~960px). Hoje o conteúdo quebra, colunas se espremem (ex.: SKU em coluna única empilhado verticalmente) e o usuário precisa reduzir o zoom.
 
-Objetivo: corrigir a base distorcida (4.888 “Ativos” inflados, 0 Inativos/Perdidos) aplicando 4 ações em sequência, todas numa **única migration idempotente** + recálculo.
+## Diagnóstico atual
+- Tabelas usam largura fixa de coluna implícita — colunas com texto curto (SKU, código) recebem largura mínima e o texto quebra letra-a-letra.
+- Não há coluna fixa (sticky) na esquerda; ao rolar horizontalmente, perde-se a referência da linha.
+- Padding/fonte são constantes — não há "modo compacto" em zoom alto.
+- Algumas colunas secundárias (Iniflex, Pedido ERP, Logística com badge) ocupam espaço mesmo quando não há prioridade.
 
-## 1. Baseline universal = 01/04/2026
+## Estratégia (combinação das três)
 
-- Cria coluna `companies.lifecycle_baseline_at TIMESTAMPTZ` (se ainda não existir) e popula com **2026-04-01** para 100% dos registros (override total, mesmo que a empresa tenha sido criada antes/depois).
-- Ajusta `recompute_company_lifecycle` para usar como “última atividade efetiva”:
+### 1. Densidade automática
+Criar utilitário `useResponsiveDensity()` que observa `window.innerWidth` (já com zoom aplicado, pois zoom reduz a viewport CSS):
+- `>= 1280px` → densidade **comfortable** (padding/fonte atuais)
+- `960–1279px` → densidade **compact** (padding reduzido, fonte 13px, badges menores)
+- `< 960px` → densidade **dense** + ativa ocultação de colunas
+
+Aplicar via classe no `<Table>` raiz (`data-density="compact"`) e tokens em `index.css` controlando `--row-py`, `--row-px`, `--cell-fs`.
+
+### 2. Ocultação progressiva de colunas
+Definir prioridade por coluna em cada lista. Colunas baixa prioridade recebem `hidden xl:table-cell` / `hidden 2xl:table-cell`. Prioridades:
+
+**Produtos**
+- Sempre: SKU, Descrição, Preço, Ações
+- Esconde primeiro: Grupo, Unidade, NCM, dimensões individuais (L/C/E)
+- Adicionar tooltip/expand row para colunas ocultas
+
+**Clientes (Companies)**
+- Sempre: Empresa, CNPJ, Responsável, Ações
+- Esconde primeiro: Iniflex, Tabela de Preço, Setor, Contato
+
+**Pedidos**
+- Sempre: Número, Empresa, Status, Sinc. ERP, Ações
+- Esconde primeiro: Tipo, Logística (badge), Pedido ERP
+
+### 3. Scroll horizontal com coluna fixa
+Quando densidade = dense e ainda houver overflow:
+- Wrap `<Table>` em container `overflow-x-auto`
+- Primeira coluna (Empresa/SKU/Número) recebe `sticky left-0 bg-card z-10` com sombra sutil à direita.
+- Última coluna de Ações fica `sticky right-0` para permanecer acessível.
+
+## Componentes a criar
+- `src/hooks/useResponsiveDensity.ts` — retorna `'comfortable' | 'compact' | 'dense'`.
+- `src/components/ui/responsive-table.tsx` — wrapper sobre `Table` que injeta `data-density`, container com overflow e sticky.
+- Tokens CSS em `src/index.css` (bloco `@layer components`):
+  ```css
+  [data-density="compact"] td, [data-density="compact"] th { @apply py-2 px-3 text-[13px]; }
+  [data-density="dense"]   td, [data-density="dense"] th   { @apply py-1.5 px-2 text-[12px]; }
   ```
-  COALESCE(activity_summary.last_interaction_at, companies.lifecycle_baseline_at)
-  ```
-  Removendo o fallback antigo (`companies.created_at`) que estava mascarando inativos.
-- Triggers de promoção (orders/deals/activities) atualizam `last_interaction_at` normalmente; o baseline só age quando não há interação real.
 
-Efeito: hoje (14/06/2026) o baseline tem ~74 dias → empresas sem interação real ficam dentro da janela Ativo padrão (180d). Quando passar de 180d sem interação real, viram Inativo automaticamente; após 365d, Perdido. O usuário consegue prever exatamente quando isso vai acontecer.
+## Arquivos a editar
+1. `src/index.css` — tokens de densidade + sticky helper.
+2. `src/hooks/useResponsiveDensity.ts` — novo.
+3. `src/components/ui/responsive-table.tsx` — novo wrapper.
+4. `src/pages/Products.tsx` — aplicar wrapper, marcar prioridade nas `<TableHead>`/`<TableCell>` (classes `hidden xl:table-cell`), encolher célula SKU (`whitespace-nowrap` + `min-w-[120px]`).
+5. `src/pages/Companies.tsx` — idem para colunas Iniflex/Setor/Tabela.
+6. `src/pages/Orders.tsx` — idem para Tipo/Logística/Pedido ERP, manter Status e Sinc. ERP sempre visíveis.
 
-## 2. Rebaixar Customer Active sem pedido → Lead
+## Validação
+- Testar nas resoluções: 1440x900 @100%, 1440x900 @125%, 1440x900 @150% (~960px efetivos).
+- Critérios: nenhum texto quebrando letra-a-letra; coluna identificadora sempre visível; ações alcançáveis sem scroll horizontal completo; sem scroll horizontal indevido até 1280px.
 
-```sql
-UPDATE companies c
-SET lifecycle_stage = 'lead',
-    activity_status = NULL
-WHERE c.lifecycle_stage = 'customer_active'
-  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.company_id = c.id);
-```
-Loga cada mudança em `company_audit_log` com `origem_alteracao = 'SYSTEM_LIFECYCLE_CLEANUP_2026Q2'`.
-
-## 3. Rebaixar Prospect sem deal → Lead
-
-```sql
-UPDATE companies c
-SET lifecycle_stage = 'lead'
-WHERE c.lifecycle_stage = 'prospect'
-  AND NOT EXISTS (SELECT 1 FROM deals d WHERE d.company_id = c.id);
-```
-Mesma auditoria.
-
-## 4. Promover Leads com histórico real
-
-Após os rebaixamentos, recalcula promoções na ordem certa:
-
-- **Lead → Prospect** (qualquer lead com deal aberto em pipeline comercial, conforme `lifecycle_config.lead_to_prospect_trigger`):
-  ```sql
-  UPDATE companies SET lifecycle_stage='prospect'
-  WHERE lifecycle_stage='lead'
-    AND EXISTS (
-      SELECT 1 FROM deals d
-      JOIN pipelines p ON p.id = d.pipeline_id
-      WHERE d.company_id = companies.id
-        AND COALESCE(p.pipeline_type,'sales') = 'sales'
-        AND d.stage NOT IN ('won','lost')  -- ou colunas equivalentes
-    );
-  ```
-- **Prospect/Lead → Customer Active** (qualquer empresa com pedido, conforme `prospect_to_customer_trigger = order_created`):
-  ```sql
-  UPDATE companies SET lifecycle_stage='customer_active'
-  WHERE lifecycle_stage IN ('lead','prospect')
-    AND EXISTS (SELECT 1 FROM orders o WHERE o.company_id = companies.id);
-  ```
-- Ao final, roda `recompute_company_lifecycle(NULL)` para sincronizar `activity_status` (ativo/inativo/perdido) de todos os `customer_active`, agora já considerando o novo baseline.
-
-## 5. Validação pós-execução
-
-Query de conferência (executada após a migration) e devolvida no chat:
-
-```
-SELECT lifecycle_stage, activity_status, COUNT(*)
-FROM companies GROUP BY 1,2 ORDER BY 1,2;
-```
-
-Asserções esperadas:
-- Customer Active = exatamente empresas com pedido (~45 hoje).
-- Prospect = empresas sem pedido **com** deal aberto.
-- Lead = restante.
-- Todos os customer_active iniciam como `ativo` (baseline 74d < 180d), salvo os que já têm interação real antiga.
-
-## 6. Telemetria & memória
-
-- Linha em `admin_intervention_log` resumindo: total rebaixados, total promovidos, baseline aplicado.
-- Atualiza `mem://features/activity-status-classification` e `mem://features/lifecycle-config` registrando a regra do **baseline 01/04/2026** e o fato de que `created_at` não é mais fallback.
-
-## Detalhes técnicos
-
-- Tudo roda numa **única migration** transacional para não deixar estados intermediários visíveis na UI.
-- Triggers existentes (`trg_promote_lead_to_prospect`, `trg_promote_to_customer_on_order`) já cobrem o futuro — esta migration só normaliza o passado.
-- Sem alteração de UI nesta etapa; o `LifecycleConfigManager` continua igual e o botão “Recalcular agora” passa a refletir corretamente.
-- Sem mexer em RLS/GRANTs (tabela `companies` já existente).
-
-## Riscos
-
-- Empresas que **deveriam** ser clientes mas o ERP ainda não importou pedidos serão temporariamente Lead/Prospect. Mitigação: assim que o pedido entrar, o trigger promove automaticamente.
-- Baseline fixo é uma decisão pontual de saneamento; documentado em memória para não ser revertido por engano em recomputes futuros.
+## Fora do escopo (próxima rodada, se aprovado)
+- Pipeline, Dashboard, Hoje, modais de edição, formulários longos.
+- Refactor para virtualização (TanStack Virtual) — só se a densidade não resolver listas muito longas.
