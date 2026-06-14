@@ -14,6 +14,7 @@ import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import type { CRMOrderForSync, CRMOrderItemForSync } from '../_shared/projedata/order-mapper.ts';
 import { parseOrderRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
+import { resolveOrderErpConfig, isOrderErpConfigError } from '../_shared/erp/order-endpoint-resolver.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
 
@@ -44,12 +45,8 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
-  const apiUrl = Deno.env.get('PROJEDATA_API_URL');
-  const apiToken = Deno.env.get('PROJEDATA_API_TOKEN');
-
-  if (!apiUrl || !apiToken) {
-    return errorResponse(500, 'PROJEDATA_API_URL e PROJEDATA_API_TOKEN não configurados');
-  }
+  // Endpoint e token são resolvidos POR PEDIDO via resolveOrderErpConfig (escopo:
+  // apenas pedidos). Outras integrações continuam usando env vars globais.
 
   try {
     // Parse request body for optional order_id (manual sync)
