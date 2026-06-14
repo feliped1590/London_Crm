@@ -1471,6 +1471,13 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
         open={customerEditOpen}
         onOpenChange={setCustomerEditOpen}
       />
+      <InlineProductEditSheet
+        productId={productEditId}
+        open={productEditOpen}
+        onOpenChange={(o) => { setProductEditOpen(o); if (!o) setProductEditId(null); }}
+      />
+
+
 
 
       {/* Vínculo opcional ao negócio (Fase 2) + Data de Entrega lado a lado */}
