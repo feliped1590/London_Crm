@@ -1,14 +1,14 @@
 import { useDashboardCards, AVAILABLE_CARDS } from '@/hooks/useDashboardCards';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Building2, Layers, Activity, TrendingUp, Handshake } from 'lucide-react';
+import { Users, Building2, Layers, Activity, UserPlus, Handshake } from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Users,
   Building2,
   Layers,
   Activity,
-  TrendingUp,
+  UserPlus,
   Handshake,
 };
 
