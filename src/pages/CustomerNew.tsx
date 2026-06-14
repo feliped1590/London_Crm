@@ -706,7 +706,9 @@ export default function CustomerNew() {
                     <Input
                       id="inscricao_estadual"
                       value={companyForm.inscricao_estadual}
-                      onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value })}
+                      onChange={(e) => setCompanyForm({ ...companyForm, inscricao_estadual: e.target.value.replace(/\D/g, '').slice(0, 14) })}
+                      inputMode="numeric"
+                      maxLength={14}
                       placeholder="Deixe em branco se ISENTO"
                     />
                   </div>
