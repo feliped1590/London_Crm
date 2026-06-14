@@ -48,6 +48,7 @@ export default function Orders() {
   const queryClient = useQueryClient();
   const { isAdmin, can } = useModulePermissions();
   const { activeLegalEntityId, isContextReady } = useLegalEntities();
+  const density = useResponsiveDensity();
   const canCreateOrders = can('orders', PermissionAction.Create);
   const canEditOrders = can('orders', PermissionAction.Edit);
   const [searchTerm, setSearchTerm] = useState('');
