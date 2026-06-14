@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2 } from 'lucide-react';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { onlyDigits } from '@/lib/cpfCnpjMask';
+import { cleanDocument } from '@/lib/cpfCnpjMask';
 import { supabase } from '@/integrations/supabase/client';
 import { useProductLookups } from '@/hooks/useProductLookups';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
@@ -111,7 +111,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
 
   // Lookup CNPJ em companies (debounced)
   useEffect(() => {
-    const digits = onlyDigits(clientCnpj);
+    const digits = cleanDocument(clientCnpj);
     if (digits.length !== 14) { setCnpjSuggestion(null); return; }
     let active = true;
     const t = setTimeout(async () => {
@@ -146,7 +146,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
   const validate = (): string | null => {
     if (!legalEntityId) return 'Selecione o CNPJ de atendimento.';
     if (!clientName.trim()) return 'Informe o nome do cliente.';
-    if (clientCnpj && onlyDigits(clientCnpj).length !== 14) return 'CNPJ inválido.';
+    if (clientCnpj && cleanDocument(clientCnpj).length !== 14) return 'CNPJ inválido.';
     if (items.length === 0) return 'Adicione ao menos um item.';
     for (const [i, it] of items.entries()) {
       if (!it.description.trim()) return `Item ${i + 1}: descrição obrigatória.`;
@@ -164,7 +164,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
       const payload = {
         legal_entity_id: legalEntityId!,
         client_name: clientName.trim(),
-        client_cnpj: clientCnpj ? onlyDigits(clientCnpj) : null,
+        client_cnpj: clientCnpj ? cleanDocument(clientCnpj) : null,
         client_contact: clientContact || null,
         client_phone: clientPhone || null,
         client_email: clientEmail || null,
