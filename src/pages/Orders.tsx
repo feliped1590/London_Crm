@@ -324,20 +324,20 @@ export default function Orders() {
            ) : filteredOrders && filteredOrders.length > 0 ? (
              <OrderSyncProvider ids={visibleOrderIds}>
              <div className="table-responsive">
-               <Table className="min-w-[900px]">
+               <Table className="min-w-[760px]" data-density={density}>
                  <TableHeader>
                    <TableRow>
-                     <TableHead>Número</TableHead>
-                     <TableHead>Tipo</TableHead>
+                     <TableHead className="sticky-col-start">Número</TableHead>
+                     <TableHead className="hidden xl:table-cell">Tipo</TableHead>
                      <TableHead>Empresa</TableHead>
-                     <TableHead>Logística</TableHead>
+                     <TableHead className="hidden 2xl:table-cell">Logística</TableHead>
                      <TableHead>Status</TableHead>
-                     <TableHead>Pedido ERP</TableHead>
+                     <TableHead className="hidden xl:table-cell">Pedido ERP</TableHead>
                      <TableHead>Sinc. ERP</TableHead>
-                    <TableHead>Entrega Prevista</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                    <TableHead>Data Criação</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="hidden lg:table-cell">Entrega Prevista</TableHead>
+                    <TableHead className="hidden md:table-cell">Valor Total</TableHead>
+                    <TableHead className="hidden 2xl:table-cell">Data Criação</TableHead>
+                    <TableHead className="text-right sticky-col-end">Ações</TableHead>
                    </TableRow>
                  </TableHeader>
                  <TableBody>
