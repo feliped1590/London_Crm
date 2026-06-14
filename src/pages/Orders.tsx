@@ -508,6 +508,17 @@ export default function Orders() {
                                  <FileText className="h-4 w-4" />
                                )}
                              </Button>
+                             {isAdmin && !(order as any).erp_order_id && (
+                               <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 onClick={() => setDeletingOrder(order)}
+                                 title="Excluir pedido"
+                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                               >
+                                 <Trash2 className="h-4 w-4" />
+                               </Button>
+                             )}
                            </div>
                          </TableCell>
                        </TableRow>
