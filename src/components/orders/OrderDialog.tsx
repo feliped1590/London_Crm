@@ -197,6 +197,20 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
     getItemIpiValue, getItemTotal,
   } = useDocumentItems<OrderItemDraft>({ ipiMode, calculateItemSubtotal: orderItemSubtotal });
 
+  // Peso previsto por item: (largura × comprimento × espessura) / 1000 × quantidade
+  const getItemWeight = useCallback((item: OrderItemDraft) => {
+    const w = Number(item.width) || 0;
+    const l = Number(item.length) || 0;
+    const t = Number(item.thickness) || 0;
+    const qty = Number(item.quantity) || 0;
+    if (w <= 0 || l <= 0 || t <= 0 || qty <= 0) return 0;
+    return ((w * l * t) / 1000) * qty;
+  }, []);
+  const orderTotalWeight = useMemo(
+    () => items.reduce((sum, it) => sum + getItemWeight(it), 0),
+    [items, getItemWeight],
+  );
+
   // --- Queries ---
   const [orderCompanySearch, setOrderCompanySearch] = useState('');
 
@@ -1583,6 +1597,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 <TableHead className="w-32">Qtd</TableHead>
                 <TableHead className="w-32">Preço Unit.</TableHead>
                 <TableHead className="w-28">Fator KG</TableHead>
+                <TableHead className="w-24 text-right">Peso (kg)</TableHead>
                 <TableHead className="w-28 text-right">Subtotal</TableHead>
                 {ipiMode !== 'isento' && (
                   <>
@@ -1601,6 +1616,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                 const ipiRate = ipiMode === 'isento' ? 0 : (item.ipi_rate || 0);
                 const ipiVal = getItemIpiValue(item);
                 const totalItem = getItemTotal(item);
+                const itemWeight = getItemWeight(item);
                 return (
                   <TableRow key={index}>
                     <TableCell>
@@ -1649,6 +1665,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
                         disabled={!canEdit}
                       />
                     </TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">
+                      {itemWeight > 0
+                        ? `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(itemWeight)} kg`
+                        : '—'}
+                    </TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(item.subtotal)}</TableCell>
                     {ipiMode !== 'isento' && (
                       <>
@@ -1686,7 +1707,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       )}
 
       {items.length > 0 && (
-        <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} />
+        <DocumentTotals subtotalProducts={orderSubtotalProducts} totalIpi={orderTotalIpi} total={orderTotal} ipiMode={ipiMode} totalWeight={orderTotalWeight} />
       )}
 
 
