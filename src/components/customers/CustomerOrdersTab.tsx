@@ -10,6 +10,7 @@ import { Package, TrendingUp, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { OrderDialog } from '@/components/orders/OrderDialog';
+import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
 
 interface CustomerOrdersTabProps {
   companyId: string;
@@ -24,8 +25,10 @@ interface CRMOrder {
   status: string;
   total_value: number | null;
   created_at: string;
+  updated_at: string | null;
   delivery_date: string | null;
   erp_order_id: string | number | null;
+  erp_synced_at: string | null;
 }
 
 interface ERPOrder {
@@ -72,7 +75,7 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, number, status, total_value, created_at, delivery_date, erp_order_id')
+        .select('id, number, status, total_value, created_at, updated_at, delivery_date, erp_order_id, erp_synced_at')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
@@ -233,7 +236,9 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                   <TableHead>Data</TableHead>
                   <TableHead>Entrega</TableHead>
                   <TableHead>Status</TableHead>
+                  {source === 'crm' && <TableHead>Sync ERP</TableHead>}
                   <TableHead className="text-right">Valor</TableHead>
+                  {source === 'crm' && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -255,8 +260,28 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                             {statusLabels[order.status]?.label || order.status}
                           </Badge>
                         </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <OrderSyncBadge
+                            orderId={order.id}
+                            erpOrderId={order.erp_order_id as any}
+                            erpSyncedAt={order.erp_synced_at}
+                            updatedAt={order.updated_at}
+                          />
+                        </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(order.total_value)}
+                        </TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <OrderSyncButton
+                            orderId={order.id}
+                            orderNumber={order.number}
+                            erpOrderId={order.erp_order_id as any}
+                            onSyncTriggered={() => {
+                              queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+                              queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                              queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     ))
