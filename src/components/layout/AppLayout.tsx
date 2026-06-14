@@ -51,6 +51,7 @@ export function AppLayout() {
             </span>
           )}
           <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
             <LegalEntitySelector />
             <ThemeToggle />
           </div>
