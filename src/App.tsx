@@ -52,6 +52,7 @@ const Stock = lazy(() => import("./pages/Stock"));
 const Carriers = lazy(() => import("./pages/Carriers"));
 const ImportCompanies = lazy(() => import("./pages/ImportCompanies"));
 const BICenter = lazy(() => import("./pages/BICenter"));
+const NotificationsPage = lazy(() => import("./pages/Notifications"));
 
 // Keys estruturais que devem ser persistidas no cache
 const PERSISTABLE_QUERY_KEYS = [
