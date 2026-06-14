@@ -33,10 +33,8 @@ export function CustomerReviewAlertDialog({
 }: Props) {
   return (
     <AlertDialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent
-        onInteractOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-      >
+      <AlertDialogContent>
+
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive" />
