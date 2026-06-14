@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
 import { Button } from '@/components/ui/button';
@@ -15,14 +15,36 @@ import { useSessionGuard } from '@/hooks/useSessionGuard';
 import { useLoginTaskAlert } from '@/hooks/useLoginTaskAlert';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { TaskAlertModal } from '@/components/tasks/TaskAlertModal';
+import { isWorkspaceTabsEnabled } from '@/config/features';
+import { WorkspaceProvider } from '@/workspace/WorkspaceContext';
+import { WorkspaceTabsBar } from '@/workspace/WorkspaceTabsBar';
+import { WorkspaceHost, OuterNavigateProvider } from '@/workspace/WorkspaceHost';
+import { isWorkspacePath } from '@/workspace/registry';
 
 export function AppLayout() {
+  const isMobile = useIsMobile();
+  const workspaceEnabled = !isMobile && isWorkspaceTabsEnabled();
+
+  if (workspaceEnabled) {
+    return (
+      <WorkspaceProvider>
+        <AppLayoutInner workspaceEnabled />
+      </WorkspaceProvider>
+    );
+  }
+  return <AppLayoutInner workspaceEnabled={false} />;
+}
+
+function AppLayoutInner({ workspaceEnabled }: { workspaceEnabled: boolean }) {
   useSessionGuard();
   const { showModal, alertData, closeModal } = useLoginTaskAlert();
   const isMobile = useIsMobile();
   const { isCollapsed, isMobileOpen, setMobileOpen } = useSidebar();
   const { effectiveEntity } = useLegalEntities();
   const { isDeveloper } = useModulePermissions();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const onPilotPath = workspaceEnabled && isWorkspacePath(location.pathname);
 
   return (
     <div
@@ -84,8 +106,21 @@ export function AppLayout() {
           </header>
         )}
 
+        {workspaceEnabled && <WorkspaceTabsBar />}
+
         <main className={cn("flex-1 min-w-0", isMobile ? "p-3 sm:p-4" : "p-6")}>
-          <Outlet />
+          {workspaceEnabled ? (
+            <OuterNavigateProvider navigate={(to) => navigate(to)}>
+              <div className={cn(onPilotPath ? 'block' : 'hidden')}>
+                <WorkspaceHost />
+              </div>
+              <div className={cn(onPilotPath ? 'hidden' : 'block')}>
+                <Outlet />
+              </div>
+            </OuterNavigateProvider>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
 
