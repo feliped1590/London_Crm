@@ -106,8 +106,21 @@ function AppLayoutInner({ workspaceEnabled }: { workspaceEnabled: boolean }) {
           </header>
         )}
 
+        {workspaceEnabled && <WorkspaceTabsBar />}
+
         <main className={cn("flex-1 min-w-0", isMobile ? "p-3 sm:p-4" : "p-6")}>
-          <Outlet />
+          {workspaceEnabled ? (
+            <OuterNavigateProvider navigate={(to) => navigate(to)}>
+              <div className={cn(onPilotPath ? 'block' : 'hidden')}>
+                <WorkspaceHost />
+              </div>
+              <div className={cn(onPilotPath ? 'hidden' : 'block')}>
+                <Outlet />
+              </div>
+            </OuterNavigateProvider>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
 
