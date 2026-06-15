@@ -58,6 +58,7 @@ export function ExecutiveExportButton({
     `<div><strong>Entidade:</strong> ${esc(entityName)}</div>`,
     sellerName ? `<div><strong>Vendedor:</strong> ${esc(sellerName)}</div>` : '',
     `<div><strong>Período:</strong> ${esc(periodo)}</div>`,
+    `<div><strong>Gerado por:</strong> ${esc(String(userLabel))}</div>`,
   ]
     .filter(Boolean)
     .join('');
@@ -82,36 +83,44 @@ export function ExecutiveExportButton({
     { label: 'Origem', value: 'CRM · Central de BI' },
   ];
 
+  const sideLogo = entityLogo
+    ? `<div class="stripe-mono" style="background:#FFFFFF; border-color:rgba(255,255,255,0.6); padding:6px;"><img src="${esc(entityLogo)}" alt="${esc(entityName)}" style="max-width:40px;max-height:40px;object-fit:contain;" /></div>`
+    : `<div class="stripe-mono">CRM</div>`;
+
   const coverHtml = `
-    <div class="print-cover-top">
-      <div class="print-cover-brand">
-        ${
-          entityLogo
-            ? `<img class="print-cover-logo" src="${esc(entityLogo)}" alt="${esc(entityName)}" />`
-            : ''
-        }
+    <div class="print-cover-side">
+      <div>
+        ${sideLogo}
+        <div class="eyebrow" style="margin-top:18px;">${esc(eyebrow)}</div>
+        <div class="stripe-title">${esc(reportName)}</div>
       </div>
-      <div class="print-cover-source">CRM · Central de BI</div>
+      <div class="stripe-mark">CRM · Central de BI</div>
     </div>
     <div class="print-cover-main">
-      <div class="print-cover-eyebrow">${esc(eyebrow)}</div>
-      <h1 class="print-cover-title">${esc(reportName)}</h1>
-      <p class="print-cover-subtitle">${esc(entityName)}${
+      <div>
+        ${
+          entityLogo
+            ? `<div class="print-cover-logo-frame"><img class="print-cover-logo" src="${esc(entityLogo)}" alt="${esc(entityName)}" /></div>`
+            : ''
+        }
+        <h1 class="print-cover-title">${esc(reportName)}</h1>
+        <p class="print-cover-subtitle">${esc(entityName)}${
     sellerName ? ` · ${esc(sellerName)}` : ''
   }</p>
-      <div class="print-cover-meta">
-        ${coverRows
-          .map(
-            (r) => `
-            <div class="row">
-              <span class="label">${esc(r.label)}</span>
-              <span class="value">${esc(r.value)}</span>
-            </div>`
-          )
-          .join('')}
+        <div class="print-cover-meta">
+          ${coverRows
+            .map(
+              (r) => `
+              <div class="row">
+                <span class="label">${esc(r.label)}</span>
+                <span class="value">${esc(r.value)}</span>
+              </div>`
+            )
+            .join('')}
+        </div>
       </div>
+      <div class="print-cover-bottom">Documento gerado automaticamente · uso interno</div>
     </div>
-    <div class="print-cover-bottom">Documento gerado automaticamente · uso interno</div>
   `;
 
   const disabled = !!isLoading || !!isEmpty;
