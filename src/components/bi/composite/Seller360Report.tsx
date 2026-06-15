@@ -18,6 +18,9 @@ import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
 import { SellerActivitySection } from './SellerActivitySection';
 import { Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useSalesDrillDown } from '@/hooks/useSalesDrillDown';
+import { SalesDrillDownModal } from './SalesDrillDownModal';
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
