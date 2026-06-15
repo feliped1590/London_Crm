@@ -71,6 +71,12 @@ export default function BICenter() {
     sellerId: null,
   });
 
+  // Status agregado dos relatórios executivos (alimenta botão "Exportar PDF")
+  const [execStatus, setExecStatus] = useState<{ isLoading: boolean; isEmpty: boolean }>({
+    isLoading: true,
+    isEmpty: false,
+  });
+
   // Aplica entidade ativa como default quando carregada
   useEffect(() => {
     if (activeLegalEntityId && execFilters.legalEntityId == null) {
@@ -79,6 +85,12 @@ export default function BICenter() {
   }, [activeLegalEntityId, execFilters.legalEntityId]);
 
   const activeCode = (searchParams.get('r') as ReportCode | null) || 'dashboard_executivo';
+
+  // Ao trocar de relatório composto, reseta status para "carregando" até o filho reportar.
+  useEffect(() => {
+    setExecStatus({ isLoading: true, isEmpty: false });
+  }, [activeCode]);
+
   const setActive = (code: ReportCode) => {
     const sp = new URLSearchParams(searchParams);
     sp.set('r', code);
@@ -212,6 +224,11 @@ export default function BICenter() {
                       reportCode={activeCode as 'executivo_comercial' | 'vendedor_360'}
                       reportName={active.name}
                       filters={execFilters}
+                      isLoading={execStatus.isLoading}
+                      isEmpty={
+                        execStatus.isEmpty ||
+                        (activeCode === 'vendedor_360' && !execFilters.sellerId)
+                      }
                     />
                   )}
                   <Button
@@ -249,9 +266,15 @@ export default function BICenter() {
 
             {composite ? (
               activeCode === 'executivo_comercial' ? (
-                <CommercialExecutiveReport filters={execFilters} />
+                <CommercialExecutiveReport
+                  filters={execFilters}
+                  onStatusChange={setExecStatus}
+                />
               ) : (
-                <Seller360Report filters={execFilters} />
+                <Seller360Report
+                  filters={execFilters}
+                  onStatusChange={setExecStatus}
+                />
               )
             ) : (
               <ReportRenderer

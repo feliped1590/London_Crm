@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DollarSign,
   ShoppingCart,
@@ -33,9 +33,10 @@ const fmtBRL = (v: number) =>
 
 interface Props {
   filters: ExecutiveFilters;
+  onStatusChange?: (status: { isLoading: boolean; isEmpty: boolean }) => void;
 }
 
-export function CommercialExecutiveReport({ filters }: Props) {
+export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   const baseFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
@@ -107,8 +108,29 @@ export function CommercialExecutiveReport({ filters }: Props) {
     return [...at, ...co].sort((a, b) => b.valor - a.valor);
   }, [perdasAt.data, perdasCot.data]);
 
+  // Status agregado (loading / vazio) para o botão de exportação
+  const mainLoading =
+    dashboard.isLoading ||
+    entidade.isLoading ||
+    vendedor.isLoading ||
+    cliente.isLoading ||
+    produto.isLoading ||
+    pipeline.isLoading;
+  const mainEmpty =
+    !mainLoading &&
+    !(Number(k.valor_vendido) || 0) &&
+    (entidadeRows.length === 0) &&
+    ((vendedor.data ?? []).length === 0) &&
+    ((cliente.data ?? []).length === 0) &&
+    ((produto.data ?? []).length === 0);
+
+  useEffect(() => {
+    onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
+  }, [mainLoading, mainEmpty, onStatusChange]);
+
   return (
     <div id="bi-export-executivo_comercial" className="space-y-4">
+
       {/* KPIs */}
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
 

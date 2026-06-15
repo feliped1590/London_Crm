@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ExportPDFButtonProps {
   containerId: string;
@@ -11,9 +17,21 @@ interface ExportPDFButtonProps {
   headerExtraHtml?: string;
   /** Label customizado para o botão. */
   label?: string;
+  /** Desabilita o botão (ex.: enquanto blocos principais carregam). */
+  disabled?: boolean;
+  /** Mensagem exibida como tooltip quando desabilitado. */
+  disabledReason?: string;
 }
 
-export function ExportPDFButton({ containerId, title = 'Relatório', className, headerExtraHtml, label }: ExportPDFButtonProps) {
+export function ExportPDFButton({
+  containerId,
+  title = 'Relatório',
+  className,
+  headerExtraHtml,
+  label,
+  disabled,
+  disabledReason,
+}: ExportPDFButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = () => {
@@ -52,6 +70,7 @@ export function ExportPDFButton({ containerId, title = 'Relatório', className, 
           <title>${title}</title>
           <style>
             ${styles}
+            @page { margin: 14mm 12mm; }
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
@@ -72,12 +91,25 @@ export function ExportPDFButton({ containerId, title = 'Relatório', className, 
             .print-header .meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; margin-top: 8px; font-size: 0.78rem; color: #374151; }
             .print-header .meta strong { color: #111827; }
             .print-footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 0.72rem; color: #6b7280; text-align: center; }
-            /* Force visible colors for print */
-            [class*="card"] { break-inside: avoid; }
             /* Esconde elementos não exportáveis (skeletons, botões internos, etc.) */
             [data-export-hide="true"] { display: none !important; }
-            /* Recharts: evita quebrar gráfico no meio de página */
-            .recharts-wrapper { break-inside: avoid; page-break-inside: avoid; }
+            /* Quebras de página: nunca cortar cards, gráficos, tabelas e KPIs no meio */
+            [class*="card"],
+            .recharts-wrapper,
+            .recharts-responsive-container,
+            table,
+            thead, tr,
+            [data-export-block="true"] {
+              break-inside: avoid;
+              page-break-inside: avoid;
+            }
+            /* Mantém títulos junto com seu conteúdo */
+            h1, h2, h3, h4 {
+              break-after: avoid;
+              page-break-after: avoid;
+            }
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
           </style>
         </head>
         <body>
@@ -106,16 +138,34 @@ export function ExportPDFButton({ containerId, title = 'Relatório', className, 
     }
   };
 
-  return (
+  const isDisabled = isExporting || !!disabled;
+
+  const button = (
     <Button
       variant="outline"
       size="sm"
       onClick={handleExport}
-      disabled={isExporting}
+      disabled={isDisabled}
       className={className}
     >
       <Download className="mr-2 h-4 w-4" />
       {label ?? 'Exportar PDF'}
     </Button>
   );
+
+  if (isDisabled && disabledReason) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          {/* span wrapper para permitir tooltip em botão desabilitado */}
+          <TooltipTrigger asChild>
+            <span tabIndex={0} className="inline-flex">{button}</span>
+          </TooltipTrigger>
+          <TooltipContent>{disabledReason}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return button;
 }
