@@ -1,125 +1,54 @@
-# Fase 4B — Drill-down dos números de venda + período explícito da meta
+# Corrigir filtro "Todas acessíveis" nos relatórios BI
 
-## Objetivo
-1. Deixar visualmente claro que **Meta x Realizado** sempre se refere ao **mês corrente**, independente do filtro de período da tela.
-2. Permitir **clicar em qualquer número/linha/barra de venda** nos relatórios executivos e abrir uma janela com os pedidos que originam aquele número, com totalizadores e exportação CSV.
+## Problema
 
-Sem alterar RPCs, regras de negócio, RLS, segurança, filtros existentes ou relatórios clássicos.
+Quando o usuário clica em **"Todas acessíveis"** no seletor de Entidade Jurídica (Relatório Executivo Comercial, 360 do Vendedor, etc.), a seleção é ignorada e o relatório continua filtrando apenas pela entidade ativa.
 
----
+**Causa raiz** (`ExecutiveFiltersBar.tsx` e consumidores):
 
-## Parte 1 — Período explícito no Meta x Realizado
+- O `Select` exibe `filters.legalEntityId ?? activeLegalEntityId ?? '__all__'` — ou seja, quando `legalEntityId` vira `null` (escolha do usuário), o valor mostrado cai para `activeLegalEntityId`, e o estado “Todas” nunca é representado.
+- `useBIAdvanced.ts` (linha 79) e `CommercialExecutiveReport.tsx` (linha 62) reaplicam o mesmo fallback `?? activeLegalEntityId`, então mesmo que o filtro fosse `null`, a consulta voltaria a filtrar pela entidade ativa.
 
-No card **Meta x Realizado** do *Seller360Report*, adicionar uma **badge fixa** ao lado do título:
+Resultado: "Todas" é um placeholder visual sem efeito real.
 
-> `Meta de {mês}/{ano} — {01/MM} a {último_dia/MM}`
+## Solução
 
-Exemplo atual: `Meta de junho/2026 — 01/06 a 30/06`.
+Usar **três estados** distintos no filtro:
+- `undefined` → não definido ainda (usa entidade ativa do usuário como default inicial)
+- `null` → o usuário escolheu explicitamente **Todas acessíveis**
+- `string` (UUID) → entidade específica
 
-- Calculada client-side a partir de `new Date()` (mês corrente em pt-BR).
-- Renderizada via `<Badge variant="outline">` dentro do header do `ExecutiveSection` (extender `ExecutiveSection` para aceitar prop `headerBadge?: ReactNode`).
-- Aparece também no PDF (não usa `data-export-hide`).
-- Nenhuma alteração em RPC `metas` — segue retornando os dados do período da meta cadastrada.
+Com isso `null` passa a ser respeitado em todo o pipeline de filtros — sem fallback automático para a entidade ativa.
 
----
+## Arquivos a alterar
 
-## Parte 2 — Drill-down universal de pedidos
+1. **`src/components/bi/composite/ExecutiveFiltersBar.tsx`**
+   - Calcular `selectedValue`: se `legalEntityId === null` → `'__all__'`; se `undefined` → `activeLegalEntityId ?? '__all__'`; senão o próprio id.
+   - `onValueChange`: `'__all__'` → `null` (explícito), demais → id.
+   - Botão **Resetar** volta a `legalEntityId: undefined` (não força activeLegalEntityId), preservando o comportamento de default inicial.
 
-### 2.1 Novo componente: `SalesDrillDownModal`
+2. **`src/hooks/useBIAdvanced.ts`**
+   - Trocar `filters.legalEntityId ?? activeLegalEntityId ?? undefined` por: se `legalEntityId === null` → não enviar filtro (todas); se `undefined` → cair para `activeLegalEntityId`; senão usar o valor.
 
-Arquivo: `src/components/bi/composite/SalesDrillDownModal.tsx`
+3. **`src/components/bi/composite/CommercialExecutiveReport.tsx`**
+   - Mesma lógica no cálculo de `filterEntityId` (linha 62) e em todos os `legalEntityId: filters.legalEntityId ?? null` passados ao drill-down — manter o `null` explícito = todas.
 
-Props:
-```ts
-{
-  open: boolean;
-  onClose: () => void;
-  title: string;          // ex: "Pedidos de Fernanda Massi — Mai/16 a Jun/15"
-  subtitle?: string;      // ex: filtros aplicados
-  filters: {
-    startDate: Date;
-    endDate: Date;
-    legalEntityId?: string | null;
-    sellerId?: string | null;
-    customerId?: string | null;
-    productId?: string | null;
-    stage?: string | null;        // para pipeline/perdas
-    sourceTable?: 'bi_sales_fact' | 'deals'; // default bi_sales_fact
-  };
-}
-```
+4. **`src/components/bi/composite/Seller360Report.tsx`**
+   - Aplicar a mesma normalização: `null` propagado significa "todas acessíveis" e não deve ser substituído por `activeLegalEntityId`.
 
-Comportamento:
-- Faz `SELECT` direto via supabase client, **respeitando RLS** (sem RPC nova):
-  - **Vendas** (default): `bi_sales_fact` joinado com `orders` (número, data, cliente, vendedor, valor, status).
-  - **Pipeline/Perdas/Forecast**: `deals` filtrado por `stage`, `lost_reason`, etc.
-- Limite de 500 linhas; mensagem se exceder.
-- Header com 3 totalizadores: **Total**, **Qtd**, **Ticket médio**.
-- Tabela com colunas: Nº pedido, Data, Cliente, Vendedor, Entidade, Status, Valor.
-- Linha clicável abre o pedido em nova aba (`/orders?id=...`).
-- Botão **Exportar CSV** gera download client-side (mesmas colunas + cabeçalho dos filtros).
-- Botão fecha modal. Modal usa `Dialog` do shadcn já existente.
+5. **`src/hooks/useBIReports.ts`**
+   - Já trata `if (filters.legalEntityId) ...` corretamente (null/undefined = sem filtro). Apenas garantir que o tipo aceite `string | null | undefined`.
 
-### 2.2 Habilitar drill-down nos blocos
+6. **`src/components/bi/composite/SalesDrillDownModal.tsx`**
+   - Já aplica `if (filters.legalEntityId)` (não filtra quando null). Sem mudança funcional; apenas confirmar tipagem.
 
-Cada bloco passa a expor um clique que abre o modal pré-filtrado:
+## Comportamento esperado após a mudança
 
-| Bloco | Onde clicar | Filtro passado |
-|---|---|---|
-| KPI Vendido / Pedidos / Ticket / Clientes | Card inteiro | período + entidade + vendedor (se 360°) |
-| Evolução de vendas | Ponto/barra do gráfico | recorta `startDate`/`endDate` para o dia ou mês clicado |
-| Vendas por entidade | Barra | adiciona `legalEntityId` |
-| Ranking vendedores | Linha | adiciona `sellerId` |
-| Top clientes | Linha | adiciona `customerId` |
-| Top produtos | Linha | adiciona `productId` |
-| Funil comercial | Linha | `sourceTable=deals` + `stage` |
-| Motivos de perda | Linha | `sourceTable=deals` + filtro de motivo |
-| Forecast | Linha | `sourceTable=deals` + `stage` |
+- Ao abrir o relatório: filtra pela entidade ativa do usuário (default atual preservado).
+- Ao escolher **"Todas acessíveis"**: KPIs, gráficos, rankings, pipeline, perdas, forecast e drill-down passam a consolidar todas as entidades às quais o usuário tem acesso (via `user_legal_entities`/RLS — sem expor entidades fora do escopo).
+- Ao escolher uma entidade específica: comportamento inalterado.
+- Botão **Resetar** volta ao default (entidade ativa).
 
-Implementação:
-- `ExecutiveKpiGrid`: aceita prop opcional `onItemClick?(key)`.
-- `RankingTable`: aceita prop opcional `onRowClick?(row)`; aplica `cursor-pointer hover:bg-muted/50`.
-- Recharts: adicionar `onClick` no `<Bar>` / `<Area>` para capturar `activePayload`.
-- Todos os cliques no PDF são neutralizados (drill-down só faz sentido no app); o modal usa portal, então não polui a captura.
+## Escopo
 
-### 2.3 Hook utilitário
-
-`src/hooks/useSalesDrillDown.ts` — gerencia estado `{ open, title, filters }` e expõe `openDrillDown(...)` para os componentes de relatório passarem para baixo.
-
----
-
-## Segurança e escopo
-
-- Queries respeitam RLS existente (`bi_sales_fact` e `deals` já têm policies).
-- Nenhuma alteração em RPC, schema, RLS ou permissão.
-- Drill-down só aparece quando há dado — botão/linha desabilitada em estado vazio.
-- Relatórios clássicos (`/reports`) intocados.
-- Botões e modal escondidos no PDF via `data-export-hide`.
-
----
-
-## Arquivos previstos
-
-**Novos:**
-- `src/components/bi/composite/SalesDrillDownModal.tsx`
-- `src/hooks/useSalesDrillDown.ts`
-
-**Editados:**
-- `src/components/bi/composite/ExecutiveSection.tsx` (suporte a `headerBadge`)
-- `src/components/bi/composite/ExecutiveKpiGrid.tsx` (`onItemClick`)
-- `src/components/bi/composite/RankingTable.tsx` (`onRowClick`)
-- `src/components/bi/composite/Seller360Report.tsx` (badge da meta + wiring drill-down)
-- `src/components/bi/composite/CommercialExecutiveReport.tsx` (wiring drill-down nos KPIs, evolução, entidade, rankings, funil, perdas, forecast)
-
----
-
-## Limitações conhecidas (assumidas)
-
-- Drill-down em **Forecast** mostra os deals em aberto na etapa, não a projeção ponderada — explicar no subtítulo do modal.
-- Tabela limitada a 500 linhas; acima disso o CSV traz a amostra e um aviso.
-- Sem persistência de estado do modal entre navegações.
-
-## Fora de escopo
-- Mudar a fonte do realizado da meta.
-- Drill-down no relatório clássico `/reports`.
-- Server-side export (CSV é gerado no navegador).
+Apenas frontend (filtros e propagação). RLS já restringe naturalmente os dados às entidades acessíveis, então "Todas" = "todas as minhas".
