@@ -12,6 +12,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { useBIReport } from '@/hooks/useBIReports';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
