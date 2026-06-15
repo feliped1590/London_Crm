@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, Inbox } from 'lucide-react';
 
 interface Props {
   title: string;
@@ -10,6 +10,10 @@ interface Props {
   error?: unknown;
   isEmpty?: boolean;
   emptyMessage?: string;
+  /** Mensagem amigável exibida em caso de erro. */
+  errorMessage?: string;
+  /** Conteúdo extra (ex.: botão de retry) — escondido no PDF via data-export-hide. */
+  errorAction?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
@@ -20,28 +24,44 @@ export function ExecutiveSection({
   isLoading,
   error,
   isEmpty,
-  emptyMessage = 'Sem dados suficientes no período.',
+  emptyMessage = 'Sem dados para os filtros atuais.',
+  errorMessage,
+  errorAction,
   className,
   children,
 }: Props) {
   return (
-    <Card className={`p-4 ${className ?? ''}`}>
+    <Card
+      className={`bi-section p-4 bg-white border border-[#E2E8F0] shadow-none rounded-[10px] ${className ?? ''}`}
+    >
       <div className="mb-3">
-        <h3 className="text-sm font-semibold">{title}</h3>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        <h3 className="text-[12px] font-semibold text-[#0F172A]">{title}</h3>
+        {description && <p className="text-[11px] text-[#64748B] mt-0.5">{description}</p>}
       </div>
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-32 w-full" />
         </div>
       ) : error ? (
-        <div className="flex items-start gap-2 text-destructive text-sm py-4">
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <span>{error instanceof Error ? error.message : 'Erro ao carregar bloco.'}</span>
+        <div className="bi-section-state flex flex-col items-center gap-2 text-center py-6 px-4 rounded-md border border-dashed border-[#FCD9D9] bg-[#FEF7F7]">
+          <AlertTriangle className="h-6 w-6 text-[#B45309]" />
+          <div className="text-sm font-medium text-[#0F172A]">
+            {errorMessage ?? 'Não foi possível carregar este bloco.'}
+          </div>
+          <div className="text-[11px] text-[#64748B]">
+            Tente ajustar os filtros (período ou entidade jurídica) ou recarregar a página.
+          </div>
+          {errorAction && (
+            <div className="mt-1" data-export-hide="true">
+              {errorAction}
+            </div>
+          )}
         </div>
       ) : isEmpty ? (
-        <div className="flex items-center gap-2 text-muted-foreground text-sm py-6 justify-center">
-          <Info className="h-4 w-4" /> {emptyMessage}
+        <div className="bi-section-state flex flex-col items-center gap-1.5 text-center py-6 px-4 rounded-md border border-dashed border-[#E2E8F0] bg-[#F8FAFC]">
+          <Inbox className="h-6 w-6 text-[#94A3B8]" />
+          <div className="text-sm font-medium text-[#334155]">{emptyMessage}</div>
+          <div className="text-[11px] text-[#64748B]">Sem dados para os filtros atuais.</div>
         </div>
       ) : (
         children

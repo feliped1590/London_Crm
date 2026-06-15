@@ -26,6 +26,8 @@ import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
+import { ForecastSummaryCard } from './ForecastSummaryCard';
+import { BI_COLORS } from './biTheme';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const fmtBRL = (v: number) =>
@@ -62,18 +64,19 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
     (Number(perdasAt.data?.valor_perdido) || 0) + (Number(perdasCot.data?.kpis?.valor_perdido) || 0);
 
   const kpis: KpiItem[] = [
-    { key: 'valor', label: 'Valor vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign },
-    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart },
-    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency', icon: TrendingUp },
-    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users },
+    { key: 'valor', label: 'Valor vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign, tone: 'primary' },
+    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart, tone: 'secondary' },
+    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency', icon: TrendingUp, tone: 'secondary' },
+    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users, tone: 'secondary' },
     {
       key: 'conv',
       label: 'Conversão',
       value: conversao.data?.taxa_conversao_venda,
       format: 'percent',
       icon: Target,
+      tone: 'success',
     },
-    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown },
+    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown, tone: 'danger' },
   ];
 
   // Evolução: agregar por mês se período > 60 dias
@@ -129,7 +132,8 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   }, [mainLoading, mainEmpty, onStatusChange]);
 
   return (
-    <div id="bi-export-executivo_comercial" className="space-y-4">
+    <div id="bi-export-executivo_comercial" className="bi-executive space-y-4">
+
 
       {/* KPIs */}
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
@@ -146,18 +150,18 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
             <AreaChart data={evolucao}>
               <defs>
                 <linearGradient id="evol" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor={BI_COLORS.primary} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={BI_COLORS.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRL(v)} width={80} />
-              <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
+              <CartesianGrid strokeDasharray="3 3" stroke={BI_COLORS.grid} opacity={0.6} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: BI_COLORS.muted }} stroke={BI_COLORS.grid} />
+              <YAxis tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={(v) => fmtBRL(v)} width={80} stroke={BI_COLORS.grid} />
+              <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="hsl(var(--primary))"
+                stroke={BI_COLORS.primary}
                 fill="url(#evol)"
                 strokeWidth={2}
               />
@@ -177,19 +181,20 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
           <div className="h-56">
             <ResponsiveContainer>
               <BarChart data={entidadeRows} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={fmtBRL} />
-                <YAxis dataKey="nome" type="category" tick={{ fontSize: 11 }} width={140} />
-                <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
+                <CartesianGrid strokeDasharray="3 3" stroke={BI_COLORS.grid} opacity={0.6} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={fmtBRL} stroke={BI_COLORS.grid} />
+                <YAxis dataKey="nome" type="category" tick={{ fontSize: 11, fill: BI_COLORS.muted }} width={140} stroke={BI_COLORS.grid} />
+                <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
                 <Bar dataKey="valor_vendido" radius={[0, 4, 4, 0]}>
                   {entidadeRows.map((r: any, i: number) => (
                     <Cell
                       key={i}
                       fill={
                         filterEntityId && r.legal_entity_id === filterEntityId
-                          ? 'hsl(var(--primary))'
-                          : 'hsl(var(--primary) / 0.5)'
+                          ? BI_COLORS.primary
+                          : BI_COLORS.secondary
                       }
+                      fillOpacity={filterEntityId && r.legal_entity_id !== filterEntityId ? 0.55 : 1}
                     />
                   ))}
                 </Bar>
@@ -317,7 +322,7 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
             limit={10}
           />
         ) : forecast.data ? (
-          <pre className="text-xs overflow-auto">{JSON.stringify(forecast.data, null, 2)}</pre>
+          <ForecastSummaryCard data={forecast.data} />
         ) : null}
       </ExecutiveSection>
     </div>

@@ -86,16 +86,17 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   }, [rankingAll.data, sellerId]);
 
   const kpis: KpiItem[] = [
-    { key: 'valor', label: 'Vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign },
-    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart },
-    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency' },
-    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users },
+    { key: 'valor', label: 'Vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign, tone: 'primary' },
+    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart, tone: 'secondary' },
+    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency', tone: 'secondary' },
+    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users, tone: 'secondary' },
     {
       key: 'novos',
       label: 'Novos clientes',
       value: clientesAtendidos.data?.novos,
       format: 'number',
       icon: UserPlus,
+      tone: 'success',
     },
     {
       key: 'conv',
@@ -103,14 +104,16 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
       value: conversao.data?.taxa_conversao_venda,
       format: 'percent',
       icon: Target,
+      tone: 'success',
     },
-    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown },
+    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown, tone: 'danger' },
     {
       key: 'propostas',
       label: 'Propostas emitidas',
       value: perdasCot.data?.kpis?.emitidas,
       format: 'number',
       icon: FileCheck,
+      tone: 'primary',
     },
   ];
 
@@ -137,7 +140,8 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   }, [mainLoading, mainEmpty, onStatusChange]);
 
   return (
-    <div id="bi-export-vendedor_360" className="space-y-4">
+    <div id="bi-export-vendedor_360" className="bi-executive space-y-4">
+
 
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
 
