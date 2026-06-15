@@ -115,7 +115,7 @@ export function ExportPDFButton({ containerId, title = 'Relatório', className, 
       className={className}
     >
       <Download className="mr-2 h-4 w-4" />
-      Exportar PDF
+      {label ?? 'Exportar PDF'}
     </Button>
   );
 }
