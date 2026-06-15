@@ -149,7 +149,7 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   const baseDrillFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? null,
+    legalEntityId: effectiveLegalEntityId ?? null,
   };
 
   return (
