@@ -413,7 +413,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         sellerId={sellerId}
         startDate={filters.startDate}
         endDate={filters.endDate}
-        legalEntityId={filters.legalEntityId ?? null}
+        legalEntityId={effectiveLegalEntityId ?? null}
       />
 
       <SalesDrillDownModal
