@@ -318,6 +318,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'valor', label: 'Valor', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios perdidos — ${row.motivo}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: 'perdido', lostReason: row.motivo, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -337,6 +344,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'abc', label: 'ABC', align: 'center' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos do vendedor — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, companyId: row.company_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -356,6 +370,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'participacao_pct', label: '% Total', align: 'right', format: 'percent' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos contendo — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, productId: row.product_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
