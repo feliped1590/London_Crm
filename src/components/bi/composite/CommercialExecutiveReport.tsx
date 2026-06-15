@@ -132,7 +132,8 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   }, [mainLoading, mainEmpty, onStatusChange]);
 
   return (
-    <div id="bi-export-executivo_comercial" className="space-y-4">
+    <div id="bi-export-executivo_comercial" className="bi-executive space-y-4">
+
 
       {/* KPIs */}
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
