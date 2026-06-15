@@ -7,9 +7,13 @@ interface ExportPDFButtonProps {
   containerId: string;
   title?: string;
   className?: string;
+  /** HTML opcional inserido logo abaixo do título no cabeçalho do PDF (ex.: filtros aplicados). */
+  headerExtraHtml?: string;
+  /** Label customizado para o botão. */
+  label?: string;
 }
 
-export function ExportPDFButton({ containerId, title = 'Relatório', className }: ExportPDFButtonProps) {
+export function ExportPDFButton({ containerId, title = 'Relatório', className, headerExtraHtml, label }: ExportPDFButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = () => {
