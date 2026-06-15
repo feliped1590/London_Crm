@@ -339,6 +339,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'dias_medio', label: 'Dias médios', align: 'right', format: 'number' },
             ]}
             limit={15}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios — etapa ${row.stage}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -359,6 +366,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'valor', label: 'Valor', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios perdidos — ${row.motivo}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: 'perdido', lostReason: row.motivo, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
       </div>
