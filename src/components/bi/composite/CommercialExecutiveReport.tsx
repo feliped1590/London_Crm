@@ -150,18 +150,18 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
             <AreaChart data={evolucao}>
               <defs>
                 <linearGradient id="evol" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop offset="0%" stopColor={BI_COLORS.primary} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={BI_COLORS.primary} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtBRL(v)} width={80} />
-              <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
+              <CartesianGrid strokeDasharray="3 3" stroke={BI_COLORS.grid} opacity={0.6} />
+              <XAxis dataKey="label" tick={{ fontSize: 11, fill: BI_COLORS.muted }} stroke={BI_COLORS.grid} />
+              <YAxis tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={(v) => fmtBRL(v)} width={80} stroke={BI_COLORS.grid} />
+              <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="hsl(var(--primary))"
+                stroke={BI_COLORS.primary}
                 fill="url(#evol)"
                 strokeWidth={2}
               />
