@@ -133,12 +133,39 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
     onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
   }, [mainLoading, mainEmpty, onStatusChange]);
 
+  const { state: drillState, openDrillDown, close: closeDrill } = useSalesDrillDown();
+  const periodSubtitle = `Período: ${filters.startDate.toLocaleDateString('pt-BR')} a ${filters.endDate.toLocaleDateString('pt-BR')}`;
+  const baseDrillFilters = {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    legalEntityId: filters.legalEntityId ?? null,
+  };
+
   return (
     <div id="bi-export-executivo_comercial" className="bi-executive space-y-4">
 
 
       {/* KPIs */}
-      <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
+      <ExecutiveKpiGrid
+        items={kpis}
+        isLoading={dashboard.isLoading}
+        columns={6}
+        onItemClick={(key) => {
+          if (['valor', 'qtd', 'ticket', 'clientes'].includes(key)) {
+            openDrillDown({
+              title: `Detalhe de pedidos — ${kpis.find((k) => k.key === key)?.label ?? ''}`,
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'sales' },
+            });
+          } else if (key === 'perdido') {
+            openDrillDown({
+              title: 'Negócios perdidos no período',
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'deals', stage: 'perdido' },
+            });
+          }
+        }}
+      />
 
       {/* Evolução */}
       <ExecutiveSection
