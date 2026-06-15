@@ -44,6 +44,7 @@ export function RankingTable<T extends Record<string, any>>({
   columns,
   limit = 10,
   emptyMessage = 'Sem dados.',
+  onRowClick,
 }: Props<T>) {
   const shown = rows.slice(0, limit);
   if (shown.length === 0) {
