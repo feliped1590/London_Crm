@@ -21,6 +21,10 @@ interface ExportPDFButtonProps {
   disabled?: boolean;
   /** Mensagem exibida como tooltip quando desabilitado. */
   disabledReason?: string;
+  /** HTML opcional de capa executiva, renderizada como primeira página antes do conteúdo. */
+  coverHtml?: string;
+  /** Texto curto exibido no rodapé fixo de todas as páginas. */
+  footerLabel?: string;
 }
 
 export function ExportPDFButton({
