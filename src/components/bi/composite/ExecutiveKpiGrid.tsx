@@ -32,7 +32,15 @@ interface Props {
 }
 
 export function ExecutiveKpiGrid({ items, isLoading, columns = 4 }: Props) {
-  const cols = `grid-cols-2 md:grid-cols-3 lg:grid-cols-${Math.min(columns, 6)}`;
+  const colsMap: Record<number, string> = {
+    2: 'grid-cols-2',
+    3: 'grid-cols-2 md:grid-cols-3',
+    4: 'grid-cols-2 md:grid-cols-4',
+    5: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5',
+    6: 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6',
+    8: 'grid-cols-2 md:grid-cols-4 lg:grid-cols-8',
+  };
+  const cols = colsMap[columns] ?? colsMap[4];
   if (isLoading) {
     return (
       <div className={`grid gap-3 ${cols}`}>
