@@ -26,7 +26,6 @@ import {
   BIReportFilters,
   isCompositeReport,
 } from '@/hooks/useBIReports';
-import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const CATEGORY_LABELS: Record<string, string> = {
   executivo: 'Relatórios Executivos',
@@ -57,8 +56,6 @@ export default function BICenter() {
   const { data: definitions, isLoading: loadingDefs } = useReportDefinitions();
   const { favorites, toggle: toggleFav } = useBIFavorites();
   const [search, setSearch] = useState('');
-  const { activeLegalEntityId } = useLegalEntities();
-
   const [filters, setFilters] = useState<BIReportFilters>({
     startDate: subDays(new Date(), 30),
     endDate: new Date(),
