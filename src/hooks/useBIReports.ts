@@ -81,7 +81,7 @@ function serializeFilters(filters: BIReportFilters) {
 export function useBIReport<T = any>(code: ReportCode | null, filters: BIReportFilters) {
   return useQuery({
     queryKey: ['bi-report', code, filters],
-    enabled: !!code,
+    enabled: !!code && !isCompositeReport(code),
     queryFn: async () => {
       const { data, error } = await supabase.rpc(`report_${code}` as any, {
         p_filters: serializeFilters(filters) as any,
