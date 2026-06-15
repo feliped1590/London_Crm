@@ -138,53 +138,60 @@ export function SalesDrillDownModal({ open, onClose, title, subtitle, filters }:
         } else {
           let q = supabase
             .from('bi_sales_fact')
-            .select(
-              `order_id, net_value, order_date,
-               orders!inner(id, number, status, total_value, order_date, company_id, sales_rep_id, legal_entity_id,
-                 companies(name, trade_name),
-                 sales_reps(name),
-                 legal_entities(name))`
-            )
+            .select('order_id, net_value, order_date, sales_rep_id, legal_entity_id, company_id, product_id, order_status')
             .gte('order_date', toISODate(filters.startDate))
             .lte('order_date', toISODate(filters.endDate))
             .neq('order_status', 'cancelled')
-            .limit(MAX_ROWS * 10); // items, will aggregate
+            .limit(MAX_ROWS * 10);
           if (filters.legalEntityId) q = q.eq('legal_entity_id', filters.legalEntityId);
           if (filters.sellerId) q = q.eq('sales_rep_id', filters.sellerId);
           if (filters.companyId) q = q.eq('company_id', filters.companyId);
           if (filters.productId) q = q.eq('product_id', filters.productId);
 
-          const { data, error: e } = await q;
+          const { data: factData, error: e } = await q;
           if (e) throw e;
           if (cancelled) return;
 
-          const byOrder = new Map<string, OrderRow>();
-          (data ?? []).forEach((row: any) => {
-            const o = row.orders;
-            if (!o) return;
-            const existing = byOrder.get(o.id);
-            if (existing) {
-              existing.value += Number(row.net_value || 0);
-            } else {
-              byOrder.set(o.id, {
-                id: o.id,
-                number: o.number,
-                date: o.order_date,
-                status: o.status,
-                company: o.companies?.trade_name || o.companies?.name || null,
-                seller: o.sales_reps?.name || null,
-                entity: o.legal_entities?.name || null,
-                value: Number(row.net_value || 0),
-              });
-            }
+          // Aggregate net_value by order_id
+          const totalsByOrder = new Map<string, number>();
+          (factData ?? []).forEach((row: any) => {
+            if (!row.order_id) return;
+            totalsByOrder.set(row.order_id, (totalsByOrder.get(row.order_id) ?? 0) + Number(row.net_value || 0));
           });
-          const list = Array.from(byOrder.values()).sort((a, b) => {
-            const da = a.date ? Date.parse(a.date) : 0;
-            const db = b.date ? Date.parse(b.date) : 0;
-            return db - da;
-          });
-          setOrderRows(list.slice(0, MAX_ROWS));
-          setTruncated(list.length > MAX_ROWS);
+
+          const orderIds = Array.from(totalsByOrder.keys());
+          if (orderIds.length === 0) {
+            setOrderRows([]);
+            setTruncated(false);
+          } else {
+            const { data: ordersData, error: oe } = await supabase
+              .from('orders')
+              .select(`id, number, status, order_date, company_id, sales_rep_id, legal_entity_id,
+                companies(name, trade_name),
+                sales_reps(name),
+                legal_entities(name)`)
+              .in('id', orderIds);
+            if (oe) throw oe;
+            if (cancelled) return;
+
+            const list: OrderRow[] = (ordersData ?? []).map((o: any) => ({
+              id: o.id,
+              number: o.number,
+              date: o.order_date,
+              status: o.status,
+              company: o.companies?.trade_name || o.companies?.name || null,
+              seller: o.sales_reps?.name || null,
+              entity: o.legal_entities?.name || null,
+              value: totalsByOrder.get(o.id) ?? 0,
+            })).sort((a, b) => {
+              const da = a.date ? Date.parse(a.date) : 0;
+              const db = b.date ? Date.parse(b.date) : 0;
+              return db - da;
+            });
+            setOrderRows(list.slice(0, MAX_ROWS));
+            setTruncated(list.length > MAX_ROWS);
+          }
+
         }
       } catch (err: any) {
         if (!cancelled) setError(err?.message || 'Falha ao carregar detalhes.');
