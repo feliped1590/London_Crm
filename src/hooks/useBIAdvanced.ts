@@ -82,13 +82,14 @@ export function useBIAdvanced() {
     error: pipelineHealthError,
     refetch: refetchPipelineHealth,
   } = useQuery({
-    queryKey: ['bi-pipeline-health', filters.startDate, filters.endDate, filters.pipelineId],
+    queryKey: ['bi-pipeline-health', filters.startDate, filters.endDate, filters.pipelineId, filters.legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_pipeline_health', {
         p_pipeline_id: filters.pipelineId || null,
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
-      });
+        p_legal_entity_id: filters.legalEntityId || null,
+      } as any);
       if (error) throw error;
       return (data || []) as PipelineHealthData[];
     },
@@ -102,13 +103,14 @@ export function useBIAdvanced() {
     error: sellerPerformanceError,
     refetch: refetchSellerPerformance,
   } = useQuery({
-    queryKey: ['bi-seller-performance', filters.startDate, filters.endDate],
+    queryKey: ['bi-seller-performance', filters.startDate, filters.endDate, filters.legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_seller_performance', {
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
         p_compare_previous: true,
-      });
+        p_legal_entity_id: filters.legalEntityId || null,
+      } as any);
       if (error) throw error;
       return (data || []) as SellerPerformanceData[];
     },
@@ -122,9 +124,11 @@ export function useBIAdvanced() {
     error: anomaliesError,
     refetch: refetchAnomalies,
   } = useQuery({
-    queryKey: ['bi-anomalies'],
+    queryKey: ['bi-anomalies', filters.legalEntityId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_bi_anomalies');
+      const { data, error } = await supabase.rpc('get_bi_anomalies', {
+        p_legal_entity_id: filters.legalEntityId || null,
+      } as any);
       if (error) throw error;
       return (data || []) as AnomalyData[];
     },
@@ -138,12 +142,13 @@ export function useBIAdvanced() {
     error: stalledDealsError,
     refetch: refetchStalledDeals,
   } = useQuery({
-    queryKey: ['bi-stalled-deals', filters.sellerId],
+    queryKey: ['bi-stalled-deals', filters.sellerId, filters.legalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_stalled_deals_by_seller', {
         p_seller_id: filters.sellerId || null,
         p_min_days: 7,
-      });
+        p_legal_entity_id: filters.legalEntityId || null,
+      } as any);
       if (error) throw error;
       return (data || []) as StalledDealData[];
     },
