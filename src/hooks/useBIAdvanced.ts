@@ -68,11 +68,17 @@ export interface BIFilters {
   legalEntityId?: string;
 }
 
+import { useLegalEntities } from '@/hooks/useLegalEntities';
+
 export function useBIAdvanced() {
+  const { activeLegalEntityId } = useLegalEntities();
   const [filters, setFilters] = useState<BIFilters>({
     startDate: subDays(new Date(), 30),
     endDate: new Date(),
   });
+  // Empresa Ativa tem prioridade sobre o filtro local quando este não for definido explicitamente.
+  const effectiveLegalEntityId = filters.legalEntityId ?? activeLegalEntityId ?? undefined;
+  filters.legalEntityId = effectiveLegalEntityId;
 
   // Pipeline Health
   const {
