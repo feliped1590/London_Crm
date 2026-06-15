@@ -108,7 +108,7 @@ export function CommercialExecutiveReport({ filters }: Props) {
   }, [perdasAt.data, perdasCot.data]);
 
   return (
-    <div className="space-y-4">
+    <div id="bi-export-executivo_comercial" className="space-y-4">
       {/* KPIs */}
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
 

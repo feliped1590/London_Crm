@@ -120,7 +120,7 @@ export function Seller360Report({ filters }: Props) {
   }, [perdasAt.data, perdasCot.data]);
 
   return (
-    <div className="space-y-4">
+    <div id="bi-export-vendedor_360" className="space-y-4">
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
 
       {/* Meta x Realizado */}
