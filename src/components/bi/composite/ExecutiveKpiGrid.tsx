@@ -42,9 +42,10 @@ interface Props {
   items: KpiItem[];
   isLoading?: boolean;
   columns?: number;
+  onItemClick?: (key: string) => void;
 }
 
-export function ExecutiveKpiGrid({ items, isLoading, columns = 4 }: Props) {
+export function ExecutiveKpiGrid({ items, isLoading, columns = 4, onItemClick }: Props) {
   const colsMap: Record<number, string> = {
     2: 'grid-cols-2',
     3: 'grid-cols-2 md:grid-cols-3',
