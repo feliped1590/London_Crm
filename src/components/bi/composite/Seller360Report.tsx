@@ -33,6 +33,14 @@ interface Props {
 
 export function Seller360Report({ filters, onStatusChange }: Props) {
   const sellerId = filters.sellerId ?? null;
+  const { activeLegalEntityId } = useLegalEntities();
+
+  // null => "Todas acessíveis" (explícito); undefined => default (entidade ativa);
+  // string => entidade específica
+  const effectiveLegalEntityId: string | undefined =
+    filters.legalEntityId === null
+      ? undefined
+      : filters.legalEntityId ?? activeLegalEntityId ?? undefined;
 
   if (!sellerId) {
     return (
@@ -46,7 +54,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const base = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? undefined,
+    legalEntityId: effectiveLegalEntityId,
     sellerId,
   };
 
@@ -62,9 +70,10 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const rankingAll = useBIReport<any[]>('vendas_vendedor', {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? undefined,
+    legalEntityId: effectiveLegalEntityId,
   });
   const clientesAtendidos = useBIReport<any>('clientes_atendidos', base);
+
 
   const k = dashboard.data?.kpis ?? {};
   const valorPerdido =
