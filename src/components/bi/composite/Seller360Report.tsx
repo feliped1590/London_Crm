@@ -405,6 +405,15 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         endDate={filters.endDate}
         legalEntityId={filters.legalEntityId ?? null}
       />
+
+      <SalesDrillDownModal
+        open={drillState.open}
+        onClose={closeDrill}
+        title={drillState.title}
+        subtitle={drillState.subtitle}
+        filters={drillState.filters}
+      />
     </div>
   );
 }
+
