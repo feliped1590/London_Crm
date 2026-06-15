@@ -214,7 +214,19 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
                 <XAxis type="number" tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={fmtBRL} stroke={BI_COLORS.grid} />
                 <YAxis dataKey="nome" type="category" tick={{ fontSize: 11, fill: BI_COLORS.muted }} width={140} stroke={BI_COLORS.grid} />
                 <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
-                <Bar dataKey="valor_vendido" radius={[0, 4, 4, 0]}>
+                <Bar
+                  dataKey="valor_vendido"
+                  radius={[0, 4, 4, 0]}
+                  cursor="pointer"
+                  onClick={(d: any) => {
+                    if (!d?.legal_entity_id) return;
+                    openDrillDown({
+                      title: `Pedidos — ${d.nome}`,
+                      subtitle: periodSubtitle,
+                      filters: { ...baseDrillFilters, legalEntityId: d.legal_entity_id, source: 'sales' },
+                    });
+                  }}
+                >
                   {entidadeRows.map((r: any, i: number) => (
                     <Cell
                       key={i}
