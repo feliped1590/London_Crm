@@ -396,11 +396,27 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'forecast', label: 'Forecast', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios em aberto — etapa ${row.stage}`,
+                subtitle: `${periodSubtitle} · Forecast mostra os deals subjacentes (não a projeção ponderada).`,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         ) : forecast.data ? (
           <ForecastSummaryCard data={forecast.data} />
         ) : null}
       </ExecutiveSection>
+
+      <SalesDrillDownModal
+        open={drillState.open}
+        onClose={closeDrill}
+        title={drillState.title}
+        subtitle={drillState.subtitle}
+        filters={drillState.filters}
+      />
     </div>
   );
 }
+
