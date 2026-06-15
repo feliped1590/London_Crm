@@ -18,6 +18,9 @@ import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
 import { SellerActivitySection } from './SellerActivitySection';
 import { Info } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { useSalesDrillDown } from '@/hooks/useSalesDrillDown';
+import { SalesDrillDownModal } from './SalesDrillDownModal';
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
@@ -139,11 +142,49 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
     onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
   }, [mainLoading, mainEmpty, onStatusChange]);
 
+  const { state: drillState, openDrillDown, close: closeDrill } = useSalesDrillDown();
+  const periodSubtitle = `Período: ${filters.startDate.toLocaleDateString('pt-BR')} a ${filters.endDate.toLocaleDateString('pt-BR')}`;
+  const baseDrillFilters = {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    legalEntityId: filters.legalEntityId ?? null,
+    sellerId,
+  };
+
+  // Período da meta = mês corrente
+  const metaPeriodo = useMemo(() => {
+    const now = new Date();
+    const inicio = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fim = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const mes = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const dd = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return { label: `Meta de ${mes} — ${dd(inicio)} a ${dd(fim)}`, inicio, fim };
+  }, []);
+
   return (
     <div id="bi-export-vendedor_360" className="bi-executive space-y-4">
 
 
-      <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
+      <ExecutiveKpiGrid
+        items={kpis}
+        isLoading={dashboard.isLoading}
+        columns={4}
+        onItemClick={(key) => {
+          if (['valor', 'qtd', 'ticket', 'clientes'].includes(key)) {
+            openDrillDown({
+              title: `Pedidos do vendedor — ${kpis.find((k) => k.key === key)?.label ?? ''}`,
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'sales' },
+            });
+          } else if (key === 'perdido') {
+            openDrillDown({
+              title: 'Negócios perdidos no período',
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, stage: 'perdido', source: 'deals' },
+            });
+          }
+        }}
+      />
 
       {/* Meta x Realizado */}
       <ExecutiveSection
@@ -152,6 +193,11 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         error={metas.error}
         isEmpty={(metas.data ?? []).length === 0}
         emptyMessage="Nenhuma meta cadastrada para o período."
+        headerBadge={
+          <Badge variant="outline" className="text-[10px] font-normal capitalize">
+            {metaPeriodo.label}
+          </Badge>
+        }
       >
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
@@ -165,6 +211,9 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               {metaPct.toFixed(1)}% • falta {fmtBRL(metaFalta)}
             </span>
           </div>
+          <p className="text-[10px] text-muted-foreground italic">
+            Realizado considera o período da meta (mês corrente), independente do filtro da tela.
+          </p>
           <div className="pt-2">
             <RankingTable
               rows={metas.data ?? []}
@@ -176,6 +225,19 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
                 { key: 'faltante', label: 'Falta', align: 'right', format: 'currency' },
               ]}
               limit={20}
+              onRowClick={() =>
+                openDrillDown({
+                  title: 'Pedidos do mês — referência da meta',
+                  subtitle: metaPeriodo.label,
+                  filters: {
+                    startDate: metaPeriodo.inicio,
+                    endDate: metaPeriodo.fim,
+                    legalEntityId: filters.legalEntityId ?? null,
+                    sellerId,
+                    source: 'sales',
+                  },
+                })
+              }
             />
           </div>
         </div>
@@ -198,6 +260,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'dias_medio', label: 'Dias médios', align: 'right', format: 'number' },
             ]}
             limit={15}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios do vendedor — etapa ${row.stage}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -249,6 +318,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'valor', label: 'Valor', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios perdidos — ${row.motivo}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: 'perdido', lostReason: row.motivo, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -268,6 +344,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'abc', label: 'ABC', align: 'center' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos do vendedor — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, companyId: row.company_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -287,6 +370,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'participacao_pct', label: '% Total', align: 'right', format: 'percent' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos contendo — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, productId: row.id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -315,6 +405,15 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         endDate={filters.endDate}
         legalEntityId={filters.legalEntityId ?? null}
       />
+
+      <SalesDrillDownModal
+        open={drillState.open}
+        onClose={closeDrill}
+        title={drillState.title}
+        subtitle={drillState.subtitle}
+        filters={drillState.filters}
+      />
     </div>
   );
 }
+

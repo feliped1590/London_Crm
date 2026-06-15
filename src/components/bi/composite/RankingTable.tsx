@@ -19,6 +19,7 @@ interface Props<T> {
   columns: RankingColumn<T>[];
   limit?: number;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 }
 
 function formatVal(v: unknown, fmt?: string) {
@@ -43,6 +44,7 @@ export function RankingTable<T extends Record<string, any>>({
   columns,
   limit = 10,
   emptyMessage = 'Sem dados.',
+  onRowClick,
 }: Props<T>) {
   const shown = rows.slice(0, limit);
   if (shown.length === 0) {
@@ -70,7 +72,11 @@ export function RankingTable<T extends Record<string, any>>({
         </TableHeader>
         <TableBody>
           {shown.map((row, i) => (
-            <TableRow key={i} className={i % 2 === 1 ? 'bg-[#F8FAFC]' : ''}>
+            <TableRow
+              key={i}
+              className={cn(i % 2 === 1 ? 'bg-[#F8FAFC]' : '', onRowClick && 'cursor-pointer hover:bg-[#EFF4FB]')}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+            >
               <TableCell className="py-1.5">
                 <span
                   className={cn(

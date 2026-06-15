@@ -42,9 +42,10 @@ interface Props {
   items: KpiItem[];
   isLoading?: boolean;
   columns?: number;
+  onItemClick?: (key: string) => void;
 }
 
-export function ExecutiveKpiGrid({ items, isLoading, columns = 4 }: Props) {
+export function ExecutiveKpiGrid({ items, isLoading, columns = 4, onItemClick }: Props) {
   const colsMap: Record<number, string> = {
     2: 'grid-cols-2',
     3: 'grid-cols-2 md:grid-cols-3',
@@ -68,12 +69,15 @@ export function ExecutiveKpiGrid({ items, isLoading, columns = 4 }: Props) {
       {items.map((k) => {
         const Icon = k.icon;
         const tone = TONE_CLASS[k.tone ?? 'neutral'];
+        const clickable = !!onItemClick;
         return (
           <Card
             key={k.key}
+            onClick={clickable ? () => onItemClick!(k.key) : undefined}
             className={cn(
               'bi-kpi-card p-4 bg-white border border-[#E2E8F0] shadow-none rounded-[10px] border-l-[3px]',
-              tone.border
+              tone.border,
+              clickable && 'cursor-pointer transition-shadow hover:shadow-md'
             )}
           >
             <div className="flex items-start justify-between gap-2">

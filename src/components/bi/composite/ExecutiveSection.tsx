@@ -14,6 +14,8 @@ interface Props {
   errorMessage?: string;
   /** Conteúdo extra (ex.: botão de retry) — escondido no PDF via data-export-hide. */
   errorAction?: ReactNode;
+  /** Badge/elemento exibido à direita do título (ex.: período da meta). */
+  headerBadge?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
@@ -27,6 +29,7 @@ export function ExecutiveSection({
   emptyMessage = 'Sem dados para os filtros atuais.',
   errorMessage,
   errorAction,
+  headerBadge,
   className,
   children,
 }: Props) {
@@ -34,9 +37,12 @@ export function ExecutiveSection({
     <Card
       className={`bi-section p-4 bg-white border border-[#E2E8F0] shadow-none rounded-[10px] ${className ?? ''}`}
     >
-      <div className="mb-3">
-        <h3 className="text-[12px] font-semibold text-[#0F172A]">{title}</h3>
-        {description && <p className="text-[11px] text-[#64748B] mt-0.5">{description}</p>}
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[12px] font-semibold text-[#0F172A]">{title}</h3>
+          {description && <p className="text-[11px] text-[#64748B] mt-0.5">{description}</p>}
+        </div>
+        {headerBadge && <div className="shrink-0">{headerBadge}</div>}
       </div>
       {isLoading ? (
         <div className="space-y-2">

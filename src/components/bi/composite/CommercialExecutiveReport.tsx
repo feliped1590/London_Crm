@@ -29,6 +29,8 @@ import { RankingTable } from './RankingTable';
 import { ForecastSummaryCard } from './ForecastSummaryCard';
 import { BI_COLORS } from './biTheme';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { useSalesDrillDown } from '@/hooks/useSalesDrillDown';
+import { SalesDrillDownModal } from './SalesDrillDownModal';
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
@@ -131,12 +133,39 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
     onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
   }, [mainLoading, mainEmpty, onStatusChange]);
 
+  const { state: drillState, openDrillDown, close: closeDrill } = useSalesDrillDown();
+  const periodSubtitle = `Período: ${filters.startDate.toLocaleDateString('pt-BR')} a ${filters.endDate.toLocaleDateString('pt-BR')}`;
+  const baseDrillFilters = {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    legalEntityId: filters.legalEntityId ?? null,
+  };
+
   return (
     <div id="bi-export-executivo_comercial" className="bi-executive space-y-4">
 
 
       {/* KPIs */}
-      <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={6} />
+      <ExecutiveKpiGrid
+        items={kpis}
+        isLoading={dashboard.isLoading}
+        columns={6}
+        onItemClick={(key) => {
+          if (['valor', 'qtd', 'ticket', 'clientes'].includes(key)) {
+            openDrillDown({
+              title: `Detalhe de pedidos — ${kpis.find((k) => k.key === key)?.label ?? ''}`,
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'sales' },
+            });
+          } else if (key === 'perdido') {
+            openDrillDown({
+              title: 'Negócios perdidos no período',
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'deals', stage: 'perdido' },
+            });
+          }
+        }}
+      />
 
       {/* Evolução */}
       <ExecutiveSection
@@ -185,7 +214,19 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
                 <XAxis type="number" tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={fmtBRL} stroke={BI_COLORS.grid} />
                 <YAxis dataKey="nome" type="category" tick={{ fontSize: 11, fill: BI_COLORS.muted }} width={140} stroke={BI_COLORS.grid} />
                 <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
-                <Bar dataKey="valor_vendido" radius={[0, 4, 4, 0]}>
+                <Bar
+                  dataKey="valor_vendido"
+                  radius={[0, 4, 4, 0]}
+                  cursor="pointer"
+                  onClick={(d: any) => {
+                    if (!d?.legal_entity_id) return;
+                    openDrillDown({
+                      title: `Pedidos — ${d.nome}`,
+                      subtitle: periodSubtitle,
+                      filters: { ...baseDrillFilters, legalEntityId: d.legal_entity_id, source: 'sales' },
+                    });
+                  }}
+                >
                   {entidadeRows.map((r: any, i: number) => (
                     <Cell
                       key={i}
@@ -219,6 +260,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'ticket_medio', label: 'Ticket', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, sellerId: row.sales_rep_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -238,6 +286,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'abc', label: 'ABC', align: 'center' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, companyId: row.company_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -257,6 +312,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'participacao_pct', label: '% Total', align: 'right', format: 'percent' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos contendo — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, productId: row.id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -277,6 +339,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'dias_medio', label: 'Dias médios', align: 'right', format: 'number' },
             ]}
             limit={15}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios — etapa ${row.stage}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -297,6 +366,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'valor', label: 'Valor', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios perdidos — ${row.motivo}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: 'perdido', lostReason: row.motivo, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
       </div>
@@ -320,11 +396,27 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'forecast', label: 'Forecast', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios em aberto — etapa ${row.stage}`,
+                subtitle: `${periodSubtitle} · Forecast mostra os deals subjacentes (não a projeção ponderada).`,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         ) : forecast.data ? (
           <ForecastSummaryCard data={forecast.data} />
         ) : null}
       </ExecutiveSection>
+
+      <SalesDrillDownModal
+        open={drillState.open}
+        onClose={closeDrill}
+        title={drillState.title}
+        subtitle={drillState.subtitle}
+        filters={drillState.filters}
+      />
     </div>
   );
 }
+
