@@ -1,14 +1,21 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { subDays } from 'date-fns';
-import { Brain, Star, StarOff, ChevronRight } from 'lucide-react';
+import { Brain, Star, StarOff, ChevronRight, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { BIFiltersBar } from '@/components/reports/bi/BIFiltersBar';
 import { ReportRenderer } from '@/components/bi/ReportRenderer';
+import { CommercialExecutiveReport } from '@/components/bi/composite/CommercialExecutiveReport';
+import { Seller360Report } from '@/components/bi/composite/Seller360Report';
+import {
+  ExecutiveFiltersBar,
+  ExecutiveFilters,
+} from '@/components/bi/composite/ExecutiveFiltersBar';
 import {
   useReportDefinitions,
   useBIReport,
@@ -16,10 +23,12 @@ import {
   ReportCode,
   ReportDefinition,
   BIReportFilters,
+  isCompositeReport,
 } from '@/hooks/useBIReports';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const CATEGORY_LABELS: Record<string, string> = {
-  executivo: 'Visão Executiva',
+  executivo: 'Relatórios Executivos',
   comercial: 'Comercial',
   funil: 'Funil',
   metas: 'Metas',
@@ -30,18 +39,43 @@ const CATEGORY_LABELS: Record<string, string> = {
   favoritos: 'Favoritos',
 };
 
-const CATEGORY_ORDER = ['favoritos', 'executivo', 'comercial', 'funil', 'metas', 'produtos', 'rankings', 'clientes', 'forecast'];
+const CATEGORY_ORDER = [
+  'favoritos',
+  'executivo',
+  'comercial',
+  'funil',
+  'metas',
+  'produtos',
+  'rankings',
+  'clientes',
+  'forecast',
+];
 
 export default function BICenter() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: definitions, isLoading: loadingDefs } = useReportDefinitions();
   const { favorites, toggle: toggleFav } = useBIFavorites();
   const [search, setSearch] = useState('');
+  const { activeLegalEntityId } = useLegalEntities();
 
   const [filters, setFilters] = useState<BIReportFilters>({
     startDate: subDays(new Date(), 30),
     endDate: new Date(),
   });
+
+  const [execFilters, setExecFilters] = useState<ExecutiveFilters>({
+    startDate: subDays(new Date(), 30),
+    endDate: new Date(),
+    legalEntityId: null,
+    sellerId: null,
+  });
+
+  // Aplica entidade ativa como default quando carregada
+  useEffect(() => {
+    if (activeLegalEntityId && execFilters.legalEntityId == null) {
+      setExecFilters((p) => ({ ...p, legalEntityId: activeLegalEntityId }));
+    }
+  }, [activeLegalEntityId, execFilters.legalEntityId]);
 
   const activeCode = (searchParams.get('r') as ReportCode | null) || 'dashboard_executivo';
   const setActive = (code: ReportCode) => {
@@ -62,7 +96,6 @@ export default function BICenter() {
       if (!map.has(d.category)) map.set(d.category, []);
       map.get(d.category)!.push(d);
     });
-    // Inject favorites pseudo-category
     const favList = (definitions || []).filter((d) => favorites.has(d.id));
     if (favList.length > 0) map.set('favoritos', favList);
     return Array.from(map.entries()).sort(
@@ -70,11 +103,11 @@ export default function BICenter() {
     );
   }, [definitions, favorites, search]);
 
+  const composite = isCompositeReport(activeCode);
   const report = useBIReport(active?.code ?? null, filters);
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-8rem)]">
-      {/* Sidebar */}
       <aside className="lg:w-72 lg:shrink-0 space-y-4">
         <div className="flex items-center gap-2">
           <Brain className="h-6 w-6 text-primary" />
@@ -88,37 +121,60 @@ export default function BICenter() {
         />
         {loadingDefs ? (
           <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-10" />
+            ))}
           </div>
         ) : (
           <nav className="space-y-4">
             {grouped.map(([cat, reports]) => (
               <div key={cat}>
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2 mb-1 flex items-center gap-1">
+                  {cat === 'executivo' && <Sparkles className="h-3 w-3 text-primary" />}
                   {CATEGORY_LABELS[cat] || cat}
                 </div>
                 <ul className="space-y-0.5">
                   {reports.map((r) => {
                     const isActive = r.code === activeCode;
                     const isFav = favorites.has(r.id);
+                    const isComp = isCompositeReport(r.code as ReportCode);
                     return (
                       <li key={r.id}>
                         <button
                           onClick={() => setActive(r.code as ReportCode)}
                           className={cn(
                             'group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left transition-colors',
-                            isActive ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent text-foreground'
+                            isActive
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'hover:bg-accent text-foreground'
                           )}
                         >
-                          <ChevronRight className={cn('h-3 w-3 shrink-0 transition-transform', isActive && 'rotate-90')} />
+                          <ChevronRight
+                            className={cn(
+                              'h-3 w-3 shrink-0 transition-transform',
+                              isActive && 'rotate-90'
+                            )}
+                          />
                           <span className="flex-1 truncate">{r.name}</span>
+                          {isComp && (
+                            <Badge variant="secondary" className="h-4 text-[9px] px-1">
+                              360
+                            </Badge>
+                          )}
                           <span
                             role="button"
-                            onClick={(e) => { e.stopPropagation(); toggleFav(r.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFav(r.id);
+                            }}
                             className="opacity-0 group-hover:opacity-100 data-[fav=true]:opacity-100 text-muted-foreground hover:text-primary"
                             data-fav={isFav}
                           >
-                            {isFav ? <Star className="h-3.5 w-3.5 fill-current" /> : <StarOff className="h-3.5 w-3.5" />}
+                            {isFav ? (
+                              <Star className="h-3.5 w-3.5 fill-current" />
+                            ) : (
+                              <StarOff className="h-3.5 w-3.5" />
+                            )}
                           </span>
                         </button>
                       </li>
@@ -131,14 +187,20 @@ export default function BICenter() {
         )}
       </aside>
 
-      {/* Main */}
       <main className="flex-1 min-w-0 space-y-4">
         {active ? (
           <>
             <Card className="p-4">
               <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold">{active.name}</h2>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    {active.name}
+                    {composite && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        Executivo
+                      </Badge>
+                    )}
+                  </h2>
                   {active.description && (
                     <p className="text-sm text-muted-foreground">{active.description}</p>
                   )}
@@ -150,24 +212,45 @@ export default function BICenter() {
                   className="gap-2"
                 >
                   {favorites.has(active.id) ? (
-                    <><Star className="h-4 w-4 fill-current text-primary" /> Favoritado</>
+                    <>
+                      <Star className="h-4 w-4 fill-current text-primary" /> Favoritado
+                    </>
                   ) : (
-                    <><StarOff className="h-4 w-4" /> Favoritar</>
+                    <>
+                      <StarOff className="h-4 w-4" /> Favoritar
+                    </>
                   )}
                 </Button>
               </div>
-              <BIFiltersBar
-                filters={{ startDate: filters.startDate!, endDate: filters.endDate! }}
-                onFiltersChange={(f) => setFilters((prev) => ({ ...prev, ...f }))}
-              />
+              {composite ? (
+                <ExecutiveFiltersBar
+                  filters={execFilters}
+                  onChange={setExecFilters}
+                  showSellerSelector={activeCode === 'vendedor_360'}
+                  requireSeller={activeCode === 'vendedor_360'}
+                />
+              ) : (
+                <BIFiltersBar
+                  filters={{ startDate: filters.startDate!, endDate: filters.endDate! }}
+                  onFiltersChange={(f) => setFilters((prev) => ({ ...prev, ...f }))}
+                />
+              )}
             </Card>
 
-            <ReportRenderer
-              data={report.data}
-              isLoading={report.isLoading}
-              error={report.error}
-              chartType={active.chart_type}
-            />
+            {composite ? (
+              activeCode === 'executivo_comercial' ? (
+                <CommercialExecutiveReport filters={execFilters} />
+              ) : (
+                <Seller360Report filters={execFilters} />
+              )
+            ) : (
+              <ReportRenderer
+                data={report.data}
+                isLoading={report.isLoading}
+                error={report.error}
+                chartType={active.chart_type}
+              />
+            )}
           </>
         ) : (
           <Card className="p-8 text-center text-muted-foreground">

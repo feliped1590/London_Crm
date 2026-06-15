@@ -15,6 +15,7 @@ Versões de produto: v1=pai (parent_product_id NULL), v2+=filhos. ERP recebe `co
 
 ## Memories
 - [Sales Goals Attribution](mem://features/sales-goals-attribution) — Metas medidas por pedidos (não deals), atribuídas por sales_rep via orders/company
+- [BI Executive Composite Reports](mem://features/bi-executive-composite-reports) — Fase 1: relatórios `executivo_comercial` e `vendedor_360` no BICenter compondo RPCs existentes
 - [Role-Based Access Control](mem://auth/role-based-access-control) — Admin, Sales, Support, Dev, Ops profiles and granular stage permissions
 - [Licensing Model](mem://business/licensing-model) — Backend limit of 25 active users on 'professional' plan
 - [WhatsApp Access](mem://security/whatsapp-access-control) — RLS on instances: users see own chats, Admins see all

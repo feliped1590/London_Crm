@@ -16,7 +16,15 @@ export type ReportCode =
   | 'rankings'
   | 'clientes_atendidos'
   | 'pipeline_comercial'
-  | 'forecast_vendas';
+  | 'forecast_vendas'
+  // Composite (no RPC; rendered via dedicated React components)
+  | 'executivo_comercial'
+  | 'vendedor_360';
+
+export const COMPOSITE_REPORT_CODES: ReportCode[] = ['executivo_comercial', 'vendedor_360'];
+export function isCompositeReport(code: ReportCode | null | undefined) {
+  return !!code && (COMPOSITE_REPORT_CODES as string[]).includes(code);
+}
 
 export interface ReportDefinition {
   id: string;
@@ -73,7 +81,7 @@ function serializeFilters(filters: BIReportFilters) {
 export function useBIReport<T = any>(code: ReportCode | null, filters: BIReportFilters) {
   return useQuery({
     queryKey: ['bi-report', code, filters],
-    enabled: !!code,
+    enabled: !!code && !isCompositeReport(code),
     queryFn: async () => {
       const { data, error } = await supabase.rpc(`report_${code}` as any, {
         p_filters: serializeFilters(filters) as any,
