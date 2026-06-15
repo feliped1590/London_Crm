@@ -193,6 +193,11 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         error={metas.error}
         isEmpty={(metas.data ?? []).length === 0}
         emptyMessage="Nenhuma meta cadastrada para o período."
+        headerBadge={
+          <Badge variant="outline" className="text-[10px] font-normal capitalize">
+            {metaPeriodo.label}
+          </Badge>
+        }
       >
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
@@ -206,6 +211,9 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               {metaPct.toFixed(1)}% • falta {fmtBRL(metaFalta)}
             </span>
           </div>
+          <p className="text-[10px] text-muted-foreground italic">
+            Realizado considera o período da meta (mês corrente), independente do filtro da tela.
+          </p>
           <div className="pt-2">
             <RankingTable
               rows={metas.data ?? []}
@@ -217,6 +225,19 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
                 { key: 'faltante', label: 'Falta', align: 'right', format: 'currency' },
               ]}
               limit={20}
+              onRowClick={() =>
+                openDrillDown({
+                  title: 'Pedidos do mês — referência da meta',
+                  subtitle: metaPeriodo.label,
+                  filters: {
+                    startDate: metaPeriodo.inicio,
+                    endDate: metaPeriodo.fim,
+                    legalEntityId: filters.legalEntityId ?? null,
+                    sellerId,
+                    source: 'sales',
+                  },
+                })
+              }
             />
           </div>
         </div>
