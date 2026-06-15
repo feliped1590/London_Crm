@@ -322,7 +322,7 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
             limit={10}
           />
         ) : forecast.data ? (
-          <pre className="text-xs overflow-auto">{JSON.stringify(forecast.data, null, 2)}</pre>
+          <ForecastSummaryCard data={forecast.data} />
         ) : null}
       </ExecutiveSection>
     </div>
