@@ -206,22 +206,31 @@ export default function BICenter() {
                     <p className="text-sm text-muted-foreground">{active.description}</p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleFav(active.id)}
-                  className="gap-2"
-                >
-                  {favorites.has(active.id) ? (
-                    <>
-                      <Star className="h-4 w-4 fill-current text-primary" /> Favoritado
-                    </>
-                  ) : (
-                    <>
-                      <StarOff className="h-4 w-4" /> Favoritar
-                    </>
+                <div className="flex items-center gap-2" data-export-hide="true">
+                  {composite && (
+                    <ExecutiveExportButton
+                      reportCode={activeCode as 'executivo_comercial' | 'vendedor_360'}
+                      reportName={active.name}
+                      filters={execFilters}
+                    />
                   )}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleFav(active.id)}
+                    className="gap-2"
+                  >
+                    {favorites.has(active.id) ? (
+                      <>
+                        <Star className="h-4 w-4 fill-current text-primary" /> Favoritado
+                      </>
+                    ) : (
+                      <>
+                        <StarOff className="h-4 w-4" /> Favoritar
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
               {composite ? (
                 <ExecutiveFiltersBar
