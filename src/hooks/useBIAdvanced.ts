@@ -65,6 +65,7 @@ export interface BIFilters {
   endDate: Date;
   sellerId?: string;
   pipelineId?: string;
+  legalEntityId?: string;
 }
 
 export function useBIAdvanced() {
