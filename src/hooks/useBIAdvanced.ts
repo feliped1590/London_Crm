@@ -76,7 +76,7 @@ export function useBIAdvanced() {
     endDate: new Date(),
   });
   // Empresa Ativa entra automaticamente quando o filtro local não definir entidade.
-  const effectiveLegalEntityId = filters.legalEntityId ?? activeLegalEntityId ?? undefined;
+  const effectiveLegalEntityId = queryLegalEntityId ?? activeLegalEntityId ?? undefined;
   const setFilters = setFiltersRaw;
   // Mantemos `filters` imutável para os consumidores; injetamos a entidade ativa apenas para queries.
   const queryLegalEntityId = effectiveLegalEntityId;
@@ -89,13 +89,13 @@ export function useBIAdvanced() {
     error: pipelineHealthError,
     refetch: refetchPipelineHealth,
   } = useQuery({
-    queryKey: ['bi-pipeline-health', filters.startDate, filters.endDate, filters.pipelineId, filters.legalEntityId],
+    queryKey: ['bi-pipeline-health', filters.startDate, filters.endDate, filters.pipelineId, queryLegalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_pipeline_health', {
         p_pipeline_id: filters.pipelineId || null,
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
-        p_legal_entity_id: filters.legalEntityId || null,
+        p_legal_entity_id: queryLegalEntityId || null,
       } as any);
       if (error) throw error;
       return (data || []) as PipelineHealthData[];
@@ -110,13 +110,13 @@ export function useBIAdvanced() {
     error: sellerPerformanceError,
     refetch: refetchSellerPerformance,
   } = useQuery({
-    queryKey: ['bi-seller-performance', filters.startDate, filters.endDate, filters.legalEntityId],
+    queryKey: ['bi-seller-performance', filters.startDate, filters.endDate, queryLegalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_seller_performance', {
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
         p_compare_previous: true,
-        p_legal_entity_id: filters.legalEntityId || null,
+        p_legal_entity_id: queryLegalEntityId || null,
       } as any);
       if (error) throw error;
       return (data || []) as SellerPerformanceData[];
@@ -131,10 +131,10 @@ export function useBIAdvanced() {
     error: anomaliesError,
     refetch: refetchAnomalies,
   } = useQuery({
-    queryKey: ['bi-anomalies', filters.legalEntityId],
+    queryKey: ['bi-anomalies', queryLegalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_bi_anomalies', {
-        p_legal_entity_id: filters.legalEntityId || null,
+        p_legal_entity_id: queryLegalEntityId || null,
       } as any);
       if (error) throw error;
       return (data || []) as AnomalyData[];
@@ -149,12 +149,12 @@ export function useBIAdvanced() {
     error: stalledDealsError,
     refetch: refetchStalledDeals,
   } = useQuery({
-    queryKey: ['bi-stalled-deals', filters.sellerId, filters.legalEntityId],
+    queryKey: ['bi-stalled-deals', filters.sellerId, queryLegalEntityId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_stalled_deals_by_seller', {
         p_seller_id: filters.sellerId || null,
         p_min_days: 7,
-        p_legal_entity_id: filters.legalEntityId || null,
+        p_legal_entity_id: queryLegalEntityId || null,
       } as any);
       if (error) throw error;
       return (data || []) as StalledDealData[];
@@ -169,12 +169,12 @@ export function useBIAdvanced() {
     error: conversionError,
     refetch: refetchConversion,
   } = useQuery({
-    queryKey: ['bi-conversion-stage', filters.startDate, filters.endDate, filters.legalEntityId, filters.pipelineId, filters.sellerId],
+    queryKey: ['bi-conversion-stage', filters.startDate, filters.endDate, queryLegalEntityId, filters.pipelineId, filters.sellerId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_conversion_by_stage', {
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
-        p_legal_entity_id: filters.legalEntityId || null,
+        p_legal_entity_id: queryLegalEntityId || null,
         p_pipeline_id: filters.pipelineId || null,
         p_seller_id: filters.sellerId || null,
       } as any);
