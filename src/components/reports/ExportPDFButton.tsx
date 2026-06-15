@@ -62,25 +62,34 @@ export function ExportPDFButton({ containerId, title = 'Relatório', className, 
               font-family: system-ui, -apple-system, sans-serif;
             }
             .print-header {
-              text-align: center;
+              text-align: left;
               margin-bottom: 24px;
               padding-bottom: 16px;
               border-bottom: 2px solid #e5e7eb;
             }
             .print-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
             .print-header p { font-size: 0.875rem; color: #6b7280; margin: 4px 0 0; }
+            .print-header .meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; margin-top: 8px; font-size: 0.78rem; color: #374151; }
+            .print-header .meta strong { color: #111827; }
+            .print-footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 0.72rem; color: #6b7280; text-align: center; }
             /* Force visible colors for print */
             [class*="card"] { break-inside: avoid; }
+            /* Esconde elementos não exportáveis (skeletons, botões internos, etc.) */
+            [data-export-hide="true"] { display: none !important; }
+            /* Recharts: evita quebrar gráfico no meio de página */
+            .recharts-wrapper { break-inside: avoid; page-break-inside: avoid; }
           </style>
         </head>
         <body>
           <div class="print-header">
             <h1>${title}</h1>
             <p>Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+            ${headerExtraHtml ? `<div class="meta">${headerExtraHtml}</div>` : ''}
           </div>
           ${container.innerHTML}
+          <div class="print-footer">CRM · Central de BI · ${new Date().toLocaleString('pt-BR')}</div>
           <script>
-            window.onload = function() { window.print(); };
+            window.onload = function() { setTimeout(function(){ window.print(); }, 300); };
           </script>
         </body>
         </html>
