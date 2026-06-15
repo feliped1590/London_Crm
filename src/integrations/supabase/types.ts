@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      _bi_phase0_snapshot_fact: {
+        Row: {
+          company_id: string | null
+          cost_value: number | null
+          created_at: string | null
+          discount_value: number | null
+          gross_margin_percent: number | null
+          gross_margin_value: number | null
+          gross_value: number | null
+          id: string | null
+          ipi_value: number | null
+          legal_entity_id: string | null
+          net_value: number | null
+          order_date: string | null
+          order_id: string | null
+          order_item_id: string | null
+          order_status: string | null
+          product_family_id: string | null
+          product_group_id: string | null
+          product_id: string | null
+          quantity: number | null
+          sales_rep_id: string | null
+          team_id: string | null
+          tenant_id: string | null
+          unit_price: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string | null
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string | null
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id?: string | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          cost_value?: number | null
+          created_at?: string | null
+          discount_value?: number | null
+          gross_margin_percent?: number | null
+          gross_margin_value?: number | null
+          gross_value?: number | null
+          id?: string | null
+          ipi_value?: number | null
+          legal_entity_id?: string | null
+          net_value?: number | null
+          order_date?: string | null
+          order_id?: string | null
+          order_item_id?: string | null
+          order_status?: string | null
+          product_family_id?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          sales_rep_id?: string | null
+          team_id?: string | null
+          tenant_id?: string | null
+          unit_price?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      _bi_phase0_snapshot_orders: {
+        Row: {
+          id: string | null
+          order_date: string | null
+          sales_rep_id: string | null
+        }
+        Insert: {
+          id?: string | null
+          order_date?: string | null
+          sales_rep_id?: string | null
+        }
+        Update: {
+          id?: string | null
+          order_date?: string | null
+          sales_rep_id?: string | null
+        }
+        Relationships: []
+      }
       access_violation_log: {
         Row: {
           action: string
@@ -654,22 +753,31 @@ export type Database = {
       bi_sales_fact_queue: {
         Row: {
           action: string
+          attempts: number
           enqueued_at: string
           id: string
+          last_attempt_at: string | null
+          last_error: string | null
           order_id: string
           processed_at: string | null
         }
         Insert: {
           action: string
+          attempts?: number
           enqueued_at?: string
           id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           order_id: string
           processed_at?: string | null
         }
         Update: {
           action?: string
+          attempts?: number
           enqueued_at?: string
           id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           order_id?: string
           processed_at?: string | null
         }
@@ -11935,6 +12043,7 @@ export type Database = {
       mark_notification_read: { Args: { p_id: string }; Returns: undefined }
       next_erp_sequence: { Args: { p_sequence_name: string }; Returns: number }
       normalize_city_name: { Args: { p_text: string }; Returns: string }
+      process_bi_sales_fact_queue: { Args: { p_limit?: number }; Returns: Json }
       process_stock_movement: {
         Args: {
           p_company_id: string
