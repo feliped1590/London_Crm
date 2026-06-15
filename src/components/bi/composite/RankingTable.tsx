@@ -19,6 +19,7 @@ interface Props<T> {
   columns: RankingColumn<T>[];
   limit?: number;
   emptyMessage?: string;
+  onRowClick?: (row: T) => void;
 }
 
 function formatVal(v: unknown, fmt?: string) {
