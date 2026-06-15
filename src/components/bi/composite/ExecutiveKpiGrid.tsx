@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { BiTone } from './biTheme';
 
 export interface KpiItem {
   key: string;
@@ -9,6 +11,8 @@ export interface KpiItem {
   format?: 'currency' | 'number' | 'percent' | 'text';
   icon?: LucideIcon;
   hint?: string;
+  /** Tom visual do acento (borda esquerda + chip do ícone). */
+  tone?: BiTone;
 }
 
 const fmtCurrency = (v: number) =>
@@ -24,6 +28,15 @@ function display(v: KpiItem['value'], fmt: KpiItem['format']) {
   }
   return String(v);
 }
+
+const TONE_CLASS: Record<BiTone, { border: string; chip: string; icon: string }> = {
+  primary:   { border: 'border-l-[#2563EB]', chip: 'bg-[#2563EB]/10',  icon: 'text-[#2563EB]' },
+  secondary: { border: 'border-l-[#4F46E5]', chip: 'bg-[#4F46E5]/10',  icon: 'text-[#4F46E5]' },
+  success:   { border: 'border-l-[#16A34A]', chip: 'bg-[#16A34A]/10',  icon: 'text-[#16A34A]' },
+  warning:   { border: 'border-l-[#F59E0B]', chip: 'bg-[#F59E0B]/15',  icon: 'text-[#B45309]' },
+  danger:    { border: 'border-l-[#DC2626]', chip: 'bg-[#DC2626]/10',  icon: 'text-[#DC2626]' },
+  neutral:   { border: 'border-l-[#CBD5E1]', chip: 'bg-[#64748B]/10',  icon: 'text-[#64748B]' },
+};
 
 interface Props {
   items: KpiItem[];
@@ -54,16 +67,29 @@ export function ExecutiveKpiGrid({ items, isLoading, columns = 4 }: Props) {
     <div className={`grid gap-3 ${cols}`}>
       {items.map((k) => {
         const Icon = k.icon;
+        const tone = TONE_CLASS[k.tone ?? 'neutral'];
         return (
-          <Card key={k.key} className="p-4">
+          <Card
+            key={k.key}
+            className={cn(
+              'bi-kpi-card p-4 bg-white border border-[#E2E8F0] shadow-none rounded-[10px] border-l-[3px]',
+              tone.border
+            )}
+          >
             <div className="flex items-start justify-between gap-2">
-              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+              <div className="text-[10px] uppercase tracking-wide text-[#64748B] font-semibold">
                 {k.label}
               </div>
-              {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
+              {Icon && (
+                <span className={cn('inline-flex h-6 w-6 items-center justify-center rounded-md', tone.chip)}>
+                  <Icon className={cn('h-3.5 w-3.5', tone.icon)} />
+                </span>
+              )}
             </div>
-            <div className="mt-2 text-2xl font-bold tabular-nums">{display(k.value, k.format)}</div>
-            {k.hint && <div className="text-[11px] text-muted-foreground mt-1">{k.hint}</div>}
+            <div className="mt-2 text-[22px] font-bold tabular-nums text-[#0F172A] leading-tight">
+              {display(k.value, k.format)}
+            </div>
+            {k.hint && <div className="text-[10px] text-[#64748B] mt-1">{k.hint}</div>}
           </Card>
         );
       })}
