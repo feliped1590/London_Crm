@@ -99,7 +99,11 @@ export function ExecutiveFiltersBar({ filters, onChange, showSellerSelector, req
       <div className="flex flex-col gap-1 min-w-[200px]">
         <Label className="text-xs text-muted-foreground">Entidade jurídica</Label>
         <Select
-          value={filters.legalEntityId ?? activeLegalEntityId ?? '__all__'}
+          value={
+            filters.legalEntityId === null
+              ? '__all__'
+              : filters.legalEntityId ?? activeLegalEntityId ?? '__all__'
+          }
           onValueChange={(v) =>
             onChange({ ...filters, legalEntityId: v === '__all__' ? null : v })
           }
@@ -117,6 +121,7 @@ export function ExecutiveFiltersBar({ filters, onChange, showSellerSelector, req
           </SelectContent>
         </Select>
       </div>
+
 
       {showSellerSelector && (
         <div className="flex flex-col gap-1 min-w-[220px]">
@@ -150,7 +155,7 @@ export function ExecutiveFiltersBar({ filters, onChange, showSellerSelector, req
           onChange({
             startDate: subDays(new Date(), 30),
             endDate: new Date(),
-            legalEntityId: activeLegalEntityId,
+            legalEntityId: undefined,
             sellerId: filters.sellerId,
           })
         }

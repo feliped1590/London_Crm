@@ -12,6 +12,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
 import { useBIReport } from '@/hooks/useBIReports';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
@@ -32,6 +33,14 @@ interface Props {
 
 export function Seller360Report({ filters, onStatusChange }: Props) {
   const sellerId = filters.sellerId ?? null;
+  const { activeLegalEntityId } = useLegalEntities();
+
+  // null => "Todas acessíveis" (explícito); undefined => default (entidade ativa);
+  // string => entidade específica
+  const effectiveLegalEntityId: string | undefined =
+    filters.legalEntityId === null
+      ? undefined
+      : filters.legalEntityId ?? activeLegalEntityId ?? undefined;
 
   if (!sellerId) {
     return (
@@ -45,7 +54,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const base = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? undefined,
+    legalEntityId: effectiveLegalEntityId,
     sellerId,
   };
 
@@ -61,9 +70,10 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const rankingAll = useBIReport<any[]>('vendas_vendedor', {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? undefined,
+    legalEntityId: effectiveLegalEntityId,
   });
   const clientesAtendidos = useBIReport<any>('clientes_atendidos', base);
+
 
   const k = dashboard.data?.kpis ?? {};
   const valorPerdido =
@@ -147,7 +157,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const baseDrillFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? null,
+    legalEntityId: effectiveLegalEntityId ?? null,
     sellerId,
   };
 
@@ -232,7 +242,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
                   filters: {
                     startDate: metaPeriodo.inicio,
                     endDate: metaPeriodo.fim,
-                    legalEntityId: filters.legalEntityId ?? null,
+                    legalEntityId: effectiveLegalEntityId ?? null,
                     sellerId,
                     source: 'sales',
                   },
@@ -403,7 +413,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
         sellerId={sellerId}
         startDate={filters.startDate}
         endDate={filters.endDate}
-        legalEntityId={filters.legalEntityId ?? null}
+        legalEntityId={effectiveLegalEntityId ?? null}
       />
 
       <SalesDrillDownModal

@@ -41,10 +41,20 @@ interface Props {
 }
 
 export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
+  const { activeLegalEntityId } = useLegalEntities();
+
+  // null => "Todas acessíveis" (explícito) — não enviar filtro;
+  // undefined => default => usa entidade ativa do usuário;
+  // string => entidade específica
+  const effectiveLegalEntityId: string | undefined =
+    filters.legalEntityId === null
+      ? undefined
+      : filters.legalEntityId ?? activeLegalEntityId ?? undefined;
+
   const baseFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? undefined,
+    legalEntityId: effectiveLegalEntityId,
   };
 
   const dashboard = useBIReport<any>('dashboard_executivo', baseFilters);
@@ -58,8 +68,9 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   const forecast = useBIReport<any>('forecast_vendas', baseFilters);
   const conversao = useBIReport<any>('conversao', baseFilters);
 
-  const { activeLegalEntityId } = useLegalEntities();
-  const filterEntityId = filters.legalEntityId ?? activeLegalEntityId ?? null;
+  // Para destacar barra/linha do gráfico: só destaca se houver entidade específica selecionada.
+  const filterEntityId = filters.legalEntityId === null ? null : effectiveLegalEntityId ?? null;
+
 
   const k = dashboard.data?.kpis ?? {};
   const valorPerdido =
@@ -138,7 +149,7 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   const baseDrillFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? null,
+    legalEntityId: effectiveLegalEntityId ?? null,
   };
 
   return (

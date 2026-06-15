@@ -66,7 +66,7 @@ export interface BIFilters {
   endDate: Date;
   sellerId?: string;
   pipelineId?: string;
-  legalEntityId?: string;
+  legalEntityId?: string | null;
 }
 
 export function useBIAdvanced() {
@@ -75,9 +75,15 @@ export function useBIAdvanced() {
     startDate: subDays(new Date(), 30),
     endDate: new Date(),
   });
-  // Empresa Ativa entra automaticamente quando o filtro local não definir entidade.
-  const queryLegalEntityId: string | undefined = filters.legalEntityId ?? activeLegalEntityId ?? undefined;
+  // legalEntityId: undefined => usa entidade ativa do usuário (default);
+  //                null      => "Todas acessíveis" (escolha explícita do usuário);
+  //                string    => entidade específica
+  const queryLegalEntityId: string | undefined =
+    filters.legalEntityId === null
+      ? undefined
+      : filters.legalEntityId ?? activeLegalEntityId ?? undefined;
   const setFilters = setFiltersRaw;
+
 
   // Pipeline Health
   const {
