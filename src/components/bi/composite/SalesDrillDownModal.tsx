@@ -97,7 +97,7 @@ export function SalesDrillDownModal({ open, onClose, title, subtitle, filters }:
             .from('deals')
             .select(
               `id, name, stage, value, created_at, closed_at, lost_reason, company_id, owner_id, legal_entity_id,
-               companies(name, trade_name)`
+               companies(name)`
             )
             .gte('created_at', filters.startDate.toISOString())
             .lte('created_at', new Date(filters.endDate.getTime() + 86400000).toISOString())
