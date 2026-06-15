@@ -26,6 +26,8 @@ import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
+import { ForecastSummaryCard } from './ForecastSummaryCard';
+import { BI_COLORS } from './biTheme';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 const fmtBRL = (v: number) =>
