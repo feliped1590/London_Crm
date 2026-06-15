@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DollarSign,
   ShoppingCart,
@@ -24,9 +24,10 @@ const fmtBRL = (v: number) =>
 
 interface Props {
   filters: ExecutiveFilters;
+  onStatusChange?: (status: { isLoading: boolean; isEmpty: boolean }) => void;
 }
 
-export function Seller360Report({ filters }: Props) {
+export function Seller360Report({ filters, onStatusChange }: Props) {
   const sellerId = filters.sellerId ?? null;
 
   if (!sellerId) {
