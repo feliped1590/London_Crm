@@ -181,19 +181,20 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
           <div className="h-56">
             <ResponsiveContainer>
               <BarChart data={entidadeRows} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={fmtBRL} />
-                <YAxis dataKey="nome" type="category" tick={{ fontSize: 11 }} width={140} />
-                <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
+                <CartesianGrid strokeDasharray="3 3" stroke={BI_COLORS.grid} opacity={0.6} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: BI_COLORS.muted }} tickFormatter={fmtBRL} stroke={BI_COLORS.grid} />
+                <YAxis dataKey="nome" type="category" tick={{ fontSize: 11, fill: BI_COLORS.muted }} width={140} stroke={BI_COLORS.grid} />
+                <Tooltip formatter={(v: any) => fmtBRL(Number(v))} contentStyle={{ borderRadius: 8, border: `1px solid ${BI_COLORS.border}` }} />
                 <Bar dataKey="valor_vendido" radius={[0, 4, 4, 0]}>
                   {entidadeRows.map((r: any, i: number) => (
                     <Cell
                       key={i}
                       fill={
                         filterEntityId && r.legal_entity_id === filterEntityId
-                          ? 'hsl(var(--primary))'
-                          : 'hsl(var(--primary) / 0.5)'
+                          ? BI_COLORS.primary
+                          : BI_COLORS.secondary
                       }
+                      fillOpacity={filterEntityId && r.legal_entity_id !== filterEntityId ? 0.55 : 1}
                     />
                   ))}
                 </Bar>
