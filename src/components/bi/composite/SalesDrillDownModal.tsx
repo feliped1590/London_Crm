@@ -167,7 +167,7 @@ export function SalesDrillDownModal({ open, onClose, title, subtitle, filters }:
             const { data: ordersData, error: oe } = await supabase
               .from('orders')
               .select(`id, number, status, order_date, company_id, sales_rep_id, legal_entity_id,
-                companies(name, trade_name),
+                companies(name),
                 sales_reps(name),
                 legal_entities(name)`)
               .in('id', orderIds);
