@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useState } from 'react';
 import { subDays, format } from 'date-fns';
+import { useLegalEntities } from '@/hooks/useLegalEntities';
 
 export interface PipelineHealthData {
   stage: string;
