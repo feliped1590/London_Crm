@@ -260,6 +260,13 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
               { key: 'dias_medio', label: 'Dias médios', align: 'right', format: 'number' },
             ]}
             limit={15}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Negócios do vendedor — etapa ${row.stage}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, stage: row.stage, source: 'deals' },
+              })
+            }
           />
         </ExecutiveSection>
 
