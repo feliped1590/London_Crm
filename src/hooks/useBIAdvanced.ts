@@ -162,12 +162,15 @@ export function useBIAdvanced() {
     error: conversionError,
     refetch: refetchConversion,
   } = useQuery({
-    queryKey: ['bi-conversion-stage', filters.startDate, filters.endDate],
+    queryKey: ['bi-conversion-stage', filters.startDate, filters.endDate, filters.legalEntityId, filters.pipelineId, filters.sellerId],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_conversion_by_stage', {
         p_start_date: format(filters.startDate, 'yyyy-MM-dd'),
         p_end_date: format(filters.endDate, 'yyyy-MM-dd'),
-      });
+        p_legal_entity_id: filters.legalEntityId || null,
+        p_pipeline_id: filters.pipelineId || null,
+        p_seller_id: filters.sellerId || null,
+      } as any);
       if (error) throw error;
       return (data || []) as ConversionByStageData[];
     },
