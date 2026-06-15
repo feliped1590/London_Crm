@@ -119,9 +119,26 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
     const co = (perdasCot.data?.por_motivo ?? []).map((m: any) => ({ ...m, origem: 'Cotação' }));
     return [...at, ...co].sort((a, b) => Number(b.valor || 0) - Number(a.valor || 0));
   }, [perdasAt.data, perdasCot.data]);
+  const mainLoading =
+    dashboard.isLoading ||
+    pipeline.isLoading ||
+    cliente.isLoading ||
+    produto.isLoading ||
+    rankingAll.isLoading;
+  const mainEmpty =
+    !mainLoading &&
+    !(Number(k.valor_vendido) || 0) &&
+    ((cliente.data ?? []).length === 0) &&
+    ((produto.data ?? []).length === 0) &&
+    !(pipeline.data?.por_etapa?.length);
+
+  useEffect(() => {
+    onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
+  }, [mainLoading, mainEmpty, onStatusChange]);
 
   return (
     <div id="bi-export-vendedor_360" className="space-y-4">
+
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
 
       {/* Meta x Realizado */}
