@@ -155,7 +155,7 @@ export function ExecutiveFiltersBar({ filters, onChange, showSellerSelector, req
           onChange({
             startDate: subDays(new Date(), 30),
             endDate: new Date(),
-            legalEntityId: activeLegalEntityId,
+            legalEntityId: undefined,
             sellerId: filters.sellerId,
           })
         }
