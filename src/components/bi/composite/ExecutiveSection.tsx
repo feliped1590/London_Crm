@@ -14,6 +14,8 @@ interface Props {
   errorMessage?: string;
   /** Conteúdo extra (ex.: botão de retry) — escondido no PDF via data-export-hide. */
   errorAction?: ReactNode;
+  /** Badge/elemento exibido à direita do título (ex.: período da meta). */
+  headerBadge?: ReactNode;
   className?: string;
   children?: ReactNode;
 }
