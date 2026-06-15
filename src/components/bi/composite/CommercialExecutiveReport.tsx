@@ -316,7 +316,7 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               openDrillDown({
                 title: `Pedidos contendo — ${row.nome}`,
                 subtitle: periodSubtitle,
-                filters: { ...baseDrillFilters, productId: row.product_id, source: 'sales' },
+                filters: { ...baseDrillFilters, productId: row.id, source: 'sales' },
               })
             }
           />
