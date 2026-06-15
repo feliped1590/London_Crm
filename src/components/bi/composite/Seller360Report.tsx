@@ -7,7 +7,7 @@ import {
   TrendingDown,
   FileCheck,
   UserPlus,
-  Clock,
+  
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
+import { SellerActivitySection } from './SellerActivitySection';
 import { Info } from 'lucide-react';
 
 const fmtBRL = (v: number) =>
@@ -286,11 +287,12 @@ export function Seller360Report({ filters }: Props) {
         </ExecutiveSection>
       </div>
 
-      <Card className="p-3 text-xs text-muted-foreground flex items-center gap-2">
-        <Clock className="h-3.5 w-3.5" />
-        Atividades, tarefas atrasadas e follow-ups serão incorporados em uma próxima fase
-        (depende de hook agregado por vendedor).
-      </Card>
+      <SellerActivitySection
+        sellerId={sellerId}
+        startDate={filters.startDate}
+        endDate={filters.endDate}
+        legalEntityId={filters.legalEntityId ?? null}
+      />
     </div>
   );
 }

@@ -11592,7 +11592,7 @@ export type Database = {
         }[]
       }
       get_bi_anomalies: {
-        Args: never
+        Args: { p_legal_entity_id?: string }
         Returns: {
           action_label: string
           affected_count: number
@@ -11698,7 +11698,13 @@ export type Database = {
           }
       get_company_owner: { Args: { p_company_id: string }; Returns: string }
       get_conversion_by_stage: {
-        Args: { p_end_date?: string; p_start_date?: string }
+        Args: {
+          p_end_date?: string
+          p_legal_entity_id?: string
+          p_pipeline_id?: string
+          p_seller_id?: string
+          p_start_date?: string
+        }
         Returns: {
           conversion_rate: number
           entered_count: number
@@ -11827,6 +11833,7 @@ export type Database = {
       get_pipeline_health: {
         Args: {
           p_end_date?: string
+          p_legal_entity_id?: string
           p_pipeline_id?: string
           p_start_date?: string
         }
@@ -11908,6 +11915,7 @@ export type Database = {
         Args: {
           p_compare_previous?: boolean
           p_end_date?: string
+          p_legal_entity_id?: string
           p_start_date?: string
         }
         Returns: {
@@ -11955,7 +11963,11 @@ export type Database = {
       }
       get_session_idle_timeout_minutes: { Args: never; Returns: number }
       get_stalled_deals_by_seller: {
-        Args: { p_min_days?: number; p_seller_id?: string }
+        Args: {
+          p_legal_entity_id?: string
+          p_min_days?: number
+          p_seller_id?: string
+        }
         Returns: {
           company_name: string
           days_stalled: number
@@ -12072,6 +12084,15 @@ export type Database = {
       release_blocked_attributes: {
         Args: { p_product_id: string }
         Returns: number
+      }
+      report_atividades_vendedor: {
+        Args: {
+          p_end_date?: string
+          p_legal_entity_id?: string
+          p_sales_rep_id: string
+          p_start_date?: string
+        }
+        Returns: Json
       }
       report_clientes_atendidos: { Args: { p_filters?: Json }; Returns: Json }
       report_conversao: { Args: { p_filters?: Json }; Returns: Json }
