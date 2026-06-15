@@ -142,11 +142,49 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
     onStatusChange?.({ isLoading: mainLoading, isEmpty: mainEmpty });
   }, [mainLoading, mainEmpty, onStatusChange]);
 
+  const { state: drillState, openDrillDown, close: closeDrill } = useSalesDrillDown();
+  const periodSubtitle = `Período: ${filters.startDate.toLocaleDateString('pt-BR')} a ${filters.endDate.toLocaleDateString('pt-BR')}`;
+  const baseDrillFilters = {
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    legalEntityId: filters.legalEntityId ?? null,
+    sellerId,
+  };
+
+  // Período da meta = mês corrente
+  const metaPeriodo = useMemo(() => {
+    const now = new Date();
+    const inicio = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fim = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const mes = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const dd = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    return { label: `Meta de ${mes} — ${dd(inicio)} a ${dd(fim)}`, inicio, fim };
+  }, []);
+
   return (
     <div id="bi-export-vendedor_360" className="bi-executive space-y-4">
 
 
-      <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
+      <ExecutiveKpiGrid
+        items={kpis}
+        isLoading={dashboard.isLoading}
+        columns={4}
+        onItemClick={(key) => {
+          if (['valor', 'qtd', 'ticket', 'clientes'].includes(key)) {
+            openDrillDown({
+              title: `Pedidos do vendedor — ${kpis.find((k) => k.key === key)?.label ?? ''}`,
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, source: 'sales' },
+            });
+          } else if (key === 'perdido') {
+            openDrillDown({
+              title: 'Negócios perdidos no período',
+              subtitle: periodSubtitle,
+              filters: { ...baseDrillFilters, stage: 'perdido', source: 'deals' },
+            });
+          }
+        }}
+      />
 
       {/* Meta x Realizado */}
       <ExecutiveSection
