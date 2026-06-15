@@ -12,6 +12,7 @@ import { BIFiltersBar } from '@/components/reports/bi/BIFiltersBar';
 import { ReportRenderer } from '@/components/bi/ReportRenderer';
 import { CommercialExecutiveReport } from '@/components/bi/composite/CommercialExecutiveReport';
 import { Seller360Report } from '@/components/bi/composite/Seller360Report';
+import { ExecutiveExportButton } from '@/components/bi/composite/ExecutiveExportButton';
 import {
   ExecutiveFiltersBar,
   ExecutiveFilters,
