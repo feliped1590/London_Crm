@@ -85,6 +85,12 @@ export default function BICenter() {
   }, [activeLegalEntityId, execFilters.legalEntityId]);
 
   const activeCode = (searchParams.get('r') as ReportCode | null) || 'dashboard_executivo';
+
+  // Ao trocar de relatório composto, reseta status para "carregando" até o filho reportar.
+  useEffect(() => {
+    setExecStatus({ isLoading: true, isEmpty: false });
+  }, [activeCode]);
+
   const setActive = (code: ReportCode) => {
     const sp = new URLSearchParams(searchParams);
     sp.set('r', code);
