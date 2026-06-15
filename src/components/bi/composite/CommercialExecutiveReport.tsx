@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   DollarSign,
   ShoppingCart,
@@ -33,9 +33,10 @@ const fmtBRL = (v: number) =>
 
 interface Props {
   filters: ExecutiveFilters;
+  onStatusChange?: (status: { isLoading: boolean; isEmpty: boolean }) => void;
 }
 
-export function CommercialExecutiveReport({ filters }: Props) {
+export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
   const baseFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
