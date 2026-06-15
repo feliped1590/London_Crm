@@ -16,6 +16,7 @@ import { ExecutiveFilters } from './ExecutiveFiltersBar';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
 import { ExecutiveSection } from './ExecutiveSection';
 import { RankingTable } from './RankingTable';
+import { SellerActivitySection } from './SellerActivitySection';
 import { Info } from 'lucide-react';
 
 const fmtBRL = (v: number) =>
