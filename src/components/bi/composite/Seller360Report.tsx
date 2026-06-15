@@ -157,7 +157,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   const baseDrillFilters = {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    legalEntityId: filters.legalEntityId ?? null,
+    legalEntityId: effectiveLegalEntityId ?? null,
     sellerId,
   };
 
@@ -242,7 +242,7 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
                   filters: {
                     startDate: metaPeriodo.inicio,
                     endDate: metaPeriodo.fim,
-                    legalEntityId: filters.legalEntityId ?? null,
+                    legalEntityId: effectiveLegalEntityId ?? null,
                     sellerId,
                     source: 'sales',
                   },
