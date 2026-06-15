@@ -16,7 +16,15 @@ export type ReportCode =
   | 'rankings'
   | 'clientes_atendidos'
   | 'pipeline_comercial'
-  | 'forecast_vendas';
+  | 'forecast_vendas'
+  // Composite (no RPC; rendered via dedicated React components)
+  | 'executivo_comercial'
+  | 'vendedor_360';
+
+export const COMPOSITE_REPORT_CODES: ReportCode[] = ['executivo_comercial', 'vendedor_360'];
+export function isCompositeReport(code: ReportCode | null | undefined) {
+  return !!code && (COMPOSITE_REPORT_CODES as string[]).includes(code);
+}
 
 export interface ReportDefinition {
   id: string;
