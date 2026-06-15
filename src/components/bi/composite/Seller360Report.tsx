@@ -140,7 +140,8 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
   }, [mainLoading, mainEmpty, onStatusChange]);
 
   return (
-    <div id="bi-export-vendedor_360" className="space-y-4">
+    <div id="bi-export-vendedor_360" className="bi-executive space-y-4">
+
 
       <ExecutiveKpiGrid items={kpis} isLoading={dashboard.isLoading} columns={4} />
 
