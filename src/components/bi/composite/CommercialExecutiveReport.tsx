@@ -260,6 +260,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'ticket_medio', label: 'Ticket', align: 'right', format: 'currency' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, sellerId: row.sales_rep_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -279,6 +286,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'abc', label: 'ABC', align: 'center' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, companyId: row.company_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
@@ -298,6 +312,13 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
               { key: 'participacao_pct', label: '% Total', align: 'right', format: 'percent' },
             ]}
             limit={10}
+            onRowClick={(row: any) =>
+              openDrillDown({
+                title: `Pedidos contendo — ${row.nome}`,
+                subtitle: periodSubtitle,
+                filters: { ...baseDrillFilters, productId: row.product_id, source: 'sales' },
+              })
+            }
           />
         </ExecutiveSection>
 
