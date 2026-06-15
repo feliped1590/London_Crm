@@ -76,10 +76,8 @@ export function useBIAdvanced() {
     endDate: new Date(),
   });
   // Empresa Ativa entra automaticamente quando o filtro local não definir entidade.
-  const effectiveLegalEntityId = queryLegalEntityId ?? activeLegalEntityId ?? undefined;
+  const queryLegalEntityId: string | undefined = filters.legalEntityId ?? activeLegalEntityId ?? undefined;
   const setFilters = setFiltersRaw;
-  // Mantemos `filters` imutável para os consumidores; injetamos a entidade ativa apenas para queries.
-  const queryLegalEntityId = effectiveLegalEntityId;
 
   // Pipeline Health
   const {
