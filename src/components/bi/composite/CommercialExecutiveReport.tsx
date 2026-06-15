@@ -64,18 +64,19 @@ export function CommercialExecutiveReport({ filters, onStatusChange }: Props) {
     (Number(perdasAt.data?.valor_perdido) || 0) + (Number(perdasCot.data?.kpis?.valor_perdido) || 0);
 
   const kpis: KpiItem[] = [
-    { key: 'valor', label: 'Valor vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign },
-    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart },
-    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency', icon: TrendingUp },
-    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users },
+    { key: 'valor', label: 'Valor vendido', value: k.valor_vendido, format: 'currency', icon: DollarSign, tone: 'primary' },
+    { key: 'qtd', label: 'Pedidos', value: k.qtd_pedidos, format: 'number', icon: ShoppingCart, tone: 'secondary' },
+    { key: 'ticket', label: 'Ticket médio', value: k.ticket_medio, format: 'currency', icon: TrendingUp, tone: 'secondary' },
+    { key: 'clientes', label: 'Clientes atendidos', value: k.clientes_atendidos, format: 'number', icon: Users, tone: 'secondary' },
     {
       key: 'conv',
       label: 'Conversão',
       value: conversao.data?.taxa_conversao_venda,
       format: 'percent',
       icon: Target,
+      tone: 'success',
     },
-    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown },
+    { key: 'perdido', label: 'Valor perdido', value: valorPerdido, format: 'currency', icon: TrendingDown, tone: 'danger' },
   ];
 
   // Evolução: agregar por mês se período > 60 dias
