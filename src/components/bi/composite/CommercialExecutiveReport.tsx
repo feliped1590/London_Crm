@@ -29,6 +29,8 @@ import { RankingTable } from './RankingTable';
 import { ForecastSummaryCard } from './ForecastSummaryCard';
 import { BI_COLORS } from './biTheme';
 import { useLegalEntities } from '@/hooks/useLegalEntities';
+import { useSalesDrillDown } from '@/hooks/useSalesDrillDown';
+import { SalesDrillDownModal } from './SalesDrillDownModal';
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v || 0);
