@@ -7,7 +7,7 @@ import {
   TrendingDown,
   FileCheck,
   UserPlus,
-  Clock,
+  
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Card } from '@/components/ui/card';
