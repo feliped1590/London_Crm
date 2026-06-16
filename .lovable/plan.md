@@ -1,54 +1,39 @@
-# Corrigir filtro "Todas acessíveis" nos relatórios BI
-
 ## Problema
 
-Quando o usuário clica em **"Todas acessíveis"** no seletor de Entidade Jurídica (Relatório Executivo Comercial, 360 do Vendedor, etc.), a seleção é ignorada e o relatório continua filtrando apenas pela entidade ativa.
+No vídeo, os atributos "Diâmetro cilindro" e "Máquina" estão chegando ao ERP Projedata com UUIDs (ex.: `33df258f-24bb-4049-…`, `038fb46a-955e-4fe2-9…`) em vez do valor que o ERP espera (o código numérico do cilindro em mm e o código da máquina).
 
-**Causa raiz** (`ExecutiveFiltersBar.tsx` e consumidores):
+## Causa
 
-- O `Select` exibe `filters.legalEntityId ?? activeLegalEntityId ?? '__all__'` — ou seja, quando `legalEntityId` vira `null` (escolha do usuário), o valor mostrado cai para `activeLegalEntityId`, e o estado “Todas” nunca é representado.
-- `useBIAdvanced.ts` (linha 79) e `CommercialExecutiveReport.tsx` (linha 62) reaplicam o mesmo fallback `?? activeLegalEntityId`, então mesmo que o filtro fosse `null`, a consulta voltaria a filtrar pela entidade ativa.
+O mapeamento atual aponta:
 
-Resultado: "Todas" é um placeholder visual sem efeito real.
+- `Diâmetro cilindro` → `impressao.cilindro_id`
+- `Máquina` → `impressao.maquina_id`
 
-## Solução
+Esses campos da `ficha_tecnica` armazenam o UUID do registro em `product_ficha_cylinders` / `product_ficha_machines`. A função SQL `extract_attribute_value` simplesmente lê o JSON pelo caminho, então grava o UUID em `product_attribute_values.valor_padrao`, e o edge function `process-attribute-sync` envia esse UUID ao ERP.
 
-Usar **três estados** distintos no filtro:
-- `undefined` → não definido ainda (usa entidade ativa do usuário como default inicial)
-- `null` → o usuário escolheu explicitamente **Todas acessíveis**
-- `string` (UUID) → entidade específica
+A coluna `value` dessas tabelas é justamente o código que o ERP espera (`"1684"`, `"270"`, `"201"`, etc.).
 
-Com isso `null` passa a ser respeitado em todo o pipeline de filtros — sem fallback automático para a entidade ativa.
+## Correção
 
-## Arquivos a alterar
+1. **Atualizar `public.extract_attribute_value`** para, quando `p_source = 'ficha_tecnica'` e o `p_path` for `impressao.cilindro_id` ou `impressao.maquina_id`:
+   - Ler o UUID no JSON normalmente.
+   - Resolver via `SELECT value FROM product_ficha_cylinders WHERE id = uuid` (ou `product_ficha_machines`).
+   - Retornar `value` (texto) — ou `NULL` se UUID não existir/estiver inativo.
+   - Caso o conteúdo do path já seja um texto que não é UUID (compatibilidade retroativa), retornar como está.
 
-1. **`src/components/bi/composite/ExecutiveFiltersBar.tsx`**
-   - Calcular `selectedValue`: se `legalEntityId === null` → `'__all__'`; se `undefined` → `activeLegalEntityId ?? '__all__'`; senão o próprio id.
-   - `onValueChange`: `'__all__'` → `null` (explícito), demais → id.
-   - Botão **Resetar** volta a `legalEntityId: undefined` (não força activeLegalEntityId), preservando o comportamento de default inicial.
+2. **Reprocessar valores existentes** (one-shot, dentro da mesma migration):
+   - Para cada produto com `ficha_tecnica->impressao->>'cilindro_id'` ou `maquina_id` preenchido:
+     - Recalcular `product_attribute_values.valor_padrao` chamando `extract_attribute_value` dos atributos com `crm_path` em (`impressao.cilindro_id`, `impressao.maquina_id`).
+     - Marcar `dirty = true`, limpar `last_sync_error`.
+   - Enfileirar em `attribute_sync_queue` (status `pending`) os itens correspondentes para reenvio ao ERP — reaproveitando a lógica do trigger existente `detect_dirty_attributes` (ou inserção direta com `ON CONFLICT DO UPDATE` para `status='pending'`, `attempt_count=0`).
 
-2. **`src/hooks/useBIAdvanced.ts`**
-   - Trocar `filters.legalEntityId ?? activeLegalEntityId ?? undefined` por: se `legalEntityId === null` → não enviar filtro (todas); se `undefined` → cair para `activeLegalEntityId`; senão usar o valor.
+3. **Verificação**: após a migration, conferir alguns registros via SELECT mostrando `valor_padrao` agora numérico (ex.: `"270"`, `"201"`) e disparar `process-attribute-sync` para um produto piloto.
 
-3. **`src/components/bi/composite/CommercialExecutiveReport.tsx`**
-   - Mesma lógica no cálculo de `filterEntityId` (linha 62) e em todos os `legalEntityId: filters.legalEntityId ?? null` passados ao drill-down — manter o `null` explícito = todas.
+## Arquivos afetados
 
-4. **`src/components/bi/composite/Seller360Report.tsx`**
-   - Aplicar a mesma normalização: `null` propagado significa "todas acessíveis" e não deve ser substituído por `activeLegalEntityId`.
+- Nova migration SQL (alteração da function `extract_attribute_value` + UPDATE/INSERT de re-sync).
+- Nenhuma alteração no edge function `process-attribute-sync` ou no frontend.
 
-5. **`src/hooks/useBIReports.ts`**
-   - Já trata `if (filters.legalEntityId) ...` corretamente (null/undefined = sem filtro). Apenas garantir que o tipo aceite `string | null | undefined`.
+## Observação
 
-6. **`src/components/bi/composite/SalesDrillDownModal.tsx`**
-   - Já aplica `if (filters.legalEntityId)` (não filtra quando null). Sem mudança funcional; apenas confirmar tipagem.
-
-## Comportamento esperado após a mudança
-
-- Ao abrir o relatório: filtra pela entidade ativa do usuário (default atual preservado).
-- Ao escolher **"Todas acessíveis"**: KPIs, gráficos, rankings, pipeline, perdas, forecast e drill-down passam a consolidar todas as entidades às quais o usuário tem acesso (via `user_legal_entities`/RLS — sem expor entidades fora do escopo).
-- Ao escolher uma entidade específica: comportamento inalterado.
-- Botão **Resetar** volta ao default (entidade ativa).
-
-## Escopo
-
-Apenas frontend (filtros e propagação). RLS já restringe naturalmente os dados às entidades acessíveis, então "Todas" = "todas as minhas".
+Não é necessário criar coluna nova nem mexer no schema da `ficha_tecnica`. A correção fica isolada na função de extração, mantendo a forma como o formulário grava (UUID) e como o ERP recebe (código `value`).
