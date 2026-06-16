@@ -35,7 +35,9 @@ export function ExecutiveExportButton({
   const { salesReps } = useSalesReps();
   const { user } = useAuth();
 
-  const effectiveLeId = filters.legalEntityId ?? activeLegalEntityId ?? null;
+  const effectiveLeId = filters.legalEntityId === null
+    ? null
+    : filters.legalEntityId ?? activeLegalEntityId ?? null;
   const entity = accessibleEntities.find((e) => e.id === effectiveLeId);
   const entityName = entity?.name ?? 'Todas acessíveis';
   const entityLogo = entity?.logo_url ?? null;
