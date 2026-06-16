@@ -749,6 +749,10 @@ export default function Products() {
       if (createForCompanyId) {
         setSearchParams({}, { replace: true });
       }
+      // Dispara processamento imediato no ERP (fire-and-forget; cron de 15min é fallback)
+      supabase.functions
+        .invoke('process-product-sync', { body: { product_id: createdProduct.id } })
+        .catch((err) => console.warn('[createMutation] process-product-sync falhou (cron fará fallback):', err));
     },
     onError: (error: any) => {
       const duplicateMessage = getDuplicateErrorMessage(error);
@@ -777,6 +781,10 @@ export default function Products() {
       queryClient.invalidateQueries({ queryKey: ['product-versions', versionsKey] });
       recordProductInteraction({ entityId: updatedProduct.id, tenantId: updatedProduct.tenant_id, interactionType: 'update' });
       toast.success('Produto atualizado! Sincronização com ERP enfileirada.');
+      // Dispara processamento imediato no ERP (fire-and-forget; cron de 15min é fallback)
+      supabase.functions
+        .invoke('process-product-sync', { body: { product_id: updatedProduct.id } })
+        .catch((err) => console.warn('[updateMutation] process-product-sync falhou (cron fará fallback):', err));
       resetForm();
     },
     onError: (error: any) => {
