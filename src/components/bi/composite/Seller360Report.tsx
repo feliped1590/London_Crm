@@ -42,37 +42,28 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
       ? undefined
       : filters.legalEntityId ?? activeLegalEntityId ?? undefined;
 
-  if (!sellerId) {
-    return (
-      <Card className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
-        <Info className="h-5 w-5" />
-        <p>Selecione um vendedor no filtro acima para visualizar a análise 360°.</p>
-      </Card>
-    );
-  }
-
   const base = {
     startDate: filters.startDate,
     endDate: filters.endDate,
     legalEntityId: effectiveLegalEntityId,
-    sellerId,
+    sellerId: sellerId ?? undefined,
   };
 
   // Reuso de RPCs existentes — todas filtram por sales_rep_id quando passado
-  const dashboard = useBIReport<any>('dashboard_executivo', base);
-  const cliente = useBIReport<any[]>('vendas_cliente', base);
-  const produto = useBIReport<any[]>('vendas_produto', base);
-  const pipeline = useBIReport<any>('pipeline_comercial', base);
-  const perdasAt = useBIReport<any>('perdas_atendimento', base);
-  const perdasCot = useBIReport<any>('perdas_cotacao', base);
-  const metas = useBIReport<any[]>('metas', base);
-  const conversao = useBIReport<any>('conversao', base);
-  const rankingAll = useBIReport<any[]>('vendas_vendedor', {
+  const dashboard = useBIReport<any>(sellerId ? 'dashboard_executivo' : null, base);
+  const cliente = useBIReport<any[]>(sellerId ? 'vendas_cliente' : null, base);
+  const produto = useBIReport<any[]>(sellerId ? 'vendas_produto' : null, base);
+  const pipeline = useBIReport<any>(sellerId ? 'pipeline_comercial' : null, base);
+  const perdasAt = useBIReport<any>(sellerId ? 'perdas_atendimento' : null, base);
+  const perdasCot = useBIReport<any>(sellerId ? 'perdas_cotacao' : null, base);
+  const metas = useBIReport<any[]>(sellerId ? 'metas' : null, base);
+  const conversao = useBIReport<any>(sellerId ? 'conversao' : null, base);
+  const rankingAll = useBIReport<any[]>(sellerId ? 'vendas_vendedor' : null, {
     startDate: filters.startDate,
     endDate: filters.endDate,
     legalEntityId: effectiveLegalEntityId,
   });
-  const clientesAtendidos = useBIReport<any>('clientes_atendidos', base);
+  const clientesAtendidos = useBIReport<any>(sellerId ? 'clientes_atendidos' : null, base);
 
 
   const k = dashboard.data?.kpis ?? {};
@@ -170,6 +161,15 @@ export function Seller360Report({ filters, onStatusChange }: Props) {
     const dd = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     return { label: `Meta de ${mes} — ${dd(inicio)} a ${dd(fim)}`, inicio, fim };
   }, []);
+
+  if (!sellerId) {
+    return (
+      <Card className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+        <Info className="h-5 w-5" />
+        <p>Selecione um vendedor no filtro acima para visualizar a análise 360°.</p>
+      </Card>
+    );
+  }
 
   return (
     <div id="bi-export-vendedor_360" className="bi-executive space-y-4">
