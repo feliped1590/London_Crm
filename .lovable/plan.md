@@ -1,39 +1,40 @@
-## Problema
+# Disparar sync do produto automaticamente após salvar
 
-No vídeo, os atributos "Diâmetro cilindro" e "Máquina" estão chegando ao ERP Projedata com UUIDs (ex.: `33df258f-24bb-4049-…`, `038fb46a-955e-4fe2-9…`) em vez do valor que o ERP espera (o código numérico do cilindro em mm e o código da máquina).
+## Diagnóstico
 
-## Causa
+Hoje o fluxo é:
 
-O mapeamento atual aponta:
+1. Usuário cria/edita um produto na tela de Produtos.
+2. Um **trigger no banco** (`trg_mark_product_pending_sync`) insere automaticamente uma linha em `product_sync_queue` com status `pending` — por isso o badge "Na fila" aparece.
+3. **Nada chama a edge function `process-product-sync` na hora.** Quem drena a fila é um cron job (`dispatch-product-sync-15min`) que roda **a cada 15 minutos**.
+4. Quando o usuário clica no botão "Reenviar ao ERP" (componente `ProductSyncStatus`), aí sim é feito `supabase.functions.invoke('process-product-sync', { body: { product_id } })` e o item é processado imediatamente.
 
-- `Diâmetro cilindro` → `impressao.cilindro_id`
-- `Máquina` → `impressao.maquina_id`
+Por isso parece que o item "fica preso na fila" — na verdade ele está esperando o próximo ciclo do cron. O reenvio manual só "destrava" porque é ele quem efetivamente dispara o processamento naquele momento.
 
-Esses campos da `ficha_tecnica` armazenam o UUID do registro em `product_ficha_cylinders` / `product_ficha_machines`. A função SQL `extract_attribute_value` simplesmente lê o JSON pelo caminho, então grava o UUID em `product_attribute_values.valor_padrao`, e o edge function `process-attribute-sync` envia esse UUID ao ERP.
+O mesmo padrão (cron 15min + dispatch manual) acontece também em pedidos e empresas, mas o foco do reporte é produto.
 
-A coluna `value` dessas tabelas é justamente o código que o ERP espera (`"1684"`, `"270"`, `"201"`, etc.).
+## Mudança proposta
 
-## Correção
+Disparar o processamento na hora, logo após o `INSERT`/`UPDATE` do produto no CRM — exatamente como o botão manual já faz, sem alterar lógica de fila nem do ERP.
 
-1. **Atualizar `public.extract_attribute_value`** para, quando `p_source = 'ficha_tecnica'` e o `p_path` for `impressao.cilindro_id` ou `impressao.maquina_id`:
-   - Ler o UUID no JSON normalmente.
-   - Resolver via `SELECT value FROM product_ficha_cylinders WHERE id = uuid` (ou `product_ficha_machines`).
-   - Retornar `value` (texto) — ou `NULL` se UUID não existir/estiver inativo.
-   - Caso o conteúdo do path já seja um texto que não é UUID (compatibilidade retroativa), retornar como está.
+### Onde mexer (apenas frontend)
 
-2. **Reprocessar valores existentes** (one-shot, dentro da mesma migration):
-   - Para cada produto com `ficha_tecnica->impressao->>'cilindro_id'` ou `maquina_id` preenchido:
-     - Recalcular `product_attribute_values.valor_padrao` chamando `extract_attribute_value` dos atributos com `crm_path` em (`impressao.cilindro_id`, `impressao.maquina_id`).
-     - Marcar `dirty = true`, limpar `last_sync_error`.
-   - Enfileirar em `attribute_sync_queue` (status `pending`) os itens correspondentes para reenvio ao ERP — reaproveitando a lógica do trigger existente `detect_dirty_attributes` (ou inserção direta com `ON CONFLICT DO UPDATE` para `status='pending'`, `attempt_count=0`).
+`src/pages/Products.tsx`
 
-3. **Verificação**: após a migration, conferir alguns registros via SELECT mostrando `valor_padrao` agora numérico (ex.: `"270"`, `"201"`) e disparar `process-attribute-sync` para um produto piloto.
+- **`createMutation.onSuccess`** (linha ~739): depois de criar, chamar
+  `supabase.functions.invoke('process-product-sync', { body: { product_id: createdProduct.id } })`
+  em modo "fire-and-forget" (sem `await` bloqueante e sem alterar a UX atual). Se a invocação falhar, fazer apenas `console.warn` — o cron ainda processa em até 15 min como fallback, então o usuário nunca fica sem rede de segurança.
 
-## Arquivos afetados
+- **`updateMutation.onSuccess`** (linha ~774): mesma chamada usando `updatedProduct.id`. Hoje o toast já diz "Sincronização com ERP enfileirada", então a semântica continua correta — apenas garante que o envio acontece em segundos em vez de minutos.
 
-- Nova migration SQL (alteração da function `extract_attribute_value` + UPDATE/INSERT de re-sync).
-- Nenhuma alteração no edge function `process-attribute-sync` ou no frontend.
+### O que NÃO muda
 
-## Observação
+- Trigger SQL `trg_mark_product_pending_sync` continua igual (fonte única de verdade do enfileiramento).
+- `process-product-sync` continua igual (já aceita `product_id` opcional).
+- Cron de 15 min continua como fallback para itens que falharem ou ficarem em `retry`.
+- Botão "Reenviar ao ERP" no `ProductSyncStatus` continua funcionando como hoje, inclusive para casos de erro/retry.
+- Lógica de validação, versões filhas (v2+), atributos (`process-attribute-sync`) e sync de empresas/pedidos: nada alterado.
 
-Não é necessário criar coluna nova nem mexer no schema da `ficha_tecnica`. A correção fica isolada na função de extração, mantendo a forma como o formulário grava (UUID) e como o ERP recebe (código `value`).
+## Resultado esperado
+
+Ao salvar um produto novo (ou editar um existente), o item entra na fila e em ~1–3 s já sai do status "Na fila" para "Enviado" / "Erro com motivo", sem necessidade de clicar em "Reenviar ao ERP".
