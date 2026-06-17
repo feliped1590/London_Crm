@@ -143,6 +143,13 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
   }, [clientCnpj]);
 
   const totalValue = items.reduce((s, it) => s + (Number(it.quantity || 0) * Number(it.unit_price || 0)), 0);
+  const totalWeight = items.reduce((s, it) => s + Number(it.weight || 0), 0);
+
+  const isSacoGroup = (grupoId: string | null) => {
+    if (!grupoId) return false;
+    const label = grupos.items.find(x => x.id === grupoId)?.label;
+    return !!label && normalize(label).startsWith('saco');
+  };
 
   const composeDescription = (it: DraftItem) => {
     const parts = [
@@ -154,9 +161,29 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
     return parts.join(' • ');
   };
 
+  const RECALC_KEYS: (keyof DraftItem)[] = ['width', 'length', 'thickness', 'fator', 'quantity', 'grupo_id'];
+
   const updateItem = (idx: number, patch: Partial<DraftItem>) => {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const merged: DraftItem = { ...it, ...patch };
+      const touchedRecalc = Object.keys(patch).some(k => RECALC_KEYS.includes(k as keyof DraftItem));
+      if (touchedRecalc && isSacoGroup(merged.grupo_id)) {
+        const w = Number(merged.width) || 0;
+        const l = Number(merged.length) || 0;
+        const t = Number(merged.thickness) || 0;
+        const q = Number(merged.quantity) || 0;
+        const f = Number(merged.fator) || 0;
+        const baseKg = (w * l * t) / 1000;
+        merged.weight = baseKg * q;
+        if (f > 0) merged.unit_price = Number((f * baseKg).toFixed(4));
+      } else if (touchedRecalc && !isSacoGroup(merged.grupo_id)) {
+        merged.weight = 0;
+      }
+      return merged;
+    }));
   };
+
 
   const validate = (): string | null => {
     if (!legalEntityId) return 'Selecione o CNPJ de atendimento.';
