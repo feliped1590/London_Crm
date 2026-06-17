@@ -330,7 +330,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                 <TableRow>
                   <TableHead className="w-[40px]">#</TableHead>
                   <TableHead>Classificação & Descrição</TableHead>
-                  <TableHead className="w-[90px]">Qtd</TableHead>
+                  <TableHead className="w-[110px]">Qtd</TableHead>
                   <TableHead className="w-[80px]">Un</TableHead>
                   <TableHead className="w-[130px]">Vlr Unit.</TableHead>
                   <TableHead className="w-[130px] text-right">Total</TableHead>
