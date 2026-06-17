@@ -22,7 +22,13 @@ export interface QuickQuoteItem {
   unit_price: number;
   total_price: number;
   notes: string | null;
+  width: number | null;
+  length: number | null;
+  thickness: number | null;
+  fator: number | null;
+  weight: number;
 }
+
 
 export interface QuickQuote {
   id: string;
