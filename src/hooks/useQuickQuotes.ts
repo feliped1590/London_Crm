@@ -214,9 +214,21 @@ export function useQuickQuoteMutations(dealId: string) {
         unit: it.unit ?? null,
         unit_price: Number(it.unit_price || 0),
         notes: it.notes ?? null,
+        width: it.width ?? null,
+        length: it.length ?? null,
+        thickness: it.thickness ?? null,
+        fator: it.fator ?? null,
+        weight: Number(it.weight || 0),
       }));
       const { error } = await supabase.from('quick_quote_items' as any).insert(rows);
       if (error) throw error;
+
+      // Atualiza total_weight no orçamento
+      const total_weight = rows.reduce((s, r) => s + Number(r.weight || 0), 0);
+      await supabase
+        .from('quick_quotes' as any)
+        .update({ total_weight })
+        .eq('id', quoteId);
     },
     onSuccess: (_, vars) => {
       invalidate();
