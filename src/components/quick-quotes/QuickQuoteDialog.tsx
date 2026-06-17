@@ -148,7 +148,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
   const isSacoGroup = (grupoId: string | null) => {
     if (!grupoId) return false;
     const label = grupos.items.find(x => x.id === grupoId)?.label;
-    return !!label && normalize(label).startsWith('saco');
+    return !!label && normalize(label).includes('saco');
   };
 
   const composeDescription = (it: DraftItem) => {
