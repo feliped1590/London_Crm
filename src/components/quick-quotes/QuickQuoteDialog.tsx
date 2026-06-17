@@ -235,7 +235,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto sm:max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>{editing ? `Orçamento ${editing.number || ''}` : 'Novo Orçamento Livre'}</DialogTitle>
         </DialogHeader>
