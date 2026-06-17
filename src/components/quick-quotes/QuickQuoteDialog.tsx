@@ -104,6 +104,11 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
         grupo_id: it.grupo_id, subgrupo_id: it.subgrupo_id,
         description: it.description, quantity: Number(it.quantity), unit: it.unit,
         unit_price: Number(it.unit_price), notes: it.notes,
+        width: it.width != null ? Number(it.width) : null,
+        length: it.length != null ? Number(it.length) : null,
+        thickness: it.thickness != null ? Number(it.thickness) : null,
+        fator: it.fator != null ? Number(it.fator) : null,
+        weight: Number(it.weight || 0),
       })));
     } else if (!editing) {
       // novo
