@@ -48,6 +48,24 @@ serve(async (req) => {
       .eq('quote_id', quote_id)
       .order('sort_order');
 
+    // Carrega rótulos de classificação para compor descrição completa no PDF
+    const collectIds = (key: string) =>
+      Array.from(new Set((items || []).map((it: any) => it[key]).filter(Boolean)));
+    const [famRes, tipRes, grpRes, subRes, clsRes] = await Promise.all([
+      supabase.from('product_families').select('id,label').in('id', collectIds('family_id') as string[]),
+      supabase.from('product_types').select('id,label').in('id', collectIds('tipo_id') as string[]),
+      supabase.from('product_groups').select('id,label').in('id', collectIds('grupo_id') as string[]),
+      supabase.from('product_subgroups').select('id,label').in('id', collectIds('subgrupo_id') as string[]),
+      supabase.from('product_classes').select('id,label').in('id', collectIds('class_id') as string[]),
+    ]);
+    const toMap = (rows: any[] | null) =>
+      new Map<string, string>((rows || []).map((r: any) => [r.id, r.label]));
+    const families = toMap(famRes.data);
+    const tipos = toMap(tipRes.data);
+    const grupos = toMap(grpRes.data);
+    const subgrupos = toMap(subRes.data);
+    const classes = toMap(clsRes.data);
+
     // Atualiza sent_at + status se solicitado e ainda em rascunho
     if (mark_sent && quote.status === 'draft') {
       await supabase
@@ -70,22 +88,41 @@ serve(async (req) => {
     const totalWeight = (items || []).reduce((s: number, it: any) => s + Number(it.weight || 0), 0);
     const fmtNum = (v: any, d = 2) =>
       Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
-    const hasDims = (it: any) =>
-      Number(it.width) > 0 || Number(it.length) > 0 || Number(it.thickness) > 0 || Number(it.fator) > 0 || Number(it.weight) > 0;
+
+    const fmtDim = (v: any, d = 0) => {
+      const n = Number(v) || 0;
+      return n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: 3 });
+    };
+
+    const buildFullDescription = (it: any) => {
+      const classif = [
+        families.get(it.family_id),
+        tipos.get(it.tipo_id),
+        grupos.get(it.grupo_id),
+        subgrupos.get(it.subgrupo_id),
+        classes.get(it.class_id),
+      ].filter(Boolean).join(' • ');
+
+      const w = Number(it.width) || 0;
+      const l = Number(it.length) || 0;
+      const t = Number(it.thickness) || 0;
+      const dims = (w > 0 && l > 0 && t > 0)
+        ? `${fmtDim(w)}×${fmtDim(l)}×${fmtDim(t, 3)} mm`
+        : '';
+
+      const extras: string[] = [];
+      if (Number(it.fator) > 0) extras.push(`Fator ${fmtNum(it.fator, 4)}`);
+      if (Number(it.weight) > 0) extras.push(`Peso ${fmtNum(it.weight, 3)} kg`);
+
+      const userDesc = String(it.description || '').trim();
+      const parts = [classif, dims, extras.join(' • '), userDesc].filter(Boolean);
+      return parts.join(' • ');
+    };
 
     const itemsHtml = (items || []).map((it: any, i: number) => `
       <tr>
         <td>${i + 1}</td>
-        <td class="desc-col">
-          ${escape(it.description)}
-          ${hasDims(it) ? `<div class="dims">
-            ${Number(it.width) > 0 ? `<span><b>L:</b> ${fmtNum(it.width)} mm</span>` : ''}
-            ${Number(it.length) > 0 ? `<span><b>C:</b> ${fmtNum(it.length)} mm</span>` : ''}
-            ${Number(it.thickness) > 0 ? `<span><b>E:</b> ${fmtNum(it.thickness, 3)} mm</span>` : ''}
-            ${Number(it.fator) > 0 ? `<span><b>Fator:</b> ${fmtNum(it.fator, 4)}</span>` : ''}
-            ${Number(it.weight) > 0 ? `<span><b>Peso:</b> ${fmtNum(it.weight, 3)} kg</span>` : ''}
-          </div>` : ''}
-        </td>
+        <td class="desc-col">${escape(buildFullDescription(it))}</td>
         <td class="right">${Number(it.quantity).toLocaleString('pt-BR')}</td>
         <td class="center">${escape(it.unit || '-')}</td>
         <td class="right">${Number(it.weight) > 0 ? fmtNum(it.weight, 3) : '-'}</td>
