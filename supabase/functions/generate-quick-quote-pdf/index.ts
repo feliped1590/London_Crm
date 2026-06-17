@@ -67,17 +67,33 @@ serve(async (req) => {
 
     const le = quote.legal_entity || {};
     const total = (items || []).reduce((s: number, it: any) => s + Number(it.total_price || 0), 0);
+    const totalWeight = (items || []).reduce((s: number, it: any) => s + Number(it.weight || 0), 0);
+    const fmtNum = (v: any, d = 2) =>
+      Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const hasDims = (it: any) =>
+      Number(it.width) > 0 || Number(it.length) > 0 || Number(it.thickness) > 0 || Number(it.fator) > 0 || Number(it.weight) > 0;
 
     const itemsHtml = (items || []).map((it: any, i: number) => `
       <tr>
         <td>${i + 1}</td>
-        <td class="desc-col">${escape(it.description)}</td>
+        <td class="desc-col">
+          ${escape(it.description)}
+          ${hasDims(it) ? `<div class="dims">
+            ${Number(it.width) > 0 ? `<span><b>L:</b> ${fmtNum(it.width)} mm</span>` : ''}
+            ${Number(it.length) > 0 ? `<span><b>C:</b> ${fmtNum(it.length)} mm</span>` : ''}
+            ${Number(it.thickness) > 0 ? `<span><b>E:</b> ${fmtNum(it.thickness, 3)} mm</span>` : ''}
+            ${Number(it.fator) > 0 ? `<span><b>Fator:</b> ${fmtNum(it.fator, 4)}</span>` : ''}
+            ${Number(it.weight) > 0 ? `<span><b>Peso:</b> ${fmtNum(it.weight, 3)} kg</span>` : ''}
+          </div>` : ''}
+        </td>
         <td class="right">${Number(it.quantity).toLocaleString('pt-BR')}</td>
         <td class="center">${escape(it.unit || '-')}</td>
+        <td class="right">${Number(it.weight) > 0 ? fmtNum(it.weight, 3) : '-'}</td>
         <td class="right">${fmtMoney(it.unit_price)}</td>
         <td class="right bold">${fmtMoney(it.total_price)}</td>
       </tr>
     `).join('');
+
 
     const statusLabel: Record<string, string> = {
       draft: 'Rascunho', sent: 'Enviado', approved: 'Aprovado',
