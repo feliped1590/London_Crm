@@ -148,7 +148,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
   const isSacoGroup = (grupoId: string | null) => {
     if (!grupoId) return false;
     const label = grupos.items.find(x => x.id === grupoId)?.label;
-    return !!label && normalize(label).startsWith('saco');
+    return !!label && normalize(label).includes('saco');
   };
 
   const composeDescription = (it: DraftItem) => {
@@ -330,7 +330,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                 <TableRow>
                   <TableHead className="w-[40px]">#</TableHead>
                   <TableHead>Classificação & Descrição</TableHead>
-                  <TableHead className="w-[90px]">Qtd</TableHead>
+                  <TableHead className="w-[110px]">Qtd</TableHead>
                   <TableHead className="w-[80px]">Un</TableHead>
                   <TableHead className="w-[130px]">Vlr Unit.</TableHead>
                   <TableHead className="w-[130px] text-right">Total</TableHead>
