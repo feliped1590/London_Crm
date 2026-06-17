@@ -183,19 +183,22 @@ tbody td{padding:6px;border-bottom:1px solid #e2e8f0}
       <tr>
         <th style="width:28px">#</th>
         <th>Descrição</th>
-        <th style="width:60px" class="right">Qtd</th>
-        <th style="width:50px" class="center">Un</th>
-        <th style="width:90px" class="right">Vlr Unit.</th>
-        <th style="width:100px" class="right">Total</th>
+        <th style="width:55px" class="right">Qtd</th>
+        <th style="width:45px" class="center">Un</th>
+        <th style="width:65px" class="right">Peso (kg)</th>
+        <th style="width:85px" class="right">Vlr Unit.</th>
+        <th style="width:95px" class="right">Total</th>
       </tr>
     </thead>
-    <tbody>${itemsHtml || '<tr><td colspan="6" class="center">Sem itens.</td></tr>'}</tbody>
+    <tbody>${itemsHtml || '<tr><td colspan="7" class="center">Sem itens.</td></tr>'}</tbody>
   </table>
   <div class="totals-wrapper">
     <div class="totals-box">
+      ${totalWeight > 0 ? `<div class="totals-row"><span>Peso Total</span><span>${fmtNum(totalWeight, 3)} kg</span></div>` : ''}
       <div class="totals-row grand"><span>Total Geral</span><span>${fmtMoney(total)}</span></div>
     </div>
   </div>
+
 </div>
 
 ${(quote.payment_terms_free || quote.delivery_terms_free || quote.observations) ? `
