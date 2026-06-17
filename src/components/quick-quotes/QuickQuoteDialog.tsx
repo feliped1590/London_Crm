@@ -364,6 +364,49 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                           <SelectContent>{classes.items.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      {isSacoGroup(it.grupo_id) && (
+                        <div className="grid grid-cols-5 gap-1 mb-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Largura (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.01" className="h-8 text-xs"
+                              value={it.width ?? ''}
+                              onChange={(e) => updateItem(i, { width: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Comprimento (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.01" className="h-8 text-xs"
+                              value={it.length ?? ''}
+                              onChange={(e) => updateItem(i, { length: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Espessura (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.001" className="h-8 text-xs"
+                              value={it.thickness ?? ''}
+                              onChange={(e) => updateItem(i, { thickness: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Fator</Label>
+                            <Input
+                              type="number" min="0" step="0.0001" className="h-8 text-xs"
+                              value={it.fator ?? ''}
+                              onChange={(e) => updateItem(i, { fator: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Peso (kg)</Label>
+                            <Input
+                              readOnly tabIndex={-1} className="h-8 text-xs bg-muted"
+                              value={Number(it.weight || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                            />
+                          </div>
+                        </div>
+                      )}
                       <div className="flex gap-1">
                         <Textarea
                           rows={1}
@@ -381,6 +424,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                           }}
                         >Sug.</Button>
                       </div>
+
                     </TableCell>
                     <TableCell>
                       <Input
