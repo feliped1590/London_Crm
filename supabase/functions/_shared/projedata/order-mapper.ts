@@ -102,11 +102,21 @@ export function parsePaymentTerms(
 // ─── Mapper principal ───────────────────────────────────────────
 
 export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
-  // Follow-up do pedido (único registro, replicado em cada item por exigência do ERP)
+  // Follow-up do pedido (raiz): tipo=1
   const followupArray: ProjedataOrderFollowupItem[] | undefined = order.followup?.texto
     ? [{
         sequencia_followup: 1,
         tipo: 1,
+        texto: order.followup.texto,
+        usuario: order.followup.erp_user_code,
+      }]
+    : undefined;
+
+  // Follow-up replicado em cada item: tipo=2 (exigência do ERP)
+  const followupItemArray: ProjedataOrderFollowupItem[] | undefined = order.followup?.texto
+    ? [{
+        sequencia_followup: 1,
+        tipo: 2,
         texto: order.followup.texto,
         usuario: order.followup.erp_user_code,
       }]
@@ -133,8 +143,8 @@ export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
       versao: item.erp_versao,
       entregas,
     };
-    if (followupArray) {
-      mapped.followup_item = followupArray;
+    if (followupItemArray) {
+      mapped.followup_item = followupItemArray;
     }
     return mapped;
   });
