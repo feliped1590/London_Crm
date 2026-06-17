@@ -126,7 +126,9 @@ thead th{background:#2d3748;color:#fff;padding:7px 6px;text-align:left;font-size
 tbody tr:nth-child(even){background:#f7fafc}
 tbody td{padding:6px;border-bottom:1px solid #e2e8f0}
 .center{text-align:center}.right{text-align:right}.bold{font-weight:700}
-.desc-col{max-width:280px}
+.desc-col{max-width:320px}
+.desc-col .dims{margin-top:3px;font-size:9px;color:#4a5568;display:flex;flex-wrap:wrap;gap:8px}
+.desc-col .dims b{color:#2d3748;font-weight:600}
 .totals-wrapper{display:flex;justify-content:flex-end;margin-top:12px}
 .totals-box{min-width:280px;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden}
 .totals-row{display:flex;justify-content:space-between;padding:7px 14px;font-size:11px}
