@@ -67,17 +67,33 @@ serve(async (req) => {
 
     const le = quote.legal_entity || {};
     const total = (items || []).reduce((s: number, it: any) => s + Number(it.total_price || 0), 0);
+    const totalWeight = (items || []).reduce((s: number, it: any) => s + Number(it.weight || 0), 0);
+    const fmtNum = (v: any, d = 2) =>
+      Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const hasDims = (it: any) =>
+      Number(it.width) > 0 || Number(it.length) > 0 || Number(it.thickness) > 0 || Number(it.fator) > 0 || Number(it.weight) > 0;
 
     const itemsHtml = (items || []).map((it: any, i: number) => `
       <tr>
         <td>${i + 1}</td>
-        <td class="desc-col">${escape(it.description)}</td>
+        <td class="desc-col">
+          ${escape(it.description)}
+          ${hasDims(it) ? `<div class="dims">
+            ${Number(it.width) > 0 ? `<span><b>L:</b> ${fmtNum(it.width)} mm</span>` : ''}
+            ${Number(it.length) > 0 ? `<span><b>C:</b> ${fmtNum(it.length)} mm</span>` : ''}
+            ${Number(it.thickness) > 0 ? `<span><b>E:</b> ${fmtNum(it.thickness, 3)} mm</span>` : ''}
+            ${Number(it.fator) > 0 ? `<span><b>Fator:</b> ${fmtNum(it.fator, 4)}</span>` : ''}
+            ${Number(it.weight) > 0 ? `<span><b>Peso:</b> ${fmtNum(it.weight, 3)} kg</span>` : ''}
+          </div>` : ''}
+        </td>
         <td class="right">${Number(it.quantity).toLocaleString('pt-BR')}</td>
         <td class="center">${escape(it.unit || '-')}</td>
+        <td class="right">${Number(it.weight) > 0 ? fmtNum(it.weight, 3) : '-'}</td>
         <td class="right">${fmtMoney(it.unit_price)}</td>
         <td class="right bold">${fmtMoney(it.total_price)}</td>
       </tr>
     `).join('');
+
 
     const statusLabel: Record<string, string> = {
       draft: 'Rascunho', sent: 'Enviado', approved: 'Aprovado',
@@ -110,7 +126,9 @@ thead th{background:#2d3748;color:#fff;padding:7px 6px;text-align:left;font-size
 tbody tr:nth-child(even){background:#f7fafc}
 tbody td{padding:6px;border-bottom:1px solid #e2e8f0}
 .center{text-align:center}.right{text-align:right}.bold{font-weight:700}
-.desc-col{max-width:280px}
+.desc-col{max-width:320px}
+.desc-col .dims{margin-top:3px;font-size:9px;color:#4a5568;display:flex;flex-wrap:wrap;gap:8px}
+.desc-col .dims b{color:#2d3748;font-weight:600}
 .totals-wrapper{display:flex;justify-content:flex-end;margin-top:12px}
 .totals-box{min-width:280px;border:1px solid #e2e8f0;border-radius:4px;overflow:hidden}
 .totals-row{display:flex;justify-content:space-between;padding:7px 14px;font-size:11px}
@@ -165,19 +183,22 @@ tbody td{padding:6px;border-bottom:1px solid #e2e8f0}
       <tr>
         <th style="width:28px">#</th>
         <th>Descrição</th>
-        <th style="width:60px" class="right">Qtd</th>
-        <th style="width:50px" class="center">Un</th>
-        <th style="width:90px" class="right">Vlr Unit.</th>
-        <th style="width:100px" class="right">Total</th>
+        <th style="width:55px" class="right">Qtd</th>
+        <th style="width:45px" class="center">Un</th>
+        <th style="width:65px" class="right">Peso (kg)</th>
+        <th style="width:85px" class="right">Vlr Unit.</th>
+        <th style="width:95px" class="right">Total</th>
       </tr>
     </thead>
-    <tbody>${itemsHtml || '<tr><td colspan="6" class="center">Sem itens.</td></tr>'}</tbody>
+    <tbody>${itemsHtml || '<tr><td colspan="7" class="center">Sem itens.</td></tr>'}</tbody>
   </table>
   <div class="totals-wrapper">
     <div class="totals-box">
+      ${totalWeight > 0 ? `<div class="totals-row"><span>Peso Total</span><span>${fmtNum(totalWeight, 3)} kg</span></div>` : ''}
       <div class="totals-row grand"><span>Total Geral</span><span>${fmtMoney(total)}</span></div>
     </div>
   </div>
+
 </div>
 
 ${(quote.payment_terms_free || quote.delivery_terms_free || quote.observations) ? `

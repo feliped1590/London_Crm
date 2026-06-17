@@ -22,7 +22,13 @@ export interface QuickQuoteItem {
   unit_price: number;
   total_price: number;
   notes: string | null;
+  width: number | null;
+  length: number | null;
+  thickness: number | null;
+  fator: number | null;
+  weight: number;
 }
+
 
 export interface QuickQuote {
   id: string;
@@ -44,6 +50,7 @@ export interface QuickQuote {
   delivery_terms_free: string | null;
   observations: string | null;
   total_value: number;
+  total_weight: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -207,9 +214,21 @@ export function useQuickQuoteMutations(dealId: string) {
         unit: it.unit ?? null,
         unit_price: Number(it.unit_price || 0),
         notes: it.notes ?? null,
+        width: it.width ?? null,
+        length: it.length ?? null,
+        thickness: it.thickness ?? null,
+        fator: it.fator ?? null,
+        weight: Number(it.weight || 0),
       }));
       const { error } = await supabase.from('quick_quote_items' as any).insert(rows);
       if (error) throw error;
+
+      // Atualiza total_weight no orçamento
+      const total_weight = rows.reduce((s, r) => s + Number(r.weight || 0), 0);
+      await supabase
+        .from('quick_quotes' as any)
+        .update({ total_weight })
+        .eq('id', quoteId);
     },
     onSuccess: (_, vars) => {
       invalidate();

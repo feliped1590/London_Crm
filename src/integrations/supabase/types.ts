@@ -9014,18 +9014,23 @@ export type Database = {
           created_at: string
           description: string
           family_id: string | null
+          fator: number | null
           grupo_id: string | null
           id: string
+          length: number | null
           notes: string | null
           quantity: number
           quote_id: string
           sort_order: number
           subgrupo_id: string | null
+          thickness: number | null
           tipo_id: string | null
           total_price: number
           unit: string | null
           unit_price: number
           updated_at: string
+          weight: number
+          width: number | null
         }
         Insert: {
           class_id?: string | null
@@ -9033,18 +9038,23 @@ export type Database = {
           created_at?: string
           description: string
           family_id?: string | null
+          fator?: number | null
           grupo_id?: string | null
           id?: string
+          length?: number | null
           notes?: string | null
           quantity?: number
           quote_id: string
           sort_order?: number
           subgrupo_id?: string | null
+          thickness?: number | null
           tipo_id?: string | null
           total_price?: number
           unit?: string | null
           unit_price?: number
           updated_at?: string
+          weight?: number
+          width?: number | null
         }
         Update: {
           class_id?: string | null
@@ -9052,18 +9062,23 @@ export type Database = {
           created_at?: string
           description?: string
           family_id?: string | null
+          fator?: number | null
           grupo_id?: string | null
           id?: string
+          length?: number | null
           notes?: string | null
           quantity?: number
           quote_id?: string
           sort_order?: number
           subgrupo_id?: string | null
+          thickness?: number | null
           tipo_id?: string | null
           total_price?: number
           unit?: string | null
           unit_price?: number
           updated_at?: string
+          weight?: number
+          width?: number | null
         }
         Relationships: [
           {
@@ -9159,6 +9174,7 @@ export type Database = {
           status: Database["public"]["Enums"]["quick_quote_status"]
           tenant_id: string
           total_value: number
+          total_weight: number
           updated_at: string
           validity_date: string | null
         }
@@ -9189,6 +9205,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["quick_quote_status"]
           tenant_id: string
           total_value?: number
+          total_weight?: number
           updated_at?: string
           validity_date?: string | null
         }
@@ -9219,6 +9236,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["quick_quote_status"]
           tenant_id?: string
           total_value?: number
+          total_weight?: number
           updated_at?: string
           validity_date?: string | null
         }

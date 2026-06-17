@@ -35,12 +35,22 @@ interface DraftItem {
   unit: string | null;
   unit_price: number;
   notes: string | null;
+  width: number | null;
+  length: number | null;
+  thickness: number | null;
+  fator: number | null;
+  weight: number;
 }
 
 const emptyItem = (): DraftItem => ({
   family_id: null, class_id: null, tipo_id: null, grupo_id: null, subgrupo_id: null,
   description: '', quantity: 1, unit: 'UN', unit_price: 0, notes: null,
+  width: null, length: null, thickness: null, fator: null, weight: 0,
 });
+
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
 
 const STATUSES: { value: QuickQuoteStatus; label: string }[] = [
   { value: 'draft', label: 'Rascunho' },
@@ -94,6 +104,11 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
         grupo_id: it.grupo_id, subgrupo_id: it.subgrupo_id,
         description: it.description, quantity: Number(it.quantity), unit: it.unit,
         unit_price: Number(it.unit_price), notes: it.notes,
+        width: it.width != null ? Number(it.width) : null,
+        length: it.length != null ? Number(it.length) : null,
+        thickness: it.thickness != null ? Number(it.thickness) : null,
+        fator: it.fator != null ? Number(it.fator) : null,
+        weight: Number(it.weight || 0),
       })));
     } else if (!editing) {
       // novo
@@ -128,6 +143,13 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
   }, [clientCnpj]);
 
   const totalValue = items.reduce((s, it) => s + (Number(it.quantity || 0) * Number(it.unit_price || 0)), 0);
+  const totalWeight = items.reduce((s, it) => s + Number(it.weight || 0), 0);
+
+  const isSacoGroup = (grupoId: string | null) => {
+    if (!grupoId) return false;
+    const label = grupos.items.find(x => x.id === grupoId)?.label;
+    return !!label && normalize(label).startsWith('saco');
+  };
 
   const composeDescription = (it: DraftItem) => {
     const parts = [
@@ -139,9 +161,29 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
     return parts.join(' • ');
   };
 
+  const RECALC_KEYS: (keyof DraftItem)[] = ['width', 'length', 'thickness', 'fator', 'quantity', 'grupo_id'];
+
   const updateItem = (idx: number, patch: Partial<DraftItem>) => {
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const merged: DraftItem = { ...it, ...patch };
+      const touchedRecalc = Object.keys(patch).some(k => RECALC_KEYS.includes(k as keyof DraftItem));
+      if (touchedRecalc && isSacoGroup(merged.grupo_id)) {
+        const w = Number(merged.width) || 0;
+        const l = Number(merged.length) || 0;
+        const t = Number(merged.thickness) || 0;
+        const q = Number(merged.quantity) || 0;
+        const f = Number(merged.fator) || 0;
+        const baseKg = (w * l * t) / 1000;
+        merged.weight = baseKg * q;
+        if (f > 0) merged.unit_price = Number((f * baseKg).toFixed(4));
+      } else if (touchedRecalc && !isSacoGroup(merged.grupo_id)) {
+        merged.weight = 0;
+      }
+      return merged;
+    }));
   };
+
 
   const validate = (): string | null => {
     if (!legalEntityId) return 'Selecione o CNPJ de atendimento.';
@@ -193,7 +235,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] w-[95vw] max-h-[95vh] overflow-y-auto sm:max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>{editing ? `Orçamento ${editing.number || ''}` : 'Novo Orçamento Livre'}</DialogTitle>
         </DialogHeader>
@@ -322,6 +364,49 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                           <SelectContent>{classes.items.map(o => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
+                      {isSacoGroup(it.grupo_id) && (
+                        <div className="grid grid-cols-5 gap-1 mb-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Largura (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.01" className="h-8 text-xs"
+                              value={it.width ?? ''}
+                              onChange={(e) => updateItem(i, { width: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Comprimento (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.01" className="h-8 text-xs"
+                              value={it.length ?? ''}
+                              onChange={(e) => updateItem(i, { length: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Espessura (mm)</Label>
+                            <Input
+                              type="number" min="0" step="0.001" className="h-8 text-xs"
+                              value={it.thickness ?? ''}
+                              onChange={(e) => updateItem(i, { thickness: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Fator</Label>
+                            <Input
+                              type="number" min="0" step="0.0001" className="h-8 text-xs"
+                              value={it.fator ?? ''}
+                              onChange={(e) => updateItem(i, { fator: e.target.value === '' ? null : Number(e.target.value) })}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">Peso (kg)</Label>
+                            <Input
+                              readOnly tabIndex={-1} className="h-8 text-xs bg-muted"
+                              value={Number(it.weight || 0).toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}
+                            />
+                          </div>
+                        </div>
+                      )}
                       <div className="flex gap-1">
                         <Textarea
                           rows={1}
@@ -339,6 +424,7 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                           }}
                         >Sug.</Button>
                       </div>
+
                     </TableCell>
                     <TableCell>
                       <Input
@@ -379,9 +465,11 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                 ))}
               </TableBody>
             </Table>
-            <div className="flex justify-end text-sm font-semibold">
-              Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            <div className="flex justify-end gap-6 text-sm font-semibold">
+              <span>Peso total: {totalWeight.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</span>
+              <span>Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
             </div>
+
           </div>
 
           {/* Condições */}
