@@ -50,6 +50,7 @@ export interface QuickQuote {
   delivery_terms_free: string | null;
   observations: string | null;
   total_value: number;
+  total_weight: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
