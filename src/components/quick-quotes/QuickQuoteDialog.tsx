@@ -35,12 +35,22 @@ interface DraftItem {
   unit: string | null;
   unit_price: number;
   notes: string | null;
+  width: number | null;
+  length: number | null;
+  thickness: number | null;
+  fator: number | null;
+  weight: number;
 }
 
 const emptyItem = (): DraftItem => ({
   family_id: null, class_id: null, tipo_id: null, grupo_id: null, subgrupo_id: null,
   description: '', quantity: 1, unit: 'UN', unit_price: 0, notes: null,
+  width: null, length: null, thickness: null, fator: null, weight: 0,
 });
+
+const normalize = (s: string) =>
+  s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
 
 const STATUSES: { value: QuickQuoteStatus; label: string }[] = [
   { value: 'draft', label: 'Rascunho' },
