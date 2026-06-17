@@ -465,9 +465,11 @@ export function QuickQuoteDialog({ open, onOpenChange, dealId, defaultLegalEntit
                 ))}
               </TableBody>
             </Table>
-            <div className="flex justify-end text-sm font-semibold">
-              Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            <div className="flex justify-end gap-6 text-sm font-semibold">
+              <span>Peso total: {totalWeight.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kg</span>
+              <span>Total: {totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
             </div>
+
           </div>
 
           {/* Condições */}
