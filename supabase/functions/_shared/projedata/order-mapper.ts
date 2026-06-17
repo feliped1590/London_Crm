@@ -102,21 +102,21 @@ export function parsePaymentTerms(
 // ─── Mapper principal ───────────────────────────────────────────
 
 export function mapCRMOrderToProjedata(order: CRMOrderForSync): ProjedataOrder {
-  // Follow-up do pedido (raiz): tipo=1
+  // Follow-up do pedido (raiz): tipo=2
   const followupArray: ProjedataOrderFollowupItem[] | undefined = order.followup?.texto
     ? [{
         sequencia_followup: 1,
-        tipo: 1,
+        tipo: 2,
         texto: order.followup.texto,
         usuario: order.followup.erp_user_code,
       }]
     : undefined;
 
-  // Follow-up replicado em cada item: tipo=2 (exigência do ERP)
+  // Follow-up replicado em cada item: tipo=1
   const followupItemArray: ProjedataOrderFollowupItem[] | undefined = order.followup?.texto
     ? [{
         sequencia_followup: 1,
-        tipo: 2,
+        tipo: 1,
         texto: order.followup.texto,
         usuario: order.followup.erp_user_code,
       }]
