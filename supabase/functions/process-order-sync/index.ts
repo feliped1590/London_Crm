@@ -24,7 +24,7 @@ const corsHeaders = {
 };
 
 const PERMANENT_ORDER_SYNC_MESSAGE = 'A Projedata não permite sincronizar novamente este pedido porque ele já avançou no fluxo do ERP.';
-const ERP_SYNC_PAUSED = true;
+const ERP_SYNC_PAUSED = false;
 
 function isPermanentOrderSyncError(message: string): boolean {
   const normalized = message
