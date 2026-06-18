@@ -14,6 +14,7 @@ import { Check, AlertTriangle, CloudOff, XCircle, Search, ChevronLeft, ChevronRi
 import { toast } from 'sonner';
 import { useValidationBreakdown } from '@/hooks/useValidationBreakdown';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; cardColor: string }> = {
   ready: {
@@ -217,6 +218,10 @@ export function IntegrationValidationPanel() {
   };
 
   const handleSync = async (companyId: string) => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     setSyncingIds(prev => new Set(prev).add(companyId));
     try {
       const { data, error } = await supabase.functions.invoke('process-company-sync', {
@@ -255,6 +260,10 @@ export function IntegrationValidationPanel() {
   const cancelBulkRef = useRef(false);
 
   const handleBulkSync = useCallback(async () => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     cancelBulkRef.current = false;
 
     // Step 1: Enqueue all not_synced companies via RPC
@@ -559,7 +568,7 @@ export function IntegrationValidationPanel() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={handleBulkSync} disabled={(summary?.not_synced ?? 0) === 0}>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={handleBulkSync} disabled={ERP_SYNC_PAUSED || (summary?.not_synced ?? 0) === 0}>
                     <PlayCircle className="h-4 w-4" />
                     Sincronizar Todos
                   </Button>
@@ -709,7 +718,7 @@ export function IntegrationValidationPanel() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => (baseStatus === 'not_synced' || baseStatus === 'sync_error') && handleSync(item.id)}
-                                    disabled={isSyncing || baseStatus === 'missing_data'}
+                                    disabled={ERP_SYNC_PAUSED || isSyncing || baseStatus === 'missing_data'}
                                     className={baseStatus === 'missing_data' ? 'opacity-50 cursor-not-allowed' : ''}
                                   >
                                     {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
