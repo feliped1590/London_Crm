@@ -31,6 +31,10 @@ function isCurrencyKey(k: string) {
 function isPercentKey(k: string) {
   return /percent|_pct|taxa|rate/i.test(k);
 }
+function isHiddenKey(k: string) {
+  // Oculta colunas técnicas de UUID/chave (id, company_id, product_id, etc.)
+  return k === 'id' || /_id$/i.test(k) || k === 'uuid';
+}
 function formatCell(key: string, value: any) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'number') {
@@ -51,7 +55,7 @@ function humanizeKey(k: string) {
 
 function exportCSV(filename: string, rows: any[]) {
   if (!rows.length) return;
-  const cols = Object.keys(rows[0]);
+  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
   const escape = (v: any) => {
     if (v === null || v === undefined) return '';
     const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
@@ -91,7 +95,7 @@ const CHART_COLORS = [
 
 function pickChartKeys(rows: any[]): { labelKey: string | null; valueKeys: string[] } {
   if (!rows || rows.length === 0) return { labelKey: null, valueKeys: [] };
-  const keys = Object.keys(rows[0]);
+  const keys = Object.keys(rows[0]).filter((k) => !isHiddenKey(k));
   const labelKey = keys.find((k) => typeof rows[0][k] === 'string') ?? keys[0];
   const valueKeys = keys.filter((k) => k !== labelKey && typeof rows[0][k] === 'number').slice(0, 3);
   return { labelKey, valueKeys };
@@ -167,7 +171,7 @@ function DataBlock({ title, rows, chartType }: { title: string; rows: any[]; cha
       </Card>
     );
   }
-  const cols = Object.keys(rows[0]);
+  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
   const showChart = chartType && chartType !== 'table' && chartType !== 'kpi';
 
   return (
