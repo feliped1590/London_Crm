@@ -1,28 +1,33 @@
-## Objetivo
+## O que são esses IDs
 
-Unificar referências ao comando ERP de pedidos como `IMP_PEDIDO_ESPECIFICO` (confirmado pelo usuário) — hoje há divergência: o envio real usa `IMP_PEDIDO_ESPECIFICO`, mas o simulador e comentários ainda mencionam `IMP_PEDIDO_V3`.
+A tabela "Top Clientes" (e também "Top Produtos" e "Top Vendedores") do **Dashboard Executivo** em `/bi` é renderizada pelo `ReportRenderer` genérico, que monta as colunas a partir de **todas** as chaves retornadas pelo RPC `report_dashboard_executivo`.
 
-## Alterações
+O RPC devolve, para cada linha:
+- `id` — UUID interno do cliente/produto/vendedor (chave primária no banco)
+- `name` — Nome real
+- `total` — Faturamento
 
-1. **`src/components/integrations/OrderPayloadSimulator.tsx`**
-   - Trocar `grupoComando: 'IMP_PEDIDO_V3'` por `'IMP_PEDIDO_ESPECIFICO'` no envelope (final do `handleSimulate`).
-   - Atualizar o título do card: `Simulador de Payload ERP (IMP_PEDIDO_ESPECIFICO)`.
+Como o renderer não filtra nada, ele expõe o `id` como primeira coluna. Esses UUIDs **não têm valor para o usuário final**, são apenas identificadores internos do banco de dados.
 
-2. **`supabase/functions/process-order-sync/index.ts`**
-   - Atualizar o comentário do cabeçalho: `... ao ERP Projedata (IMP_PEDIDO_ESPECIFICO).`
+## O que mudar
 
-3. **`supabase/functions/_shared/erp/order-endpoint-resolver.ts`**
-   - Atualizar o comentário do cabeçalho de `IMP_PEDIDO_V3` para `IMP_PEDIDO_ESPECIFICO`.
+Esconder colunas técnicas no `ReportRenderer` (`src/components/bi/ReportRenderer.tsx`), aplicando o filtro tanto na tabela exibida quanto na exportação CSV.
 
-4. **`supabase/functions/_shared/projedata/index.ts`** (linha 35)
-   - Atualizar comentário da seção: `── Pedidos (IMP_PEDIDO_ESPECIFICO) ──`.
+### Regra de oculto
+Esconder qualquer coluna cujo nome:
+- seja exatamente `id`
+- termine em `_id` (ex.: `company_id`, `product_id`, `sales_rep_id`, `order_id`, `legal_entity_id`, `deal_id`, etc.)
 
-## Fora de escopo
+Esses campos continuam disponíveis nos objetos das linhas (para usos futuros tipo drill-down via `onRowClick`), apenas não são renderizados nem exportados.
 
-- Nenhuma mudança no `order-mapper.ts` (já usa `IMP_PEDIDO_ESPECIFICO`).
-- Nenhuma mudança no payload em si, na fila ou na lógica de sync.
-- Não mexer no erro ORA-06502 — investigação separada (próximo passo continua sendo o `erp_user_code` da Fernanda).
+### Impacto
+- "Top Clientes / Produtos / Vendedores" do Dashboard Executivo passam a mostrar **Nome** e **Total** apenas.
+- "Vendas por Cliente" (`vendas_cliente`), "Vendas por Produto", "Rankings Dinâmicos" e demais relatórios que usam o renderer genérico também deixam de mostrar `company_id`/`product_id`/etc.
+- Os relatórios compostos (`CommercialExecutiveReport`, `Seller360Report`) **não são afetados** — eles já usam `RankingTable` com colunas explícitas.
+- Nenhuma mudança em RPC, migration, RLS ou backend.
+
+## Arquivo alterado
+- `src/components/bi/ReportRenderer.tsx` — adicionar helper `isHiddenKey(key)` e aplicar em (a) `cols` do `DataBlock`, (b) lista de colunas do CSV em `exportCSV`, (c) `pickChartKeys` para que os ids não virem eixo de gráfico.
 
 ## Validação
-
-- Reabrir o simulador e confirmar que o envelope agora exibe `IMP_PEDIDO_ESPECIFICO`, idêntico ao que aparece nos logs do `process-order-sync`.
+Após o ajuste, abrir `/bi → Dashboard Executivo` e confirmar que "Top Clientes", "Top Produtos" e "Top Vendedores" mostram apenas Nome + Total, sem coluna de UUID.
