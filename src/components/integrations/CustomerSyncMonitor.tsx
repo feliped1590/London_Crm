@@ -36,6 +36,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 interface QueueStatusRow {
   status: string;
@@ -137,6 +138,10 @@ export function CustomerSyncMonitor() {
 
   // ─── Ações ────────────────────────────────────────────────
   const releaseOne = async () => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     setIsReleasing(true);
     try {
       // Buscar 1 cliente pausado com dados completos
@@ -183,6 +188,10 @@ export function CustomerSyncMonitor() {
   };
 
   const releaseBatch = async (n: number) => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     setIsReleasing(true);
     try {
       const { data: queueItems, error: e1 } = await supabase
@@ -238,6 +247,10 @@ export function CustomerSyncMonitor() {
   };
 
   const triggerProcessing = async () => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-company-sync', {
@@ -326,19 +339,19 @@ export function CustomerSyncMonitor() {
 
         {/* Ações de teste */}
         <div className="flex flex-wrap gap-2 pt-2 border-t">
-          <Button onClick={releaseOne} disabled={isReleasing} variant="default" size="sm" className="gap-2">
+          <Button onClick={releaseOne} disabled={ERP_SYNC_PAUSED || isReleasing} variant="default" size="sm" className="gap-2">
             <PlayCircle className="h-4 w-4" />
             Liberar 1 cliente (Fase 1)
           </Button>
-          <Button onClick={() => releaseBatch(10)} disabled={isReleasing} variant="secondary" size="sm" className="gap-2">
+          <Button onClick={() => releaseBatch(10)} disabled={ERP_SYNC_PAUSED || isReleasing} variant="secondary" size="sm" className="gap-2">
             <PlayCircle className="h-4 w-4" />
             Liberar 10 (Fase 2)
           </Button>
-          <Button onClick={() => releaseBatch(100)} disabled={isReleasing} variant="secondary" size="sm" className="gap-2">
+          <Button onClick={() => releaseBatch(100)} disabled={ERP_SYNC_PAUSED || isReleasing} variant="secondary" size="sm" className="gap-2">
             <PlayCircle className="h-4 w-4" />
             Liberar 100
           </Button>
-          <Button onClick={triggerProcessing} disabled={isProcessing} variant="default" size="sm" className="gap-2">
+          <Button onClick={triggerProcessing} disabled={ERP_SYNC_PAUSED || isProcessing} variant="default" size="sm" className="gap-2">
             <Send className={`h-4 w-4 ${isProcessing ? 'animate-pulse' : ''}`} />
             {isProcessing ? 'Processando...' : 'Disparar processamento (10)'}
           </Button>

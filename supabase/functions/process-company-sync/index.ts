@@ -19,6 +19,7 @@ const corsHeaders = {
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
 const ERP_REQUEST_TIMEOUT_MS = 12_000;
+const ERP_SYNC_PAUSED = true;
 
 async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 0): Promise<Response> {
   let lastError: unknown;
@@ -81,6 +82,10 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
+
+  if (ERP_SYNC_PAUSED) {
+    return jsonResponse({ success: true, processed: 0, paused: true, message: 'Sincronização ERP temporariamente bloqueada.' });
+  }
 
   const apiUrl = Deno.env.get('PROJEDATA_API_URL');
   const apiToken = Deno.env.get('PROJEDATA_API_TOKEN');

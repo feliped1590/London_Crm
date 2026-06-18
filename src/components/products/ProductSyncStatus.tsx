@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductSyncEntry } from '@/components/sync/SyncBatchProviders';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 type ProductSyncSnapshot = {
   id: string;
@@ -292,7 +293,9 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered, 
     }
   };
 
-  const tooltipLabel = erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
+  const tooltipLabel = ERP_SYNC_PAUSED
+    ? 'Sincronização ERP temporariamente bloqueada'
+    : erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
     <>
@@ -304,9 +307,13 @@ export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered, 
               size="icon"
               onClick={(e) => {
                 e.stopPropagation();
+                if (ERP_SYNC_PAUSED) {
+                  toast.warning('Sincronização ERP temporariamente bloqueada.');
+                  return;
+                }
                 handleSync();
               }}
-              disabled={isSyncing}
+              disabled={isSyncing || ERP_SYNC_PAUSED}
               title={tooltipLabel}
             >
               {isSyncing ? (

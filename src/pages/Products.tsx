@@ -70,6 +70,7 @@ import { ProductSyncBadge, ProductSyncButton } from '@/components/products/Produ
 import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at' | 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 type SortDirection = 'asc' | 'desc';
@@ -188,6 +189,10 @@ export default function Products() {
   };
 
   const handleSyncNow = async () => {
+    if (ERP_SYNC_PAUSED) {
+      toast.warning('Sincronização ERP temporariamente bloqueada.');
+      return;
+    }
     setIsSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-product-sync');
@@ -749,10 +754,11 @@ export default function Products() {
       if (createForCompanyId) {
         setSearchParams({}, { replace: true });
       }
-      // Dispara processamento imediato no ERP (fire-and-forget; cron de 15min é fallback)
-      supabase.functions
-        .invoke('process-product-sync', { body: { product_id: createdProduct.id } })
-        .catch((err) => console.warn('[createMutation] process-product-sync falhou (cron fará fallback):', err));
+      if (!ERP_SYNC_PAUSED) {
+        supabase.functions
+          .invoke('process-product-sync', { body: { product_id: createdProduct.id } })
+          .catch((err) => console.warn('[createMutation] process-product-sync falhou (cron fará fallback):', err));
+      }
     },
     onError: (error: any) => {
       const duplicateMessage = getDuplicateErrorMessage(error);
@@ -780,11 +786,12 @@ export default function Products() {
       const versionsKey = (updatedProduct as any).parent_product_id ?? updatedProduct.id;
       queryClient.invalidateQueries({ queryKey: ['product-versions', versionsKey] });
       recordProductInteraction({ entityId: updatedProduct.id, tenantId: updatedProduct.tenant_id, interactionType: 'update' });
-      toast.success('Produto atualizado! Sincronização com ERP enfileirada.');
-      // Dispara processamento imediato no ERP (fire-and-forget; cron de 15min é fallback)
-      supabase.functions
-        .invoke('process-product-sync', { body: { product_id: updatedProduct.id } })
-        .catch((err) => console.warn('[updateMutation] process-product-sync falhou (cron fará fallback):', err));
+      toast.success(ERP_SYNC_PAUSED ? 'Produto atualizado! Sincronização ERP pausada.' : 'Produto atualizado! Sincronização com ERP enfileirada.');
+      if (!ERP_SYNC_PAUSED) {
+        supabase.functions
+          .invoke('process-product-sync', { body: { product_id: updatedProduct.id } })
+          .catch((err) => console.warn('[updateMutation] process-product-sync falhou (cron fará fallback):', err));
+      }
       resetForm();
     },
     onError: (error: any) => {

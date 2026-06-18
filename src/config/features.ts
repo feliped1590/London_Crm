@@ -9,6 +9,13 @@
 export const WHATSAPP_ENABLED = false;
 
 /**
+ * ERP_SYNC_PAUSED: trava temporária da integração ERP enquanto a instabilidade
+ * é investigada. Quando true, botões e disparos automáticos de sincronização
+ * ficam bloqueados no frontend.
+ */
+export const ERP_SYNC_PAUSED = true;
+
+/**
  * WORKSPACE_TABS_ENABLED: ativa a barra de abas de trabalho (Workspace) que
  * preserva o estado dos formulários ao alternar entre módulos.
  *

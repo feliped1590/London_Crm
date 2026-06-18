@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useCompanySyncEntry } from '@/components/sync/SyncBatchProviders';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 interface CompanySyncStatusProps {
   companyId: string;
@@ -277,6 +278,7 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
 
   const tooltipLabel = isBlocked
     ? 'Validar e reenviar ao ERP'
+    : ERP_SYNC_PAUSED ? 'Sincronização ERP temporariamente bloqueada'
     : erpCode ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
   return (
@@ -289,9 +291,13 @@ export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: Compa
               size="icon"
               onClick={(e) => {
                 e.stopPropagation();
+                if (ERP_SYNC_PAUSED) {
+                  toast.warning('Sincronização ERP temporariamente bloqueada.');
+                  return;
+                }
                 handleSync();
               }}
-              disabled={isSyncing}
+              disabled={isSyncing || ERP_SYNC_PAUSED}
               title={tooltipLabel}
             >
               {isSyncing ? (
