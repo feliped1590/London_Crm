@@ -273,12 +273,42 @@ export default function BICenter() {
                   onStatusChange={setExecStatus}
                 />
               )
+            ) : report.isLoading ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+                </div>
+                <Skeleton className="h-64" />
+              </div>
+            ) : report.error ? (
+              <Card className="p-6 border-destructive/50">
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="font-medium">Erro ao carregar relatório</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {report.error instanceof Error ? report.error.message : 'Erro desconhecido'}
+                </p>
+              </Card>
+            ) : activeCode === 'forecast_vendas' ? (
+              <ForecastRenderer data={report.data || {}} />
+            ) : activeCode === 'metas' ? (
+              <MetasRenderer data={report.data || []} />
+            ) : activeCode === 'vendas_cliente' ? (
+              <AbcRenderer data={report.data || []} />
+            ) : activeCode === 'conversao' ? (
+              <ConversaoRenderer data={report.data || { kpis: {}, por_vendedor: [], taxa_conversao_venda: 0 }} />
+            ) : activeCode === 'pipeline_comercial' ? (
+              <PipelineComercialRenderer data={report.data || {}} />
+            ) : activeCode === 'rankings' ? (
+              <RankingsRenderer data={report.data || {}} />
             ) : (
               <ReportRenderer
                 data={report.data}
                 isLoading={report.isLoading}
                 error={report.error}
                 chartType={active.chart_type}
+                reportCode={activeCode}
               />
             )}
           </>
