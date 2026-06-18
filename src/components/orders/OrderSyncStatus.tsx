@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useOrderSyncEntry } from '@/components/sync/SyncBatchProviders';
+import { ERP_SYNC_PAUSED } from '@/config/features';
 
 // Realtime channel per row — só é usado quando o componente NÃO está dentro de
 // <OrderSyncProvider>. Dentro de listas (Orders.tsx), o provider abre 1 canal
@@ -273,6 +274,7 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
 
   const tooltipLabel = isBlocked
     ? 'Revalidar e enviar ao ERP'
+    : ERP_SYNC_PAUSED ? 'Sincronização ERP temporariamente bloqueada'
     : isPermanentFailure ? 'Pedido bloqueado no ERP'
       : erpOrderId ? 'Reenviar ao ERP' : 'Enviar ao ERP';
 
@@ -287,9 +289,10 @@ export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTrigge
               onClick={(e) => {
                 e.stopPropagation();
                 if (isPermanentFailure) toast.error(PERMANENT_ORDER_SYNC_MESSAGE);
+                else if (ERP_SYNC_PAUSED) toast.warning('Sincronização ERP temporariamente bloqueada.');
                 else handleSync();
               }}
-              disabled={isSyncing || isPermanentFailure}
+              disabled={isSyncing || isPermanentFailure || ERP_SYNC_PAUSED}
               title={tooltipLabel}
             >
               {isSyncing ? (
