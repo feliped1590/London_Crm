@@ -16,7 +16,6 @@ import { AbcRenderer } from '@/components/bi/renderers/AbcRenderer';
 import { ConversaoRenderer } from '@/components/bi/renderers/ConversaoRenderer';
 import { PipelineComercialRenderer } from '@/components/bi/renderers/PipelineComercialRenderer';
 import { RankingsRenderer } from '@/components/bi/renderers/RankingsRenderer';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { CommercialExecutiveReport } from '@/components/bi/composite/CommercialExecutiveReport';
 import { Seller360Report } from '@/components/bi/composite/Seller360Report';
