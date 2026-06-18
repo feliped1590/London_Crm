@@ -55,7 +55,7 @@ function humanizeKey(k: string) {
 
 function exportCSV(filename: string, rows: any[]) {
   if (!rows.length) return;
-  const cols = Object.keys(rows[0]);
+  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
   const escape = (v: any) => {
     if (v === null || v === undefined) return '';
     const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
