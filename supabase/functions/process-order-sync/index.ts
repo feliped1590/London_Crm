@@ -24,6 +24,7 @@ const corsHeaders = {
 };
 
 const PERMANENT_ORDER_SYNC_MESSAGE = 'A Projedata não permite sincronizar novamente este pedido porque ele já avançou no fluxo do ERP.';
+const ERP_SYNC_PAUSED = true;
 
 function isPermanentOrderSyncError(message: string): boolean {
   const normalized = message
@@ -49,6 +50,13 @@ Deno.serve(async (req) => {
   // apenas pedidos). Outras integrações continuam usando env vars globais.
 
   try {
+    if (ERP_SYNC_PAUSED) {
+      return new Response(
+        JSON.stringify({ success: true, processed: 0, paused: true, message: 'Sincronização ERP temporariamente bloqueada.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     // Parse request body for optional order_id (manual sync)
     let targetOrderId: string | null = null;
     try {
