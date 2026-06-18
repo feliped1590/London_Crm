@@ -1,40 +1,33 @@
-# Disparar sync do produto automaticamente após salvar
+## Objetivo
 
-## Diagnóstico
+Persistir o JSON exato enviado ao Projedata (e a resposta crua) toda vez que `process-order-sync` dispara um pedido, para podermos abrir o body do PED-2026-0268 e identificar o campo que causa o `ORA-06502`.
 
-Hoje o fluxo é:
+## Mudança
 
-1. Usuário cria/edita um produto na tela de Produtos.
-2. Um **trigger no banco** (`trg_mark_product_pending_sync`) insere automaticamente uma linha em `product_sync_queue` com status `pending` — por isso o badge "Na fila" aparece.
-3. **Nada chama a edge function `process-product-sync` na hora.** Quem drena a fila é um cron job (`dispatch-product-sync-15min`) que roda **a cada 15 minutos**.
-4. Quando o usuário clica no botão "Reenviar ao ERP" (componente `ProductSyncStatus`), aí sim é feito `supabase.functions.invoke('process-product-sync', { body: { product_id } })` e o item é processado imediatamente.
+Apenas em `supabase/functions/process-order-sync/index.ts`, no bloco de envio (em torno das linhas 315–340):
 
-Por isso parece que o item "fica preso na fila" — na verdade ele está esperando o próximo ciclo do cron. O reenvio manual só "destrava" porque é ele quem efetivamente dispara o processamento naquele momento.
+1. Logar em `iniflex_sandbox_logs` antes/depois do fetch:
+   - `request_payload`: `JSON.parse(payload)` (o envelope ASDCOMANDO completo, com o `json` interno já string — fica navegável no Supabase).
+   - `response_payload`: `responseText` parseado quando possível (fallback para `{ raw: responseText }`).
+   - `http_status`: `response.status`.
+   - `latency_ms`: medido com `performance.now()` em volta do fetch.
+   - `error_message`: preenchido quando `p_retorno` começa com `#ERRO#` ou quando `!response.ok`.
+   - `created_by`: `order.created_by` quando disponível.
+2. O log roda independente do resultado (sucesso, erro de validação ERP, exceção de rede) usando `try/finally`.
+3. Acrescentar também `console.log` com o `payload` inteiro (uma linha) para inspeção imediata via Edge Function logs, prefixado com `[process-order-sync] PAYLOAD ${order.number}:`.
 
-O mesmo padrão (cron 15min + dispatch manual) acontece também em pedidos e empresas, mas o foco do reporte é produto.
+## Não faz parte deste plano
 
-## Mudança proposta
+- Nenhuma alteração no `order-mapper.ts`, `order-loader.ts` ou validador.
+- Nenhuma mudança em casas decimais, parcelas, followup ou tipos de venda.
+- Sem migrations: `iniflex_sandbox_logs` já existe com as colunas necessárias.
 
-Disparar o processamento na hora, logo após o `INSERT`/`UPDATE` do produto no CRM — exatamente como o botão manual já faz, sem alterar lógica de fila nem do ERP.
+## Como usar depois de aplicado
 
-### Onde mexer (apenas frontend)
+1. Clicar em "Reenviar ao ERP" no PED-2026-0268.
+2. Você (ou eu, via `supabase--read_query`) abre o registro mais recente em `iniflex_sandbox_logs` e copia o `request_payload` → cola no suporte Projedata anexado ao `p_retorno`.
+3. Com o campo problemático identificado pelo Projedata, abrimos um plano específico de correção (parcela `dias=0`, formatação numérica, etc.).
 
-`src/pages/Products.tsx`
+## Risco
 
-- **`createMutation.onSuccess`** (linha ~739): depois de criar, chamar
-  `supabase.functions.invoke('process-product-sync', { body: { product_id: createdProduct.id } })`
-  em modo "fire-and-forget" (sem `await` bloqueante e sem alterar a UX atual). Se a invocação falhar, fazer apenas `console.warn` — o cron ainda processa em até 15 min como fallback, então o usuário nunca fica sem rede de segurança.
-
-- **`updateMutation.onSuccess`** (linha ~774): mesma chamada usando `updatedProduct.id`. Hoje o toast já diz "Sincronização com ERP enfileirada", então a semântica continua correta — apenas garante que o envio acontece em segundos em vez de minutos.
-
-### O que NÃO muda
-
-- Trigger SQL `trg_mark_product_pending_sync` continua igual (fonte única de verdade do enfileiramento).
-- `process-product-sync` continua igual (já aceita `product_id` opcional).
-- Cron de 15 min continua como fallback para itens que falharem ou ficarem em `retry`.
-- Botão "Reenviar ao ERP" no `ProductSyncStatus` continua funcionando como hoje, inclusive para casos de erro/retry.
-- Lógica de validação, versões filhas (v2+), atributos (`process-attribute-sync`) e sync de empresas/pedidos: nada alterado.
-
-## Resultado esperado
-
-Ao salvar um produto novo (ou editar um existente), o item entra na fila e em ~1–3 s já sai do status "Na fila" para "Enviado" / "Erro com motivo", sem necessidade de clicar em "Reenviar ao ERP".
+Baixo. Escrita extra em `iniflex_sandbox_logs` por pedido enviado; nenhuma mudança no payload em si.
