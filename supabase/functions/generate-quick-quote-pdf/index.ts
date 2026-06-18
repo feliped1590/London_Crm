@@ -253,6 +253,7 @@ ${(quote.payment_terms_free || quote.delivery_terms_free || quote.observations) 
 <div class="footer">
   <strong>${escape(le.name || '')}</strong> — Orçamento ${escape(quote.number)} — Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 </div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.focus();window.print();},400);});</script>
 </body></html>`;
 
     return new Response(html, {
