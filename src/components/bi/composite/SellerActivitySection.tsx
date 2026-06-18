@@ -59,20 +59,28 @@ interface ProductivityRow {
 export function SellerActivitySection({ sellerId, startDate, endDate, legalEntityId }: Props) {
   const queryClient = useQueryClient();
 
-  // ===== Fonte 1: Produtividade (mesma base do relatório "Detalhamento por Tipo de Interação")
+  // ===== Fonte 1: Produtividade (mesma chamada/lista do relatório "Detalhamento por Tipo de Interação")
   const prodKey = ['seller-360-productivity', sellerId, startDate, endDate];
   const productivity = useQuery({
     queryKey: prodKey,
     enabled: !!sellerId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_sales_rep_productivity' as any, {
+      const { data: links, error: linkError } = await supabase
+        .from('user_sales_reps')
+        .select('user_id')
+        .eq('sales_rep_id', sellerId)
+        .limit(1);
+      if (linkError) throw linkError;
+
+      const linkedUserId = links?.[0]?.user_id ?? null;
+      const rpcName = linkedUserId ? 'get_seller_productivity' : 'get_sales_rep_productivity';
+      const { data, error } = await supabase.rpc(rpcName as any, {
         p_start_date: startDate.toISOString(),
         p_end_date: endDate.toISOString(),
-        p_sales_rep_id: sellerId,
       } as any);
       if (error) throw error;
       const rows = (data ?? []) as unknown as ProductivityRow[];
-      return rows.find((r) => r.seller_id === sellerId) ?? rows[0] ?? null;
+      return rows.find((r) => r.seller_id === (linkedUserId ?? sellerId)) ?? null;
     },
     staleTime: 60 * 1000,
   });
