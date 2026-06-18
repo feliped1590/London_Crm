@@ -140,7 +140,9 @@ serve(async (req) => {
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Orçamento ${escape(quote.number)}</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;padding:30px 35px;color:#1a1a2e;font-size:11px;line-height:1.4}
+@page{size:A4;margin:12mm 10mm}
+@media print{body{padding:0 !important} .no-print{display:none !important}}
+body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;padding:30px 35px;color:#1a1a2e;font-size:11px;line-height:1.4;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:15px;border-bottom:2px solid #2d3748;margin-bottom:20px}
 .header-left{display:flex;align-items:center;gap:15px}
 .header-logo img{max-height:60px;width:auto}
@@ -251,6 +253,7 @@ ${(quote.payment_terms_free || quote.delivery_terms_free || quote.observations) 
 <div class="footer">
   <strong>${escape(le.name || '')}</strong> — Orçamento ${escape(quote.number)} — Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
 </div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.focus();window.print();},400);});</script>
 </body></html>`;
 
     return new Response(html, {
