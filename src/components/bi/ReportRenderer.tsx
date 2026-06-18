@@ -171,7 +171,7 @@ function DataBlock({ title, rows, chartType }: { title: string; rows: any[]; cha
       </Card>
     );
   }
-  const cols = Object.keys(rows[0]);
+  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
   const showChart = chartType && chartType !== 'table' && chartType !== 'kpi';
 
   return (
