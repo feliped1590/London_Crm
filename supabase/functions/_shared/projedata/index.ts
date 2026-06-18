@@ -32,7 +32,7 @@ export {
 } from './product-validator.ts';
 export type { ProductValidationError, ProductValidationResult } from './product-validator.ts';
 
-// ─── Pedidos (IMP_PEDIDO_V3) ────────────────────────────────────
+// ─── Pedidos (IMP_PEDIDO_ESPECIFICO) ────────────────────────────────────
 export type {
   ProjedataOrder,
   ProjedataOrderItem,

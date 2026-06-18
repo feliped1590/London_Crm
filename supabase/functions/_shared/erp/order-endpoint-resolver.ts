@@ -3,7 +3,7 @@
  *
  * Lê os campos `order_erp_endpoint`, `order_erp_token_secret_name`, `order_erp_enabled`
  * e `erp_company_code` da entidade jurídica vinculada ao pedido e devolve o trio
- * (endpoint, token, empresa) usado para POSTar o IMP_PEDIDO_V3 no ERP.
+ * (endpoint, token, empresa) usado para POSTar o IMP_PEDIDO_ESPECIFICO no ERP.
  *
  * Quando `order_erp_endpoint` e `order_erp_token_secret_name` estão nulos, o
  * resolver cai no fallback global (PROJEDATA_API_URL / PROJEDATA_API_TOKEN) — é o

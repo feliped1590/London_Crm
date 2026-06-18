@@ -1,6 +1,6 @@
 /**
  * Edge Function: process-order-sync
- * Processa a fila order_sync_queue enviando pedidos pendentes ao ERP Projedata (IMP_PEDIDO_V3).
+ * Processa a fila order_sync_queue enviando pedidos pendentes ao ERP Projedata (IMP_PEDIDO_ESPECIFICO).
  * Todos os campos são resolvidos dinamicamente — NENHUM hardcode.
  *
  * Defesa em profundidade: se a pré-validação falhar, o item da fila é marcado

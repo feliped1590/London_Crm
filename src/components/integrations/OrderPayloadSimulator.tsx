@@ -346,7 +346,7 @@ export function OrderPayloadSimulator() {
       // Envelope
       const envelope = {
         tipoComando: 'ASDCOMANDO',
-        grupoComando: 'IMP_PEDIDO_V3',
+        grupoComando: 'IMP_PEDIDO_ESPECIFICO',
         '#out#p_retorno': 'T',
         json: JSON.stringify(innerJson),
       };
@@ -380,7 +380,7 @@ export function OrderPayloadSimulator() {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <FileJson className="h-4 w-4" />
-          Simulador de Payload ERP (IMP_PEDIDO_V3)
+          Simulador de Payload ERP (IMP_PEDIDO_ESPECIFICO)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
