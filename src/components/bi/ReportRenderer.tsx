@@ -95,7 +95,7 @@ const CHART_COLORS = [
 
 function pickChartKeys(rows: any[]): { labelKey: string | null; valueKeys: string[] } {
   if (!rows || rows.length === 0) return { labelKey: null, valueKeys: [] };
-  const keys = Object.keys(rows[0]);
+  const keys = Object.keys(rows[0]).filter((k) => !isHiddenKey(k));
   const labelKey = keys.find((k) => typeof rows[0][k] === 'string') ?? keys[0];
   const valueKeys = keys.filter((k) => k !== labelKey && typeof rows[0][k] === 'number').slice(0, 3);
   return { labelKey, valueKeys };
