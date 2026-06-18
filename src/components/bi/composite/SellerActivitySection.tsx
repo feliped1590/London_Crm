@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
+import { endOfDay, format, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   CheckCircle2,
@@ -24,6 +24,7 @@ import {
   Percent,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { ExecutiveSection } from './ExecutiveSection';
 import { ExecutiveKpiGrid, KpiItem } from './ExecutiveKpiGrid';
@@ -56,23 +57,49 @@ interface ProductivityRow {
   deal_updates: number;
 }
 
+type ProductivityRpcName = 'get_seller_productivity' | 'get_sales_rep_productivity';
+type PendenciasReport = {
+  kpis?: Partial<Record<
+    | 'tarefas_atrasadas'
+    | 'tarefas_proximas_7d'
+    | 'negocios_parados_14d'
+    | 'negocios_parados_30d'
+    | 'propostas_sem_retorno_7d'
+    | 'clientes_sem_proxima_acao',
+    number
+  >> & { ultima_atividade?: string | null };
+};
+
+const toPendenciasReport = (value: Database['public']['Functions']['report_atividades_vendedor']['Returns']): PendenciasReport =>
+  (value && typeof value === 'object' && !Array.isArray(value) ? value : {}) as PendenciasReport;
+
 export function SellerActivitySection({ sellerId, startDate, endDate, legalEntityId }: Props) {
   const queryClient = useQueryClient();
+  const productivityStart = startOfDay(startDate);
+  const productivityEnd = endOfDay(endDate);
 
-  // ===== Fonte 1: Produtividade (mesma base do relatório "Detalhamento por Tipo de Interação")
-  const prodKey = ['seller-360-productivity', sellerId, startDate, endDate];
+  // ===== Fonte 1: Produtividade (mesma chamada/lista do relatório "Detalhamento por Tipo de Interação")
+  const prodKey = ['seller-360-productivity', sellerId, productivityStart.toISOString(), productivityEnd.toISOString()];
   const productivity = useQuery({
     queryKey: prodKey,
     enabled: !!sellerId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_sales_rep_productivity' as any, {
-        p_start_date: startDate.toISOString(),
-        p_end_date: endDate.toISOString(),
-        p_sales_rep_id: sellerId,
-      } as any);
+      const { data: links, error: linkError } = await supabase
+        .from('user_sales_reps')
+        .select('user_id')
+        .eq('sales_rep_id', sellerId)
+        .limit(1);
+      if (linkError) throw linkError;
+
+      const linkedUserId = links?.[0]?.user_id ?? null;
+      const rpcName: ProductivityRpcName = linkedUserId ? 'get_seller_productivity' : 'get_sales_rep_productivity';
+      const { data, error } = await supabase.rpc(rpcName, {
+        p_start_date: productivityStart.toISOString(),
+        p_end_date: productivityEnd.toISOString(),
+      });
       if (error) throw error;
       const rows = (data ?? []) as unknown as ProductivityRow[];
-      return rows.find((r) => r.seller_id === sellerId) ?? rows[0] ?? null;
+      return rows.find((r) => r.seller_id === (linkedUserId ?? sellerId)) ?? null;
     },
     staleTime: 60 * 1000,
   });
@@ -83,7 +110,7 @@ export function SellerActivitySection({ sellerId, startDate, endDate, legalEntit
     queryKey: pendKey,
     enabled: !!sellerId,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('report_atividades_vendedor' as any, {
+      const { data, error } = await supabase.rpc('report_atividades_vendedor', {
         p_sales_rep_id: sellerId,
         p_start_date: format(startDate, 'yyyy-MM-dd'),
         p_end_date: format(endDate, 'yyyy-MM-dd'),
@@ -93,7 +120,7 @@ export function SellerActivitySection({ sellerId, startDate, endDate, legalEntit
         console.warn('[SellerActivitySection] pendências RPC error:', error.message);
         throw error;
       }
-      return data as any;
+      return toPendenciasReport(data);
     },
     staleTime: 60 * 1000,
   });
@@ -105,7 +132,7 @@ export function SellerActivitySection({ sellerId, startDate, endDate, legalEntit
   const error = productivity.error ?? pendencias.error;
   const isEmpty = !p && Object.keys(pk).length === 0;
 
-  // === Bloco "Produção" (fonte: get_sales_rep_productivity) ===
+  // === Bloco "Produção" (fonte: produtividade do dashboard) ===
   const producao: KpiItem[] = [
     { key: 'act', label: 'Atividades', value: p?.activities ?? 0, format: 'number', icon: Activity, tone: 'primary' },
     { key: 'tcrit', label: 'Tarefas criadas', value: p?.tasks_created ?? 0, format: 'number', icon: ListChecks, tone: 'secondary' },
@@ -147,7 +174,7 @@ export function SellerActivitySection({ sellerId, startDate, endDate, legalEntit
       title="Atividades / Uso do CRM"
       description={`Última atividade registrada: ${ultima} · Mesma base do relatório de Produtividade.`}
       isLoading={isLoading}
-      error={error as any}
+      error={error}
       errorMessage="Não foi possível carregar as atividades deste vendedor para o filtro selecionado."
       errorAction={
         <Button
