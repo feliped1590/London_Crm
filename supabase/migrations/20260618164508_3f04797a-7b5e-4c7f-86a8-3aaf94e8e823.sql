@@ -1,0 +1,2 @@
+DELETE FROM public.company_sync_queue WHERE status IN ('pending','processing','waiting_propagation','paused','retry');
+DELETE FROM public.product_sync_queue WHERE status IN ('pending','processing','waiting_propagation','retry');
