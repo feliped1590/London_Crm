@@ -313,23 +313,61 @@ Deno.serve(async (req) => {
         const payload = buildOrderPayload(projedataOrder);
 
         console.log(`[process-order-sync] Enviando pedido ${order.number} (terceiro: ${queueItem.pedido_terceiro})`);
+        console.log(`[process-order-sync] PAYLOAD ${order.number}: ${payload}`);
 
         // 6. Enviar ao ERP (endpoint/token resolvidos pela entidade jurídica do pedido)
-        const response = await fetch(erpCfg.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${erpCfg.token}`,
-          },
-          body: payload,
-        });
+        const sentAt = performance.now();
+        let response: Response;
+        let responseText = '';
+        let fetchError: unknown = null;
+        try {
+          response = await fetch(erpCfg.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${erpCfg.token}`,
+            },
+            body: payload,
+          });
+          responseText = await response.text();
+        } catch (err) {
+          fetchError = err;
+          response = new Response(null, { status: 0 });
+        } finally {
+          // Persistir payload + resposta em iniflex_sandbox_logs para diagnóstico
+          try {
+            const latencyMs = Math.round(performance.now() - sentAt);
+            let reqPayloadJson: any;
+            try { reqPayloadJson = JSON.parse(payload); } catch { reqPayloadJson = { raw: payload }; }
+            let respPayloadJson: any;
+            try { respPayloadJson = responseText ? JSON.parse(responseText) : null; } catch { respPayloadJson = { raw: responseText }; }
+            const respStr = JSON.stringify(respPayloadJson ?? '');
+            const errMsg = fetchError
+              ? (fetchError instanceof Error ? fetchError.message : String(fetchError))
+              : (respStr.includes('#ERRO#') || !response.ok ? respStr.slice(0, 1000) : null);
+            await supabase.from('iniflex_sandbox_logs').insert({
+              request_payload: reqPayloadJson,
+              response_payload: respPayloadJson,
+              http_status: response.status || null,
+              latency_ms: latencyMs,
+              error_message: errMsg,
+              created_by: order.created_by ?? null,
+            });
+          } catch (logErr) {
+            console.error('[process-order-sync] Falha ao gravar iniflex_sandbox_logs:', logErr);
+          }
+        }
 
-        const responseText = await response.text();
+        if (fetchError) {
+          throw fetchError instanceof Error ? fetchError : new Error(String(fetchError));
+        }
+
         console.log(`[process-order-sync] Resposta ERP (${response.status}): ${responseText}`);
 
         if (!response.ok) {
           throw new Error(`ERP retornou ${response.status}: ${responseText}`);
         }
+
 
         // 8. Parse retorno via parser unificado
         let responseData: any;
