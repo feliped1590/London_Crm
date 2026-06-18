@@ -23,6 +23,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ERP_SYNC_PAUSED = true;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -32,6 +34,13 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
+
+  if (ERP_SYNC_PAUSED) {
+    return new Response(
+      JSON.stringify({ success: true, processed: 0, paused: true, message: 'Sincronização ERP temporariamente bloqueada.' }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
 
   const apiUrl = Deno.env.get('PROJEDATA_API_URL');
   const apiToken = Deno.env.get('PROJEDATA_API_TOKEN');
