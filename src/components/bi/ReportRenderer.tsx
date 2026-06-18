@@ -11,12 +11,14 @@ import {
   PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
+import { getReportConfig, type ReportConfig, type ColumnFormat } from './reportConfigs';
 
 interface ReportRendererProps {
   data: any;
   isLoading: boolean;
   error: unknown;
   chartType?: string;
+  reportCode?: string;
 }
 
 function formatCurrency(v: number) {
@@ -26,36 +28,36 @@ function formatNumber(v: number) {
   return new Intl.NumberFormat('pt-BR').format(v || 0);
 }
 function isCurrencyKey(k: string) {
-  return /valor|ticket|receita|faturamento|meta|realizado|margem|forecast|projecao|total/i.test(k);
+  return /valor|ticket|receita|faturamento|meta|realizado|margem|forecast|projecao|total|faltante|aberto|fechado/i.test(k);
 }
 function isPercentKey(k: string) {
-  return /percent|_pct|taxa|rate/i.test(k);
+  return /percent|_pct|taxa|rate|participacao/i.test(k);
 }
 function isHiddenKey(k: string) {
-  // Oculta colunas técnicas de UUID/chave (id, company_id, product_id, etc.)
   return k === 'id' || /_id$/i.test(k) || k === 'uuid';
 }
-function formatCell(key: string, value: any) {
+function applyFormat(format: ColumnFormat | undefined, key: string, value: any): string {
   if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'number') {
-    if (isCurrencyKey(key)) return formatCurrency(value);
-    if (isPercentKey(key)) return `${value.toFixed(1)}%`;
-    return formatNumber(value);
-  }
-  if (typeof value === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}/.test(value)) return new Date(value).toLocaleDateString('pt-BR');
-    return value;
-  }
+  const f = format ?? (
+    typeof value === 'number'
+      ? (isCurrencyKey(key) ? 'currency' : isPercentKey(key) ? 'percent' : 'number')
+      : (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) ? 'date' : 'text'
+  );
+  if (f === 'currency') return formatCurrency(Number(value));
+  if (f === 'percent') return `${Number(value).toFixed(1)}%`;
+  if (f === 'number') return formatNumber(Number(value));
+  if (f === 'date') return new Date(value).toLocaleDateString('pt-BR');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
-function humanizeKey(k: string) {
+function humanizeKey(k: string, labels?: Record<string, string>) {
+  if (labels?.[k]) return labels[k];
   return k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function exportCSV(filename: string, rows: any[]) {
+function exportCSV(filename: string, rows: any[], hidden: Set<string>) {
   if (!rows.length) return;
-  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
+  const cols = Object.keys(rows[0]).filter((c) => !hidden.has(c) && !isHiddenKey(c));
   const escape = (v: any) => {
     if (v === null || v === undefined) return '';
     const s = typeof v === 'object' ? JSON.stringify(v) : String(v);
@@ -86,26 +88,44 @@ function KPICard({ label, value }: { label: string; value: any }) {
 
 const CHART_COLORS = [
   'hsl(var(--primary))',
-  'hsl(var(--chart-2, 173 58% 39%))',
-  'hsl(var(--chart-3, 197 37% 24%))',
-  'hsl(var(--chart-4, 43 74% 66%))',
-  'hsl(var(--chart-5, 27 87% 67%))',
+  'hsl(173 58% 39%)',
+  'hsl(43 96% 56%)',
+  'hsl(27 87% 67%)',
+  'hsl(280 65% 60%)',
   'hsl(var(--destructive))',
 ];
 
-function pickChartKeys(rows: any[]): { labelKey: string | null; valueKeys: string[] } {
-  if (!rows || rows.length === 0) return { labelKey: null, valueKeys: [] };
-  const keys = Object.keys(rows[0]).filter((k) => !isHiddenKey(k));
-  const labelKey = keys.find((k) => typeof rows[0][k] === 'string') ?? keys[0];
-  const valueKeys = keys.filter((k) => k !== labelKey && typeof rows[0][k] === 'number').slice(0, 3);
-  return { labelKey, valueKeys };
-}
+function ChartBlock({
+  chartType,
+  rows,
+  config,
+}: {
+  chartType: string;
+  rows: any[];
+  config?: ReportConfig;
+}) {
+  const { labelKey, valueKeys } = useMemo(() => {
+    if (rows.length === 0) return { labelKey: null as string | null, valueKeys: [] as string[] };
+    const keys = Object.keys(rows[0]).filter((k) => !isHiddenKey(k));
+    const labelKey =
+      config?.chartLabelKey ??
+      keys.find((k) => typeof rows[0][k] === 'string') ??
+      keys[0];
+    const valueKeys = config?.chartValueKeys?.filter((k) => keys.includes(k))
+      ?? keys.filter((k) => k !== labelKey && typeof rows[0][k] === 'number').slice(0, 3);
+    return { labelKey, valueKeys };
+  }, [rows, config]);
 
-function ChartBlock({ chartType, rows }: { chartType: string; rows: any[] }) {
-  const { labelKey, valueKeys } = useMemo(() => pickChartKeys(rows), [rows]);
   if (!labelKey || valueKeys.length === 0) return null;
 
-  const data = rows.slice(0, 20);
+  const limit = config?.topN ?? 20;
+  const data = rows.slice(0, limit);
+  const fmtVal = (v: any, k?: string) => {
+    const key = k ?? valueKeys[0];
+    if (isCurrencyKey(key)) return formatCurrency(Number(v));
+    if (isPercentKey(key)) return `${Number(v).toFixed(1)}%`;
+    return formatNumber(Number(v));
+  };
 
   if (chartType === 'pie' || chartType === 'donut') {
     const k = valueKeys[0];
@@ -113,10 +133,10 @@ function ChartBlock({ chartType, rows }: { chartType: string; rows: any[] }) {
       <div className="h-72 w-full">
         <ResponsiveContainer>
           <PieChart>
-            <Pie data={data} dataKey={k} nameKey={labelKey} outerRadius={100} label>
+            <Pie data={data} dataKey={k} nameKey={labelKey} outerRadius={100} label={(e: any) => e[labelKey]}>
               {data.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
             </Pie>
-            <Tooltip formatter={(v: any) => isCurrencyKey(k) ? formatCurrency(Number(v)) : formatNumber(Number(v))} />
+            <Tooltip formatter={(v: any) => fmtVal(v, k)} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>
@@ -132,8 +152,8 @@ function ChartBlock({ chartType, rows }: { chartType: string; rows: any[] }) {
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} />
             <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Legend />
+            <Tooltip formatter={(v: any, k: any) => fmtVal(v, k as string)} />
+            <Legend formatter={(k) => humanizeKey(k as string, config?.columnLabels)} />
             {valueKeys.map((k, i) => (
               <Line key={k} type="monotone" dataKey={k} stroke={CHART_COLORS[i]} strokeWidth={2} dot={false} />
             ))}
@@ -143,16 +163,15 @@ function ChartBlock({ chartType, rows }: { chartType: string; rows: any[] }) {
     );
   }
 
-  // default: bar (also funnel fallback)
   return (
     <div className="h-72 w-full">
       <ResponsiveContainer>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-          <XAxis dataKey={labelKey} tick={{ fontSize: 12 }} />
-          <YAxis tick={{ fontSize: 12 }} />
-          <Tooltip />
-          <Legend />
+          <XAxis dataKey={labelKey} tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={70} />
+          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => isCurrencyKey(valueKeys[0]) ? formatCurrency(Number(v)) : formatNumber(Number(v))} />
+          <Tooltip formatter={(v: any, k: any) => fmtVal(v, k as string)} />
+          <Legend formatter={(k) => humanizeKey(k as string, config?.columnLabels)} />
           {valueKeys.map((k, i) => (
             <Bar key={k} dataKey={k} fill={CHART_COLORS[i]} radius={[4, 4, 0, 0]} />
           ))}
@@ -162,51 +181,78 @@ function ChartBlock({ chartType, rows }: { chartType: string; rows: any[] }) {
   );
 }
 
-function DataBlock({ title, rows, chartType }: { title: string; rows: any[]; chartType?: string }) {
-  if (!rows || rows.length === 0) {
+function DataBlock({
+  title,
+  rows,
+  chartType,
+  config,
+}: {
+  title: string;
+  rows: any[];
+  chartType?: string;
+  config?: ReportConfig;
+}) {
+  const hidden = new Set<string>(config?.hiddenColumns ?? []);
+  const sorted = useMemo(() => {
+    if (!config?.sortBy) return rows;
+    const dir = config.sortDir === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const av = a[config.sortBy!]; const bv = b[config.sortBy!];
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }, [rows, config]);
+
+  if (!sorted || sorted.length === 0) {
     return (
       <Card className="p-6">
-        <h3 className="text-sm font-semibold mb-3">{humanizeKey(title)}</h3>
+        <h3 className="text-sm font-semibold mb-3">{humanizeKey(title, config?.columnLabels)}</h3>
         <p className="text-sm text-muted-foreground">Nenhum dado no período.</p>
       </Card>
     );
   }
-  const cols = Object.keys(rows[0]).filter((c) => !isHiddenKey(c));
+
+  const allCols = Object.keys(sorted[0]).filter((c) => !hidden.has(c) && !isHiddenKey(c));
+  const cols = config?.columnOrder
+    ? [...config.columnOrder.filter((c) => allCols.includes(c)), ...allCols.filter((c) => !config.columnOrder!.includes(c))]
+    : allCols;
   const showChart = chartType && chartType !== 'table' && chartType !== 'kpi';
 
   return (
     <Card className="p-4 overflow-hidden">
       <div className="flex items-center justify-between mb-3 gap-2">
-        <h3 className="text-sm font-semibold">{humanizeKey(title)}</h3>
-        <Button variant="ghost" size="sm" className="gap-2 h-7" onClick={() => exportCSV(title, rows)}>
+        <h3 className="text-sm font-semibold">{humanizeKey(title, config?.columnLabels)}</h3>
+        <Button variant="ghost" size="sm" className="gap-2 h-7" onClick={() => exportCSV(title, sorted, hidden)}>
           <Download className="h-3.5 w-3.5" /> CSV
         </Button>
       </div>
-      {showChart && <ChartBlock chartType={chartType!} rows={rows} />}
+      {showChart && <ChartBlock chartType={chartType!} rows={sorted} config={config} />}
       <div className="overflow-x-auto mt-3">
         <Table>
           <TableHeader>
             <TableRow>
               {cols.map((c) => (
-                <TableHead key={c}>{humanizeKey(c)}</TableHead>
+                <TableHead key={c}>{humanizeKey(c, config?.columnLabels)}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.slice(0, 100).map((row, i) => (
+            {sorted.slice(0, 100).map((row, i) => (
               <TableRow key={i}>
                 {cols.map((c) => (
                   <TableCell key={c} className="tabular-nums">
-                    {formatCell(c, row[c])}
+                    {applyFormat(config?.columnFormat?.[c], c, row[c])}
                   </TableCell>
                 ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
-        {rows.length > 100 && (
+        {sorted.length > 100 && (
           <p className="text-xs text-muted-foreground mt-2">
-            Mostrando 100 de {rows.length.toLocaleString('pt-BR')} linhas.
+            Mostrando 100 de {sorted.length.toLocaleString('pt-BR')} linhas.
           </p>
         )}
       </div>
@@ -214,7 +260,17 @@ function DataBlock({ title, rows, chartType }: { title: string; rows: any[]; cha
   );
 }
 
-export function ReportRenderer({ data, isLoading, error, chartType }: ReportRendererProps) {
+function PlainObjectKpis({ obj }: { obj: Record<string, any> }) {
+  const entries = Object.entries(obj).filter(([k, v]) => !isHiddenKey(k) && (typeof v === 'number' || typeof v === 'string'));
+  if (entries.length === 0) return null;
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      {entries.map(([k, v]) => <KPICard key={k} label={k} value={v} />)}
+    </div>
+  );
+}
+
+export function ReportRenderer({ data, isLoading, error, chartType, reportCode }: ReportRendererProps) {
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -240,18 +296,29 @@ export function ReportRenderer({ data, isLoading, error, chartType }: ReportRend
   }
   if (!data) return null;
 
+  const config = getReportConfig(reportCode);
   const kpis = data.kpis && typeof data.kpis === 'object' ? data.kpis : null;
   const period = data.period;
 
   const arrayFields: Array<[string, any[]]> = [];
+  const nestedObjects: Array<[string, Record<string, any>]> = [];
   if (Array.isArray(data)) {
     arrayFields.push(['Resultados', data]);
   } else if (typeof data === 'object') {
     for (const [k, v] of Object.entries(data)) {
       if (k === 'kpis' || k === 'period' || k === 'filters') continue;
       if (Array.isArray(v)) arrayFields.push([k, v as any[]]);
+      else if (v && typeof v === 'object') nestedObjects.push([k, v as Record<string, any>]);
     }
   }
+
+  // Caso "objeto plano" (Forecast genérico, sem array nem kpis explícitos)
+  const isPlainObject =
+    !Array.isArray(data) &&
+    typeof data === 'object' &&
+    !kpis &&
+    arrayFields.length === 0 &&
+    nestedObjects.length === 0;
 
   return (
     <div className="space-y-6">
@@ -260,6 +327,7 @@ export function ReportRenderer({ data, isLoading, error, chartType }: ReportRend
           Período: {period.from} → {period.to}
         </p>
       )}
+      {isPlainObject && <PlainObjectKpis obj={data} />}
       {kpis && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {Object.entries(kpis).map(([k, v]) => (
@@ -269,10 +337,16 @@ export function ReportRenderer({ data, isLoading, error, chartType }: ReportRend
       )}
       <div className="grid grid-cols-1 gap-4">
         {arrayFields.map(([k, rows], idx) => (
-          <DataBlock key={k} title={k} rows={rows} chartType={idx === 0 ? chartType : 'table'} />
+          <DataBlock
+            key={k}
+            title={k}
+            rows={rows}
+            chartType={idx === 0 ? chartType : 'table'}
+            config={config}
+          />
         ))}
       </div>
-      {!kpis && arrayFields.length === 0 && (
+      {!isPlainObject && !kpis && arrayFields.length === 0 && (
         <Card className="p-4">
           <pre className="text-xs overflow-auto">{JSON.stringify(data, null, 2)}</pre>
         </Card>
