@@ -31,6 +31,10 @@ function isCurrencyKey(k: string) {
 function isPercentKey(k: string) {
   return /percent|_pct|taxa|rate/i.test(k);
 }
+function isHiddenKey(k: string) {
+  // Oculta colunas técnicas de UUID/chave (id, company_id, product_id, etc.)
+  return k === 'id' || /_id$/i.test(k) || k === 'uuid';
+}
 function formatCell(key: string, value: any) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value === 'number') {
