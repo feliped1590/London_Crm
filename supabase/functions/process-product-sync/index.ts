@@ -23,7 +23,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ERP_SYNC_PAUSED = true;
+const ERP_SYNC_PAUSED = false;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

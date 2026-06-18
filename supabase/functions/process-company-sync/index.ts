@@ -19,7 +19,7 @@ const corsHeaders = {
 
 const DEFAULT_ERP_COMPANY_CODE = 1;
 const ERP_REQUEST_TIMEOUT_MS = 12_000;
-const ERP_SYNC_PAUSED = true;
+const ERP_SYNC_PAUSED = false;
 
 async function fetchWithRetry(url: string, init: RequestInit, correlationId: string, retries = 0): Promise<Response> {
   let lastError: unknown;

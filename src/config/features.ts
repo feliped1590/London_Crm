@@ -13,7 +13,7 @@ export const WHATSAPP_ENABLED = false;
  * é investigada. Quando true, botões e disparos automáticos de sincronização
  * ficam bloqueados no frontend.
  */
-export const ERP_SYNC_PAUSED = true;
+export const ERP_SYNC_PAUSED = false;
 
 /**
  * WORKSPACE_TABS_ENABLED: ativa a barra de abas de trabalho (Workspace) que
