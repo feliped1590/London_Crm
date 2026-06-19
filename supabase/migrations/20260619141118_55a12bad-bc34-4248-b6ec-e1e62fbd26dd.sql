@@ -1,0 +1,1 @@
+UPDATE public.license_settings SET max_users = 35, updated_at = now();
