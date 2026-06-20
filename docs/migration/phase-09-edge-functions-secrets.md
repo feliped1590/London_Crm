@@ -350,3 +350,18 @@ Até existir sandbox isolado para integrações e dados controlados:
 5. Preparar roteiros de smoke test sintético por onda de deploy.
 6. Iniciar Fase 10 com deploy controlado em ondas, começando pelas funções de menor risco.
 
+
+## Decisão de escopo
+
+Nesta fase, as integrações externas serão apenas inventariadas e classificadas.
+
+Não serão configurados secrets reais e não serão executados testes práticos envolvendo:
+
+- WhatsApp / Z-API
+- Resend / envio real de e-mail
+- Google Calendar
+- IA / Lovable AI
+- ERP / Projedata / Iniflex real
+
+Essas integrações ficarão bloqueadas para execução até fase específica de homologação controlada.
+
