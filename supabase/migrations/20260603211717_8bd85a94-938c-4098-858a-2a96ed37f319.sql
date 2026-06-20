@@ -4,15 +4,15 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 2. Índices de busca em companies
 CREATE INDEX IF NOT EXISTS idx_companies_name_trgm
-  ON public.companies USING gin (lower(name) gin_trgm_ops);
+  ON public.companies USING gin (lower(name) extensions.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_companies_fantasia_trgm
-  ON public.companies USING gin (lower(coalesce(fantasia,'')) gin_trgm_ops);
+  ON public.companies USING gin (lower(coalesce(fantasia,'')) extensions.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_companies_city_trgm
-  ON public.companies USING gin (lower(coalesce(city,'')) gin_trgm_ops);
+  ON public.companies USING gin (lower(coalesce(city,'')) extensions.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_companies_email_trgm
-  ON public.companies USING gin (lower(coalesce(email,'')) gin_trgm_ops);
+  ON public.companies USING gin (lower(coalesce(email,'')) extensions.gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_companies_contact_name_trgm
-  ON public.companies USING gin (lower(coalesce(contact_name,'')) gin_trgm_ops);
+  ON public.companies USING gin (lower(coalesce(contact_name,'')) extensions.gin_trgm_ops);
 
 CREATE INDEX IF NOT EXISTS idx_companies_cnpj_digits
   ON public.companies ((regexp_replace(coalesce(cnpj,''),'\D','','g')));
