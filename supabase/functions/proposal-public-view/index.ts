@@ -38,6 +38,14 @@ function tokenHint(token: string | null) {
   return `${token.slice(0, 4)}***${token.slice(-2)}`;
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -70,15 +78,20 @@ serve(async (req) => {
     const token = sanitizeToken(rawBody?.token);
     const maskedToken = tokenHint(token);
 
-    // Helper function to log access attempts
-    const logAccess = async (proposalId: string | null, actionType: string, success: boolean) => {
+    // Helper function to log access attempts (without persisting raw token data)
+    const logAccess = async (
+      proposalId: string | null,
+      actionType: string,
+      success: boolean,
+      tokenHashPrefix: string | null = null,
+    ) => {
       try {
         await supabase.from('proposal_access_logs').insert({
           proposal_id: proposalId,
           ip_address: clientIp,
           action: actionType,
           success,
-          token_prefix: token ? token.slice(0, 4) : null,
+          token_prefix: tokenHashPrefix,
         });
       } catch (logError) {
         console.error('Failed to log access attempt', { code: (logError as { code?: string })?.code });
@@ -110,9 +123,39 @@ serve(async (req) => {
       return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
     }
 
+    const tokenHash = await sha256Hex(token);
+    const tokenHashPrefix = tokenHash.slice(0, 8);
+
     console.log('Fetching proposal by token hint', { token: maskedToken, ip: clientIp });
 
-    // Fetch proposal by approval token
+    // Fetch active public link by token hash (never query with raw token)
+    const nowIso = new Date().toISOString();
+    const { data: publicLink, error: publicLinkError } = await supabase
+      .from('proposal_public_links')
+      .select('id, proposal_id, status, expires_at, revoked_at, access_count, max_access_count')
+      .eq('token_hash', tokenHash)
+      .eq('token_hash_alg', 'sha256')
+      .eq('status', 'active')
+      .is('revoked_at', null)
+      .gt('expires_at', nowIso)
+      .single();
+
+    if (publicLinkError || !publicLink) {
+      console.error('Public link fetch denied', { token: maskedToken, code: publicLinkError?.code });
+      await logAccess(null, 'invalid_token', false, tokenHashPrefix);
+      return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
+    }
+
+    if (
+      publicLink.max_access_count !== null &&
+      publicLink.max_access_count !== undefined &&
+      publicLink.access_count >= publicLink.max_access_count
+    ) {
+      await logAccess(publicLink.proposal_id, 'max_access_exceeded', false, tokenHashPrefix);
+      return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
+    }
+
+    // Fetch proposal by proposal_id resolved from public link
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
       .select(`
@@ -128,24 +171,23 @@ serve(async (req) => {
         total_ipi,
         ipi_mode,
         created_at,
-        approval_token_expires_at,
         approved_at,
         company:companies(name),
         contact:contacts(first_name, last_name),
         legal_entity:legal_entities(name, trade_name, logo_url)
       `)
-      .eq('approval_token', token)
+      .eq('id', publicLink.proposal_id)
       .single();
 
     if (proposalError || !proposal) {
       console.error('Proposal fetch denied', { token: maskedToken, code: proposalError?.code });
-      await logAccess(null, 'invalid_token', false);
+      await logAccess(null, 'invalid_token', false, tokenHashPrefix);
       return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
     }
 
     // Check if already processed
     if (proposal.status === 'aprovada') {
-      await logAccess(proposal.id, 'view_approved', true);
+      await logAccess(proposal.id, 'view_approved', true, tokenHashPrefix);
       return jsonResponse(
         {
           error: 'Esta proposta já foi aprovada',
@@ -157,7 +199,7 @@ serve(async (req) => {
     }
 
     if (proposal.status === 'recusada') {
-      await logAccess(proposal.id, 'view_rejected', true);
+      await logAccess(proposal.id, 'view_rejected', true, tokenHashPrefix);
       return jsonResponse(
         {
           error: 'Esta proposta já foi recusada',
@@ -165,15 +207,6 @@ serve(async (req) => {
         },
         400
       );
-    }
-
-    // Check if link expired
-    if (proposal.approval_token_expires_at) {
-      const expiresAt = new Date(proposal.approval_token_expires_at);
-      if (expiresAt < new Date()) {
-        await logAccess(proposal.id, 'expired_token', false);
-        return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
-      }
     }
 
     // Fetch proposal items
@@ -196,7 +229,7 @@ serve(async (req) => {
     }
 
     // Log successful view
-    await logAccess(proposal.id, 'view', true);
+    await logAccess(proposal.id, 'view', true, tokenHashPrefix);
 
     const publicProposal = {
       number: proposal.number,
