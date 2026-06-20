@@ -293,6 +293,8 @@ Até existir sandbox isolado para integrações e dados controlados:
 
 - **Envio real de e-mail:** `send-email`, `send-bulk-email`, `process-scheduled-emails`, `process-task-reminders`
 - **WhatsApp real:** `zapi-send-message`, `zapi-instance-status`, `zapi-get-qrcode`, `zapi-webhook`, `execute-automation`
+- **Google Calendar real:** `google-calendar-oauth`, `google-calendar-sync`, `google-calendar-webhook`
+- **IA / Lovable AI real:** `ai-assistant`, `analyze-whatsapp-conversation`, `validate-ncm-semantic`, `lookup-ncm-online`
 - **ERP real (Projedata/Iniflex):** `process-company-sync`, `process-product-sync`, `process-order-sync`, `process-attribute-sync`, `erp-import-*`, `erp-promote-products`
 - **Geração de pedido real / efeitos comerciais:** `proposal-approve`, automações com escrita (`execute-automation`)
 - **Sincronização Projedata:** todos os fluxos `process-*sync` e `erp-*`
