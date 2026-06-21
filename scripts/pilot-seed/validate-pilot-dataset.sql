@@ -31,6 +31,12 @@ from public.profiles
 where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto')
 order by full_name;
 
+-- Pré-requisito para notificacoes sinteticas:
+-- o bloco de notifications do seed depende da existencia desses profiles.
+select count(*) as pilot_profiles_total
+from public.profiles
+where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto');
+
 -- Contagem por tabela do escopo principal
 select 'companies' as table_name, count(*) as cnt from public.companies where name ilike 'CLIENTE PILOTO %'
 union all
@@ -64,8 +70,44 @@ where o.number like 'ORD-PIL-%'
 union all
 select 'tasks', count(*) from public.tasks where title ilike 'TASK PILOTO_MIGRACAO_20260621 %'
 union all
+-- Valor bruto (a expectativa condicional e reportada no bloco abaixo).
 select 'notifications', count(*) from public.notifications where title like 'Notif PILOTO_MIGRACAO_20260621 %'
 order by table_name;
+
+-- Reconciliacao condicional de notifications:
+-- - com profiles piloto: esperado 5;
+-- - sem profiles piloto: esperado 0 (bloco do seed fica naturalmente sem linhas).
+with profile_ctx as (
+  select count(*)::bigint as pilot_profiles_total
+  from public.profiles
+  where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto')
+),
+notif_ctx as (
+  select count(*)::bigint as notifications_actual
+  from public.notifications
+  where title like 'Notif PILOTO_MIGRACAO_20260621 %'
+),
+expected_ctx as (
+  select
+    p.pilot_profiles_total,
+    n.notifications_actual,
+    case when p.pilot_profiles_total > 0 then 5::bigint else 0::bigint end as expected_notifications
+  from profile_ctx p
+  cross join notif_ctx n
+)
+select
+  pilot_profiles_total,
+  notifications_actual,
+  expected_notifications,
+  case
+    when notifications_actual = expected_notifications then 'OK'
+    else 'DIVERGENTE'
+  end as status,
+  case
+    when pilot_profiles_total = 0 then 'notifications skipped because pilot profiles were not present'
+    else 'notifications expected from direct seed insert block'
+  end as reason
+from expected_ctx;
 
 -- Regra ERP de transportadora piloto (esperado = 0)
 select count(*) as pilot_carriers_missing_erp_code

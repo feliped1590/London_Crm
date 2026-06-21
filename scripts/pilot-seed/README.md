@@ -232,6 +232,20 @@ Os scripts abortam quando:
   - sem alteracao de tabela/trigger/RLS/policies.
 - A migration foi apenas versionada e **nao aplicada** nesta fase.
 
+## Licoes da Fase 19V/19W
+
+- A Fase 19V foi o primeiro ciclo tecnico com `seed + validate + reconcile` concluindo sem erro estrutural no target isolado.
+- O valor `notifications=0` observado na 19V foi diagnosticado na 19W como comportamento condicional, nao falha estrutural:
+  - o bloco de notifications do seed existe, mas depende de `public.profiles` com usuarios piloto;
+  - quando `pilot_profiles_total=0`, o insert de notifications fica naturalmente sem linhas;
+  - por isso, validate/reconcile passaram a tratar notifications com expectativa condicional (profiles presentes => 5; profiles ausentes => 0).
+- O valor `product_sync_queue=20` foi diagnosticado na 19W como comportamento esperado:
+  - os 20 produtos piloto acionam trigger de enqueue em `products`;
+  - o resultado esperado nesta trilha e 1:1 (20 filas pendentes para 20 produtos piloto), sem drenagem.
+- O drainer de filas **nao** faz parte desta trilha de seed piloto controlado.
+- Cleanup permanece proibido ate fechamento da validacao final e aprovacao explicita.
+- A Fase 19X faz apenas alinhamento estatico de validate/reconcile/documentacao, sem escrita em banco.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.

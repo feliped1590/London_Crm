@@ -5,7 +5,12 @@
 -- Nao faz escrita em banco.
 -- =============================================================================
 
-with expected(table_name, expected_count) as (
+with profile_ctx as (
+  select count(*)::bigint as pilot_profiles_total
+  from public.profiles
+  where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto')
+),
+expected_base(table_name, expected_count) as (
   values
     ('tenants', 1),
     ('legal_entities', 2),
@@ -19,8 +24,14 @@ with expected(table_name, expected_count) as (
     ('proposal_items', 20),
     ('orders', 10),
     ('order_items', 20),
-    ('tasks', 5),
-    ('notifications', 5)
+    ('tasks', 5)
+),
+expected(table_name, expected_count) as (
+  select table_name, expected_count from expected_base
+  union all
+  select
+    'notifications'::text as table_name,
+    case when (select pilot_profiles_total from profile_ctx) > 0 then 5 else 0 end as expected_count
 ),
 actual as (
   select 'tenants' as table_name, count(*)::bigint as actual_count
@@ -80,6 +91,40 @@ select
 from expected e
 left join actual a on a.table_name = e.table_name
 order by e.table_name;
+
+-- Contexto da expectativa de notifications para evitar falso positivo:
+-- sem profiles piloto, notifications=0 e comportamento esperado do seed.
+with profile_ctx as (
+  select count(*)::bigint as pilot_profiles_total
+  from public.profiles
+  where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto')
+),
+notif_ctx as (
+  select count(*)::bigint as notifications_actual
+  from public.notifications
+  where title like 'Notif PILOTO_MIGRACAO_20260621 %'
+),
+expected_ctx as (
+  select
+    p.pilot_profiles_total,
+    n.notifications_actual,
+    case when p.pilot_profiles_total > 0 then 5::bigint else 0::bigint end as expected_notifications
+  from profile_ctx p
+  cross join notif_ctx n
+)
+select
+  pilot_profiles_total,
+  notifications_actual,
+  expected_notifications,
+  case
+    when notifications_actual = expected_notifications then 'OK'
+    else 'DIVERGENTE'
+  end as status,
+  case
+    when pilot_profiles_total = 0 then 'notifications skipped because pilot profiles were not present'
+    else 'notifications expected from direct seed insert block'
+  end as reason
+from expected_ctx;
 
 -- FKs orfas criticas (esperado = 0)
 select 'proposal_items_without_proposal' as check_name, count(*) as orphan_count
@@ -179,6 +224,12 @@ where p.nome_impresso like 'PILOTO IMPRESSO %'
 do $$
 declare
   v_count bigint;
+  v_pilot_products bigint;
+  v_pilot_queue_rows bigint;
+  v_outside_pilot_queue_rows bigint;
+  v_pending_rows bigint;
+  v_non_pending_rows bigint;
+  v_processed_rows bigint;
 begin
   if to_regclass('public.order_sync_queue') is not null then
     execute 'select count(*) from public.order_sync_queue' into v_count;
@@ -190,6 +241,45 @@ begin
   if to_regclass('public.product_sync_queue') is not null then
     execute 'select count(*) from public.product_sync_queue' into v_count;
     raise notice 'product_sync_queue_nonzero: %', v_count;
+
+    execute $sql$
+      select count(*)
+      from public.products p
+      where p.sku like 'PIL-SKU-%'
+         or p.nome_impresso like 'PILOTO IMPRESSO %'
+    $sql$ into v_pilot_products;
+
+    execute $sql$
+      select count(*)
+      from public.product_sync_queue q
+      join public.products p on p.id = q.product_id
+      where p.sku like 'PIL-SKU-%'
+         or p.nome_impresso like 'PILOTO IMPRESSO %'
+    $sql$ into v_pilot_queue_rows;
+
+    execute $sql$
+      select count(*)
+      from public.product_sync_queue q
+      left join public.products p on p.id = q.product_id
+      where p.id is null
+         or (p.sku not like 'PIL-SKU-%' and coalesce(p.nome_impresso, '') not like 'PILOTO IMPRESSO %')
+    $sql$ into v_outside_pilot_queue_rows;
+
+    execute 'select count(*) from public.product_sync_queue where status = ''pending''' into v_pending_rows;
+    execute 'select count(*) from public.product_sync_queue where status <> ''pending''' into v_non_pending_rows;
+    execute 'select count(*) from public.product_sync_queue where processed_at is not null' into v_processed_rows;
+
+    if v_pilot_products = 20
+       and v_pilot_queue_rows = 20
+       and v_outside_pilot_queue_rows = 0
+       and v_pending_rows = 20
+       and v_non_pending_rows = 0
+       and v_processed_rows = 0 then
+      raise notice 'product_sync_queue_classification: EXPECTED_PENDING_EXTERNAL (20/20 produtos piloto enfileirados por trigger; drainer fora desta trilha).';
+    else
+      raise notice 'product_sync_queue_classification: DIVERGENTE (pilot_products=%, pilot_queue=%, outside_pilot=%, pending=%, non_pending=%, processed=%).',
+        v_pilot_products, v_pilot_queue_rows, v_outside_pilot_queue_rows, v_pending_rows, v_non_pending_rows, v_processed_rows;
+    end if;
   else
     raise notice 'product_sync_queue ausente (OK para este ambiente).';
   end if;
