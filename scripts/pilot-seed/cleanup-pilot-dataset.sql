@@ -42,7 +42,7 @@ from public.notifications
 where title like 'Notif PILOTO_MIGRACAO_20260621 %'
 union all
 select 'tasks', count(*) from public.tasks
-where title like 'Task PILOTO_MIGRACAO_20260621 %'
+where title ilike 'TASK PILOTO_MIGRACAO_20260621 %'
 union all
 select 'order_items', count(*)
 from public.order_items oi
@@ -61,22 +61,22 @@ select 'proposals', count(*) from public.proposals
 where number like 'PROP-PIL-%'
 union all
 select 'deals', count(*) from public.deals
-where name like 'Deal Piloto %'
+where name ilike 'DEAL PILOTO %'
 union all
 select 'contacts', count(*) from public.contacts
-where first_name like 'Contato Piloto %'
+where first_name ilike 'CONTATO PILOTO %'
 union all
 select 'products', count(*) from public.products
 where sku like 'PIL-SKU-%'
 union all
 select 'companies', count(*) from public.companies
-where name like 'Cliente Piloto %'
+where name ilike 'CLIENTE PILOTO %'
 union all
 select 'sales_reps', count(*) from public.sales_reps
 where name like 'Vendedor Piloto %'
 union all
 select 'carriers', count(*) from public.carriers
-where name like 'Carrier Piloto %'
+where name ilike 'CARRIER PILOTO %'
 union all
 select 'user_roles', count(*) from public.user_roles
 where user_id in (
@@ -115,7 +115,7 @@ begin
   where title like 'Notif PILOTO_MIGRACAO_20260621 %';
 
   delete from public.tasks
-  where title like 'Task PILOTO_MIGRACAO_20260621 %';
+  where title ilike 'TASK PILOTO_MIGRACAO_20260621 %';
 
   delete from public.order_items
   where order_id in (
@@ -134,22 +134,22 @@ begin
   where number like 'PROP-PIL-%';
 
   delete from public.deals
-  where name like 'Deal Piloto %';
+  where name ilike 'DEAL PILOTO %';
 
   delete from public.contacts
-  where first_name like 'Contato Piloto %';
+  where first_name ilike 'CONTATO PILOTO %';
 
   delete from public.products
   where sku like 'PIL-SKU-%';
 
   delete from public.companies
-  where name like 'Cliente Piloto %';
+  where name ilike 'CLIENTE PILOTO %';
 
   delete from public.sales_reps
   where name like 'Vendedor Piloto %';
 
   delete from public.carriers
-  where name like 'Carrier Piloto %';
+  where name ilike 'CARRIER PILOTO %';
 
   delete from public.user_roles
   where user_id in (

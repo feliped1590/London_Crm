@@ -21,6 +21,7 @@ declare
   v_target_ref text := current_setting('app.pilot_target_ref', true);
   v_target_name text := current_setting('app.pilot_target_name', true);
   v_approved text := current_setting('app.pilot_execution_approved', true);
+  v_hstore_installed boolean;
 begin
   if v_target_ref is null or v_target_name is null or v_approved is null then
     raise exception 'Hard-stop: defina app.pilot_target_ref, app.pilot_target_name e app.pilot_execution_approved antes da execucao.';
@@ -40,6 +41,12 @@ begin
 
   if coalesce(v_approved, 'NO') <> 'YES' then
     raise exception 'Hard-stop: janela nao aprovada. Defina app.pilot_execution_approved=YES';
+  end if;
+
+  select exists (select 1 from pg_extension where extname = 'hstore')
+  into v_hstore_installed;
+  if not v_hstore_installed then
+    raise exception 'Hard-stop tecnico: extensao hstore ausente no alvo. Triggers uppercase dependem de hstore; tratar em trilha separada antes de novo seed.';
   end if;
 end $$;
 
@@ -181,8 +188,8 @@ with t as (
 ),
 src(name) as (
   values
-    ('Carrier Piloto 01'),
-    ('Carrier Piloto 02')
+    ('CARRIER PILOTO 01'),
+    ('CARRIER PILOTO 02')
 )
 insert into public.carriers (tenant_id, name)
 select t.tenant_id, s.name
@@ -237,7 +244,7 @@ select
   t.tenant_id,
   le.legal_entity_id,
   sr.sales_rep_id,
-  format('Cliente Piloto %s', lpad(src.n::text, 3, '0'))
+  format('CLIENTE PILOTO %s', lpad(src.n::text, 3, '0'))
 from src
 cross join t
 cross join le
@@ -245,7 +252,7 @@ cross join sr
 where not exists (
   select 1 from public.companies c
   where c.tenant_id = t.tenant_id
-    and c.name = format('Cliente Piloto %s', lpad(src.n::text, 3, '0'))
+    and c.name = format('CLIENTE PILOTO %s', lpad(src.n::text, 3, '0'))
 );
 
 -- Contacts sinteticos (20)
@@ -255,7 +262,7 @@ with t as (
 cmp as (
   select id, row_number() over (order by name) as rn
   from public.companies
-  where name like 'Cliente Piloto %'
+  where name ilike 'CLIENTE PILOTO %'
 ),
 src as (
   select generate_series(1, 20) as n
@@ -264,14 +271,14 @@ insert into public.contacts (tenant_id, company_id, first_name)
 select
   t.tenant_id,
   cmp.id,
-  format('Contato Piloto %s', lpad(src.n::text, 3, '0'))
+  format('CONTATO PILOTO %s', lpad(src.n::text, 3, '0'))
 from src
 join cmp on cmp.rn = src.n
 cross join t
 where not exists (
   select 1 from public.contacts c
   where c.company_id = cmp.id
-    and c.first_name = format('Contato Piloto %s', lpad(src.n::text, 3, '0'))
+    and c.first_name = format('CONTATO PILOTO %s', lpad(src.n::text, 3, '0'))
 );
 
 -- Products sinteticos (20)
@@ -306,7 +313,7 @@ select
   sub.subgrupo_id,
   typ.tipo_id,
   format('PIL-SKU-%s', lpad(src.n::text, 3, '0')),
-  format('Produto Piloto %s', lpad(src.n::text, 3, '0'))
+  format('PRODUTO PILOTO %s', lpad(src.n::text, 3, '0'))
 from src
 cross join t
 cross join le
@@ -335,12 +342,12 @@ st as (
 cmp as (
   select id, row_number() over (order by name) as rn
   from public.companies
-  where name like 'Cliente Piloto %'
+  where name ilike 'CLIENTE PILOTO %'
 ),
 ct as (
   select id, row_number() over (order by first_name) as rn
   from public.contacts
-  where first_name like 'Contato Piloto %'
+  where first_name ilike 'CONTATO PILOTO %'
 ),
 src as (
   select generate_series(1, 10) as n
@@ -355,7 +362,7 @@ select
   ct.id,
   pl.pipeline_id,
   st.pipeline_stage_id,
-  format('Deal Piloto %s', lpad(src.n::text, 3, '0'))
+  format('DEAL PILOTO %s', lpad(src.n::text, 3, '0'))
 from src
 join cmp on cmp.rn = src.n
 join ct on ct.rn = src.n
@@ -366,7 +373,7 @@ cross join st
 where not exists (
   select 1 from public.deals d
   where d.tenant_id = t.tenant_id
-    and d.name = format('Deal Piloto %s', lpad(src.n::text, 3, '0'))
+    and d.name = format('DEAL PILOTO %s', lpad(src.n::text, 3, '0'))
 );
 
 -- Proposals sinteticas (10) com status seguros (sem gatilho de integracao)
@@ -380,7 +387,7 @@ sr as (
   select id as sales_rep_id from public.sales_reps where name = 'Vendedor Piloto 01' limit 1
 ),
 car as (
-  select id as carrier_id from public.carriers where name = 'Carrier Piloto 01' limit 1
+  select id as carrier_id from public.carriers where name = 'CARRIER PILOTO 01' limit 1
 ),
 src as (
   select
@@ -389,15 +396,15 @@ src as (
     d.contact_id,
     row_number() over (order by d.name) as n
   from public.deals d
-  where d.name like 'Deal Piloto %'
+  where d.name ilike 'DEAL PILOTO %'
 ),
 status_map as (
   select n,
     case ((n - 1) % 4)
-      when 0 then 'draft'
-      when 1 then 'rejected'
-      when 2 then 'rejected'
-      else 'draft'
+      when 0 then 'rascunho'
+      when 1 then 'recusada'
+      when 2 then 'recusada'
+      else 'rascunho'
     end as status
   from generate_series(1, 10) as n
 )
@@ -466,7 +473,7 @@ sr as (
   select id as sales_rep_id from public.sales_reps where name = 'Vendedor Piloto 01' limit 1
 ),
 car as (
-  select id as carrier_id from public.carriers where name = 'Carrier Piloto 01' limit 1
+  select id as carrier_id from public.carriers where name = 'CARRIER PILOTO 01' limit 1
 ),
 src as (
   select
@@ -481,10 +488,10 @@ src as (
 status_map as (
   select n,
     case ((n - 1) % 4)
-      when 0 then 'draft'
-      when 1 then 'pending'
-      when 2 then 'draft'
-      else 'pending'
+      when 0 then 'pendente'
+      when 1 then 'em_producao'
+      when 2 then 'pendente'
+      else 'em_producao'
     end as status
   from generate_series(1, 10) as n
 )
@@ -535,13 +542,13 @@ insert into public.order_items (order_id, product_id, description)
 select
   s.order_id,
   s.product_id,
-  format('Item Pedido Piloto %s', s.item_n)
+  format('ITEM PEDIDO PILOTO %s', s.item_n)
 from src s
 where not exists (
   select 1
   from public.order_items oi
   where oi.order_id = s.order_id
-    and oi.description = format('Item Pedido Piloto %s', s.item_n)
+    and oi.description = format('ITEM PEDIDO PILOTO %s', s.item_n)
 );
 
 -- Tasks sinteticas (5)
@@ -551,7 +558,7 @@ with t as (
 cmp as (
   select id, row_number() over (order by name) as rn
   from public.companies
-  where name like 'Cliente Piloto %'
+  where name ilike 'CLIENTE PILOTO %'
 ),
 src as (
   select generate_series(1, 5) as n
@@ -560,14 +567,14 @@ insert into public.tasks (tenant_id, company_id, title)
 select
   t.tenant_id,
   cmp.id,
-  format('Task PILOTO_MIGRACAO_20260621 %s', lpad(src.n::text, 3, '0'))
+  format('TASK PILOTO_MIGRACAO_20260621 %s', lpad(src.n::text, 3, '0'))
 from src
 join cmp on cmp.rn = src.n
 cross join t
 where not exists (
   select 1 from public.tasks tk
   where tk.tenant_id = t.tenant_id
-    and tk.title = format('Task PILOTO_MIGRACAO_20260621 %s', lpad(src.n::text, 3, '0'))
+    and tk.title = format('TASK PILOTO_MIGRACAO_20260621 %s', lpad(src.n::text, 3, '0'))
 );
 
 -- Notifications sinteticas (5, inertes)

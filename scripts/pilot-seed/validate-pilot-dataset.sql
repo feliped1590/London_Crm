@@ -32,17 +32,17 @@ where full_name in ('Admin Piloto', 'Vendedor Piloto', 'Assistente Piloto')
 order by full_name;
 
 -- Contagem por tabela do escopo principal
-select 'companies' as table_name, count(*) as cnt from public.companies where name like 'Cliente Piloto %'
+select 'companies' as table_name, count(*) as cnt from public.companies where name ilike 'CLIENTE PILOTO %'
 union all
-select 'contacts', count(*) from public.contacts where first_name like 'Contato Piloto %'
+select 'contacts', count(*) from public.contacts where first_name ilike 'CONTATO PILOTO %'
 union all
-select 'products', count(*) from public.products where name like 'Produto Piloto %' or sku like 'PIL-SKU-%'
+select 'products', count(*) from public.products where name ilike 'PRODUTO PILOTO %' or sku like 'PIL-SKU-%'
 union all
-select 'carriers', count(*) from public.carriers where name like 'Carrier Piloto %'
+select 'carriers', count(*) from public.carriers where name ilike 'CARRIER PILOTO %'
 union all
-select 'sales_reps', count(*) from public.sales_reps where name like 'Vendedor Piloto %'
+select 'sales_reps', count(*) from public.sales_reps where name ilike 'Vendedor Piloto %'
 union all
-select 'deals', count(*) from public.deals where name like 'Deal Piloto %'
+select 'deals', count(*) from public.deals where name ilike 'DEAL PILOTO %'
 union all
 select 'proposals', count(*) from public.proposals where number like 'PROP-PIL-%'
 union all
@@ -58,7 +58,7 @@ from public.order_items oi
 join public.orders o on o.id = oi.order_id
 where o.number like 'ORD-PIL-%'
 union all
-select 'tasks', count(*) from public.tasks where title like 'Task PILOTO_MIGRACAO_20260621 %'
+select 'tasks', count(*) from public.tasks where title ilike 'TASK PILOTO_MIGRACAO_20260621 %'
 union all
 select 'notifications', count(*) from public.notifications where title like 'Notif PILOTO_MIGRACAO_20260621 %'
 order by table_name;
@@ -115,7 +115,7 @@ select
 from public.companies c
 left join public.tenants t on t.id = c.tenant_id
 left join public.legal_entities le on le.id = c.legal_entity_id
-where c.name like 'Cliente Piloto %'
+where c.name ilike 'CLIENTE PILOTO %'
 order by c.name
 limit 50;
 
@@ -124,7 +124,7 @@ limit 50;
 select count(*) as pilot_named_companies_outside_pilot_tenant
 from public.companies c
 left join public.tenants t on t.id = c.tenant_id
-where c.name like 'Cliente Piloto %'
+where c.name ilike 'CLIENTE PILOTO %'
   and coalesce(t.slug, '') <> 'piloto-migracao-20260621';
 
 -- Sinais de integracao externa (heuristica por tabelas de fila/log)

@@ -68,7 +68,7 @@ Os scripts abortam quando:
 
 - Namespace/prefixo oficial: `PILOTO_MIGRACAO_20260621`
 - Slug de tenant piloto: `piloto-migracao-20260621`
-- Prefixos de rastreio: `Cliente Piloto`, `Contato Piloto`, `PIL-SKU-`, `PROP-PIL-`, `ORD-PIL-`, `Task PILOTO_MIGRACAO_20260621`, `Notif PILOTO_MIGRACAO_20260621`
+- Prefixos de rastreio: `CLIENTE PILOTO`, `CONTATO PILOTO`, `PIL-SKU-`, `PROP-PIL-`, `ORD-PIL-`, `TASK PILOTO_MIGRACAO_20260621`, `Notif PILOTO_MIGRACAO_20260621`
 - Insercoes com `where not exists` para evitar duplicidade
 - Sem sobrescrever registros fora do namespace piloto
 
@@ -99,8 +99,8 @@ Os scripts abortam quando:
 - Proibido disparar ERP/PDF/CNPJ/n8n/webhooks reais.
 - Usar apenas estados seguros para evitar sincronizacao externa.
 - No seed atual:
-  - propostas: `draft` e `rejected`
-  - pedidos: `draft` e `pending`
+  - propostas: `rascunho` e `recusada` (enum real `proposal_status`)
+  - pedidos: `pendente` e `em_producao` (enum real `order_status`)
 - Se alguma integracao depender de campo sem opcao segura, bloquear execucao e tratar em trilha separada.
 
 ## Politica de cleanup
@@ -129,6 +129,20 @@ Os scripts abortam quando:
 - Qualquer dado real/sensivel no fluxo.
 - Divergencias criticas sem justificativa.
 - Risco de cleanup afetar dados fora do piloto.
+
+## Licoes da Fase 19B
+
+- Seed falhou por dependencia tecnica de `hstore` na funcao de trigger `enforce_uppercase_text()`.
+- Reconcile falhou por uso de valor invalido de enum em `proposal_status` (`draft`).
+- Controles de seguranca funcionaram: target correto, staging/producao nao usados.
+- Cleanup nao foi executado (nao autorizado).
+- Contagens do namespace piloto permaneceram em zero apos a tentativa parcial.
+- Ajustes aplicados na Fase 19C:
+  - validacao tecnica explicita de `hstore` no hard-stop do seed;
+  - normalizacao de textos para uppercase em colunas cobertas por `enforce_uppercase_text()`;
+  - substituicao de status para enums reais (`proposal_status` e `order_status`);
+  - validacoes/reconciliacao/cleanup ajustadas para filtros case-insensitive do namespace piloto.
+- Nova execucao somente em Fase 19D, mediante aprovacao explicita de Felipe Duarte.
 
 ## Aviso critico
 

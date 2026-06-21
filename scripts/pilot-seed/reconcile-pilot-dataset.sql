@@ -30,22 +30,22 @@ actual as (
   where name in ('Empresa Piloto A', 'Empresa Piloto B')
   union all
   select 'companies', count(*) from public.companies
-  where name like 'Cliente Piloto %'
+  where name ilike 'CLIENTE PILOTO %'
   union all
   select 'contacts', count(*) from public.contacts
-  where first_name like 'Contato Piloto %'
+  where first_name ilike 'CONTATO PILOTO %'
   union all
   select 'products', count(*) from public.products
   where sku like 'PIL-SKU-%'
   union all
   select 'carriers', count(*) from public.carriers
-  where name like 'Carrier Piloto %'
+  where name ilike 'CARRIER PILOTO %'
   union all
   select 'sales_reps', count(*) from public.sales_reps
   where name like 'Vendedor Piloto %'
   union all
   select 'deals', count(*) from public.deals
-  where name like 'Deal Piloto %'
+  where name ilike 'DEAL PILOTO %'
   union all
   select 'proposals', count(*) from public.proposals
   where number like 'PROP-PIL-%'
@@ -64,7 +64,7 @@ actual as (
   where o.number like 'ORD-PIL-%'
   union all
   select 'tasks', count(*) from public.tasks
-  where title like 'Task PILOTO_MIGRACAO_20260621 %'
+  where title ilike 'TASK PILOTO_MIGRACAO_20260621 %'
   union all
   select 'notifications', count(*) from public.notifications
   where title like 'Notif PILOTO_MIGRACAO_20260621 %'
@@ -107,16 +107,16 @@ left join public.products pr on pr.id = oi.product_id
 where pr.id is null;
 
 -- Status invalidos para propostas/pedidos piloto (esperado = 0 linhas)
--- Fase 17A: apenas status seguros para evitar gatilhos de integracao.
+-- Fase 19C: enum real do alvo usa proposal_status/order_status em pt-BR.
 select 'invalid_proposal_status' as issue_type, p.id::text as entity_id, p.status::text as current_status
 from public.proposals p
 where p.number like 'PROP-PIL-%'
-  and p.status not in ('draft','rejected')
+  and p.status not in ('rascunho','recusada')
 union all
 select 'invalid_order_status', o.id::text, o.status::text
 from public.orders o
 where o.number like 'ORD-PIL-%'
-  and o.status not in ('draft','pending');
+  and o.status not in ('pendente','em_producao');
 
 -- Vínculos ausentes tenant/legal entity em entidades piloto (esperado = 0 linhas)
 select
@@ -125,7 +125,7 @@ select
   case when c.tenant_id is null then 'tenant_missing' end as tenant_issue,
   case when c.legal_entity_id is null then 'legal_entity_missing' end as legal_entity_issue
 from public.companies c
-where c.name like 'Cliente Piloto %'
+where c.name ilike 'CLIENTE PILOTO %'
   and (c.tenant_id is null or c.legal_entity_id is null);
 
 -- Possivel colateral de integracao (heuristica)
