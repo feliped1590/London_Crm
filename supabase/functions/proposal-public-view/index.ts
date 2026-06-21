@@ -45,6 +45,12 @@ async function sha256Hex(value: string): Promise<string> {
     .join('');
 }
 
+type PublicLinkAccessSnapshot = {
+  id: string;
+  access_count: number;
+  max_access_count: number | null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -154,6 +160,60 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
     }
 
+    const reserveAccessSlot = async (
+      initialSnapshot: PublicLinkAccessSnapshot,
+      maxAttempts = 3,
+    ): Promise<PublicLinkAccessSnapshot | null> => {
+      let snapshot = initialSnapshot;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        if (
+          snapshot.max_access_count !== null &&
+          snapshot.max_access_count !== undefined &&
+          snapshot.access_count >= snapshot.max_access_count
+        ) {
+          return null;
+        }
+
+        const now = new Date().toISOString();
+        const { data: updatedLink, error: updateError } = await supabase
+          .from('proposal_public_links')
+          .update({
+            access_count: snapshot.access_count + 1,
+            last_accessed_at: now,
+          })
+          .eq('id', snapshot.id)
+          .eq('access_count', snapshot.access_count)
+          .select('id, access_count, max_access_count')
+          .maybeSingle();
+
+        if (updateError) {
+          console.error('Failed to reserve public link access slot', { code: updateError.code });
+          throw new Error('access_count_update_failed');
+        }
+
+        if (updatedLink) {
+          return updatedLink;
+        }
+
+        // Lost concurrent race; refresh snapshot and retry.
+        const { data: refreshedLink, error: refreshError } = await supabase
+          .from('proposal_public_links')
+          .select('id, access_count, max_access_count')
+          .eq('id', snapshot.id)
+          .single();
+
+        if (refreshError || !refreshedLink) {
+          console.error('Failed to refresh public link after update race', { code: refreshError?.code });
+          throw new Error('access_count_refresh_failed');
+        }
+
+        snapshot = refreshedLink;
+      }
+
+      return null;
+    };
+
     // Fetch proposal by proposal_id resolved from public link
     const { data: proposal, error: proposalError } = await supabase
       .from('proposals')
@@ -225,6 +285,17 @@ Deno.serve(async (req) => {
 
     if (itemsError) {
       console.error('Error fetching proposal items', { token: maskedToken, code: itemsError.code });
+    }
+
+    const reservedAccess = await reserveAccessSlot({
+      id: publicLink.id,
+      access_count: publicLink.access_count,
+      max_access_count: publicLink.max_access_count,
+    });
+
+    if (!reservedAccess) {
+      await logAccess(publicLink.proposal_id, 'max_access_exceeded', false, tokenHashPrefix);
+      return jsonResponse({ error: GENERIC_INVALID_LINK_ERROR }, 404);
     }
 
     // Log successful view
