@@ -38,7 +38,9 @@ select 'contacts', count(*) from public.contacts where first_name ilike 'CONTATO
 union all
 select 'products', count(*) from public.products where name ilike 'PRODUTO PILOTO %' or sku like 'PIL-SKU-%'
 union all
-select 'carriers', count(*) from public.carriers where name ilike 'CARRIER PILOTO %'
+select 'carriers', count(*) from public.carriers
+where name ilike 'CARRIER PILOTO %'
+  and erp_code in (999001, 999002)
 union all
 select 'sales_reps', count(*) from public.sales_reps where name ilike 'Vendedor Piloto %'
 union all
@@ -62,6 +64,12 @@ select 'tasks', count(*) from public.tasks where title ilike 'TASK PILOTO_MIGRAC
 union all
 select 'notifications', count(*) from public.notifications where title like 'Notif PILOTO_MIGRACAO_20260621 %'
 order by table_name;
+
+-- Regra ERP de transportadora piloto (esperado = 0)
+select count(*) as pilot_carriers_missing_erp_code
+from public.carriers
+where name ilike 'CARRIER PILOTO %'
+  and erp_code is null;
 
 -- Presenca de status esperados em propostas/pedidos
 -- Fase 17A: somente status seguros, sem gatilho de integracao externa.

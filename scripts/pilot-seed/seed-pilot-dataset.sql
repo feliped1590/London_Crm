@@ -182,17 +182,17 @@ typ_ins as (
 )
 select 1;
 
--- Carriers sinteticas (2)
+-- Carriers sinteticas (2) com ERP code obrigatorio
 with t as (
   select id as tenant_id from public.tenants where slug = 'piloto-migracao-20260621' limit 1
 ),
-src(name) as (
+src(name, erp_code) as (
   values
-    ('CARRIER PILOTO 01'),
-    ('CARRIER PILOTO 02')
+    ('CARRIER PILOTO 01', 999001),
+    ('CARRIER PILOTO 02', 999002)
 )
-insert into public.carriers (tenant_id, name)
-select t.tenant_id, s.name
+insert into public.carriers (tenant_id, name, erp_code)
+select t.tenant_id, s.name, s.erp_code
 from t
 cross join src s
 where not exists (
@@ -200,6 +200,23 @@ where not exists (
   where c.tenant_id = t.tenant_id
     and c.name = s.name
 );
+
+-- Garantia de ERP code nos carriers piloto preexistentes
+with t as (
+  select id as tenant_id from public.tenants where slug = 'piloto-migracao-20260621' limit 1
+),
+src(name, erp_code) as (
+  values
+    ('CARRIER PILOTO 01', 999001),
+    ('CARRIER PILOTO 02', 999002)
+)
+update public.carriers c
+set erp_code = s.erp_code
+from t
+join src s on true
+where c.tenant_id = t.tenant_id
+  and c.name = s.name
+  and c.erp_code is null;
 
 -- Sales reps sinteticos (2)
 with t as (
@@ -611,5 +628,6 @@ where not exists (
 -- 3) logs/filas/auditoria reais: fora do piloto; somente dados sinteticos inertes no escopo local.
 -- 4) storage objetos reais: fora de escopo da Fase 17A.
 -- 5) integracoes externas reais (ERP/PDF/CNPJ/n8n/webhooks): proibidas nesta fase.
+-- 6) carriers piloto exigem erp_code sintetico (999001/999002) por regra validate_carrier_erp_code().
 
 commit;

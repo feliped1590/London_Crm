@@ -77,6 +77,7 @@ where name like 'Vendedor Piloto %'
 union all
 select 'carriers', count(*) from public.carriers
 where name ilike 'CARRIER PILOTO %'
+  and erp_code in (999001, 999002)
 union all
 select 'user_roles', count(*) from public.user_roles
 where user_id in (
@@ -149,7 +150,8 @@ begin
   where name like 'Vendedor Piloto %';
 
   delete from public.carriers
-  where name ilike 'CARRIER PILOTO %';
+  where name ilike 'CARRIER PILOTO %'
+    and erp_code in (999001, 999002);
 
   delete from public.user_roles
   where user_id in (

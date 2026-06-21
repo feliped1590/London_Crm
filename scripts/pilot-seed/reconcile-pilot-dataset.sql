@@ -40,6 +40,7 @@ actual as (
   union all
   select 'carriers', count(*) from public.carriers
   where name ilike 'CARRIER PILOTO %'
+    and erp_code in (999001, 999002)
   union all
   select 'sales_reps', count(*) from public.sales_reps
   where name like 'Vendedor Piloto %'
@@ -127,6 +128,15 @@ select
 from public.companies c
 where c.name ilike 'CLIENTE PILOTO %'
   and (c.tenant_id is null or c.legal_entity_id is null);
+
+-- Carriers piloto sem ERP code (esperado = 0)
+select
+  c.id as carrier_id,
+  c.name as carrier_name,
+  c.erp_code
+from public.carriers c
+where c.name ilike 'CARRIER PILOTO %'
+  and c.erp_code is null;
 
 -- Possivel colateral de integracao (heuristica)
 -- Fase 17A: logs/filas reais fora de escopo; checagem tolerante a tabela ausente.

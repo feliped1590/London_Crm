@@ -144,6 +144,18 @@ Os scripts abortam quando:
   - validacoes/reconciliacao/cleanup ajustadas para filtros case-insensitive do namespace piloto.
 - Nova execucao somente em Fase 19D, mediante aprovacao explicita de Felipe Duarte.
 
+## Licoes da Fase 19D-D
+
+- Seed avancou apos habilitacao controlada de `hstore` no restore-test.
+- Nova falha foi regra real de transportadora: `Codigo ERP e obrigatorio para transportadora`.
+- Regra associada: trigger/funcao `validate_carrier_erp_code()`.
+- Contagens principais permaneceram em zero e filas permaneceram zeradas.
+- Cleanup nao foi executado.
+- Ajuste aplicado na Fase 19E:
+  - carriers piloto passam a incluir `erp_code` sintetico obrigatorio (`999001` e `999002`);
+  - validate/reconcile/cleanup foram alinhados para conferir/filtrar carriers piloto com ERP code sintetico.
+- Nova execucao deve ocorrer em fase dedicada, com aprovacao explicita de Felipe Duarte.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
