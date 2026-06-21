@@ -449,7 +449,7 @@ select
   s.contact_id,
   car.carrier_id,
   format('PROP-PIL-%s', lpad(s.n::text, 3, '0')),
-  sm.status
+  sm.status::proposal_status
 from src s
 join status_map sm on sm.n = s.n
 cross join t
@@ -537,7 +537,7 @@ select
   sr.sales_rep_id,
   car.carrier_id,
   format('ORD-PIL-%s', lpad(s.n::text, 3, '0')),
-  sm.status
+  sm.status::order_status
 from src s
 join status_map sm on sm.n = s.n
 cross join t

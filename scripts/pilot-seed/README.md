@@ -179,6 +179,23 @@ Os scripts abortam quando:
   - remover `sales_rep_id` apenas do bloco de insert de `proposals`, mantendo o menor ajuste compativel com o schema real.
 - Nova execucao deve ocorrer somente em fase dedicada e com aprovacao explicita de Felipe Duarte.
 
+## Licoes da Fase 19K
+
+- Seed iniciou no target isolado e abortou por incompatibilidade de tipagem em `proposals.status`.
+- Erro encontrado: `column "status" is of type proposal_status but expression is of type text`.
+- Causa provavel: o valor de status vinha de CTE textual (`sm.status`) sem cast explicito para o enum real.
+- Impacto operacional da 19K:
+  - seed abortado;
+  - validate/reconcile nao executados;
+  - contagens e filas permaneceram zeradas;
+  - cleanup nao executado;
+  - staging/producao intocados.
+- Correcao aplicada na Fase 19L:
+  - cast explicito no seed para `proposal_status` em `public.proposals.status`;
+  - ajuste preventivo equivalente para `orders.status` com `::order_status`;
+  - sem qualquer alteracao de schema/tipos no banco.
+- Nova execucao deve ocorrer somente em fase dedicada e com aprovacao explicita de Felipe Duarte.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
