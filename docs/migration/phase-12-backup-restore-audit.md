@@ -136,6 +136,103 @@ Criar evidencia auditavel de backup e teste de restauracao do CRM sem alterar co
 5. Atualizar este documento com evidencias anexas (sem dados sensiveis).
 6. Reavaliar status GO/NO-GO da Fase 12 apos evidencias operacionais.
 
+## Fase 12A.3 - Restore test controlado
+
+### 1. Objetivo
+
+Validar, em ambiente isolado e descartavel, que os artefatos de backup de staging sao restauraveis sem impactar staging ou producao.
+
+### 2. Origem e alvo
+
+- Origem dos dumps: `crm-qualyvac-staging` (`cansbrrwrprcycjvgvqm`)
+- Alvo do restore test: `crm-qualyvac-restore-test` (`nsnmlleplpzsefzkuxlb`)
+- Confirmacao: origem e alvo sao diferentes.
+
+### 3. Hard stop executado
+
+- `origem != alvo`: OK
+- `alvo == nsnmlleplpzsefzkuxlb`: OK
+- alvo marcado como descartavel/isolado: OK
+- staging nao seria alterado: OK
+- producao nao seria alterada: OK
+
+### 4. Estrategia usada
+
+- Supabase CLI + Docker.
+- Workdir temporario fora do repositorio para apontar somente para o target.
+- Como `psql`/`pg_restore` nao estavam disponiveis e o dump full nao era compativel direto com `db query`, foi aplicado fluxo compativel:
+  - schema `public-only`;
+  - data `data-only` em inserts (sem `--use-copy`);
+  - restore apenas no target isolado.
+
+### 5. Resultado dos restores
+
+- Restore original de roles: falhou (`role already exists`) - nao bloqueante para o teste.
+- Restore original de schema completo: falhou (permissao em schema `auth`).
+- Restore original de data com COPY: falhou (incompatibilidade `COPY ... \.` via `db query`).
+- Restore compativel de schema `public-only`: sucesso.
+- Restore compativel de data em inserts: sucesso.
+
+### 6. Validacoes pos-restore
+
+- Tabelas `public`: 196
+- Views `public`: 3
+- Funcoes `public`: 211
+- Triggers `public`: 225
+- Policies `public`: 519
+- Tabelas criticas esperadas presentes, exceto `portfolios` e `product_versions` (tambem ausentes na origem staging).
+- Contagens basicas no target conferiram com a origem para o conjunto validado:
+  - `tenants=1`
+  - `legal_entities=0`
+  - `profiles=0`
+  - `companies=0`
+  - `contacts=0`
+  - `products=0`
+  - `deals=0`
+  - `proposals=0`
+  - `proposal_items=0`
+  - `orders=0`
+  - `order_items=0`
+  - `sales_reps=0`
+  - `notifications=0`
+
+### 7. Manifesto gerado fora do repositorio
+
+- Arquivo: `backup-manifest-restore-test_20260621T152638Z.json`
+- Tamanho: `14870` bytes
+- SHA256: `8761ebb652f18d17de1f8b92b41c695a81a1f10d6313a3c57f41d55b5847725f`
+
+### 8. Confirmacoes de seguranca
+
+- Nada foi versionado no repositorio.
+- Nenhum dump/manifesto sensivel foi salvo no Git.
+- Nao houve deploy.
+- Staging nao foi alvo de restore.
+- Producao nao foi alvo de restore.
+
+### 9. Avaliacao final
+
+**APROVADO COM RESSALVA**
+
+### 10. Ressalvas e proximos passos
+
+1. Restore direto de dump full via `db query` nao foi compativel.
+2. Resolver pendencia de `secrets list` (autenticacao CLI fora do repositorio).
+3. Criar copia redundante dos artefatos de backup.
+4. Padronizar formalmente o procedimento de `compat restore` para futuras simulacoes de DR.
+
+### Procedimento recomendado para restore compativel
+
+1. Validar hard stop (origem, alvo, isolamento e autorizacao).
+2. Garantir ambiente alvo descartavel e diferente de staging/producao.
+3. Gerar dump de schema `public-only`.
+4. Gerar dump `data-only` em inserts (sem COPY).
+5. Restaurar schema no alvo isolado.
+6. Restaurar dados no alvo isolado.
+7. Validar contagens e existencia de objetos criticos.
+8. Gerar manifesto de execucao com resultados, warnings e decisao.
+9. Nunca executar esse fluxo em staging/producao sem autorizacao explicita.
+
 ## Alerta obrigatorio de seguranca
 
 **Dumps reais (schema/data/auth/storage) nao devem ser versionados no repositorio Git.**
