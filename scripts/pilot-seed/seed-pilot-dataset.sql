@@ -416,9 +416,6 @@ with t as (
 le as (
   select id as legal_entity_id from public.legal_entities where name = 'Empresa Piloto A' limit 1
 ),
-sr as (
-  select id as sales_rep_id from public.sales_reps where name = 'Vendedor Piloto 01' limit 1
-),
 car as (
   select id as carrier_id from public.carriers where name = 'CARRIER PILOTO 01' limit 1
 ),
@@ -442,7 +439,7 @@ status_map as (
   from generate_series(1, 10) as n
 )
 insert into public.proposals (
-  tenant_id, legal_entity_id, deal_id, company_id, contact_id, sales_rep_id, carrier_id, number, status
+  tenant_id, legal_entity_id, deal_id, company_id, contact_id, carrier_id, number, status
 )
 select
   t.tenant_id,
@@ -450,7 +447,6 @@ select
   s.deal_id,
   s.company_id,
   s.contact_id,
-  sr.sales_rep_id,
   car.carrier_id,
   format('PROP-PIL-%s', lpad(s.n::text, 3, '0')),
   sm.status
@@ -458,7 +454,6 @@ from src s
 join status_map sm on sm.n = s.n
 cross join t
 cross join le
-cross join sr
 cross join car
 where not exists (
   select 1 from public.proposals p

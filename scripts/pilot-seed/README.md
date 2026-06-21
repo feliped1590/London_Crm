@@ -168,6 +168,17 @@ Os scripts abortam quando:
   - `validate/reconcile/cleanup` foram ajustados para rastrear products pelo padrao tecnico piloto (`PIL-SKU-%` + `PILOTO IMPRESSO %`).
 - Nova execucao so pode ocorrer em fase dedicada, com aprovacao explicita de Felipe Duarte.
 
+## Licoes da Fase 19I
+
+- Seed iniciou no target isolado e abortou por incompatibilidade estrutural em `proposals`.
+- Erro encontrado: `column "sales_rep_id" of relation "proposals" does not exist`.
+- Causa: o `seed-pilot-dataset.sql` ainda tentava inserir `sales_rep_id` em `public.proposals`, mas o schema real do target nao possui essa coluna.
+- Impacto: nenhuma linha piloto persistida; contagens principais e filas permaneceram em zero.
+- Cleanup nao foi executado.
+- Correcao aplicada na Fase 19J:
+  - remover `sales_rep_id` apenas do bloco de insert de `proposals`, mantendo o menor ajuste compativel com o schema real.
+- Nova execucao deve ocorrer somente em fase dedicada e com aprovacao explicita de Felipe Duarte.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
