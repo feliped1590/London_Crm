@@ -36,7 +36,9 @@ select 'companies' as table_name, count(*) as cnt from public.companies where na
 union all
 select 'contacts', count(*) from public.contacts where first_name ilike 'CONTATO PILOTO %'
 union all
-select 'products', count(*) from public.products where name ilike 'PRODUTO PILOTO %' or sku like 'PIL-SKU-%'
+select 'products', count(*) from public.products
+where sku like 'PIL-SKU-%'
+  and nome_impresso like 'PILOTO IMPRESSO %'
 union all
 select 'carriers', count(*) from public.carriers
 where name ilike 'CARRIER PILOTO %'
@@ -70,6 +72,40 @@ select count(*) as pilot_carriers_missing_erp_code
 from public.carriers
 where name ilike 'CARRIER PILOTO %'
   and erp_code is null;
+
+-- Duplicidade tecnica de produtos piloto (esperado = 0)
+with pilot_products as (
+  select *
+  from public.products
+  where sku like 'PIL-SKU-%'
+    and nome_impresso like 'PILOTO IMPRESSO %'
+    and active = true
+)
+select count(*) as pilot_products_technical_duplicates
+from (
+  select
+    tenant_id,
+    coalesce(tipo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as tipo_key,
+    coalesce(grupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as grupo_key,
+    coalesce(subgrupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as subgrupo_key,
+    coalesce(family_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as family_key,
+    coalesce(class_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as class_key,
+    coalesce(width::text, '-1') as width_key,
+    coalesce(length::text, '-1') as length_key,
+    coalesce(thickness::text, '-1') as thickness_key,
+    coalesce(nome_impresso, '') as nome_impresso_key,
+    count(*) as dup_count
+  from pilot_products
+  group by 1,2,3,4,5,6,7,8,9,10
+  having count(*) > 1
+) dups;
+
+-- Colisao de nome_impresso piloto fora do tenant piloto (esperado = 0)
+select count(*) as pilot_nome_impresso_outside_pilot_tenant
+from public.products p
+left join public.tenants t on t.id = p.tenant_id
+where p.nome_impresso like 'PILOTO IMPRESSO %'
+  and coalesce(t.slug, '') <> 'piloto-migracao-20260621';
 
 -- Presenca de status esperados em propostas/pedidos
 -- Fase 17A: somente status seguros, sem gatilho de integracao externa.

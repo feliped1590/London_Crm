@@ -37,6 +37,7 @@ actual as (
   union all
   select 'products', count(*) from public.products
   where sku like 'PIL-SKU-%'
+    and nome_impresso like 'PILOTO IMPRESSO %'
   union all
   select 'carriers', count(*) from public.carriers
   where name ilike 'CARRIER PILOTO %'
@@ -137,6 +138,41 @@ select
 from public.carriers c
 where c.name ilike 'CARRIER PILOTO %'
   and c.erp_code is null;
+
+-- Duplicidade tecnica em products piloto (esperado = 0 linhas)
+with pilot_products as (
+  select *
+  from public.products
+  where sku like 'PIL-SKU-%'
+    and nome_impresso like 'PILOTO IMPRESSO %'
+    and active = true
+)
+select
+  p.tenant_id,
+  coalesce(p.tipo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as tipo_key,
+  coalesce(p.grupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as grupo_key,
+  coalesce(p.subgrupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as subgrupo_key,
+  coalesce(p.family_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as family_key,
+  coalesce(p.class_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) as class_key,
+  coalesce(p.width::text, '-1') as width_key,
+  coalesce(p.length::text, '-1') as length_key,
+  coalesce(p.thickness::text, '-1') as thickness_key,
+  coalesce(p.nome_impresso, '') as nome_impresso_key,
+  count(*) as duplicate_count
+from pilot_products p
+group by 1,2,3,4,5,6,7,8,9,10
+having count(*) > 1;
+
+-- Nome impresso piloto fora do tenant piloto (esperado = 0 linhas)
+select
+  p.id as product_id,
+  p.sku,
+  p.nome_impresso,
+  t.slug as tenant_slug
+from public.products p
+left join public.tenants t on t.id = p.tenant_id
+where p.nome_impresso like 'PILOTO IMPRESSO %'
+  and coalesce(t.slug, '') <> 'piloto-migracao-20260621';
 
 -- Possivel colateral de integracao (heuristica)
 -- Fase 17A: logs/filas reais fora de escopo; checagem tolerante a tabela ausente.

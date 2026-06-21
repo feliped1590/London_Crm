@@ -156,6 +156,18 @@ Os scripts abortam quando:
   - validate/reconcile/cleanup foram alinhados para conferir/filtrar carriers piloto com ERP code sintetico.
 - Nova execucao deve ocorrer em fase dedicada, com aprovacao explicita de Felipe Duarte.
 
+## Licoes da Fase 19G
+
+- Seed avancou apos correcoes de `hstore` e ERP code de transportadoras.
+- Nova falha foi restricao de unicidade tecnica em `products`: `idx_products_technical_uniqueness`.
+- Contagens principais permaneceram em zero e filas permaneceram zeradas.
+- Cleanup nao foi executado.
+- Ajuste aplicado na Fase 19H:
+  - `seed-pilot-dataset.sql` passou a gerar `nome_impresso` sintetico e unico por produto piloto;
+  - idempotencia de products foi alinhada a mesma composicao tecnica do indice unico (com `active = true`).
+  - `validate/reconcile/cleanup` foram ajustados para rastrear products pelo padrao tecnico piloto (`PIL-SKU-%` + `PILOTO IMPRESSO %`).
+- Nova execucao so pode ocorrer em fase dedicada, com aprovacao explicita de Felipe Duarte.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.

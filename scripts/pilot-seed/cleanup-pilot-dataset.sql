@@ -68,6 +68,7 @@ where first_name ilike 'CONTATO PILOTO %'
 union all
 select 'products', count(*) from public.products
 where sku like 'PIL-SKU-%'
+  and nome_impresso like 'PILOTO IMPRESSO %'
 union all
 select 'companies', count(*) from public.companies
 where name ilike 'CLIENTE PILOTO %'
@@ -141,7 +142,8 @@ begin
   where first_name ilike 'CONTATO PILOTO %';
 
   delete from public.products
-  where sku like 'PIL-SKU-%';
+  where sku like 'PIL-SKU-%'
+    and nome_impresso like 'PILOTO IMPRESSO %';
 
   delete from public.companies
   where name ilike 'CLIENTE PILOTO %';

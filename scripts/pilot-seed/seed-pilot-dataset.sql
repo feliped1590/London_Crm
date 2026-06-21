@@ -318,10 +318,15 @@ typ as (
   select id as tipo_id from public.product_types where label = 'Tipo Piloto 01' limit 1
 ),
 src as (
-  select generate_series(1, 20) as n
+  select
+    gs.n,
+    format('PIL-SKU-%s', lpad(gs.n::text, 3, '0')) as sku,
+    format('PRODUTO PILOTO %s', lpad(gs.n::text, 3, '0')) as product_name,
+    format('PILOTO IMPRESSO %s', lpad(gs.n::text, 3, '0')) as nome_impresso
+  from generate_series(1, 20) as gs(n)
 )
 insert into public.products (
-  tenant_id, legal_entity_id, grupo_id, subgrupo_id, tipo_id, sku, name
+  tenant_id, legal_entity_id, grupo_id, subgrupo_id, tipo_id, sku, name, nome_impresso
 )
 select
   t.tenant_id,
@@ -329,8 +334,9 @@ select
   grp.grupo_id,
   sub.subgrupo_id,
   typ.tipo_id,
-  format('PIL-SKU-%s', lpad(src.n::text, 3, '0')),
-  format('PRODUTO PILOTO %s', lpad(src.n::text, 3, '0'))
+  src.sku,
+  src.product_name,
+  src.nome_impresso
 from src
 cross join t
 cross join le
@@ -340,7 +346,17 @@ cross join typ
 where not exists (
   select 1
   from public.products p
-  where p.sku = format('PIL-SKU-%s', lpad(src.n::text, 3, '0'))
+  where p.active = true
+    and p.tenant_id = t.tenant_id
+    and coalesce(p.tipo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) = coalesce(typ.tipo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
+    and coalesce(p.grupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) = coalesce(grp.grupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
+    and coalesce(p.subgrupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) = coalesce(sub.subgrupo_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
+    and coalesce(p.family_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) = 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid
+    and coalesce(p.class_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid) = 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid
+    and coalesce(p.width::text, '-1') = '-1'
+    and coalesce(p.length::text, '-1') = '-1'
+    and coalesce(p.thickness::text, '-1') = '-1'
+    and coalesce(p.nome_impresso, '') = src.nome_impresso
 );
 
 -- Deals sinteticos (10)
