@@ -70,6 +70,24 @@ select 'products', count(*) from public.products
 where sku like 'PIL-SKU-%'
   and nome_impresso like 'PILOTO IMPRESSO %'
 union all
+select 'product_subgroups', count(*) from public.product_subgroups
+where tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+  and label ilike 'Subgrupo Piloto %'
+union all
+select 'product_types', count(*) from public.product_types
+where tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+  and label ilike 'Tipo Piloto %'
+union all
+select 'product_groups', count(*) from public.product_groups
+where tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+  and label ilike 'Grupo Piloto %'
+union all
 select 'companies', count(*) from public.companies
 where name ilike 'CLIENTE PILOTO %'
 union all
@@ -92,6 +110,29 @@ where user_id in (
   where full_name in ('Admin Piloto','Vendedor Piloto','Assistente Piloto')
 )
 union all
+select 'user_tenants_pilot_scope', count(*) from public.user_tenants
+where tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+union all
+select 'user_legal_entities', count(*) from public.user_legal_entities
+where tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+   or legal_entity_id in (
+     select id from public.legal_entities
+     where name in ('Empresa Piloto A','Empresa Piloto B')
+   )
+union all
+select 'profiles_with_active_pilot_refs', count(*) from public.profiles
+where active_tenant_id in (
+  select id from public.tenants where slug = 'piloto-migracao-20260621'
+)
+   or active_legal_entity_id in (
+     select id from public.legal_entities
+     where name in ('Empresa Piloto A','Empresa Piloto B')
+   )
+union all
 select 'profiles', count(*) from public.profiles
 where full_name in ('Admin Piloto','Vendedor Piloto','Assistente Piloto')
 union all
@@ -111,6 +152,46 @@ begin
     raise notice 'Cleanup em modo PREVIEW. Defina app.pilot_cleanup_execute=YES para executar deletes.';
     return;
   end if;
+
+  -- Escopo piloto centralizado para filtros estritos por tenant/legal entity.
+  -- Mantemos filtros por slug e nome piloto para evitar cleanup amplo.
+  with pilot_scope as (
+    select t.id as tenant_id
+    from public.tenants t
+    where t.slug = 'piloto-migracao-20260621'
+  ),
+  pilot_legal_entities as (
+    select le.id as legal_entity_id
+    from public.legal_entities le
+    join pilot_scope ps on ps.tenant_id = le.tenant_id
+    where le.name in ('Empresa Piloto A','Empresa Piloto B')
+  )
+  update public.profiles p
+  set
+    active_tenant_id = case
+      when p.active_tenant_id in (select tenant_id from pilot_scope) then null
+      else p.active_tenant_id
+    end,
+    active_legal_entity_id = case
+      when p.active_legal_entity_id in (select legal_entity_id from pilot_legal_entities) then null
+      else p.active_legal_entity_id
+    end
+  where p.active_tenant_id in (select tenant_id from pilot_scope)
+     or p.active_legal_entity_id in (select legal_entity_id from pilot_legal_entities);
+
+  -- Remove apenas vinculos de users/profiles ao escopo piloto.
+  -- Nao remove auth users nem perfis fora do namespace.
+  delete from public.user_legal_entities
+  where tenant_id in (
+    select id from public.tenants where slug = 'piloto-migracao-20260621'
+  )
+     or legal_entity_id in (
+       select le.id
+       from public.legal_entities le
+       join public.tenants t on t.id = le.tenant_id
+       where t.slug = 'piloto-migracao-20260621'
+         and le.name in ('Empresa Piloto A','Empresa Piloto B')
+     );
 
   -- Ordem inversa de dependencia
   delete from public.notifications
@@ -145,6 +226,26 @@ begin
   where sku like 'PIL-SKU-%'
     and nome_impresso like 'PILOTO IMPRESSO %';
 
+  -- Auxiliares de produto do seed piloto (20D: lacuna identificada no cleanup oficial).
+  -- Ordem: subgroups/types -> groups, com filtro por tenant piloto + labels de namespace.
+  delete from public.product_subgroups
+  where tenant_id in (
+    select id from public.tenants where slug = 'piloto-migracao-20260621'
+  )
+    and label ilike 'Subgrupo Piloto %';
+
+  delete from public.product_types
+  where tenant_id in (
+    select id from public.tenants where slug = 'piloto-migracao-20260621'
+  )
+    and label ilike 'Tipo Piloto %';
+
+  delete from public.product_groups
+  where tenant_id in (
+    select id from public.tenants where slug = 'piloto-migracao-20260621'
+  )
+    and label ilike 'Grupo Piloto %';
+
   delete from public.companies
   where name ilike 'CLIENTE PILOTO %';
 
@@ -159,6 +260,12 @@ begin
   where user_id in (
     select user_id from public.profiles
     where full_name in ('Admin Piloto','Vendedor Piloto','Assistente Piloto')
+  );
+
+  -- Remove vinculos de tenant piloto para evitar bloqueios no delete do tenant.
+  delete from public.user_tenants
+  where tenant_id in (
+    select id from public.tenants where slug = 'piloto-migracao-20260621'
   );
 
   delete from public.user_tenants

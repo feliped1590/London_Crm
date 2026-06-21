@@ -246,6 +246,19 @@ Os scripts abortam quando:
 - Cleanup permanece proibido ate fechamento da validacao final e aprovacao explicita.
 - A Fase 19X faz apenas alinhamento estatico de validate/reconcile/documentacao, sem escrita em banco.
 
+## Licoes da Fase 20D
+
+- O cleanup controlado da 20D foi concluido com sucesso no target isolado, com contagens finais piloto zeradas.
+- O script oficial anterior apresentou bloqueio de FK em `profiles.active_legal_entity_id` quando havia vinculo tecnico apontando para legal entity piloto.
+- O script oficial anterior nao removia auxiliares de produto criados pelo seed (`product_groups`, `product_subgroups`, `product_types`), causando bloqueio na remocao de tenant piloto.
+- A 20D foi destravada operacionalmente com cleanup suplementar estritamente filtrado por escopo piloto.
+- A Fase 20E incorpora essas lacunas no `cleanup-pilot-dataset.sql`:
+  - desassociacao segura de `profiles.active_tenant_id`/`active_legal_entity_id` quando referenciam tenant/legal entities piloto;
+  - remocao de vinculos `user_tenants`/`user_legal_entities` no escopo piloto;
+  - remocao dos auxiliares de produto piloto com filtro por tenant e labels de namespace.
+- O gate obrigatorio de cleanup permanece: `app.pilot_cleanup_execute = 'YES'`.
+- O cleanup continua restrito ao target isolado autorizado; staging/producao seguem proibidos sem fase dedicada e aprovacao explicita.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
