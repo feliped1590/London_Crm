@@ -211,6 +211,27 @@ Os scripts abortam quando:
   - sem criar enum/type, sem alterar coluna, sem remover/desabilitar trigger.
 - A migration foi apenas versionada e **nao aplicada** nesta fase.
 
+## Licoes da Fase 19R/19S
+
+- Seed da 19R iniciou e abortou ao inserir em `tasks`.
+- Erro encontrado: `null value in column "user_id" of relation "access_violation_log" violates not-null constraint`.
+- Diagnostico read-only (19S):
+  - a trigger `check_task_owner_consistency_trigger` esta ativa em `public.tasks` (`BEFORE INSERT OR UPDATE`);
+  - a funcao `public.check_task_owner_consistency()` usa `auth.uid()` para validacao e para inserir log de violacao;
+  - em contexto tecnico/seed, `auth.uid()` fica `NULL`;
+  - `public.access_violation_log.user_id` e `uuid NOT NULL`, sem default.
+- Impacto:
+  - incompatibilidade da funcao em execucao tecnica sem usuario autenticado;
+  - seed abortado por tentativa de inserir `user_id = NULL` no log.
+- Decisao:
+  - **nao** enfraquecer seed com workaround;
+  - preparar correcao estrutural versionada na Fase 19T, mantendo seguranca para usuarios autenticados.
+- Correcao preparada na Fase 19T (somente repo):
+  - migration de compatibilidade para `check_task_owner_consistency()` com retorno antecipado quando `auth.uid() IS NULL`;
+  - regras para usuarios autenticados preservadas (validacao de carteira + log de violacao);
+  - sem alteracao de tabela/trigger/RLS/policies.
+- A migration foi apenas versionada e **nao aplicada** nesta fase.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
