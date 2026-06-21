@@ -233,6 +233,48 @@ Validar, em ambiente isolado e descartavel, que os artefatos de backup de stagin
 8. Gerar manifesto de execucao com resultados, warnings e decisao.
 9. Nunca executar esse fluxo em staging/producao sem autorizacao explicita.
 
+## Fase 12A.6 - Encerramento da trilha backup/restore
+
+### 1. Status executivo
+
+**APROVADO COM RESSALVA**
+
+### 2. O que foi concluido
+
+- Backup SQL gerado fora do repositorio.
+- Hashes SHA256 reconfirmados para os artefatos principais.
+- Armazenamento externo em Google Drive restrito formalizado.
+- Restore target isolado formalizado (`crm-qualyvac-restore-test`).
+- Restore test executado somente no target isolado.
+- Documentacao da Fase 12A.3 commitada e enviada para `origin/main`.
+
+### 3. Evidencias principais
+
+- Commit de documentacao: `48281b8f1921f74980b4ff58f8b2eb6dab22953d`
+- Manifesto externo do restore test: `backup-manifest-restore-test_20260621T152638Z.json`
+- SHA256 do manifesto: `8761ebb652f18d17de1f8b92b41c695a81a1f10d6313a3c57f41d55b5847725f`
+- Restore target: `crm-qualyvac-restore-test` (`nsnmlleplpzsefzkuxlb`)
+- Origem staging: `cansbrrwrprcycjvgvqm`
+
+### 4. Ressalvas
+
+1. Restore direto do dump full nao foi compativel via `db query`.
+2. Procedimento compativel foi necessario e funcionou (`public-only + inserts`).
+3. `secrets list` segue pendente por autenticacao CLI.
+4. Copia redundante dos artefatos segue recomendada.
+
+### 5. Pendencias remanescentes
+
+1. Resolver autenticacao CLI para inventario de nomes de secrets.
+2. Criar segunda copia segura dos artefatos.
+3. Padronizar playbook de restore compativel para DR.
+4. Seguir para fases de migracao/reconciliacao/homologacao.
+
+### 6. Decisao
+
+- A Fase 12 pode ser considerada encerrada para fins de comprovacao de backup restauravel.
+- Producao permanece NO-GO ate conclusao das demais fases criticas de migracao e readiness operacional.
+
 ## Alerta obrigatorio de seguranca
 
 **Dumps reais (schema/data/auth/storage) nao devem ser versionados no repositorio Git.**
