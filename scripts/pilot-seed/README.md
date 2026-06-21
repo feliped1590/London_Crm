@@ -196,6 +196,21 @@ Os scripts abortam quando:
   - sem qualquer alteracao de schema/tipos no banco.
 - Nova execucao deve ocorrer somente em fase dedicada e com aprovacao explicita de Felipe Duarte.
 
+## Licoes da Fase 19M/19O
+
+- Seed da 19M iniciou e abortou ao inserir em `orders`.
+- Erro encontrado: `type "activity_status" does not exist`.
+- Diagnostico read-only (19N/19O):
+  - trigger `trg_promote_to_customer_on_order` (AFTER INSERT em `orders`) chama funcao homonima;
+  - a funcao fazia cast para tipo inexistente (`'ativo'::activity_status`);
+  - no schema real do target, `public.companies.activity_status` e `text`;
+  - nao existe `CREATE TYPE activity_status` no historico de migrations.
+- Correcao preparada na Fase 19P (somente repo):
+  - migration de compatibilidade para alinhar funcoes lifecycle ao tipo `text`;
+  - remove casts `::activity_status` de funcoes ativas (`trg_promote_to_customer_on_order`, `recompute_company_lifecycle`, `flag_lost_customers_for_release`);
+  - sem criar enum/type, sem alterar coluna, sem remover/desabilitar trigger.
+- A migration foi apenas versionada e **nao aplicada** nesta fase.
+
 ## Aviso critico
 
 Nao executar estes scripts sem aprovacao explicita de Felipe Duarte.
