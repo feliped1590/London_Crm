@@ -1,0 +1,285 @@
+{
+  "phase": "22AJ-R2",
+  "timestamp": "2026-06-27T18:30:53-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "sources": {
+    "docs": [
+      "docs/migration/phase-22ag-r2-post-product-types-audit.md",
+      "docs/migration/phase-22af-r2-pilot-product-types-write.md",
+      "docs/migration/phase-22ac-r2-product-aux-pilot-selection.md"
+    ],
+    "scripts": [
+      "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+      "scripts/migration/phase-22k-r2-baseline-write.mjs"
+    ],
+    "artifacts": [
+      "artifacts/migration/phase-22ac-r2-product-aux-pilot-selection/product-aux-pilot-selection-20260627-173529.json",
+      "artifacts/migration/phase-22af-r2-pilot-product-types-write/after-20260627-181728.json",
+      "artifacts/migration/phase-22ag-r2-post-product-types-audit/post-product-types-audit-20260627-182125.json",
+      "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-181728.json"
+    ],
+    "latestApplicableEvidenceUsed": [
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-181728.json"
+    ]
+  },
+  "candidatesEvaluated": [
+    {
+      "entity": "product_groups",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLine": {
+        "temp_key": "TMP-22F-R2-PRODGROUP-01",
+        "code": "TMP-PG-001",
+        "name": "TMP Product Group",
+        "mappedValue": "TMP-PG-001",
+        "mappedLabel": "TMP Product Group"
+      },
+      "schemaSummary": {
+        "requiredWithoutDefault": [
+          "value",
+          "label"
+        ],
+        "requiredWithDefault": [
+          "dimension_profile",
+          "ficha_profile"
+        ],
+        "optionalRelevant": [
+          "tenant_id",
+          "sort_order",
+          "is_active",
+          "created_at",
+          "created_by",
+          "is_printed",
+          "default_ncm_code"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "foreignKeys": [
+          "tenant_id -> tenants(id)",
+          "created_by -> auth.users(id)"
+        ],
+        "checks": [
+          "ficha_profile in allowed values"
+        ],
+        "indexes": [
+          "idx_product_groups_dimension_profile"
+        ]
+      },
+      "dependencies": {
+        "fkDependencyOnProductTypes": false,
+        "fkDependencyOnOtherAuxTables": false,
+        "canWriteIsolated": true,
+        "businessOrderPosition": 2
+      },
+      "collisionChecks": {
+        "currentRows": 21,
+        "candidateValueCount": 0,
+        "candidateLabelCount": 0,
+        "maxDuplicateByValue": 0,
+        "maxDuplicateByTenantValue": 0
+      },
+      "idempotencyRulePossible": "value as natural key (insert if absent, idempotent_noop if exact match, NO-GO if divergence)"
+    },
+    {
+      "entity": "product_subgroups",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLine": {
+        "temp_key": "TMP-22F-R2-PRODSUBGROUP-01",
+        "code": "TMP-PSG-001",
+        "name": "TMP Product Subgroup",
+        "mappedValue": "TMP-PSG-001",
+        "mappedLabel": "TMP Product Subgroup"
+      },
+      "schemaSummary": {
+        "requiredWithoutDefault": [
+          "value",
+          "label"
+        ],
+        "requiredWithDefault": [],
+        "optionalRelevant": [
+          "tenant_id",
+          "sort_order",
+          "is_active",
+          "created_at",
+          "created_by"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "foreignKeys": [
+          "tenant_id -> tenants(id)",
+          "created_by -> auth.users(id)"
+        ],
+        "checks": [],
+        "indexes": []
+      },
+      "dependencies": {
+        "fkDependencyOnProductGroups": false,
+        "fkDependencyOnOtherAuxTables": false,
+        "canWriteIsolated": true,
+        "businessOrderPosition": 3
+      },
+      "collisionChecks": {
+        "currentRows": 53,
+        "candidateValueCount": 0,
+        "candidateLabelCount": 0,
+        "maxDuplicateByValue": 0,
+        "maxDuplicateByTenantValue": 0
+      },
+      "idempotencyRulePossible": "value as natural key"
+    },
+    {
+      "entity": "product_families",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLine": {
+        "temp_key": "TMP-22F-R2-PRODFAMILY-01",
+        "code": "TMP-PF-001",
+        "name": "TMP Product Family",
+        "mappedValue": "TMP-PF-001",
+        "mappedLabel": "TMP Product Family"
+      },
+      "schemaSummary": {
+        "requiredWithoutDefault": [
+          "value",
+          "label"
+        ],
+        "requiredWithDefault": [
+          "sort_order",
+          "is_active",
+          "created_at"
+        ],
+        "optionalRelevant": [
+          "tenant_id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "foreignKeys": [
+          "tenant_id -> tenants(id)"
+        ],
+        "checks": [],
+        "indexes": []
+      },
+      "dependencies": {
+        "fkDependencyOnOtherAuxTables": false,
+        "canWriteIsolated": true,
+        "businessOrderPosition": 4
+      },
+      "collisionChecks": {
+        "currentRows": 6,
+        "candidateValueCount": 0,
+        "candidateLabelCount": 0,
+        "maxDuplicateByValue": 0,
+        "maxDuplicateByTenantValue": 0
+      },
+      "idempotencyRulePossible": "value as natural key"
+    },
+    {
+      "entity": "product_classes",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLine": {
+        "temp_key": "TMP-22F-R2-PRODCLASS-01",
+        "code": "TMP-PC-001",
+        "name": "TMP Product Class",
+        "mappedValue": "TMP-PC-001",
+        "mappedLabel": "TMP Product Class"
+      },
+      "schemaSummary": {
+        "requiredWithoutDefault": [
+          "value",
+          "label"
+        ],
+        "requiredWithDefault": [
+          "sort_order",
+          "is_active",
+          "created_at"
+        ],
+        "optionalRelevant": [
+          "tenant_id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "foreignKeys": [
+          "tenant_id -> tenants(id)"
+        ],
+        "checks": [],
+        "indexes": []
+      },
+      "dependencies": {
+        "fkDependencyOnOtherAuxTables": false,
+        "canWriteIsolated": true,
+        "businessOrderPosition": 5
+      },
+      "collisionChecks": {
+        "currentRows": 10,
+        "candidateValueCount": 0,
+        "candidateLabelCount": 0,
+        "maxDuplicateByValue": 0,
+        "maxDuplicateByTenantValue": 0
+      },
+      "idempotencyRulePossible": "value as natural key"
+    }
+  ],
+  "safeDependencyOrderEvaluation": {
+    "plannedOrder": [
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes"
+    ],
+    "productGroupsDependsOnProductTypesByFK": false,
+    "productSubgroupsDependsOnProductGroupsByFK": false,
+    "productFamiliesDependsOnPriorAuxByFK": false,
+    "productClassesDependsOnPriorAuxByFK": false,
+    "summary": "No mandatory FK dependencies between aux tables; order remains business-driven and compatible with isolated pilot."
+  },
+  "recommendedEntity": "product_groups",
+  "justification": [
+    "Preference criterion met with strong line-by-line payload and planned count = 1.",
+    "No candidate collision for value/label and no duplicate natural keys detected.",
+    "No mandatory FK dependency on product_types or other aux tables for insert.",
+    "Idempotency by UNIQUE(value) is clear and compatible with controlled pilot contract.",
+    "Although it has extra required columns, both dimension_profile and ficha_profile are satisfied by defaults."
+  ],
+  "remainingRisks": [
+    "Business order still suggests keeping product_groups before other aux entities to avoid semantic drift.",
+    "Defaulted required fields (dimension_profile/ficha_profile) should be explicitly frozen in pilot contract to avoid ambiguity."
+  ],
+  "decision": "GO",
+  "decisionReasons": [
+    "A safe next auxiliary candidate was selected with complete technical gate evidence.",
+    "Read-only schema/constraint/collision checks are consistent with isolated controlled pilot.",
+    "No write occurred and executor remained unchanged."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

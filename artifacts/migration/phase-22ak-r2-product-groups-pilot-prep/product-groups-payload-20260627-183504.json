@@ -1,0 +1,184 @@
+{
+  "phase": "22AK-R2",
+  "timestamp": "2026-06-27T18:35:04-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "payloadOrigin": {
+    "primarySource": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "section": "BASELINE_SIMULATION.product_groups[0]",
+    "supportingEvidence": [
+      "docs/migration/phase-22aj-r2-next-product-aux-gate.md",
+      "artifacts/migration/phase-22aj-r2-next-product-aux-gate/next-product-aux-gate-20260627-183053.json"
+    ],
+    "rawSourceRecord": {
+      "temp_key": "TMP-22F-R2-PRODGROUP-01",
+      "code": "TMP-PG-001",
+      "name": "TMP Product Group"
+    },
+    "mappingRules": [
+      "value <- code (direct mapping, no transformation)",
+      "label <- name (direct mapping, no transformation)"
+    ]
+  },
+  "frozenPayload": {
+    "entity": "product_groups",
+    "source": "baseline_simulation_22g_r2",
+    "records": [
+      {
+        "temp_key": "TMP-22F-R2-PRODGROUP-01",
+        "value": "TMP-PG-001",
+        "label": "TMP Product Group",
+        "tenant_id": null,
+        "created_by": null
+      }
+    ],
+    "omittedFieldsByPolicy": [
+      "dimension_profile (expect DB default 'none')",
+      "ficha_profile (expect DB default 'none')",
+      "sort_order",
+      "is_active",
+      "created_at",
+      "is_printed",
+      "default_ncm_code"
+    ]
+  },
+  "tenantPolicy": {
+    "mode": "global_null_scope",
+    "tenant_id": null,
+    "decision": "GO",
+    "rationale": [
+      "Source payload has no tenant_id.",
+      "product_groups.tenant_id is nullable.",
+      "UNIQUE(value) is global and supports deterministic idempotency by value.",
+      "Current restore-test has no collision for TMP-PG-001."
+    ]
+  },
+  "createdByPolicy": {
+    "mode": "null_omit",
+    "created_by": null,
+    "decision": "GO",
+    "rationale": [
+      "product_groups.created_by is nullable and has no safe source in baseline payload.",
+      "No auth/profile linkage is required in this prep phase.",
+      "Pilot must not bind to real user identities."
+    ]
+  },
+  "requiredDefaultsPolicy": {
+    "dimension_profile": {
+      "nullable": false,
+      "default": "'none'::dimension_profile",
+      "omitInPilotPayload": true,
+      "status": "GO"
+    },
+    "ficha_profile": {
+      "nullable": false,
+      "default": "'none'::text",
+      "omitInPilotPayload": true,
+      "status": "GO"
+    },
+    "summary": "Required NOT NULL fields are safely satisfied by defaults when omitted."
+  },
+  "schemaSummary": {
+    "table": "public.product_groups",
+    "columns": {
+      "value": {
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      "label": {
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      "tenant_id": {
+        "type": "uuid",
+        "nullable": true,
+        "default": null
+      },
+      "created_by": {
+        "type": "uuid",
+        "nullable": true,
+        "default": null
+      },
+      "dimension_profile": {
+        "type": "dimension_profile",
+        "nullable": false,
+        "default": "'none'::dimension_profile"
+      },
+      "ficha_profile": {
+        "type": "text",
+        "nullable": false,
+        "default": "'none'::text"
+      }
+    },
+    "primaryKey": "PRIMARY KEY (id)",
+    "uniqueConstraints": [
+      "UNIQUE (value)"
+    ],
+    "foreignKeys": [
+      "tenant_id -> tenants(id)",
+      "created_by -> auth.users(id)"
+    ],
+    "checks": [
+      "ficha_profile constrained to allowed values"
+    ],
+    "indexes": [
+      "product_materials_pkey",
+      "product_materials_value_key",
+      "idx_product_groups_dimension_profile"
+    ]
+  },
+  "constraintsValidation": {
+    "uniqueValuePresent": true,
+    "tenantIdNullable": true,
+    "createdByNullable": true,
+    "dimensionProfileDefaultPresent": true,
+    "fichaProfileDefaultPresent": true
+  },
+  "collisionValidation": {
+    "currentRowCount": 21,
+    "candidateValue": "TMP-PG-001",
+    "candidateLabel": "TMP Product Group",
+    "candidateValueCount": 0,
+    "candidateLabelCount": 0,
+    "duplicateByValueGroups": 0,
+    "duplicateByTenantValueGroups": 0,
+    "hasCollision": false
+  },
+  "idempotencyRule": {
+    "key": "value",
+    "policy": [
+      "If value does not exist, future controlled phase may INSERT one record.",
+      "If value exists and payload matches value+label+tenant_id+dimension_profile+ficha_profile, treat as idempotent_noop.",
+      "If value exists and diverges, ABORT with NO-GO.",
+      "No upsert overwrite, no delete, no cleanup, no automatic correction."
+    ]
+  },
+  "humanGate": {
+    "pilotAuthorizationPhrase": "AUTORIZO A QUARTA ESCRITA PILOTO DA BASELINE 22AK-R2 SOMENTE EM product_groups NO RESTORE-TEST nsnmlleplpzsefzkuxlb",
+    "documentedOnly": true
+  },
+  "payloadDecision": "GO",
+  "payloadDecisionReasons": [
+    "Payload origin is traceable and mapping is direct.",
+    "Required defaults for dimension_profile and ficha_profile are present and safe.",
+    "tenant_id and created_by policies are explicit and conservative (null scope).",
+    "No current candidate collision and no duplicate natural key."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

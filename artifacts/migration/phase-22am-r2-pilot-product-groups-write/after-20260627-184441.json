@@ -1,0 +1,52 @@
+{
+  "phase": "22AM-R2",
+  "timestamp": "2026-06-27T21:45:17.888Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationExecuted": "inserted",
+  "productGroupsCountAfter": 22,
+  "delta": 1,
+  "recordByValue": [
+    {
+      "created_by": null,
+      "dimension_profile": "none",
+      "ficha_profile": "none",
+      "id": "c5057853-15be-440d-886f-b0093de363fa",
+      "label": "TMP Product Group",
+      "tenant_id": null,
+      "value": "TMP-PG-001"
+    }
+  ],
+  "recordId": "c5057853-15be-440d-886f-b0093de363fa",
+  "value": "TMP-PG-001",
+  "label": "TMP Product Group",
+  "tenant_id": null,
+  "created_by": null,
+  "dimension_profile": "none",
+  "ficha_profile": "none",
+  "defaultsApplied": {
+    "dimension_profile": true,
+    "ficha_profile": true
+  },
+  "uniqueValueDuplicateCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "touchedEntity": "product_groups",
+    "legalEntitiesTouchedAgain": false,
+    "productTypesTouchedAgain": false,
+    "salesRepsTouched": false,
+    "profilesTouched": false,
+    "companyContactsTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true
+  },
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_groups. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

@@ -1,0 +1,135 @@
+{
+  "phase": "22AN-R2",
+  "timestamp": "2026-06-27T18:54:54-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "expectedRecord": {
+    "id": "c5057853-15be-440d-886f-b0093de363fa",
+    "value": "TMP-PG-001",
+    "label": "TMP Product Group",
+    "tenant_id": null,
+    "created_by": null,
+    "dimension_profile": "none",
+    "ficha_profile": "none"
+  },
+  "evidencesReviewed": {
+    "phase22amDoc": "docs/migration/phase-22am-r2-pilot-product-groups-write.md",
+    "phase22alDoc": "docs/migration/phase-22al-r2-pilot-product-groups-hard-stop.md",
+    "phase22akDoc": "docs/migration/phase-22ak-r2-product-groups-pilot-prep.md",
+    "phase22agDoc": "docs/migration/phase-22ag-r2-post-product-types-audit.md",
+    "executorScript": "scripts/migration/phase-22k-r2-baseline-write.mjs",
+    "before22am": "artifacts/migration/phase-22am-r2-pilot-product-groups-write/before-20260627-184441.json",
+    "after22am": "artifacts/migration/phase-22am-r2-pilot-product-groups-write/after-20260627-184441.json",
+    "payload22ak": "artifacts/migration/phase-22ak-r2-product-groups-pilot-prep/product-groups-payload-20260627-183504.json",
+    "additionalLatestApplicable": [
+      "artifacts/migration/phase-22al-r2-pilot-product-groups/pilot-product-groups-20260627-184441.json"
+    ]
+  },
+  "recordValidation": {
+    "countById": 1,
+    "countByValue": 1,
+    "countByLabel": 1,
+    "recordByValue": {
+      "id": "c5057853-15be-440d-886f-b0093de363fa",
+      "value": "TMP-PG-001",
+      "label": "TMP Product Group",
+      "tenant_id": null,
+      "created_by": null,
+      "dimension_profile": "none",
+      "ficha_profile": "none"
+    },
+    "matchesExpectedPayload": true
+  },
+  "defaultsValidation": {
+    "tenant_id_is_null": true,
+    "created_by_is_null": true,
+    "dimension_profile_is_none": true,
+    "ficha_profile_is_none": true
+  },
+  "idempotencyValidation": {
+    "uniqueValuePresent": true,
+    "cardinalityByValue": 1,
+    "divergentSameValueCount": 0,
+    "duplicateByValueCount": 1,
+    "expectedIfReexecuted": "idempotent_noop",
+    "notes": [
+      "No duplicate key cardinality by value.",
+      "No divergent payload/defaults for same value."
+    ]
+  },
+  "deltaValidation": {
+    "beforeTotal22AM": 21,
+    "afterTotal22AM": 22,
+    "currentTotal": 22,
+    "deltaBeforeAfter": 1,
+    "deltaAfterCurrent": 0,
+    "coherent": true
+  },
+  "negativeScopeValidation": {
+    "tables": [
+      { "name": "legal_entities", "exists": true, "rowCount": 1, "expected": 1, "status": "PASS" },
+      { "name": "product_types", "exists": true, "rowCount": 13, "expected": 13, "status": "PASS" },
+      { "name": "product_groups", "exists": true, "rowCount": 22, "expected": 22, "status": "PASS" },
+      { "name": "product_subgroups", "exists": true, "rowCount": 53, "expected": "not_regressed", "status": "PASS" },
+      { "name": "product_families", "exists": true, "rowCount": 6, "expected": "not_regressed", "status": "PASS" },
+      { "name": "product_classes", "exists": true, "rowCount": 10, "expected": "not_regressed", "status": "PASS" },
+      { "name": "sales_reps", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "user_tenants", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "user_legal_entities", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "user_sales_reps", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "companies", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "contacts", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "products", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "deals", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "orders", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "order_items", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "proposals", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "audit_logs", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" },
+      { "name": "notifications", "exists": true, "rowCount": 0, "expected": 0, "status": "PASS" }
+    ],
+    "transacionalTablesRemainZero": true
+  },
+  "executorGuardsValidation": {
+    "executorChangedIn22AN": false,
+    "salesRepsPilotAllowed": false,
+    "profilesExcludedInRoundOne": true,
+    "companyContactsReferenceOnly": true,
+    "forbiddenFlagsStillBlocked": true,
+    "bypassFlagsAdded": false,
+    "productGroupsHardStopPresent": true,
+    "productTypesHardStopPresent": true,
+    "noAutomaticExpandedExecutionAfterProductGroups": true,
+    "evidence": [
+      "ALLOWED_PILOT_ENTITIES allows only legal_entities, product_types, product_groups.",
+      "INPUT_REFERENCE_ONLY_ENTITIES contains company_contacts.",
+      "FORBIDDEN_FLAGS still includes --force, --skip-guards, --tables, --all.",
+      "FIRST_ROUND_EXECUTABLE_ENTITIES_22Q excludes profiles and company_contacts.",
+      "phase22AMStopAfterPilotMessage and phase22AFStopAfterPilotMessage are emitted in final output."
+    ]
+  },
+  "decision": "GO",
+  "decisionReasons": [
+    "Pilot record exists exactly as expected by id/value/label and payload/defaults.",
+    "Idempotency by UNIQUE(value) remains valid with cardinality 1 and no divergence.",
+    "Delta from 22AM remains coherent: 21 -> 22 and current remains 22.",
+    "Negative scope stayed stable and transacional tables remain zero.",
+    "Executor guard rails remain active and no expanded execution was observed.",
+    "No new write operation was executed in this audit phase."
+  ],
+  "confirmations": {
+    "newDbWrite": false,
+    "sqlWriteExecuted": false,
+    "migrationExecuted": false,
+    "seedCleanupExecuted": false,
+    "rollbackExecuted": false,
+    "erpApiWebhookN8nCalled": false,
+    "queuesProcessed": false,
+    "deployExecuted": false,
+    "commitExecuted": false,
+    "pushExecuted": false,
+    "executorChanged": false,
+    "stagingProdChanged": false,
+    "executorExpandedExecutionRan": false
+  }
+}

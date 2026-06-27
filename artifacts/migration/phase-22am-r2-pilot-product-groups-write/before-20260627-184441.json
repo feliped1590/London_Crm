@@ -1,0 +1,33 @@
+{
+  "phase": "22AM-R2",
+  "timestamp": "2026-06-27T21:44:51.455Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "product_groups",
+  "pilotPayloadPath": "artifacts/migration/phase-22ak-r2-product-groups-pilot-prep/product-groups-payload-20260627-183504.json",
+  "payloadUsed": {
+    "value": "TMP-PG-001",
+    "label": "TMP Product Group",
+    "tenant_id": null,
+    "created_by": null,
+    "temp_key": "TMP-22F-R2-PRODGROUP-01"
+  },
+  "productGroupsCountBefore": 21,
+  "lookupByValue": [],
+  "lookupByLabelCount": 0,
+  "uniqueValueValidated": true,
+  "tenantNullableValidated": true,
+  "createdByNullableValidated": true,
+  "defaultsValidated": {
+    "dimension_profile": "'none'::dimension_profile",
+    "ficha_profile": "'none'::text"
+  },
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}
