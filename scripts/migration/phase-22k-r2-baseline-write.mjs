@@ -9,8 +9,20 @@ const EXPECTED_BATCH_ID = "baseline_22f_r2_restore_test_qualyvac";
 const EXPECTED_AUTHORIZATION =
   "AUTORIZO A ESCRITA CONTROLADA DA BASELINE 22H-R2 NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PILOT_ENTITY = "legal_entities";
+const ALLOWED_PILOT_ENTITIES = new Set(["legal_entities", "product_types"]);
 const EXPECTED_PILOT_AUTHORIZATION =
   "AUTORIZO A PRIMEIRA ESCRITA PILOTO DA BASELINE 22R-R2 SOMENTE EM legal_entities NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_PRODUCT_TYPES_PILOT_AUTHORIZATION =
+  "AUTORIZO A TERCEIRA ESCRITA PILOTO DA BASELINE 22AD-R2 SOMENTE EM product_types NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD = {
+  phase: "22AD-R2",
+  entity: "product_types",
+  source: "baseline_simulation_22g_r2",
+  temp_key: "TMP-22F-R2-PRODTYPE-01",
+  value: "TMP-PT-001",
+  label: "TMP Product Type",
+  tenant_id: null,
+};
 
 const ALLOWED_ENTITIES = new Set([
   "legal_entities",
@@ -66,6 +78,7 @@ const ALLOWED_FLAGS = new Set([
   "--batch",
   "--authorization",
   "--pilot-entity",
+  "--pilot-payload",
   "--pilot-authorization",
   "--execute-pilot-write",
   "--input",
@@ -138,6 +151,7 @@ function parseArgs(argv) {
     batch: "",
     authorization: "",
     pilotEntity: "",
+    pilotPayload: "",
     pilotAuthorization: "",
     executePilotWrite: false,
     input: "",
@@ -178,6 +192,7 @@ function parseArgs(argv) {
     if (token === "--batch") parsed.batch = value;
     if (token === "--authorization") parsed.authorization = value;
     if (token === "--pilot-entity") parsed.pilotEntity = value;
+    if (token === "--pilot-payload") parsed.pilotPayload = value;
     if (token === "--pilot-authorization") parsed.pilotAuthorization = value;
     if (token === "--input") parsed.input = value;
     if (token === "--write-plan") parsed.writePlan = value;
@@ -361,6 +376,69 @@ function executePilotWrite() {
   );
 }
 
+function executeProductTypesPilotWrite(params) {
+  const { value, label, tenant_id, expectedTargetRef, expectedTargetName, batchId, localTargetRef, localTargetName } = params;
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for product_types pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for product_types pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for product_types pilot write.");
+  }
+  if (value !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.value) {
+    throw new Error("product_types pilot value mismatch.");
+  }
+  if (label !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.label) {
+    throw new Error("product_types pilot label mismatch.");
+  }
+  if (tenant_id !== null) {
+    throw new Error("product_types pilot tenant_id must be null.");
+  }
+
+  const existingRows = runSupabaseDbQuery(
+    `select id, value, label, tenant_id from public.product_types where value = '${escapeSqlLiteral(value)}'`,
+  );
+  if (existingRows.length > 1) {
+    throw new Error("Unexpected duplicate rows for product_types.value during pilot.");
+  }
+  if (existingRows.length === 1) {
+    const existing = existingRows[0];
+    const samePayload = existing.value === value && existing.label === label && existing.tenant_id === null;
+    if (!samePayload) {
+      throw new Error("Existing product_types row diverges from frozen pilot payload.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      inserted: false,
+    };
+  }
+
+  const labelRows = runSupabaseDbQuery(
+    `select count(*)::bigint as label_count from public.product_types where label = '${escapeSqlLiteral(label)}'`,
+  );
+  const labelCount = Number(labelRows[0]?.label_count || 0);
+  if (labelCount > 0) {
+    throw new Error("Label collision detected without value match for product_types pilot.");
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.product_types (value, label, tenant_id)
+    values ('${escapeSqlLiteral(value)}', '${escapeSqlLiteral(label)}', null)
+    returning id, value, label, tenant_id
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one row.");
+  }
+  return {
+    operation: "inserted",
+    record: insertedRows[0],
+    inserted: true,
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const noGoReasons = [];
@@ -444,14 +522,27 @@ function main() {
     pushValidation(validations, "authorization.value", "PASS", "Authorization phrase validated.");
   }
 
-  if (args.executePilotWrite && !args.pilotEntity) {
+  const selectedPilotEntity = args.pilotEntity || null;
+  const expectedPilotAuthorization =
+    selectedPilotEntity === "product_types"
+      ? EXPECTED_PRODUCT_TYPES_PILOT_AUTHORIZATION
+      : EXPECTED_PILOT_AUTHORIZATION;
+
+  if (args.executePilotWrite && !selectedPilotEntity) {
     noGoReasons.push("--pilot-entity is required when --execute-pilot-write is used.");
     pushValidation(validations, "pilot.entity.flag", "FAIL", "--pilot-entity not provided in pilot mode.");
-  } else if (args.pilotEntity && args.pilotEntity !== EXPECTED_PILOT_ENTITY) {
-    noGoReasons.push(`Pilot entity is not allowed: ${args.pilotEntity} != ${EXPECTED_PILOT_ENTITY}`);
-    pushValidation(validations, "pilot.entity.value", "FAIL", "Only legal_entities is accepted as pilot entity.");
-  } else if (args.pilotEntity === EXPECTED_PILOT_ENTITY) {
+  } else if (selectedPilotEntity && !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
+    noGoReasons.push(`Pilot entity is not allowed: ${selectedPilotEntity}`);
+    pushValidation(
+      validations,
+      "pilot.entity.value",
+      "FAIL",
+      "Pilot entity must be legal_entities or product_types.",
+    );
+  } else if (selectedPilotEntity === "legal_entities") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as legal_entities.");
+  } else if (selectedPilotEntity === "product_types") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_types.");
   } else {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity not requested.");
   }
@@ -459,13 +550,22 @@ function main() {
   if (args.executePilotWrite && !args.pilotAuthorization) {
     noGoReasons.push("--pilot-authorization is required when --execute-pilot-write is used.");
     pushValidation(validations, "pilot.authorization.flag", "FAIL", "--pilot-authorization not provided in pilot mode.");
-  } else if (args.pilotAuthorization && args.pilotAuthorization !== EXPECTED_PILOT_AUTHORIZATION) {
+  } else if (args.pilotAuthorization && args.pilotAuthorization !== expectedPilotAuthorization) {
     noGoReasons.push("Pilot authorization phrase mismatch.");
     pushValidation(validations, "pilot.authorization.value", "FAIL", "Pilot authorization phrase is not exact.");
-  } else if (args.pilotAuthorization === EXPECTED_PILOT_AUTHORIZATION) {
+  } else if (args.pilotAuthorization === expectedPilotAuthorization) {
     pushValidation(validations, "pilot.authorization.value", "PASS", "Pilot authorization phrase validated.");
   } else {
     pushValidation(validations, "pilot.authorization.value", "PASS", "Pilot authorization not requested.");
+  }
+
+  if (selectedPilotEntity === "product_types" && !args.pilotPayload) {
+    noGoReasons.push("--pilot-payload is required when --pilot-entity product_types is used.");
+    pushValidation(validations, "pilot.payload.flag", "FAIL", "--pilot-payload not provided for product_types pilot.");
+  } else if (selectedPilotEntity === "product_types" && args.pilotPayload) {
+    pushValidation(validations, "pilot.payload.flag", "PASS", "--pilot-payload provided for product_types pilot.");
+  } else {
+    pushValidation(validations, "pilot.payload.flag", "PASS", "Pilot payload not required for this pilot entity.");
   }
 
   if (!args.batch) {
@@ -492,6 +592,14 @@ function main() {
   let writePlanParsed = false;
   let writePlanJson = null;
   const writePlanValidationErrors = [];
+  let pilotPayloadExists = false;
+  let pilotPayloadParsed = false;
+  let pilotPayloadJson = null;
+  const pilotPayloadValidationErrors = [];
+  let productTypesCountCurrent = null;
+  let productTypesValueCollisionCount = null;
+  let productTypesLabelCollisionCount = null;
+  let productTypesUniqueValuePresent = false;
 
   if (!args.input) {
     noGoReasons.push("--input is required.");
@@ -703,6 +811,178 @@ function main() {
     }
   }
 
+  if (selectedPilotEntity === "product_types") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.phase) {
+        pilotPayloadValidationErrors.push("phase mismatch");
+      }
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) {
+        pilotPayloadValidationErrors.push("targetRef mismatch");
+      }
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) {
+        pilotPayloadValidationErrors.push("targetName mismatch");
+      }
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) {
+        pilotPayloadValidationErrors.push("batchId mismatch");
+      }
+      if (!["GO", "PARCIAL"].includes(String(pilotPayloadJson?.decision || "").toUpperCase())) {
+        pilotPayloadValidationErrors.push("payload decision is not GO/PARCIAL");
+      }
+      const sourceOk =
+        typeof pilotPayloadJson?.payloadOrigin?.primarySource === "string" &&
+        pilotPayloadJson.payloadOrigin.primarySource.includes("phase-22g-r2-baseline-dry-run.mjs");
+      if (!sourceOk) {
+        pilotPayloadValidationErrors.push("payload origin source mismatch");
+      }
+      const sectionOk = String(pilotPayloadJson?.payloadOrigin?.section || "").includes("BASELINE_SIMULATION.product_types");
+      if (!sectionOk) {
+        pilotPayloadValidationErrors.push("payload origin section mismatch");
+      }
+
+      const frozenRecords = pilotPayloadJson?.frozenPayload?.records;
+      if (!Array.isArray(frozenRecords) || frozenRecords.length !== 1) {
+        pilotPayloadValidationErrors.push("frozen payload must contain exactly 1 record");
+      } else {
+        const [record] = frozenRecords;
+        if (pilotPayloadJson?.frozenPayload?.entity !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.entity) {
+          pilotPayloadValidationErrors.push("frozen payload entity mismatch");
+        }
+        if (record?.temp_key !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.temp_key) {
+          pilotPayloadValidationErrors.push("temp_key mismatch");
+        }
+        if (record?.value !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.value) {
+          pilotPayloadValidationErrors.push("value mismatch");
+        }
+        if (record?.label !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.label) {
+          pilotPayloadValidationErrors.push("label mismatch");
+        }
+        if (record?.tenant_id !== EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.tenant_id) {
+          pilotPayloadValidationErrors.push("tenant_id mismatch");
+        }
+        if (typeof record?.value !== "string" || record.value.trim().length === 0) {
+          pilotPayloadValidationErrors.push("value must be non-empty text");
+        }
+        if (typeof record?.label !== "string" || record.label.trim().length === 0) {
+          pilotPayloadValidationErrors.push("label must be non-empty text");
+        }
+      }
+
+      const tenantPolicyIsNull =
+        pilotPayloadJson?.tenantPolicy?.tenant_id === null &&
+        String(pilotPayloadJson?.tenantPolicy?.mode || "").toLowerCase().includes("null");
+      if (!tenantPolicyIsNull) {
+        pilotPayloadValidationErrors.push("tenant policy must be null scope");
+      }
+
+      const idempotencyByValue = String(pilotPayloadJson?.idempotencyRule?.key || "") === "value";
+      if (!idempotencyByValue) {
+        pilotPayloadValidationErrors.push("idempotency key must be value");
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const uniqueRows = runSupabaseDbQuery(`
+        select exists(
+          select 1
+          from pg_constraint c
+          join pg_class t on t.oid = c.conrelid
+          join pg_namespace n on n.oid = t.relnamespace
+          where n.nspname = 'public'
+            and t.relname = 'product_types'
+            and c.contype = 'u'
+            and pg_get_constraintdef(c.oid) ilike '%(value)%'
+        ) as has_unique_value
+      `);
+      productTypesUniqueValuePresent = uniqueRows[0]?.has_unique_value === true;
+      if (!productTypesUniqueValuePresent) {
+        noGoReasons.push("UNIQUE(value) was not found for public.product_types.");
+        pushValidation(validations, "pilot.product_types.unique_value", "FAIL", "UNIQUE(value) is required.");
+      } else {
+        pushValidation(validations, "pilot.product_types.unique_value", "PASS", "UNIQUE(value) validated.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate UNIQUE(value) for public.product_types.");
+      pushValidation(validations, "pilot.product_types.unique_value", "FAIL", "Failed to validate UNIQUE(value).");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery(
+        "select count(*)::bigint as total_rows from public.product_types",
+      );
+      productTypesCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.product_types.current_count", "PASS", "Current product_types count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.product_types.");
+      pushValidation(validations, "pilot.product_types.current_count", "FAIL", "Failed to read product_types count.");
+    }
+
+    const candidateValue = EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.label;
+    try {
+      const valueRows = runSupabaseDbQuery(
+        `select count(*)::bigint as value_count from public.product_types where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      productTypesValueCollisionCount = Number(valueRows[0]?.value_count ?? 0);
+      if (productTypesValueCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_types.value_collision",
+          "PASS",
+          "Value exists; idempotent payload match will be validated in pilot before/write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_types.value_collision", "PASS", "No value collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate value collision for product_types pilot payload.");
+      pushValidation(validations, "pilot.product_types.value_collision", "FAIL", "Failed to validate value collision.");
+    }
+
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_types where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      productTypesLabelCollisionCount = Number(labelRows[0]?.label_count ?? 0);
+      if (productTypesLabelCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_types.label_collision",
+          "PASS",
+          "Label exists; collision will be validated against value/idempotency in pilot before/write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_types.label_collision", "PASS", "No label collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate label collision for product_types pilot payload.");
+      pushValidation(validations, "pilot.product_types.label_collision", "FAIL", "Failed to validate label collision.");
+    }
+  }
+
   const preflightDecision = classifyDecision(noGoReasons, partialReasons);
   const notWritableEntities = [...new Set([...blockedEntitiesFound, ...referenceOnlyEntitiesFound])].sort();
 
@@ -796,13 +1076,26 @@ function main() {
 
   const armedWriteDecision = classifyDecision(armedNoGoReasons, armedPartialReasons);
 
-  const pilotOperation = {
-    entity: "legal_entities",
-    action: "upsert_pilot_planned",
-    executableIn22S: false,
-    realExecutionBlocked: true,
-    reason: "Hard stop final active; no database mutation allowed in 22S-R2",
-  };
+  const activePilotEntity = selectedPilotEntity || EXPECTED_PILOT_ENTITY;
+  const pilotOperation =
+    activePilotEntity === "product_types"
+      ? {
+          entity: "product_types",
+          action: "insert_pilot_planned",
+          value: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.value,
+          label: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.label,
+          tenant_id: null,
+          executableIn22AE: false,
+          realExecutionBlocked: true,
+          reason: "Hard stop final active; no database mutation allowed in 22AE-R2",
+        }
+      : {
+          entity: "legal_entities",
+          action: "upsert_pilot_planned",
+          executableIn22S: false,
+          realExecutionBlocked: true,
+          reason: "Hard stop final active; no database mutation allowed in 22S-R2",
+        };
 
   const pilotNoGoReasons = [];
   const pilotPartialReasons = [];
@@ -810,39 +1103,42 @@ function main() {
     ? writePlanJson.eligibleEntitiesForWrite
     : [];
   const writePlanOrder = Array.isArray(writePlanJson?.plannedWriteOrder) ? writePlanJson.plannedWriteOrder : [];
-  const legalEntityPlannedCount = Object.prototype.hasOwnProperty.call(plannedCountsByEntity, EXPECTED_PILOT_ENTITY)
-    ? plannedCountsByEntity[EXPECTED_PILOT_ENTITY]
+  const pilotPlannedCount = Object.prototype.hasOwnProperty.call(plannedCountsByEntity, activePilotEntity)
+    ? plannedCountsByEntity[activePilotEntity]
     : null;
-  const legalEntityTmpPrefixCount =
-    typeof writePlanJson?.batchTraceabilityStrategy?.tmpPrefixCounts?.[EXPECTED_PILOT_ENTITY] === "number"
-      ? writePlanJson.batchTraceabilityStrategy.tmpPrefixCounts[EXPECTED_PILOT_ENTITY]
+  const pilotTmpPrefixCount =
+    typeof writePlanJson?.batchTraceabilityStrategy?.tmpPrefixCounts?.[activePilotEntity] === "number"
+      ? writePlanJson.batchTraceabilityStrategy.tmpPrefixCounts[activePilotEntity]
       : null;
 
   if (!args.executePilotWrite) {
     pilotPartialReasons.push("Pilot execution flag is absent; pilot checks were not fully armed.");
   }
 
-  if (args.pilotEntity && args.pilotEntity !== EXPECTED_PILOT_ENTITY) {
-    pilotNoGoReasons.push("Pilot entity must be legal_entities.");
+  if (selectedPilotEntity && !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
+    pilotNoGoReasons.push("Pilot entity must be legal_entities or product_types.");
   }
-  if (args.pilotAuthorization && args.pilotAuthorization !== EXPECTED_PILOT_AUTHORIZATION) {
+  if (args.pilotAuthorization && args.pilotAuthorization !== expectedPilotAuthorization) {
     pilotNoGoReasons.push("Pilot authorization phrase is invalid.");
   }
 
   if (args.executePilotWrite) {
-    if (args.pilotEntity !== EXPECTED_PILOT_ENTITY) {
-      pilotNoGoReasons.push("Pilot mode armed without legal_entities as pilot.");
+    if (!selectedPilotEntity || !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
+      pilotNoGoReasons.push("Pilot mode armed without an allowed pilot entity.");
     }
-    if (args.pilotAuthorization !== EXPECTED_PILOT_AUTHORIZATION) {
+    if (args.pilotAuthorization !== expectedPilotAuthorization) {
       pilotNoGoReasons.push("Pilot mode armed without exact pilot authorization.");
+    }
+    if (selectedPilotEntity === "product_types" && (!args.pilotPayload || !pilotPayloadParsed)) {
+      pilotNoGoReasons.push("Pilot mode armed for product_types without validated --pilot-payload.");
     }
   }
 
-  if (!writePlanEligibleEntities.includes(EXPECTED_PILOT_ENTITY)) {
-    pilotNoGoReasons.push("legal_entities is missing from write plan eligible entities.");
+  if (!writePlanEligibleEntities.includes(activePilotEntity)) {
+    pilotNoGoReasons.push(`${activePilotEntity} is missing from write plan eligible entities.`);
   }
-  if (!executableEntitiesRoundOne22Q.includes(EXPECTED_PILOT_ENTITY)) {
-    pilotNoGoReasons.push("legal_entities is missing from first round executable entities.");
+  if (!executableEntitiesRoundOne22Q.includes(activePilotEntity)) {
+    pilotNoGoReasons.push(`${activePilotEntity} is missing from first round executable entities.`);
   }
   if (executableEntitiesRoundOne22Q.includes("profiles")) {
     pilotNoGoReasons.push("profiles must remain excluded from first round pilot.");
@@ -850,24 +1146,30 @@ function main() {
   if (executableEntitiesRoundOne22Q.includes("company_contacts")) {
     pilotNoGoReasons.push("company_contacts must remain excluded from first round pilot.");
   }
-  if (BLOCKED_ENTITIES.has(EXPECTED_PILOT_ENTITY)) {
-    pilotNoGoReasons.push("legal_entities cannot be blocked or transactional.");
+  if (BLOCKED_ENTITIES.has(activePilotEntity)) {
+    pilotNoGoReasons.push(`${activePilotEntity} cannot be blocked or transactional.`);
   }
-  if (writePlanOrder.length > 0 && !writePlanOrder.includes(EXPECTED_PILOT_ENTITY)) {
-    pilotNoGoReasons.push("legal_entities is missing from planned write order.");
+  if (writePlanOrder.length > 0 && !writePlanOrder.includes(activePilotEntity)) {
+    pilotNoGoReasons.push(`${activePilotEntity} is missing from planned write order.`);
   }
-  if (writePlanOrder.includes("profiles")) {
-    const legalIdx = writePlanOrder.indexOf(EXPECTED_PILOT_ENTITY);
+  if (activePilotEntity === EXPECTED_PILOT_ENTITY && writePlanOrder.includes("profiles")) {
+    const legalIdx = writePlanOrder.indexOf(activePilotEntity);
     const profilesIdx = writePlanOrder.indexOf("profiles");
     if (legalIdx > profilesIdx) {
-      pilotNoGoReasons.push("legal_entities appears after profiles in write order, violating pilot dependency rule.");
+      pilotNoGoReasons.push(`${activePilotEntity} appears after profiles in write order, violating pilot dependency rule.`);
     }
   }
   if (writePlanOrder.includes("company_contacts")) {
     pilotNoGoReasons.push("company_contacts must not appear in write order for pilot validation.");
   }
-  if (legalEntityPlannedCount === null) {
-    pilotPartialReasons.push("Planned count for legal_entities is unavailable.");
+  if (pilotPlannedCount === null) {
+    pilotPartialReasons.push(`Planned count for ${activePilotEntity} is unavailable.`);
+  }
+  if (selectedPilotEntity === "product_types" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("product_types pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "product_types" && productTypesUniqueValuePresent !== true) {
+    pilotNoGoReasons.push("product_types requires UNIQUE(value) for pilot.");
   }
 
   const pilotDecisionFinal = classifyDecision(pilotNoGoReasons, pilotPartialReasons);
@@ -880,6 +1182,8 @@ function main() {
     "EXECUÇÃO REAL BLOQUEADA NA FASE 22Q-R2. Operações montadas em memória, mas nenhuma mutação foi executada.";
   const phase22SHardStopMessage =
     "EXECUÇÃO PILOTO REAL BLOQUEADA NA FASE 22S-R2. legal_entities validada como piloto, mas nenhuma mutação foi executada.";
+  const phase22AFStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_types. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22TStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM legal_entities. EXECUÇÃO AMPLIADA BLOQUEADA.";
 
@@ -897,6 +1201,16 @@ function main() {
     expectedBatchId: EXPECTED_BATCH_ID,
     receivedBatchId: args.batch || null,
     authorizationValid: args.authorization === EXPECTED_AUTHORIZATION,
+    pilotAuthorizationValid: args.pilotAuthorization === expectedPilotAuthorization,
+    pilotEntity: selectedPilotEntity,
+    pilotPayloadPath: args.pilotPayload || null,
+    pilotPayloadExists,
+    pilotPayloadParsed,
+    pilotPayloadValidationErrors,
+    productTypesUniqueValuePresent,
+    productTypesCountCurrent,
+    productTypesValueCollisionCount,
+    productTypesLabelCollisionCount,
     inputProvided: args.input || null,
     inputExists,
     inputParsed,
@@ -1050,46 +1364,60 @@ function main() {
   };
   fs.writeFileSync(armedBeforePath, JSON.stringify(armedBefore, null, 2), "utf8");
 
-  const pilotEvidenceDir = path.resolve("artifacts/migration/phase-22s-r2-pilot-legal-entities");
+  const pilotEvidenceDir =
+    selectedPilotEntity === "product_types"
+      ? path.resolve("artifacts/migration/phase-22ae-r2-pilot-product-types")
+      : path.resolve("artifacts/migration/phase-22s-r2-pilot-legal-entities");
   fs.mkdirSync(pilotEvidenceDir, { recursive: true });
-  const pilotEvidencePath = path.join(pilotEvidenceDir, `pilot-legal-entities-${nowStamp()}.json`);
+  const pilotEvidencePath =
+    selectedPilotEntity === "product_types"
+      ? path.join(pilotEvidenceDir, `pilot-product-types-${nowStamp()}.json`)
+      : path.join(pilotEvidenceDir, `pilot-legal-entities-${nowStamp()}.json`);
   const pilotEvidence = {
-    phase: "22S-R2",
+    phase: selectedPilotEntity === "product_types" ? "22AE-R2" : "22S-R2",
     timestamp: new Date().toISOString(),
     targetRef: EXPECTED_TARGET_REF,
     targetName: EXPECTED_TARGET_NAME,
     batchId: EXPECTED_BATCH_ID,
     inputPath: args.input || null,
     writePlanPath: args.writePlan || null,
+    pilotPayloadPath: args.pilotPayload || null,
     generalAuthorizationValid: args.authorization === EXPECTED_AUTHORIZATION,
-    pilotAuthorizationValid: args.pilotAuthorization === EXPECTED_PILOT_AUTHORIZATION,
-    pilotEntity: args.pilotEntity || null,
-    pilotEntityValidated: args.pilotEntity === EXPECTED_PILOT_ENTITY,
-    legalEntitiesPlannedCount: legalEntityPlannedCount,
-    legalEntitiesTmpPrefixCount: legalEntityTmpPrefixCount,
+    pilotAuthorizationValid: args.pilotAuthorization === expectedPilotAuthorization,
+    pilotEntity: selectedPilotEntity,
+    pilotEntityValidated: selectedPilotEntity !== null && ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity),
+    pilotPayloadValidated:
+      selectedPilotEntity === "product_types" ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0 : null,
+    pilotPlannedCount,
+    pilotTmpPrefixCount,
+    productTypesCurrentCount: selectedPilotEntity === "product_types" ? productTypesCountCurrent : null,
+    productTypesValueCollisionCount: selectedPilotEntity === "product_types" ? productTypesValueCollisionCount : null,
+    productTypesLabelCollisionCount: selectedPilotEntity === "product_types" ? productTypesLabelCollisionCount : null,
+    productTypesUniqueValueValidated: selectedPilotEntity === "product_types" ? productTypesUniqueValuePresent : null,
     pilotOperation,
     pilotValidation: {
-      existsInWritePlanEligibleEntities: writePlanEligibleEntities.includes(EXPECTED_PILOT_ENTITY),
-      existsInFutureRoundOne: executableEntitiesRoundOne22Q.includes(EXPECTED_PILOT_ENTITY),
+      existsInWritePlanEligibleEntities: writePlanEligibleEntities.includes(activePilotEntity),
+      existsInFutureRoundOne: executableEntitiesRoundOne22Q.includes(activePilotEntity),
       noProfilesInFutureRoundOne: !executableEntitiesRoundOne22Q.includes("profiles"),
       noCompanyContactsInFutureRoundOne: !executableEntitiesRoundOne22Q.includes("company_contacts"),
-      nonTransactionalEntity: !BLOCKED_ENTITIES.has(EXPECTED_PILOT_ENTITY),
+      nonTransactionalEntity: !BLOCKED_ENTITIES.has(activePilotEntity),
       noQueueExecution: true,
       noExternalCalls: true,
-      dependencyOnProfiles: false,
-      dependencyOnCompanyContacts: false,
+      legalEntitiesWillNotBeTouchedAgain: selectedPilotEntity === "product_types",
+      salesRepsBlocked: true,
+      profilesExcluded: !executableEntitiesRoundOne22Q.includes("profiles"),
+      companyContactsExcluded: !executableEntitiesRoundOne22Q.includes("company_contacts"),
       batchTraceabilityAvailable:
         typeof writePlanJson?.batchTraceabilityStrategy?.batchId === "string" &&
         writePlanJson.batchTraceabilityStrategy.batchId === EXPECTED_BATCH_ID,
     },
     confirmations: {
-      profilesExcluded: !executableEntitiesRoundOne22Q.includes("profiles"),
-      companyContactsExcluded: !executableEntitiesRoundOne22Q.includes("company_contacts"),
       noTransactionalExecution: true,
       noQueueProcessing: true,
       noErpApiN8nWebhookCalls: true,
       realExecutionBlocked: true,
       noMutationExecuted: true,
+      noExpandedExecution: true,
     },
     preflightDecision,
     writePlanDecision: planDecision,
@@ -1100,264 +1428,221 @@ function main() {
       partialReasons: pilotPartialReasons,
     },
     hardStopTriggered: false,
-    finalHardStopMessage: phase22SHardStopMessage,
+    finalHardStopMessage: selectedPilotEntity === "product_types" ? phase22AFStopAfterPilotMessage : phase22SHardStopMessage,
   };
   fs.writeFileSync(pilotEvidencePath, JSON.stringify(pilotEvidence, null, 2), "utf8");
 
   const phase22TDir = path.resolve(PILOT_T_WRITE_DIR);
   fs.mkdirSync(phase22TDir, { recursive: true });
-  const phase22TBeforePath = path.join(phase22TDir, `before-${nowStamp()}.json`);
-  const phase22TAfterPath = path.join(phase22TDir, `after-${nowStamp()}.json`);
+  const phase22AFDir = path.resolve("artifacts/migration/phase-22af-r2-pilot-product-types-write");
+  fs.mkdirSync(phase22AFDir, { recursive: true });
+  let pilotWriteBeforePath = "not_generated";
+  let pilotWriteAfterPath = "not_generated";
+  let pilotWriteBeforeDecision = "GO";
+  let pilotWriteAfterDecision = "GO";
+  let pilotWriteOperation = "not_applicable";
+  let pilotWriteDelta = null;
+  let pilotWriteRecord = null;
+  let recordsAffected = [];
+  const legalPilotMode = selectedPilotEntity === "legal_entities";
+  const productTypesPilotMode = selectedPilotEntity === "product_types";
 
-  const pilotWriteNoGoReasons = [];
-  const pilotWritePartialReasons = [];
-  const pilotEntityFromArg = args.pilotEntity || null;
-  const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
-  const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_PILOT_AUTHORIZATION;
-  const pilotScopeOnlyEntity = EXPECTED_PILOT_ENTITY;
-  const excludedByScope = [
-    "profiles",
-    "user_tenants",
-    "user_legal_entities",
-    "sales_reps",
-    "user_sales_reps",
-    "product_types",
-    "product_groups",
-    "product_subgroups",
-    "product_families",
-    "product_classes",
-    "products",
-    "companies",
-    "contacts",
-    "company_contacts",
-  ];
-  const blockedExecutionFamilies = {
-    transactional: true,
-    queues: true,
-    integrations: true,
-  };
+  if (productTypesPilotMode) {
+    pilotWriteBeforePath = path.join(phase22AFDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22AFDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
 
-  if (!args.write) pilotWriteNoGoReasons.push("--write is required for real pilot execution in 22T-R2.");
-  if (!args.executePilotWrite) pilotWriteNoGoReasons.push("--execute-pilot-write is required for real pilot execution in 22T-R2.");
-  if (pilotEntityFromArg !== EXPECTED_PILOT_ENTITY) pilotWriteNoGoReasons.push("Pilot entity must be legal_entities.");
-  if (!generalAuthorizationValid) pilotWriteNoGoReasons.push("General authorization is invalid.");
-  if (!pilotAuthorizationValid) pilotWriteNoGoReasons.push("Pilot authorization is invalid.");
-  if (args.expectedTarget !== EXPECTED_TARGET_REF) pilotWriteNoGoReasons.push("Expected target flag mismatch.");
-  if (localTargetRef !== EXPECTED_TARGET_REF) pilotWriteNoGoReasons.push("Local target ref mismatch.");
-  if (localTargetName !== EXPECTED_TARGET_NAME) pilotWriteNoGoReasons.push("Local target name mismatch.");
-  if (args.batch !== EXPECTED_BATCH_ID) pilotWriteNoGoReasons.push("Batch mismatch.");
-  if (!inputExists || !inputParsed) pilotWriteNoGoReasons.push("Input was not validated.");
-  if (!writePlanExists || !writePlanParsed || writePlanValidationErrors.length > 0) {
-    pilotWriteNoGoReasons.push("Write plan was not validated.");
-  }
-  if (pilotDecisionFinal !== "GO") pilotWriteNoGoReasons.push("pilot_validation_decision is not GO.");
-  if (blockedEntitiesFound.length > 0) pilotWriteNoGoReasons.push("Blocked entities were detected.");
-  if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) {
-    pilotWriteNoGoReasons.push("Forbidden or unknown flags detected.");
-  }
-  if (executableEntitiesRoundOne22Q.includes("profiles")) pilotWriteNoGoReasons.push("profiles must be excluded.");
-  if (executableEntitiesRoundOne22Q.includes("company_contacts")) pilotWriteNoGoReasons.push("company_contacts must be excluded.");
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_PRODUCT_TYPES_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueValueValidated = productTypesUniqueValuePresent === true;
+    const candidateValue = EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.label;
 
-  const plannedPilotRecord = { ...PILOT_LEGAL_ENTITY_RECORD };
-  const pilotNaturalKey = {
-    tenant_id: plannedPilotRecord.tenant_id,
-    cnpj: plannedPilotRecord.cnpj,
-  };
-  let legalEntitiesCountBefore = null;
-  let legalEntitiesCountAfter = null;
-  let uniqueNaturalKeyConstraintFound = false;
-  let tenantExistsForPilot = false;
-  let writeAttempted = false;
-  let writeSucceeded = false;
-  let writeErrorMessage = null;
-  let upsertReturnedRows = [];
-
-  try {
-    const beforeRows = runSupabaseDbQuery("select count(*)::bigint as row_count from public.legal_entities");
-    legalEntitiesCountBefore = Number(beforeRows[0]?.row_count || 0);
-  } catch (error) {
-    pilotWriteNoGoReasons.push("Unable to read before count for legal_entities.");
-    writeErrorMessage = writeErrorMessage || (error instanceof Error ? error.message : String(error));
-  }
-
-  try {
-    const tenantRows = runSupabaseDbQuery(
-      `select exists(select 1 from public.tenants where id = '${escapeSqlLiteral(plannedPilotRecord.tenant_id)}'::uuid) as tenant_exists`,
-    );
-    tenantExistsForPilot = tenantRows[0]?.tenant_exists === true;
-    if (!tenantExistsForPilot) pilotWriteNoGoReasons.push("Pilot tenant_id does not exist in tenants.");
-  } catch (error) {
-    pilotWriteNoGoReasons.push("Unable to validate tenant_id existence.");
-    writeErrorMessage = writeErrorMessage || (error instanceof Error ? error.message : String(error));
-  }
-
-  try {
-    const constraintRows = runSupabaseDbQuery(`
-      select exists(
-        select 1
-        from pg_constraint c
-        join pg_class t on t.oid = c.conrelid
-        join pg_namespace n on n.oid = t.relnamespace
-        where n.nspname = 'public'
-          and t.relname = 'legal_entities'
-          and c.contype = 'u'
-          and pg_get_constraintdef(c.oid) ilike '%(tenant_id, cnpj)%'
-      ) as has_natural_key
-    `);
-    uniqueNaturalKeyConstraintFound = constraintRows[0]?.has_natural_key === true;
-    if (!uniqueNaturalKeyConstraintFound) {
-      pilotWriteNoGoReasons.push("Natural key (tenant_id, cnpj) is not available for safe idempotent upsert.");
-    }
-  } catch (error) {
-    pilotWriteNoGoReasons.push("Unable to validate natural key constraint for legal_entities.");
-    writeErrorMessage = writeErrorMessage || (error instanceof Error ? error.message : String(error));
-  }
-
-  if (legalEntityPlannedCount !== 1) {
-    pilotWritePartialReasons.push(`Planned count for legal_entities is ${legalEntityPlannedCount}; expected 1.`);
-  }
-
-  const beforeDecision22T = classifyDecision(pilotWriteNoGoReasons, pilotWritePartialReasons);
-  const beforeEvidence22T = {
-    phase: "22T-R2",
-    timestamp: new Date().toISOString(),
-    targetRef: EXPECTED_TARGET_REF,
-    targetName: EXPECTED_TARGET_NAME,
-    batchId: EXPECTED_BATCH_ID,
-    inputPath: args.input || null,
-    writePlanPath: args.writePlan || null,
-    pilotEntity: pilotEntityFromArg,
-    generalAuthorizationValid,
-    pilotAuthorizationValid,
-    legalEntitiesCountBefore,
-    plannedRecord: plannedPilotRecord,
-    naturalKey: pilotNaturalKey,
-    uniqueNaturalKeyConstraintFound,
-    tenantExistsForPilot,
-    plannedLegalEntitiesCount: legalEntityPlannedCount,
-    scopeConfirmation: {
-      singleEntityExecution: true,
-      allowedEntity: pilotScopeOnlyEntity,
-      excludedEntities: excludedByScope,
-      blockedFamilies: blockedExecutionFamilies,
-      profilesExcluded: true,
-      companyContactsExcluded: true,
-    },
-    beforeDecision: beforeDecision22T,
-    reasons: {
-      noGoReasons: pilotWriteNoGoReasons,
-      partialReasons: pilotWritePartialReasons,
-    },
-  };
-  fs.writeFileSync(phase22TBeforePath, JSON.stringify(beforeEvidence22T, null, 2), "utf8");
-
-  if (beforeDecision22T === "GO") {
+    let countBefore = null;
+    let existingByValue = [];
+    let labelCountBefore = null;
     try {
-      writeAttempted = true;
-      const upsertSql = `
-        insert into public.legal_entities (
-          tenant_id, name, trade_name, cnpj, erp_company_code, is_headquarters, active
-        )
-        values (
-          '${escapeSqlLiteral(plannedPilotRecord.tenant_id)}'::uuid,
-          '${escapeSqlLiteral(plannedPilotRecord.name)}',
-          '${escapeSqlLiteral(plannedPilotRecord.trade_name)}',
-          '${escapeSqlLiteral(plannedPilotRecord.cnpj)}',
-          '${escapeSqlLiteral(plannedPilotRecord.erp_company_code)}',
-          ${plannedPilotRecord.is_headquarters ? "true" : "false"},
-          ${plannedPilotRecord.active ? "true" : "false"}
-        )
-        on conflict (tenant_id, cnpj)
-        do update set
-          name = excluded.name,
-          trade_name = excluded.trade_name,
-          erp_company_code = excluded.erp_company_code,
-          is_headquarters = excluded.is_headquarters,
-          active = excluded.active,
-          updated_at = now()
-        returning id, tenant_id, name, cnpj, erp_company_code, created_at, updated_at
-      `;
-      upsertReturnedRows = runSupabaseDbQuery(upsertSql);
-      writeSucceeded = true;
-    } catch (error) {
-      writeErrorMessage = error instanceof Error ? error.message : String(error);
-      writeSucceeded = false;
+      const beforeRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_types");
+      countBefore = Number(beforeRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read product_types count before write.");
     }
-  }
-
-  try {
-    const afterRows = runSupabaseDbQuery("select count(*)::bigint as row_count from public.legal_entities");
-    legalEntitiesCountAfter = Number(afterRows[0]?.row_count || 0);
-  } catch (error) {
-    writeErrorMessage = writeErrorMessage || (error instanceof Error ? error.message : String(error));
-  }
-
-  const afterNoGoReasons22T = [];
-  const afterPartialReasons22T = [];
-  if (beforeDecision22T !== "GO") afterNoGoReasons22T.push("beforeDecision is not GO.");
-  if (beforeDecision22T === "GO" && !writeAttempted) afterNoGoReasons22T.push("Pilot write was not attempted despite before GO.");
-  if (writeAttempted && !writeSucceeded) afterNoGoReasons22T.push("Pilot write failed.");
-  if (writeSucceeded && upsertReturnedRows.length === 0) {
-    afterPartialReasons22T.push("Pilot write succeeded without returning affected rows.");
-  }
-  if (legalEntitiesCountBefore !== null && legalEntitiesCountAfter !== null) {
-    const delta = legalEntitiesCountAfter - legalEntitiesCountBefore;
-    if (delta < 0 || delta > 1) {
-      afterNoGoReasons22T.push(`Unexpected legal_entities delta: ${delta}.`);
+    try {
+      existingByValue = runSupabaseDbQuery(
+        `select id, value, label, tenant_id from public.product_types where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_types by value before write.");
     }
-  } else {
-    afterNoGoReasons22T.push("Unable to compute legal_entities delta.");
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_types where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      labelCountBefore = Number(labelRows[0]?.label_count || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_types by label before write.");
+    }
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for product_types pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for product_types pilot real execution.");
+    if (activePilotEntity !== "product_types") beforeNoGoReasons.push("Pilot entity must be product_types.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueValueValidated) beforeNoGoReasons.push("UNIQUE(value) is not validated for product_types.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if (existingByValue.length > 1) beforeNoGoReasons.push("More than one row found for product_types.value.");
+    if (existingByValue.length === 0 && (labelCountBefore ?? 0) > 0) {
+      beforeNoGoReasons.push("Label collision found without matching value for product_types pilot payload.");
+    }
+    if (executableEntitiesRoundOne22Q.includes("profiles")) beforeNoGoReasons.push("profiles must remain excluded.");
+    if (executableEntitiesRoundOne22Q.includes("company_contacts")) beforeNoGoReasons.push("company_contacts must remain excluded.");
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22AF = {
+      phase: "22AF-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "product_types",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: {
+        value: candidateValue,
+        label: candidateLabel,
+        tenant_id: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.tenant_id,
+        temp_key: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.temp_key,
+      },
+      productTypesCountBefore: countBefore,
+      lookupByValue: existingByValue,
+      lookupByLabelCount: labelCountBefore,
+      uniqueValueValidated,
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22AF, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeProductTypesPilotWrite({
+          value: candidateValue,
+          label: candidateLabel,
+          tenant_id: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.tenant_id,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          inserted: false,
+        };
+      }
+    }
+
+    let countAfter = null;
+    let rowsByValueAfter = [];
+    let duplicateByValueCount = null;
+    try {
+      const afterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_types");
+      countAfter = Number(afterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      rowsByValueAfter = runSupabaseDbQuery(
+        `select id, value, label, tenant_id from public.product_types where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {}
+    try {
+      const dupRows = runSupabaseDbQuery(
+        `select count(*)::bigint as duplicate_count from public.product_types where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      duplicateByValueCount = Number(dupRows[0]?.duplicate_count || 0);
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = rowsByValueAfter[0] || writeResult.record || null;
+    pilotWriteDelta = countAfter !== null && countBefore !== null ? countAfter - countBefore : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (!rowsByValueAfter.length) afterNoGoReasons.push("No row found by pilot value after execution.");
+    if ((duplicateByValueCount ?? 0) !== 1) afterNoGoReasons.push("Expected exactly one row for pilot value after execution.");
+    if (rowsByValueAfter.length === 1) {
+      const row = rowsByValueAfter[0];
+      if (row.value !== candidateValue) afterNoGoReasons.push("After value mismatch.");
+      if (row.label !== candidateLabel) afterNoGoReasons.push("After label mismatch.");
+      if (row.tenant_id !== null) afterNoGoReasons.push("After tenant_id must be null.");
+    }
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+
+    const afterEvidence22AF = {
+      phase: "22AF-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      productTypesCountAfter: countAfter,
+      delta: pilotWriteDelta,
+      recordByValue: rowsByValueAfter,
+      recordId: rowsByValueAfter[0]?.id || null,
+      value: candidateValue,
+      label: candidateLabel,
+      tenant_id: EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD.tenant_id,
+      uniqueValueDuplicateCount: duplicateByValueCount,
+      scopeConfirmation: {
+        singleEntityExecution: true,
+        touchedEntity: "product_types",
+        legalEntitiesTouchedAgain: false,
+        salesRepsTouched: false,
+        profilesTouched: false,
+        companyContactsTouched: false,
+        transactionalTouched: false,
+        queueTouched: false,
+        externalIntegrationsCalled: false,
+        expandedExecutionBlocked: true,
+      },
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22AFStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22AF, null, 2), "utf8");
+  } else if (legalPilotMode) {
+    pilotWriteBeforePath = path.join(phase22TDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22TDir, `after-${nowStamp()}.json`);
+    pilotWriteOperation = "legal_entities_branch_not_executed_in_22af";
+    pilotWriteRecord = null;
+    pilotWriteDelta = 0;
+    pilotWriteBeforeDecision = "PARCIAL";
+    pilotWriteAfterDecision = "PARCIAL";
   }
-
-  const afterDecision22T = classifyDecision(afterNoGoReasons22T, afterPartialReasons22T);
-  const legalEntitiesDelta =
-    legalEntitiesCountBefore !== null && legalEntitiesCountAfter !== null
-      ? legalEntitiesCountAfter - legalEntitiesCountBefore
-      : null;
-  const recordsAffected = upsertReturnedRows.map((row) => ({
-    id: row.id,
-    tenant_id: row.tenant_id,
-    name: row.name,
-    cnpj: row.cnpj,
-    erp_company_code: row.erp_company_code,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-  }));
-
-  const afterEvidence22T = {
-    phase: "22T-R2",
-    timestamp: new Date().toISOString(),
-    targetRef: EXPECTED_TARGET_REF,
-    targetName: EXPECTED_TARGET_NAME,
-    batchId: EXPECTED_BATCH_ID,
-    pilotEntityExecuted: writeSucceeded ? EXPECTED_PILOT_ENTITY : null,
-    operationExecuted: writeSucceeded ? "upsert_legal_entities_by_tenant_cnpj" : "no_write_executed",
-    legalEntitiesCountBefore,
-    legalEntitiesCountAfter,
-    legalEntitiesDelta,
-    recordsCreatedOrAffected: recordsAffected,
-    recordsAffectedCount: recordsAffected.length,
-    naturalKey: pilotNaturalKey,
-    scopeConfirmation: {
-      onlyLegalEntitiesTouched: writeSucceeded,
-      profilesTouched: false,
-      companyContactsTouched: false,
-      transactionalTouched: false,
-      queueTouched: false,
-      externalIntegrationsCalled: false,
-      expandedExecutionBlocked: true,
-    },
-    errors: writeErrorMessage ? [writeErrorMessage] : [],
-    writeAttempted,
-    writeSucceeded,
-    afterDecision: afterDecision22T,
-    reasons: {
-      noGoReasons: afterNoGoReasons22T,
-      partialReasons: afterPartialReasons22T,
-    },
-    finalMessage: phase22TStopAfterPilotMessage,
-  };
-  fs.writeFileSync(phase22TAfterPath, JSON.stringify(afterEvidence22T, null, 2), "utf8");
 
   console.log(`preflight_decision=${preflightDecision}`);
   console.log(`evidence_path=${evidencePath}`);
@@ -1366,16 +1651,28 @@ function main() {
   console.log(`armed_write_decision=${armedWriteDecision}`);
   console.log(`armed_before_path=${armedBeforePath}`);
   console.log(`pilot_validation_decision=${pilotDecisionFinal}`);
+  console.log(
+    `pilot_payload_validated=${
+      selectedPilotEntity === "product_types" ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0 : "not_applicable"
+    }`,
+  );
   console.log(`pilot_evidence_path=${pilotEvidencePath}`);
-  console.log(`pilot_write_before_decision=${beforeDecision22T}`);
-  console.log(`pilot_write_before_path=${phase22TBeforePath}`);
-  console.log(`pilot_write_after_decision=${afterDecision22T}`);
-  console.log(`pilot_write_after_path=${phase22TAfterPath}`);
+  console.log(`pilot_write_before_decision=${pilotWriteBeforeDecision}`);
+  console.log(`pilot_write_before_path=${pilotWriteBeforePath}`);
+  console.log(`pilot_write_after_decision=${pilotWriteAfterDecision}`);
+  console.log(`pilot_write_after_path=${pilotWriteAfterPath}`);
+  console.log(`pilot_write_operation=${pilotWriteOperation}`);
+  console.log(`pilot_write_delta=${pilotWriteDelta === null ? "n/a" : pilotWriteDelta}`);
+  console.log(`pilot_write_record_id=${pilotWriteRecord?.id || "n/a"}`);
   console.log(`pilot_write_records_affected=${recordsAffected.length}`);
   console.log(phase22OBlockingMessage);
   console.log(phase22QHardStopMessage);
-  console.log(phase22SHardStopMessage);
-  console.log(phase22TStopAfterPilotMessage);
+  console.log(selectedPilotEntity === "product_types" ? phase22AFStopAfterPilotMessage : phase22SHardStopMessage);
+  console.log(
+    selectedPilotEntity === "product_types"
+      ? phase22AFStopAfterPilotMessage
+      : phase22TStopAfterPilotMessage,
+  );
   console.log(writeStatusMessage);
 
   if (
@@ -1383,8 +1680,8 @@ function main() {
     planDecision === "NO-GO" ||
     armedWriteDecision === "NO-GO" ||
     pilotDecisionFinal === "NO-GO" ||
-    beforeDecision22T === "NO-GO" ||
-    afterDecision22T === "NO-GO"
+    pilotWriteBeforeDecision === "NO-GO" ||
+    pilotWriteAfterDecision === "NO-GO"
   ) {
     process.exit(1);
   }

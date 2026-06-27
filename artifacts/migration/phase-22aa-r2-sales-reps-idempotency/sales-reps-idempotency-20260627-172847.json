@@ -1,0 +1,175 @@
+{
+  "phase": "22AA-R2",
+  "timestamp": "2026-06-27T17:28:47-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "sources": {
+    "inputPath": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+    "writePlanPath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260626-224906.json",
+    "postPilotAuditPath": "artifacts/migration/phase-22u-r2-post-pilot-audit/post-pilot-audit-20260626-225314.json"
+  },
+  "payloadExtraction": {
+    "expectedSalesRepsCount": 2,
+    "foundInInputEntities": true,
+    "foundInWritePlan": true,
+    "lineByLinePayloadFound": false,
+    "extractedRecords": [],
+    "missingFieldsByRecord": [],
+    "gap": "Input and write plan contain counts/metadata only; no per-record payload for sales_reps."
+  },
+  "salesRepsSchema": {
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "is_nullable": false,
+        "column_default": "gen_random_uuid()"
+      },
+      {
+        "column_name": "name",
+        "data_type": "text",
+        "is_nullable": false,
+        "column_default": null
+      },
+      {
+        "column_name": "type",
+        "data_type": "text",
+        "is_nullable": true,
+        "column_default": "'interno'::text"
+      },
+      {
+        "column_name": "phone",
+        "data_type": "text",
+        "is_nullable": true,
+        "column_default": null
+      },
+      {
+        "column_name": "email",
+        "data_type": "text",
+        "is_nullable": true,
+        "column_default": null
+      },
+      {
+        "column_name": "active",
+        "data_type": "boolean",
+        "is_nullable": true,
+        "column_default": "true"
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "is_nullable": false,
+        "column_default": null
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "is_nullable": true,
+        "column_default": "now()"
+      },
+      {
+        "column_name": "erp_vendor_code",
+        "data_type": "integer",
+        "is_nullable": true,
+        "column_default": null
+      }
+    ],
+    "constraints": [
+      {
+        "name": "sales_reps_tenant_id_fkey",
+        "type": "f",
+        "definition": "FOREIGN KEY (tenant_id) REFERENCES tenants(id)"
+      },
+      {
+        "name": "sales_reps_pkey",
+        "type": "p",
+        "definition": "PRIMARY KEY (id)"
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sales_reps_pkey",
+        "is_unique": true,
+        "indexdef": "CREATE UNIQUE INDEX sales_reps_pkey ON public.sales_reps USING btree (id)"
+      },
+      {
+        "name": "idx_sales_reps_erp_vendor_code",
+        "is_unique": false,
+        "indexdef": "CREATE INDEX idx_sales_reps_erp_vendor_code ON public.sales_reps USING btree (erp_vendor_code)"
+      },
+      {
+        "name": "idx_sales_reps_tenant",
+        "is_unique": false,
+        "indexdef": "CREATE INDEX idx_sales_reps_tenant ON public.sales_reps USING btree (tenant_id)"
+      }
+    ]
+  },
+  "erpVendorCodeValidation": {
+    "columnType": "integer",
+    "nullable": true,
+    "uniqueConstraintTenantAndCode": false,
+    "recordsValidated": 0,
+    "recordsWithValidCode": 0,
+    "recordsWithMissingCode": 0,
+    "recordsWithTypeIncompatibility": 0,
+    "status": "FAIL",
+    "reason": "Cannot validate the two planned codes because per-record payload is unavailable."
+  },
+  "collisionChecks": {
+    "tableCurrentStats": {
+      "totalRows": 0,
+      "rowsWithNullErpVendorCode": 0
+    },
+    "duplicateTenantAndErpVendorCode": [],
+    "duplicateTenantAndName": [],
+    "duplicateTenantAndEmail": [],
+    "collisionsDetectedInCurrentData": false,
+    "note": "No rows currently exist in sales_reps; however, exact collision analysis for planned records is blocked by missing per-record payload."
+  },
+  "idempotencyAssessment": {
+    "safeKeyDefined": false,
+    "proposedKey": "tenant_id + erp_vendor_code",
+    "safeWithoutMigration": false,
+    "gaps": [
+      "No line-by-line payload for the two planned sales_reps records.",
+      "No UNIQUE (tenant_id, erp_vendor_code) constraint in current schema.",
+      "erp_vendor_code is nullable in current schema."
+    ]
+  },
+  "optionsEvaluated": {
+    "optionA_withoutMigration_lookupControlled": {
+      "feasibleNow": false,
+      "reason": "Missing record-level payload blocks deterministic lookup contract."
+    },
+    "optionB_createConstraintMigrationBeforeWrite": {
+      "feasibleNow": "out_of_scope",
+      "reason": "Could improve safety, but migration is prohibited in this phase."
+    },
+    "optionC_doNotAdvanceSalesRepsYet": {
+      "feasibleNow": true,
+      "reason": "Conservative option given critical payload/idempotency gaps."
+    }
+  },
+  "recommendedOption": "C",
+  "decision": "NO-GO",
+  "reasons": [
+    "Real payload for the two planned sales_reps records was not available in input/write plan.",
+    "erp_vendor_code validity cannot be proven record-by-record.",
+    "No unique business constraint exists for tenant_id + erp_vendor_code."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noErpApiWebhookN8n": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

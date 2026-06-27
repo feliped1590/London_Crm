@@ -1,0 +1,136 @@
+{
+  "phase": "22AD-R2",
+  "timestamp": "2026-06-27T18:04:36-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "payloadOrigin": {
+    "primarySource": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "section": "BASELINE_SIMULATION.product_types[0]",
+    "supportingEvidence": [
+      "docs/migration/phase-22ac-r2-product-aux-pilot-selection.md",
+      "artifacts/migration/phase-22ac-r2-product-aux-pilot-selection/product-aux-pilot-selection-20260627-173529.json"
+    ],
+    "rawSourceRecord": {
+      "temp_key": "TMP-22F-R2-PRODTYPE-01",
+      "code": "TMP-PT-001",
+      "name": "TMP Product Type"
+    },
+    "mappingRules": [
+      "value <- code (direct mapping, no transformation)",
+      "label <- name (direct mapping, no transformation)"
+    ]
+  },
+  "frozenPayload": {
+    "entity": "product_types",
+    "source": "baseline_simulation_22g_r2",
+    "records": [
+      {
+        "temp_key": "TMP-22F-R2-PRODTYPE-01",
+        "value": "TMP-PT-001",
+        "label": "TMP Product Type",
+        "tenant_id": null
+      }
+    ],
+    "optionalFieldsIncluded": [],
+    "ignoredFields": [
+      "id",
+      "sort_order",
+      "is_active",
+      "created_at",
+      "created_by"
+    ]
+  },
+  "tenantPolicy": {
+    "mode": "global_null_scope",
+    "tenant_id": null,
+    "decision": "GO",
+    "rationale": [
+      "Source payload has no tenant_id and no safe tenant mapping rule is documented for product_types.",
+      "product_types has UNIQUE (value), indicating global uniqueness by value at table level.",
+      "Read-only lookup confirms candidate value TMP-PT-001 does not exist in current restore-test data.",
+      "Using explicit tenant_id would not change uniqueness behavior because key is globally unique by value."
+    ]
+  },
+  "schemaSummary": {
+    "table": "public.product_types",
+    "columns": {
+      "value": {
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      "label": {
+        "type": "text",
+        "nullable": false,
+        "default": null
+      },
+      "tenant_id": {
+        "type": "uuid",
+        "nullable": true,
+        "default": null
+      }
+    },
+    "otherColumns": [
+      "id uuid not null default gen_random_uuid()",
+      "sort_order integer null default 0",
+      "is_active boolean null default true",
+      "created_at timestamptz null default now()",
+      "created_by uuid null"
+    ]
+  },
+  "constraintsValidation": {
+    "primaryKey": "PRIMARY KEY (id)",
+    "uniqueValue": {
+      "present": true,
+      "definition": "UNIQUE (value)"
+    },
+    "foreignKeys": [
+      "FOREIGN KEY (tenant_id) REFERENCES tenants(id)",
+      "FOREIGN KEY (created_by) REFERENCES auth.users(id)"
+    ]
+  },
+  "collisionValidation": {
+    "currentRowCount": 12,
+    "candidateValue": "TMP-PT-001",
+    "candidateLabel": "TMP Product Type",
+    "candidateValueCount": 0,
+    "candidateLabelCount": 0,
+    "hasCollision": false
+  },
+  "idempotencyRule": {
+    "key": "value",
+    "policy": [
+      "If value does not exist, future phase may INSERT one record.",
+      "If value exists and payload matches value+label+tenant_id policy, treat as idempotent (no-op).",
+      "If value exists and diverges from frozen payload, ABORT with NO-GO.",
+      "No DELETE, no CLEANUP, no automatic overwrite of divergent data."
+    ]
+  },
+  "humanGate": {
+    "pilotAuthorizationPhrase": "AUTORIZO A TERCEIRA ESCRITA PILOTO DA BASELINE 22AD-R2 SOMENTE EM product_types NO RESTORE-TEST nsnmlleplpzsefzkuxlb",
+    "documentedOnly": true
+  },
+  "decision": "GO",
+  "decisionReasons": [
+    "Payload was frozen with traceable origin and explicit mapping rules.",
+    "tenant_id policy was defined safely as null/global.",
+    "Schema and unique key validation support deterministic idempotency by value.",
+    "No current collision for candidate value/label in restore-test.",
+    "No write or executor change occurred in this phase."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

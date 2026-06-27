@@ -1,0 +1,26 @@
+{
+  "phase": "22AF-R2",
+  "timestamp": "2026-06-27T21:17:37.469Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "product_types",
+  "pilotPayloadPath": "artifacts/migration/phase-22ad-r2-product-types-pilot-prep/product-types-payload-20260627-180436.json",
+  "payloadUsed": {
+    "value": "TMP-PT-001",
+    "label": "TMP Product Type",
+    "tenant_id": null,
+    "temp_key": "TMP-22F-R2-PRODTYPE-01"
+  },
+  "productTypesCountBefore": 12,
+  "lookupByValue": [],
+  "lookupByLabelCount": 0,
+  "uniqueValueValidated": true,
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

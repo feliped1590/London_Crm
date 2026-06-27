@@ -1,0 +1,312 @@
+{
+  "phase": "22AC-R2",
+  "timestamp": "2026-06-27T17:35:29-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "sources": {
+    "inputPath": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+    "writePlanPath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260626-224906.json",
+    "payloadSourcePath": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "payloadSourceSection": "BASELINE_SIMULATION"
+  },
+  "candidates": [
+    {
+      "entity": "product_types",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLineAvailable": true,
+      "payloadRecords": [
+        {
+          "temp_key": "TMP-22F-R2-PRODTYPE-01",
+          "value": "TMP-PT-001",
+          "label": "TMP Product Type"
+        }
+      ],
+      "schemaSummary": {
+        "requiredColumns": [
+          "id",
+          "value",
+          "label"
+        ],
+        "optionalColumns": [
+          "sort_order",
+          "is_active",
+          "created_at",
+          "created_by",
+          "tenant_id"
+        ],
+        "primaryKey": "id",
+        "foreignKeys": [
+          "tenant_id -> tenants.id",
+          "created_by -> auth.users.id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "keyCandidate": "value (global unique)",
+        "tenantScopedKeyCandidate": "tenant_id + value"
+      },
+      "dependencies": {
+        "priorEntitiesRequired": [],
+        "writeOrderPosition": 1,
+        "canBeWrittenIsolated": true
+      },
+      "collisionChecks": {
+        "currentRows": 12,
+        "duplicateTenantAndValueDetected": false,
+        "duplicateTenantAndLabelDetected": false,
+        "candidateValueAlreadyExists": false,
+        "candidateLabelAlreadyExists": false
+      },
+      "riskLevel": "low"
+    },
+    {
+      "entity": "product_groups",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLineAvailable": true,
+      "payloadRecords": [
+        {
+          "temp_key": "TMP-22F-R2-PRODGROUP-01",
+          "value": "TMP-PG-001",
+          "label": "TMP Product Group"
+        }
+      ],
+      "schemaSummary": {
+        "requiredColumns": [
+          "id",
+          "value",
+          "label",
+          "dimension_profile",
+          "ficha_profile"
+        ],
+        "optionalColumns": [
+          "sort_order",
+          "is_active",
+          "created_at",
+          "created_by",
+          "tenant_id",
+          "is_printed",
+          "default_ncm_code"
+        ],
+        "primaryKey": "id",
+        "foreignKeys": [
+          "tenant_id -> tenants.id",
+          "created_by -> auth.users.id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "keyCandidate": "value (global unique)"
+      },
+      "dependencies": {
+        "priorEntitiesRequired": [],
+        "writeOrderPosition": 2,
+        "canBeWrittenIsolated": true
+      },
+      "collisionChecks": {
+        "currentRows": 21,
+        "duplicateTenantAndValueDetected": false,
+        "duplicateTenantAndLabelDetected": false,
+        "candidateValueAlreadyExists": false,
+        "candidateLabelAlreadyExists": false
+      },
+      "riskLevel": "medium",
+      "riskNotes": [
+        "Payload source does not provide required column values for dimension_profile/ficha_profile."
+      ]
+    },
+    {
+      "entity": "product_subgroups",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLineAvailable": true,
+      "payloadRecords": [
+        {
+          "temp_key": "TMP-22F-R2-PRODSUBGROUP-01",
+          "value": "TMP-PSG-001",
+          "label": "TMP Product Subgroup"
+        }
+      ],
+      "schemaSummary": {
+        "requiredColumns": [
+          "id",
+          "value",
+          "label"
+        ],
+        "optionalColumns": [
+          "sort_order",
+          "is_active",
+          "created_at",
+          "created_by",
+          "tenant_id"
+        ],
+        "primaryKey": "id",
+        "foreignKeys": [
+          "tenant_id -> tenants.id",
+          "created_by -> auth.users.id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "keyCandidate": "value (global unique)"
+      },
+      "dependencies": {
+        "priorEntitiesRequired": [
+          "product_groups (business ordering)"
+        ],
+        "writeOrderPosition": 3,
+        "canBeWrittenIsolated": true
+      },
+      "collisionChecks": {
+        "currentRows": 53,
+        "duplicateTenantAndValueDetected": false,
+        "duplicateTenantAndLabelDetected": false,
+        "candidateValueAlreadyExists": false,
+        "candidateLabelAlreadyExists": false
+      },
+      "riskLevel": "low"
+    },
+    {
+      "entity": "product_families",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLineAvailable": true,
+      "payloadRecords": [
+        {
+          "temp_key": "TMP-22F-R2-PRODFAMILY-01",
+          "value": "TMP-PF-001",
+          "label": "TMP Product Family"
+        }
+      ],
+      "schemaSummary": {
+        "requiredColumns": [
+          "id",
+          "value",
+          "label",
+          "sort_order",
+          "is_active",
+          "created_at"
+        ],
+        "optionalColumns": [
+          "tenant_id"
+        ],
+        "primaryKey": "id",
+        "foreignKeys": [
+          "tenant_id -> tenants.id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "keyCandidate": "value (global unique)"
+      },
+      "dependencies": {
+        "priorEntitiesRequired": [
+          "product_subgroups (business ordering)"
+        ],
+        "writeOrderPosition": 4,
+        "canBeWrittenIsolated": true
+      },
+      "collisionChecks": {
+        "currentRows": 6,
+        "duplicateTenantAndValueDetected": false,
+        "duplicateTenantAndLabelDetected": false,
+        "candidateValueAlreadyExists": false,
+        "candidateLabelAlreadyExists": false
+      },
+      "riskLevel": "low"
+    },
+    {
+      "entity": "product_classes",
+      "presentInInput": true,
+      "presentInWritePlan": true,
+      "plannedCountInput": 1,
+      "plannedCountWritePlan": 1,
+      "payloadLineByLineAvailable": true,
+      "payloadRecords": [
+        {
+          "temp_key": "TMP-22F-R2-PRODCLASS-01",
+          "value": "TMP-PC-001",
+          "label": "TMP Product Class"
+        }
+      ],
+      "schemaSummary": {
+        "requiredColumns": [
+          "id",
+          "value",
+          "label",
+          "sort_order",
+          "is_active",
+          "created_at"
+        ],
+        "optionalColumns": [
+          "tenant_id"
+        ],
+        "primaryKey": "id",
+        "foreignKeys": [
+          "tenant_id -> tenants.id"
+        ],
+        "uniqueConstraints": [
+          "UNIQUE (value)"
+        ],
+        "keyCandidate": "value (global unique)"
+      },
+      "dependencies": {
+        "priorEntitiesRequired": [
+          "product_families (business ordering)"
+        ],
+        "writeOrderPosition": 5,
+        "canBeWrittenIsolated": true
+      },
+      "collisionChecks": {
+        "currentRows": 10,
+        "duplicateTenantAndValueDetected": false,
+        "duplicateTenantAndLabelDetected": false,
+        "candidateValueAlreadyExists": false,
+        "candidateLabelAlreadyExists": false
+      },
+      "riskLevel": "low"
+    }
+  ],
+  "recommendedEntity": "product_types",
+  "justification": [
+    "Lowest dependency surface among auxiliary product candidates.",
+    "Planned count is minimal (1).",
+    "Line-by-line payload exists in baseline simulation source.",
+    "Unique constraint on value enables deterministic lookup strategy.",
+    "No current collision for candidate value/label in restore-test."
+  ],
+  "remainingRisks": [
+    "Payload source is simulation-derived and should be frozen in a dedicated pilot payload artifact before execution.",
+    "tenant_id is nullable and absent in current source record; tenant policy must be explicit in execution-prep phase."
+  ],
+  "decision": "GO",
+  "reasons": [
+    "A safer auxiliary candidate was identified with explicit row payload and low dependency profile.",
+    "Read-only checks show deterministic unique key path and no current collisions for candidate values.",
+    "No write, migration, or executor change occurred."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noErpApiWebhookN8n": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

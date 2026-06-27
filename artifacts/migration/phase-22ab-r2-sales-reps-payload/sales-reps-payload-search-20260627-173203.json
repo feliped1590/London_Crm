@@ -1,0 +1,117 @@
+{
+  "phase": "22AB-R2",
+  "timestamp": "2026-06-27T17:32:03-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "searchScope": {
+    "locations": [
+      "artifacts/migration/",
+      "docs/migration/",
+      "scripts/migration/"
+    ],
+    "keywords": [
+      "sales_reps",
+      "erp_vendor_code",
+      "vendor",
+      "vendedor",
+      "sales rep",
+      "baseline_22f_r2_restore_test_qualyvac"
+    ]
+  },
+  "filesAnalyzed": [
+    "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+    "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260626-224906.json",
+    "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "docs/migration/phase-22f-r2-baseline-exact-data-spec.md",
+    "docs/migration/phase-22g-r2-baseline-dry-run.md",
+    "docs/migration/phase-22h-r2-controlled-write-gate.md"
+  ],
+  "findings": {
+    "inputAndWritePlan": {
+      "salesRepsPresent": true,
+      "plannedCount": 2,
+      "lineByLinePayloadPresent": false,
+      "details": "Input and write plan expose entity presence/count only, without per-record rows."
+    },
+    "partialSourceFromSpec22F": {
+      "found": true,
+      "records": [
+        {
+          "logical_key": "TMP-22F-R2-SREP-001",
+          "name": "Vendedor Interno 01",
+          "erp_vendor_code_raw": "SR-ERP-001"
+        },
+        {
+          "logical_key": "TMP-22F-R2-SREP-002",
+          "name": "Vendedor Interno 02",
+          "erp_vendor_code_raw": "SR-ERP-002"
+        }
+      ],
+      "gaps": [
+        "Missing tenant_id",
+        "ERP code format appears textual and not integer-compatible"
+      ]
+    },
+    "partialSourceFromDryRunScriptSimulation": {
+      "found": true,
+      "records": [
+        {
+          "temp_key": "TMP-22F-R2-SALESREP-01",
+          "code_raw": "TMP-SR-001",
+          "profile_temp_key": "TMP-22F-R2-PROFILE-SALESREP"
+        },
+        {
+          "temp_key": "TMP-22F-R2-SALESREP-02",
+          "code_raw": "TMP-SR-002",
+          "profile_temp_key": "TMP-22F-R2-PROFILE-SALESOPS"
+        }
+      ],
+      "gaps": [
+        "Missing tenant_id",
+        "Missing explicit name",
+        "Code format appears textual and not integer-compatible"
+      ],
+      "note": "This is simulation data for dry-run preparation, not confirmed final write payload."
+    }
+  },
+  "originClassification": {
+    "strongOriginFound": false,
+    "partialOriginsFound": true,
+    "classification": "origem_parcial",
+    "reason": "No single traceable source contains the two records with tenant_id + name + integer-compatible erp_vendor_code."
+  },
+  "schemaValidationReference": {
+    "erp_vendor_code_type": "integer",
+    "erp_vendor_code_nullable": true,
+    "unique_tenant_and_vendor_code_constraint": false
+  },
+  "collisionChecks": {
+    "totalRowsSalesReps": 0,
+    "duplicateTenantAndErpVendorCodeRows": 0,
+    "duplicateTenantAndNameRows": 0,
+    "duplicateTenantAndEmailRows": 0,
+    "note": "No current collisions in table state, but planned payload collisions cannot be validated without strong payload origin."
+  },
+  "gaps": [
+    "Payload line-by-line not present in latest.json/write-plan artifacts.",
+    "No source with tenant_id + name + erp_vendor_code for both planned records.",
+    "Candidate ERP codes found are textual and not directly compatible with integer schema."
+  ],
+  "decision": "NO-GO",
+  "recommendation": "Create a dedicated, traceable baseline payload artifact for sales_reps with exact tenant_id, name and integer erp_vendor_code values sourced from approved baseline definition before any execution-prep phase.",
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noErpApiWebhookN8n": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

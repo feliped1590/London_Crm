@@ -1,0 +1,41 @@
+{
+  "phase": "22AF-R2",
+  "timestamp": "2026-06-27T21:17:56.117Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationExecuted": "inserted",
+  "productTypesCountAfter": 13,
+  "delta": 1,
+  "recordByValue": [
+    {
+      "id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "label": "TMP Product Type",
+      "tenant_id": null,
+      "value": "TMP-PT-001"
+    }
+  ],
+  "recordId": "522d0e75-641f-4161-bd41-94ebd50e8158",
+  "value": "TMP-PT-001",
+  "label": "TMP Product Type",
+  "tenant_id": null,
+  "uniqueValueDuplicateCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "touchedEntity": "product_types",
+    "legalEntitiesTouchedAgain": false,
+    "salesRepsTouched": false,
+    "profilesTouched": false,
+    "companyContactsTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true
+  },
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_types. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

@@ -1,0 +1,99 @@
+{
+  "phase": "22AG-R2",
+  "timestamp": "2026-06-27T18:21:25-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "evidenceSources": {
+    "phase22afDoc": "docs/migration/phase-22af-r2-pilot-product-types-write.md",
+    "phase22aeDoc": "docs/migration/phase-22ae-r2-pilot-product-types-hard-stop.md",
+    "phase22adDoc": "docs/migration/phase-22ad-r2-product-types-pilot-prep.md",
+    "phase22uDoc": "docs/migration/phase-22u-r2-post-pilot-audit.md",
+    "executorPath": "scripts/migration/phase-22k-r2-baseline-write.mjs",
+    "before22af": "artifacts/migration/phase-22af-r2-pilot-product-types-write/before-20260627-181728.json",
+    "after22af": "artifacts/migration/phase-22af-r2-pilot-product-types-write/after-20260627-181728.json",
+    "payload22ad": "artifacts/migration/phase-22ad-r2-product-types-pilot-prep/product-types-payload-20260627-180436.json",
+    "phase22aeEvidenceLatestApplied": "artifacts/migration/phase-22ae-r2-pilot-product-types/pilot-product-types-20260627-181728.json"
+  },
+  "expectedRecord": {
+    "id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+    "value": "TMP-PT-001",
+    "label": "TMP Product Type",
+    "tenant_id": null
+  },
+  "lookupValidation": {
+    "byIdCount": 1,
+    "byValueCount": 1,
+    "byLabelCount": 1,
+    "recordFound": {
+      "id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "value": "TMP-PT-001",
+      "label": "TMP Product Type",
+      "tenant_id": null
+    }
+  },
+  "idempotencyValidation": {
+    "uniqueValuePresent": true,
+    "countByValue": 1,
+    "duplicateByValue": false,
+    "divergenceCountSameValue": 0,
+    "expectedIfReexecuted": "idempotent_noop"
+  },
+  "deltaValidation": {
+    "beforeTotal": 12,
+    "afterTotal": 13,
+    "currentTotal": 13,
+    "deltaBeforeAfter": 1,
+    "deltaAfterCurrent": 0,
+    "coherent": true
+  },
+  "negativeScopeValidation": {
+    "legal_entities": 1,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "companies": 0,
+    "contacts": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0,
+    "notApplicableTables": []
+  },
+  "executorGuardsValidation": {
+    "executorChangedIn22AGR2": false,
+    "pilotAllowedEntitiesLimitedToLegalEntitiesAndProductTypes": true,
+    "salesRepsBlockedAsPilot": true,
+    "profilesExcludedFromPilotRound": true,
+    "companyContactsReferenceOnly": true,
+    "hardStopProductTypesPresent": true,
+    "expandedExecutionAutomaticallyBlocked": true,
+    "forbiddenFlagsStillBlocked": true,
+    "bypassFlagsDetected": false
+  },
+  "decision": "GO",
+  "reasons": [
+    "Registro piloto existe e confere exatamente com payload esperado.",
+    "Cardinalidade por value e 1, sem duplicidade e sem divergencia.",
+    "Delta da 22AF-R2 permanece coerente: 12 -> 13 -> 13.",
+    "Escopo negativo permanece estavel nas entidades nao permitidas.",
+    "Guard rails do executor permanecem ativos sem bypass."
+  ],
+  "confirmations": {
+    "noNewDbWrite": true,
+    "noSqlWriteExecuted": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}
