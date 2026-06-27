@@ -1,3 +1,13 @@
+> ERRATA / INVALIDAÇÃO DE TARGET
+>
+> Este documento foi gerado com base no projeto Supabase `nazymjfzjadfgovcfivs`, posteriormente confirmado como projeto não pertencente à migração atual.
+>
+> Portanto, os achados deste documento não devem ser usados para decisão de carga da migração Qualyvac atual.
+>
+> A auditoria 22D deve ser refeita no target correto:
+> - restore-test: `nsnmlleplpzsefzkuxlb` / `crm-qualyvac-restore-test`
+> - staging: `cansbrrwrprcycjvgvqm` / `crm-qualyvac-staging`, apenas quando autorizado.
+
 # Fase 22D — Saneamento e mapeamento read-only das chaves ERP e vínculos mínimos
 
 ## 1. Resumo e contexto de execução
