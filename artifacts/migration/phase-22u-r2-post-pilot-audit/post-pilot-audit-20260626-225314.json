@@ -1,0 +1,134 @@
+{
+  "phase": "22U-R2",
+  "timestamp": "2026-06-27T01:53:14.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "pilotRecordExpected": {
+    "id": "973a686d-e87f-4114-9d1d-455ed80a92de",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "cnpj": "TMP-CNPJ-LE-0001",
+    "erp_company_code": "TMP-LE-001",
+    "name": "Qualyvac Baseline LE"
+  },
+  "pilotRecordReadResult": {
+    "exact_match_count": 1,
+    "record_found": true,
+    "record": {
+      "id": "973a686d-e87f-4114-9d1d-455ed80a92de",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "cnpj": "TMP-CNPJ-LE-0001",
+      "erp_company_code": "TMP-LE-001",
+      "name": "Qualyvac Baseline LE",
+      "created_at": "2026-06-27 01:49:21.735153+00",
+      "updated_at": "2026-06-27 01:49:21.735153+00"
+    }
+  },
+  "currentCounts": {
+    "legal_entities": 1,
+    "profiles": 1,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "sales_reps": 0,
+    "user_sales_reps": 0,
+    "product_types": 12,
+    "product_groups": 21,
+    "product_subgroups": 53,
+    "product_families": 6,
+    "product_classes": 10,
+    "products": 0,
+    "companies": 0,
+    "contacts": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "beforeAfterCurrentComparison": {
+    "before_evidence_22t": 0,
+    "after_evidence_22t": 1,
+    "current_read_only_count": 1,
+    "delta_from_before_to_after": 1,
+    "delta_from_after_to_current": 0,
+    "coherent": true
+  },
+  "tenantValidation": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "tenant_exists": true
+  },
+  "naturalKeyValidation": {
+    "natural_key": [
+      "tenant_id",
+      "cnpj"
+    ],
+    "natural_key_constraint_present": true,
+    "constraint_name": "uq_legal_entities_tenant_cnpj",
+    "natural_key_count": 1,
+    "distinct_ids_for_natural_key": 1,
+    "duplicate_detected": false
+  },
+  "duplicateValidation": {
+    "same_tenant_same_cnpj_count": 1,
+    "status": "unique_for_target_tenant"
+  },
+  "unexpectedDependencyValidation": {
+    "user_legal_entities_refs": 0,
+    "companies_refs": 0,
+    "products_refs": 0,
+    "unexpected_dependencies_found": false
+  },
+  "negativeScopeValidation": {
+    "checked_tables": {
+      "profiles": "not_touched",
+      "user_tenants": "not_touched",
+      "user_legal_entities": "not_touched",
+      "sales_reps": "not_touched",
+      "user_sales_reps": "not_touched",
+      "product_types": "not_touched_by_22T",
+      "product_groups": "not_touched_by_22T",
+      "product_subgroups": "not_touched_by_22T",
+      "product_families": "not_touched_by_22T",
+      "product_classes": "not_touched_by_22T",
+      "products": "not_touched",
+      "companies": "not_touched",
+      "contacts": "not_touched",
+      "deals": "not_touched",
+      "orders": "not_touched",
+      "order_items": "not_touched",
+      "proposals": "not_touched",
+      "audit_logs": "not_touched",
+      "notifications": "not_touched"
+    },
+    "not_applicable": [
+      "company_contacts",
+      "sync_queues",
+      "erp_sync",
+      "webhooks",
+      "n8n",
+      "sessions",
+      "attachments"
+    ],
+    "not_checked": []
+  },
+  "idempotencyAssessment": {
+    "reexecution_performed": false,
+    "idempotency_mechanism_reviewed": true,
+    "on_conflict_clause_present": true,
+    "on_conflict_key": "tenant_id, cnpj",
+    "natural_key_unique_constraint_present": true,
+    "delete_cleanup_detected_in_pilot_path": false,
+    "assessment": "acceptable_for_next_phase"
+  },
+  "executorExpandedExecutionBlocked": true,
+  "decision": "GO",
+  "decisionReasons": [
+    "Pilot record exists and matches planned values.",
+    "Current count remains coherent with 22T before/after evidence.",
+    "Tenant and natural key validations are valid and unique.",
+    "No unexpected dependencies were created.",
+    "Negative scope validation shows no additional touched entities.",
+    "Executor still enforces scoped pilot behavior and expanded execution block."
+  ]
+}

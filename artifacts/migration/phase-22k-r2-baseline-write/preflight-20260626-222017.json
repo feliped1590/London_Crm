@@ -1,0 +1,118 @@
+{
+  "phase": "22K-R2",
+  "timestamp": "2026-06-27T01:20:17.138Z",
+  "expectedTargetRef": "nsnmlleplpzsefzkuxlb",
+  "expectedTargetName": "crm-qualyvac-restore-test",
+  "localTargetRef": "nsnmlleplpzsefzkuxlb",
+  "localTargetName": "crm-qualyvac-restore-test",
+  "expectedBatchId": "baseline_22f_r2_restore_test_qualyvac",
+  "receivedBatchId": "baseline_22f_r2_restore_test_qualyvac",
+  "authorizationValid": true,
+  "inputProvided": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+  "inputExists": false,
+  "inputParsed": false,
+  "entitiesFound": [],
+  "allowedEntities": [
+    "companies",
+    "contacts",
+    "legal_entities",
+    "product_classes",
+    "product_families",
+    "product_groups",
+    "product_subgroups",
+    "product_types",
+    "products",
+    "profiles",
+    "sales_reps",
+    "user_legal_entities",
+    "user_sales_reps",
+    "user_tenants"
+  ],
+  "blockedEntities": [
+    "attachments",
+    "audit_logs",
+    "company_contacts",
+    "deal_stage_history",
+    "deals",
+    "erp_sync",
+    "n8n",
+    "notifications",
+    "order_items",
+    "orders",
+    "proposal_items",
+    "proposals",
+    "sales_proposal_items",
+    "sales_proposals",
+    "sessions",
+    "sync_queues",
+    "webhooks"
+  ],
+  "blockedEntitiesFound": [],
+  "outsideWhitelistFound": [],
+  "receivedFlags": [
+    "--expected-target",
+    "--batch",
+    "--authorization",
+    "--input",
+    "--write"
+  ],
+  "forbiddenFlagsFound": [],
+  "unknownFlagsFound": [],
+  "validations": [
+    {
+      "key": "flags.forbidden",
+      "status": "PASS",
+      "detail": "No forbidden flags detected."
+    },
+    {
+      "key": "flags.unknown",
+      "status": "PASS",
+      "detail": "Only allowed flags were used."
+    },
+    {
+      "key": "target.project_ref_file",
+      "status": "PASS",
+      "detail": "supabase/.temp/project-ref found."
+    },
+    {
+      "key": "target.project_ref_value",
+      "status": "PASS",
+      "detail": "Local project-ref matches expected target."
+    },
+    {
+      "key": "target.project_name_value",
+      "status": "PASS",
+      "detail": "Local project name matches expected name."
+    },
+    {
+      "key": "target.expected_target_flag",
+      "status": "PASS",
+      "detail": "--expected-target validated."
+    },
+    {
+      "key": "authorization.value",
+      "status": "PASS",
+      "detail": "Authorization phrase validated."
+    },
+    {
+      "key": "batch.value",
+      "status": "PASS",
+      "detail": "Batch id validated."
+    },
+    {
+      "key": "input.exists",
+      "status": "FAIL",
+      "detail": "Input file was not found."
+    }
+  ],
+  "gaps": [],
+  "decision": "NO-GO",
+  "reasons": {
+    "noGoReasons": [
+      "Input file does not exist: artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json"
+    ],
+    "partialReasons": []
+  },
+  "writeFunctionalEnabled": false,
+  "message": "WRITE FUNCIONAL AINDA DESABILITADO NA FASE 22K-R2."
+}

@@ -1,0 +1,61 @@
+{
+  "phase": "22T-R2",
+  "timestamp": "2026-06-27T01:49:23.317Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "inputPath": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+  "writePlanPath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260626-224501.json",
+  "pilotEntity": "legal_entities",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "legalEntitiesCountBefore": 0,
+  "plannedRecord": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "name": "Qualyvac Baseline LE",
+    "trade_name": "Qualyvac Baseline LE",
+    "cnpj": "TMP-CNPJ-LE-0001",
+    "erp_company_code": "TMP-LE-001",
+    "is_headquarters": true,
+    "active": true
+  },
+  "naturalKey": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "cnpj": "TMP-CNPJ-LE-0001"
+  },
+  "uniqueNaturalKeyConstraintFound": true,
+  "tenantExistsForPilot": true,
+  "plannedLegalEntitiesCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "allowedEntity": "legal_entities",
+    "excludedEntities": [
+      "profiles",
+      "user_tenants",
+      "user_legal_entities",
+      "sales_reps",
+      "user_sales_reps",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "products",
+      "companies",
+      "contacts",
+      "company_contacts"
+    ],
+    "blockedFamilies": {
+      "transactional": true,
+      "queues": true,
+      "integrations": true
+    },
+    "profilesExcluded": true,
+    "companyContactsExcluded": true
+  },
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

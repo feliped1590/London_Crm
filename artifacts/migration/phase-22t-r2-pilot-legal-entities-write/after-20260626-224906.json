@@ -1,0 +1,46 @@
+{
+  "phase": "22T-R2",
+  "timestamp": "2026-06-27T01:49:29.624Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "pilotEntityExecuted": "legal_entities",
+  "operationExecuted": "upsert_legal_entities_by_tenant_cnpj",
+  "legalEntitiesCountBefore": 0,
+  "legalEntitiesCountAfter": 1,
+  "legalEntitiesDelta": 1,
+  "recordsCreatedOrAffected": [
+    {
+      "id": "973a686d-e87f-4114-9d1d-455ed80a92de",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "name": "Qualyvac Baseline LE",
+      "cnpj": "TMP-CNPJ-LE-0001",
+      "erp_company_code": "TMP-LE-001",
+      "created_at": "2026-06-27 01:49:21.735153+00",
+      "updated_at": "2026-06-27 01:49:21.735153+00"
+    }
+  ],
+  "recordsAffectedCount": 1,
+  "naturalKey": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "cnpj": "TMP-CNPJ-LE-0001"
+  },
+  "scopeConfirmation": {
+    "onlyLegalEntitiesTouched": true,
+    "profilesTouched": false,
+    "companyContactsTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true
+  },
+  "errors": [],
+  "writeAttempted": true,
+  "writeSucceeded": true,
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM legal_entities. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

@@ -1,0 +1,449 @@
+{
+  "timestamp": "2026-06-27T01:05:35.559Z",
+  "branch": "main",
+  "git_status": "?? docs/migration/phase-22g-r2-baseline-dry-run.md\n?? scripts/migration/",
+  "expected_target": "nsnmlleplpzsefzkuxlb",
+  "linked_target": "nsnmlleplpzsefzkuxlb",
+  "linked_target_name": "crm-qualyvac-restore-test",
+  "batch_id": "baseline_22f_r2_restore_test_qualyvac",
+  "dry_run": true,
+  "baseline_entities": [
+    "legal_entities",
+    "profiles",
+    "sales_reps",
+    "user_tenants",
+    "user_legal_entities",
+    "user_sales_reps",
+    "companies",
+    "contacts",
+    "company_contacts",
+    "product_types",
+    "product_groups",
+    "product_subgroups",
+    "product_families",
+    "product_classes",
+    "products"
+  ],
+  "simulated_records_count": {
+    "legal_entities": 1,
+    "profiles": 3,
+    "sales_reps": 2,
+    "user_tenants": 3,
+    "user_legal_entities": 3,
+    "user_sales_reps": 2,
+    "companies": 5,
+    "contacts": 5,
+    "company_contacts": 1,
+    "product_types": 1,
+    "product_groups": 1,
+    "product_subgroups": 1,
+    "product_families": 1,
+    "product_classes": 1,
+    "products": 5
+  },
+  "schema_validation": {
+    "found_tables": [
+      "companies",
+      "contacts",
+      "legal_entities",
+      "product_classes",
+      "product_families",
+      "product_groups",
+      "product_subgroups",
+      "product_types",
+      "products",
+      "profiles",
+      "sales_reps",
+      "user_legal_entities",
+      "user_sales_reps",
+      "user_tenants"
+    ],
+    "missing_tables": [],
+    "optional_missing_tables": [
+      "company_contacts"
+    ],
+    "column_checks": {
+      "legal_entities": {
+        "label_field": "name",
+        "code_field": "erp_company_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "profiles": {
+        "label_field": "full_name",
+        "code_field": "erp_user_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "sales_reps": {
+        "label_field": "name",
+        "code_field": "erp_vendor_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "user_tenants": {
+        "label_field": "role",
+        "code_field": null,
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "user_legal_entities": {
+        "label_field": "role",
+        "code_field": null,
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "user_sales_reps": {
+        "label_field": "is_default",
+        "code_field": null,
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "companies": {
+        "label_field": "name",
+        "code_field": "erp_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "contacts": {
+        "label_field": "first_name",
+        "code_field": "erp_contact_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "company_contacts": {
+        "label_field": null,
+        "code_field": null,
+        "required_missing": [
+          "company_id",
+          "contact_id"
+        ],
+        "warning_missing": [],
+        "optional_table": true,
+        "table_missing": true
+      },
+      "product_types": {
+        "label_field": "label",
+        "code_field": "value",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "product_groups": {
+        "label_field": "label",
+        "code_field": "value",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "product_subgroups": {
+        "label_field": "label",
+        "code_field": "value",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "product_families": {
+        "label_field": "label",
+        "code_field": "value",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "product_classes": {
+        "label_field": "label",
+        "code_field": "value",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      },
+      "products": {
+        "label_field": "name",
+        "code_field": "erp_product_code",
+        "required_missing": [],
+        "warning_missing": [],
+        "optional_table": false
+      }
+    },
+    "table_field_map": {
+      "legal_entities": {
+        "label": "name",
+        "code": "erp_company_code",
+        "required": [
+          "tenant_id",
+          "name"
+        ],
+        "warning": [
+          "erp_company_code",
+          "cnpj"
+        ]
+      },
+      "profiles": {
+        "label": "full_name",
+        "code": "erp_user_code",
+        "required": [
+          "user_id",
+          "full_name"
+        ],
+        "warning": [
+          "email",
+          "active_tenant_id",
+          "active_legal_entity_id",
+          "erp_user_code"
+        ]
+      },
+      "sales_reps": {
+        "label": "name",
+        "code": "erp_vendor_code",
+        "required": [
+          "name",
+          "tenant_id"
+        ],
+        "warning": [
+          "email",
+          "erp_vendor_code",
+          "active"
+        ]
+      },
+      "user_tenants": {
+        "label": "role",
+        "code": null,
+        "required": [
+          "user_id",
+          "tenant_id",
+          "role"
+        ],
+        "warning": []
+      },
+      "user_legal_entities": {
+        "label": "role",
+        "code": null,
+        "required": [
+          "user_id",
+          "tenant_id",
+          "legal_entity_id",
+          "role"
+        ],
+        "warning": []
+      },
+      "user_sales_reps": {
+        "label": "is_default",
+        "code": null,
+        "required": [
+          "user_id",
+          "sales_rep_id"
+        ],
+        "warning": [
+          "is_default"
+        ]
+      },
+      "companies": {
+        "label": "name",
+        "code": "erp_code",
+        "required": [
+          "name",
+          "tenant_id"
+        ],
+        "warning": [
+          "cnpj",
+          "owner_id",
+          "sales_rep_id",
+          "legal_entity_id",
+          "erp_code"
+        ]
+      },
+      "contacts": {
+        "label": "first_name",
+        "code": "erp_contact_code",
+        "required": [
+          "first_name",
+          "tenant_id"
+        ],
+        "warning": [
+          "last_name",
+          "email",
+          "company_id",
+          "erp_contact_code"
+        ]
+      },
+      "company_contacts": {
+        "label": null,
+        "code": null,
+        "required": [
+          "company_id",
+          "contact_id"
+        ],
+        "warning": [],
+        "optional_table": true
+      },
+      "product_types": {
+        "label": "label",
+        "code": "value",
+        "required": [
+          "label",
+          "value",
+          "tenant_id"
+        ],
+        "warning": []
+      },
+      "product_groups": {
+        "label": "label",
+        "code": "value",
+        "required": [
+          "label",
+          "value",
+          "tenant_id"
+        ],
+        "warning": []
+      },
+      "product_subgroups": {
+        "label": "label",
+        "code": "value",
+        "required": [
+          "label",
+          "value",
+          "tenant_id"
+        ],
+        "warning": []
+      },
+      "product_families": {
+        "label": "label",
+        "code": "value",
+        "required": [
+          "label",
+          "value",
+          "tenant_id"
+        ],
+        "warning": []
+      },
+      "product_classes": {
+        "label": "label",
+        "code": "value",
+        "required": [
+          "label",
+          "value",
+          "tenant_id"
+        ],
+        "warning": []
+      },
+      "products": {
+        "label": "name",
+        "code": "erp_product_code",
+        "required": [
+          "sku",
+          "name",
+          "tenant_id"
+        ],
+        "warning": [
+          "erp_product_code",
+          "tipo_id",
+          "grupo_id",
+          "subgrupo_id",
+          "family_id",
+          "class_id",
+          "legal_entity_id"
+        ]
+      }
+    }
+  },
+  "current_counts": {
+    "companies": 0,
+    "contacts": 0,
+    "legal_entities": 0,
+    "product_classes": 10,
+    "product_families": 6,
+    "product_groups": 21,
+    "product_subgroups": 53,
+    "product_types": 12,
+    "products": 0,
+    "profiles": 1,
+    "sales_reps": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "user_tenants": 0
+  },
+  "tmp_prefix_existing_count": {
+    "companies": 0,
+    "contacts": 0,
+    "legal_entities": 0,
+    "product_classes": 0,
+    "product_families": 0,
+    "product_groups": 0,
+    "product_subgroups": 0,
+    "product_types": 0,
+    "products": 0,
+    "profiles": 0,
+    "sales_reps": 0,
+    "user_legal_entities": null,
+    "user_sales_reps": null,
+    "user_tenants": null
+  },
+  "dependency_validation": {
+    "order": [
+      "tenant_context",
+      "legal_entities",
+      "profiles",
+      "user_tenants",
+      "user_legal_entities",
+      "sales_reps",
+      "user_sales_reps",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "products",
+      "companies",
+      "contacts_or_company_contacts"
+    ],
+    "contacts_relation_mode": "direct_contacts_company_id",
+    "checks": {
+      "legal_entities_before_companies": true,
+      "profiles_before_sales_reps": true,
+      "product_aux_before_products": true,
+      "contacts_path_available": true
+    }
+  },
+  "contacts_relation_mode": "direct_contacts_company_id",
+  "blocked_entities": [
+    "deals",
+    "deal_stage_history",
+    "proposals",
+    "sales_proposals",
+    "proposal_items",
+    "sales_proposal_items",
+    "orders",
+    "order_items",
+    "product_sync_queue",
+    "order_sync_queue",
+    "audit_events",
+    "user_sessions",
+    "session_login_history"
+  ],
+  "decision": "GO",
+  "reasons": [
+    "All dry-run validations passed with read-only checks only."
+  ],
+  "warnings": [
+    "Optional missing tables: company_contacts"
+  ],
+  "confirmations": {
+    "no_db_write": true,
+    "no_sql_write": true,
+    "no_migration": true,
+    "no_seed": true,
+    "no_cleanup": true,
+    "no_erp_api": true,
+    "no_queue_processing": true,
+    "no_deploy": true,
+    "no_staging_prod_changes": true
+  }
+}
