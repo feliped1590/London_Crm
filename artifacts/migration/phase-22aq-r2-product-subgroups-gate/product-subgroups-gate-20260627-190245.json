@@ -1,0 +1,145 @@
+{
+  "phase": "22AQ-R2",
+  "timestamp": "2026-06-27T19:02:45-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "evidenceReviewed": {
+    "required": [
+      "docs/migration/phase-22an-r2-post-product-groups-audit.md",
+      "docs/migration/phase-22am-r2-pilot-product-groups-write.md",
+      "docs/migration/phase-22ak-r2-product-groups-pilot-prep.md",
+      "docs/migration/phase-22aj-r2-next-product-aux-gate.md",
+      "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+      "scripts/migration/phase-22k-r2-baseline-write.mjs",
+      "artifacts/migration/phase-22an-r2-post-product-groups-audit/post-product-groups-audit-20260627-185454.json",
+      "artifacts/migration/phase-22am-r2-pilot-product-groups-write/after-20260627-184441.json",
+      "artifacts/migration/phase-22aj-r2-next-product-aux-gate/next-product-aux-gate-20260627-183053.json",
+      "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-183924.json"
+    ],
+    "latestApplicableUsed": [
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-184441.json",
+      "artifacts/migration/phase-22al-r2-pilot-product-groups/pilot-product-groups-20260627-184441.json"
+    ]
+  },
+  "payloadFound": {
+    "source": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "section": "BASELINE_SIMULATION.product_subgroups[0]",
+    "record": {
+      "temp_key": "TMP-22F-R2-PRODSUBGROUP-01",
+      "code": "TMP-PSG-001",
+      "name": "TMP Product Subgroup"
+    },
+    "mapping": {
+      "value": "TMP-PSG-001",
+      "label": "TMP Product Subgroup"
+    },
+    "dependencyFieldsInPayload": {
+      "product_group_id": null,
+      "group_value": null,
+      "parent_id": null,
+      "tenant_id": null,
+      "created_by": null
+    },
+    "traceabilityStrength": "strong_line_by_line"
+  },
+  "schemaSummary": {
+    "table": "public.product_subgroups",
+    "columns": [
+      { "name": "id", "type": "uuid", "nullable": false, "default": "gen_random_uuid()" },
+      { "name": "value", "type": "text", "nullable": false, "default": null },
+      { "name": "label", "type": "text", "nullable": false, "default": null },
+      { "name": "sort_order", "type": "integer", "nullable": true, "default": "0" },
+      { "name": "is_active", "type": "boolean", "nullable": true, "default": "true" },
+      { "name": "created_at", "type": "timestamp with time zone", "nullable": true, "default": "now()" },
+      { "name": "created_by", "type": "uuid", "nullable": true, "default": null },
+      { "name": "tenant_id", "type": "uuid", "nullable": true, "default": null }
+    ],
+    "requiredWithoutDefault": ["value", "label"],
+    "requiredWithDefault": ["id"],
+    "optionalRelevant": ["tenant_id", "created_by", "sort_order", "is_active", "created_at"]
+  },
+  "constraints": {
+    "primaryKey": "PRIMARY KEY (id)",
+    "unique": ["UNIQUE (value)"],
+    "foreignKeys": [
+      "FOREIGN KEY (created_by) REFERENCES auth.users(id)",
+      "FOREIGN KEY (tenant_id) REFERENCES tenants(id)"
+    ],
+    "indexes": [
+      "product_colors_pkey (unique on id)",
+      "product_colors_value_key (unique on value)"
+    ],
+    "notes": [
+      "Constraint/index names use legacy prefix product_colors, but they are attached to public.product_subgroups."
+    ]
+  },
+  "dependencyAssessment": {
+    "hasProductGroupIdColumn": false,
+    "hasFkToProductGroups": false,
+    "hasExplicitParentDependency": false,
+    "productGroupsPilotCardinalityByValueTMP_PG_001": 1,
+    "productGroupsPilotResolvedId": "c5057853-15be-440d-886f-b0093de363fa",
+    "futureLookupRuleIfNeeded": "lookup by product_groups.value='TMP-PG-001' and require cardinality = 1",
+    "isolatedFutureWriteFeasible": true
+  },
+  "policyPreliminary": {
+    "tenant_id": {
+      "exists": true,
+      "nullable": true,
+      "proposed": "tenant_id = null (global/null scope)"
+    },
+    "created_by": {
+      "exists": true,
+      "nullable": true,
+      "proposed": "null/omit; do not use real user and do not query profiles"
+    }
+  },
+  "collisions": {
+    "currentTotalRows": 53,
+    "candidateValue": "TMP-PSG-001",
+    "candidateLabel": "TMP Product Subgroup",
+    "candidateValueCount": 0,
+    "candidateLabelCount": 0,
+    "exactCandidateMatchCount": 0,
+    "maxDuplicateByValue": 0,
+    "maxDuplicateByTenantValue": 0
+  },
+  "idempotencyProposed": {
+    "naturalKey": "value",
+    "rule": [
+      "if value does not exist: insert",
+      "if value exists and payload matches expected fields: idempotent_noop",
+      "if value exists and diverges: abort NO-GO"
+    ],
+    "plausible": true
+  },
+  "decision": "GO",
+  "decisionReasons": [
+    "Strong line-by-line payload exists for product_subgroups from BASELINE_SIMULATION.",
+    "Schema supports isolated future write with required fields value+label and nullable tenant_id/created_by.",
+    "No mandatory FK to product_groups and no unresolved required dependency field was found.",
+    "No collisions for candidate value/label and no duplicate groups by value.",
+    "Idempotency by UNIQUE(value) is technically plausible for controlled pilot contract.",
+    "No write was executed and executor was not changed in this phase."
+  ],
+  "remainingRisks": [
+    "Semantic relationship to product_groups is not represented in current schema/payload, requiring explicit business confirmation in next prep phase.",
+    "Legacy constraint/index naming (product_colors_*) may confuse audits and should be documented in pilot prep."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

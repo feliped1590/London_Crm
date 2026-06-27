@@ -1,0 +1,157 @@
+{
+  "phase": "22AU-R2",
+  "timestamp": "2026-06-27T19:24:55-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "evidenceSources": {
+    "before22AT": "artifacts/migration/phase-22at-r2-pilot-product-subgroups-write/before-20260627-192122.json",
+    "after22AT": "artifacts/migration/phase-22at-r2-pilot-product-subgroups-write/after-20260627-192122.json",
+    "payload22AR": "artifacts/migration/phase-22ar-r2-product-subgroups-pilot-prep/product-subgroups-payload-20260627-190705.json",
+    "pilot22ASLatest": "artifacts/migration/phase-22as-r2-pilot-product-subgroups/pilot-product-subgroups-20260627-192122.json"
+  },
+  "expectedRecord": {
+    "id": "8f798403-516e-48cf-b675-e025240385f3",
+    "value": "TMP-PSG-001",
+    "label": "TMP Product Subgroup",
+    "tenant_id": null,
+    "created_by": null,
+    "sort_order": 0,
+    "is_active": true
+  },
+  "recordValidation": {
+    "countById": 1,
+    "countByValue": 1,
+    "countByLabel": 1,
+    "recordById": {
+      "id": "8f798403-516e-48cf-b675-e025240385f3",
+      "value": "TMP-PSG-001",
+      "label": "TMP Product Subgroup",
+      "tenant_id": null,
+      "created_by": null,
+      "sort_order": 0,
+      "is_active": true,
+      "created_at": "2026-06-27 22:21:45.798616+00"
+    },
+    "matchesExpectedPayload": true
+  },
+  "defaultsValidation": {
+    "tenantIdIsNull": true,
+    "createdByIsNull": true,
+    "sortOrderIsZero": true,
+    "isActiveIsTrue": true,
+    "createdAtIsNotNull": true
+  },
+  "idempotencyValidation": {
+    "uniqueValuePresent": true,
+    "countWhereValue": 1,
+    "duplicateValueRows": 1,
+    "divergentRowsWithSameValue": 0,
+    "expectedIfReexecuted": "idempotent_noop"
+  },
+  "technicalLinkToProductGroups": {
+    "has_product_group_id_column": false,
+    "fk_to_product_groups": 0,
+    "pilotRecordHasTechnicalLinkField": false,
+    "technicalInferenceCreated": false
+  },
+  "deltaValidation": {
+    "beforeTotal22AT": 53,
+    "afterTotal22AT": 54,
+    "currentTotal": 54,
+    "deltaBeforeAfter": 1,
+    "deltaAfterCurrent": 0,
+    "isCoherent": true
+  },
+  "negativeScopeCounts": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 6,
+    "product_classes": 10,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "companies": 0,
+    "contacts": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "toRegclassValidation": {
+    "legal_entities": "legal_entities",
+    "product_types": "product_types",
+    "product_groups": "product_groups",
+    "product_subgroups": "product_subgroups",
+    "product_families": "product_families",
+    "product_classes": "product_classes",
+    "sales_reps": "sales_reps",
+    "user_tenants": "user_tenants",
+    "user_legal_entities": "user_legal_entities",
+    "user_sales_reps": "user_sales_reps",
+    "companies": "companies",
+    "contacts": "contacts",
+    "products": "products",
+    "deals": "deals",
+    "orders": "orders",
+    "order_items": "order_items",
+    "proposals": "proposals",
+    "audit_logs": "audit_logs",
+    "notifications": "notifications"
+  },
+  "executorBlockValidation": {
+    "executorFile": "scripts/migration/phase-22k-r2-baseline-write.mjs",
+    "salesRepsPilotAllowed": false,
+    "profilesExcludedFromRoundOne": true,
+    "companyContactsReferenceOnly": true,
+    "autoExpandedExecutionAfterProductSubgroups": false,
+    "hardStopProductSubgroupsPresent": true,
+    "hardStopProductGroupsPresent": true,
+    "hardStopProductTypesPresent": true,
+    "forbiddenFlagsBlocked": [
+      "--force",
+      "--skip-guards",
+      "--tables",
+      "--all"
+    ],
+    "bypassFlagsAdded": false
+  },
+  "decision": "GO",
+  "decisionReasons": [
+    "Registro piloto existe e corresponde exatamente ao payload/defaults esperados.",
+    "Cardinalidade por value permanece 1 sem divergencia.",
+    "UNIQUE(value) continua presente em product_subgroups.",
+    "Delta 22AT-R2 permanece coerente (+1) com total atual estavel em 54.",
+    "Ausencia tecnica de vinculo com product_groups permanece preservada.",
+    "Escopo negativo sem evidencias de alteracoes indevidas em outras entidades.",
+    "Bloqueios do executor e hard stops de pilotos permanecem ativos."
+  ],
+  "riskClassification": {
+    "status": "low",
+    "residualRisks": [
+      "Risco semantico de relacionamento grupo/subgrupo permanece dependente de regra de negocio futura.",
+      "Preflight global segue PARCIAL por company_contacts em modo reference-only (esperado por politica 22N-R2)."
+    ]
+  },
+  "confirmations": {
+    "newDbWrite": false,
+    "sqlWriteExecuted": false,
+    "migrationExecuted": false,
+    "seedOrCleanupExecuted": false,
+    "rollbackExecuted": false,
+    "erpApiWebhookN8nCalled": false,
+    "queuesProcessed": false,
+    "deployExecuted": false,
+    "commitExecuted": false,
+    "pushExecuted": false,
+    "executorChangedInThisPhase": false,
+    "stagingOrProdChanged": false,
+    "executorRanExpandedWrite": false
+  }
+}
