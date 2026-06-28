@@ -1,0 +1,152 @@
+{
+  "phase": "22BI-R2",
+  "timestamp": "2026-06-28T01:21:14.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "statusShort": [
+      "M scripts/migration/phase-22k-r2-baseline-write.mjs",
+      "?? artifacts/migration/phase-22be-r2-companies-contacts-gate/",
+      "?? artifacts/migration/phase-22bf-r2-companies-contacts-payload-sanitization/",
+      "?? artifacts/migration/phase-22bg-r2-pilot-companies-write/",
+      "?? artifacts/migration/phase-22bh-r2-pilot-contacts-write/",
+      "?? docs/migration/phase-22be-r2-companies-contacts-gate.md",
+      "?? docs/migration/phase-22bf-r2-companies-contacts-payload-sanitization.md",
+      "?? docs/migration/phase-22bg-r2-pilot-companies-write.md",
+      "?? docs/migration/phase-22bh-r2-pilot-contacts-write.md"
+    ],
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "4a8935cd feat(migration): add product families and classes pilot writes",
+    "head": "4a8935cd67b7146231c12e069834eb9c7f560c47",
+    "originMain": "4a8935cd67b7146231c12e069834eb9c7f560c47",
+    "headEqualsOriginMain": true
+  },
+  "latestApplicableEvidenceUsed": {
+    "companiesBefore": "artifacts/migration/phase-22bg-r2-pilot-companies-write/before-20260627-220034.json",
+    "companiesAfter": "artifacts/migration/phase-22bg-r2-pilot-companies-write/after-20260627-220034.json",
+    "contactsBefore": "artifacts/migration/phase-22bh-r2-pilot-contacts-write/before-20260627-221252.json",
+    "contactsAfter": "artifacts/migration/phase-22bh-r2-pilot-contacts-write/after-20260627-221252.json"
+  },
+  "companiesAudit": {
+    "recordById": {
+      "id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "cnpj": "TMP-DOC-COMP-0001",
+      "name": "TMP COMPANY 01",
+      "cnpj_root": null,
+      "owner_id": null,
+      "sales_rep_id": null,
+      "legal_entity_id": null,
+      "created_by": null
+    },
+    "countById": 1,
+    "countByTenantCnpj": 1,
+    "countByName": 1
+  },
+  "contactsAudit": {
+    "recordById": {
+      "id": "06514c9c-24b8-49fd-b8e2-f744b24d307f",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "first_name": "TMP CONTACT 01",
+      "email": "tmp.contact01@qualyvac.local",
+      "owner_id": null,
+      "created_by": null
+    },
+    "countById": 1,
+    "countByTenantCompanyEmail": 1,
+    "countByEmail": 1
+  },
+  "contactCompanyLinkValidation": {
+    "contact_id": "06514c9c-24b8-49fd-b8e2-f744b24d307f",
+    "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+    "company_exists": true,
+    "company_cardinality": 1,
+    "is_orphan": false,
+    "contact_tenant_matches_company_tenant": true,
+    "company_contacts_regclass": null
+  },
+  "idempotencyValidation": {
+    "companies": {
+      "key": [
+        "tenant_id",
+        "cnpj"
+      ],
+      "indexPresent": true,
+      "indexNames": [
+        "idx_companies_tenant_cnpj",
+        "idx_companies_cnpj_unique"
+      ],
+      "keyCount": 1,
+      "duplicateGroups": 0,
+      "divergentKeyRows": false,
+      "expectedReexecutionResult": "idempotent_noop"
+    },
+    "contacts": {
+      "key": [
+        "tenant_id",
+        "company_id",
+        "email"
+      ],
+      "indexPresent": true,
+      "indexNames": [
+        "idx_contacts_tenant_company_email_unique"
+      ],
+      "keyCount": 1,
+      "duplicateGroups": 0,
+      "divergentKeyRows": false,
+      "expectedReexecutionResult": "idempotent_noop"
+    }
+  },
+  "deltaValidation": {
+    "companiesBefore22BG": 0,
+    "companiesCurrent": 1,
+    "companiesDeltaNet": 1,
+    "contactsBefore22BH": 0,
+    "contactsCurrent": 1,
+    "contactsDeltaNet": 1
+  },
+  "negativeScopeCounts": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 1,
+    "contacts": 1,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "executorGuardsValidation": {
+    "companiesHardStopPresent": true,
+    "contactsHardStopPresent": true,
+    "companyContactsReferenceOnly": true,
+    "salesRepsBlocked": true,
+    "profilesExcludedFromFirstRound": true,
+    "noAutomaticExpandedExecution": true,
+    "forbiddenFlagsBlocked": [
+      "--force",
+      "--skip-guards",
+      "--tables",
+      "--all"
+    ],
+    "bypassFlagDetected": false
+  },
+  "auditDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

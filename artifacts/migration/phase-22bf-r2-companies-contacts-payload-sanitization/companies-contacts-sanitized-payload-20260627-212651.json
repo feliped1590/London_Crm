@@ -1,0 +1,274 @@
+{
+  "phase": "22BF-R2",
+  "timestamp": "2026-06-27T21:26:51-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "projectName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitPrecheck": {
+    "branch": "main",
+    "statusShort": [
+      "?? artifacts/migration/phase-22be-r2-companies-contacts-gate/",
+      "?? docs/migration/phase-22be-r2-companies-contacts-gate.md"
+    ],
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "4a8935cd feat(migration): add product families and classes pilot writes",
+    "head": "4a8935cd67b7146231c12e069834eb9c7f560c47",
+    "originMain": "4a8935cd67b7146231c12e069834eb9c7f560c47",
+    "headEqualsOriginMain": true
+  },
+  "findings22BE": {
+    "decision": "NO-GO",
+    "rootCause": "payload_schema_mismatch",
+    "companiesGaps": [
+      "missing_name",
+      "missing_tenant_id",
+      "missing_cnpj",
+      "missing_operational_natural_key",
+      "owner_depends_on_paused_sales_reps"
+    ],
+    "contactsGaps": [
+      "missing_first_name",
+      "missing_tenant_id",
+      "missing_company_id",
+      "company_temp_key_not_resolved_to_company_id"
+    ],
+    "dbOrExecutorIssueDetected": false
+  },
+  "schemaValidated": {
+    "companies": {
+      "requiredWithoutDefault": [
+        "name",
+        "tenant_id"
+      ],
+      "columns": {
+        "name": {
+          "data_type": "text",
+          "nullable": false
+        },
+        "tenant_id": {
+          "data_type": "uuid",
+          "nullable": false,
+          "default": "'00000000-0000-0000-0000-000000000001'::uuid"
+        },
+        "cnpj": {
+          "data_type": "text",
+          "nullable": true
+        },
+        "owner_id": {
+          "data_type": "uuid",
+          "nullable": true
+        },
+        "sales_rep_id": {
+          "data_type": "uuid",
+          "nullable": true
+        },
+        "legal_entity_id": {
+          "data_type": "uuid",
+          "nullable": true
+        },
+        "created_by": {
+          "data_type": "uuid",
+          "nullable": true
+        }
+      },
+      "alternativeDocumentFields": {
+        "external_id": false,
+        "erp_code": true,
+        "document": false,
+        "tax_id": false,
+        "metadata": false
+      },
+      "cnpjChecksAndTriggers": {
+        "cnpjCheckConstraintsOnColumn": [],
+        "cnpjRootConstraint": "CHECK (((cnpj_root IS NULL) OR ((cnpj_root)::text ~ '^[0-9]{8}$'::text)))",
+        "setCompanyCnpjRootTriggerBehavior": "regexp_replace non-digits; if digits length >= 8 set cnpj_root first 8 else cnpj_root null",
+        "formatBlockingOnCnpjText": false
+      },
+      "indexesForIdempotency": [
+        "idx_companies_cnpj_unique",
+        "idx_companies_tenant_cnpj",
+        "idx_companies_tenant_erp_code"
+      ]
+    },
+    "contacts": {
+      "requiredWithoutDefault": [
+        "first_name",
+        "tenant_id"
+      ],
+      "columns": {
+        "first_name": {
+          "data_type": "text",
+          "nullable": false
+        },
+        "tenant_id": {
+          "data_type": "uuid",
+          "nullable": false,
+          "default": "'00000000-0000-0000-0000-000000000001'::uuid"
+        },
+        "email": {
+          "data_type": "text",
+          "nullable": true
+        },
+        "company_id": {
+          "data_type": "uuid",
+          "nullable": true
+        },
+        "owner_id": {
+          "data_type": "uuid",
+          "nullable": true
+        },
+        "created_by": {
+          "data_type": "uuid",
+          "nullable": true
+        }
+      },
+      "emailFormatBlockingConstraint": false,
+      "uniqueEmailKeyIndex": "idx_contacts_tenant_company_email_unique"
+    },
+    "tenantValidation": {
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "exists": true,
+      "count": 1
+    },
+    "companyContacts": {
+      "toRegclass": null,
+      "classification": "reference_only_not_writable"
+    },
+    "rlsDetected": {
+      "companies": true,
+      "contacts": true
+    }
+  },
+  "collisionChecks": {
+    "companies": {
+      "totalRows": 0,
+      "name_TMP_Company_01": 0,
+      "cnpj_TMP_DOC_COMP_0001": 0
+    },
+    "contacts": {
+      "totalRows": 0,
+      "firstName_TMP_Contact_01": 0,
+      "email_tmp_contact01_qualyvac_local": 0
+    }
+  },
+  "cnpjDecision": {
+    "status": "GO",
+    "decision": "accept_synthetic_text_for_technical_pilot",
+    "value": "TMP-DOC-COMP-0001",
+    "rationale": [
+      "companies.cnpj is text and nullable",
+      "No check constraint enforces numeric-only cnpj on the cnpj column",
+      "set_company_cnpj_root trigger does not raise exception for non-digit strings",
+      "Current table has zero rows and no collision for candidate value"
+    ],
+    "guardrail": "Do not invent real CNPJ; keep synthetic value tied to source_document for technical pilot only"
+  },
+  "sanitizedCompanyPayload": {
+    "status": "GO",
+    "payload": {
+      "source": "baseline_simulation_22g_r2_sanitized",
+      "temp_key": "TMP-22F-R2-COMPANY-01",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "name": "TMP Company 01",
+      "cnpj": "TMP-DOC-COMP-0001",
+      "source_document": "TMP-DOC-COMP-0001",
+      "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+      "owner_write_policy": "reference_only_not_written",
+      "legal_entity_id_policy": "omit_or_null",
+      "sales_rep_id_policy": "omit_or_null",
+      "created_by_policy": "omit_or_null"
+    }
+  },
+  "sanitizedContactPayload": {
+    "status": "GO_PREPARED_NOT_RELEASED",
+    "payload": {
+      "source": "baseline_simulation_22g_r2_sanitized",
+      "temp_key": "TMP-22F-R2-CONTACT-01",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "first_name": "TMP Contact 01",
+      "email": "tmp.contact01@qualyvac.local",
+      "company_temp_key": "TMP-22F-R2-COMPANY-01",
+      "company_resolution_policy": "defer_until_company_exists",
+      "company_id_policy": "lookup_after_company_insert",
+      "write_contact_in_same_phase": false
+    }
+  },
+  "omissionPolicies": {
+    "owner_sales_rep_policy": "owner and sales_rep are reference-only in this wave; do not write owner_id or sales_rep_id",
+    "legal_entity_policy": "omit legal_entity_id unless deterministic FK resolution exists with cardinality 1",
+    "created_by_policy": "omit created_by in technical pilot payload"
+  },
+  "idempotencyRules": {
+    "companies": {
+      "status": "GO",
+      "primaryKey": [
+        "tenant_id",
+        "cnpj"
+      ],
+      "fallbackKey": [
+        "tenant_id",
+        "erp_code"
+      ],
+      "fallbackStatus": "allowed_only_if_erp_code_is_present_and_single_match",
+      "executionRule": {
+        "ifMissing": "insert",
+        "ifExistingSame": "idempotent_noop",
+        "ifExistingDivergent": "NO-GO",
+        "forbidden": [
+          "overwrite",
+          "destructive_upsert",
+          "delete"
+        ]
+      }
+    },
+    "contacts": {
+      "status": "GO_PREPARED_DEPENDENT",
+      "primaryKey": [
+        "tenant_id",
+        "company_id",
+        "email"
+      ],
+      "dependency": "company_id must be resolved by deterministic company lookup after company insert",
+      "resolutionRule": "if company lookup cardinality != 1 then NO-GO",
+      "executionRule": {
+        "ifMissing": "insert",
+        "ifExistingSame": "idempotent_noop",
+        "ifExistingDivergent": "NO-GO"
+      }
+    }
+  },
+  "safeWriteOrder": [
+    "companies",
+    "contacts"
+  ],
+  "remainingRisks": [
+    "RLS policies may require authenticated execution context in real write phase",
+    "contacts remain blocked until company_id lookup is validated with cardinality 1",
+    "If future trigger behavior changes for cnpj normalization, synthetic cnpj policy must be revalidated"
+  ],
+  "finalDecision": "GO",
+  "finalReasons": [
+    "Sanitized company payload is technically writable without owner/sales_rep dependency",
+    "tenant_id exists and mandatory fields are deterministically filled",
+    "Primary idempotency key for companies is closed as (tenant_id, cnpj)",
+    "Sanitized contact payload is prepared with explicit deferred company resolution policy",
+    "Phase executed read-only with no executor changes"
+  ],
+  "nextPhaseRecommendation": "Run a dedicated companies pilot write gate using this sanitized company payload and keep contacts deferred until company_id is resolvable by deterministic lookup",
+  "confirmations": {
+    "newDbWrite": false,
+    "writeSqlExecuted": false,
+    "migration": false,
+    "seedCleanup": false,
+    "rollback": false,
+    "erpApiWebhookN8n": false,
+    "queueProcessing": false,
+    "deploy": false,
+    "commit": false,
+    "push": false,
+    "executorChanged": false,
+    "stagingProdChanged": false,
+    "expandedWriteExecution": false
+  }
+}

@@ -1,0 +1,293 @@
+{
+  "phase": "22BE-R2",
+  "timestamp": "2026-06-27T21:17:20-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "statusShort": "",
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "4a8935cd feat(migration): add product families and classes pilot writes",
+    "head": "4a8935cd67b7146231c12e069834eb9c7f560c47",
+    "originMain": "4a8935cd67b7146231c12e069834eb9c7f560c47"
+  },
+  "latestApplicableEvidenceUsed": {
+    "writePlan": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-205752.json",
+    "baselineDryRun": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json"
+  },
+  "payloadCompanies": {
+    "origin": [
+      "scripts/migration/phase-22g-r2-baseline-dry-run.mjs::BASELINE_SIMULATION.companies",
+      "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json::simulated_records_count.companies",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-205752.json::plannedCountsByEntity.companies"
+    ],
+    "plannedCount": 5,
+    "firstCandidate": {
+      "temp_key": "TMP-22F-R2-COMPANY-01",
+      "document": "TMP-DOC-COMP-0001",
+      "owner": "TMP-22F-R2-SALESREP-01"
+    },
+    "availableFieldsInPayload": [
+      "temp_key",
+      "document",
+      "owner"
+    ],
+    "identificationFieldsObserved": {
+      "id": false,
+      "tenant_id": false,
+      "cnpj": false,
+      "document": true,
+      "tax_id": false,
+      "erp_code": false,
+      "external_id": false,
+      "name": false,
+      "trade_name": false,
+      "legal_name": false
+    },
+    "requiredFieldCoverageAgainstSchema": {
+      "name": false,
+      "tenant_id": false
+    },
+    "dependenciesObservedInPayload": {
+      "legal_entity_link": false,
+      "sales_rep_link": true,
+      "owner_link": true
+    },
+    "strengthAssessment": "weak",
+    "notes": [
+      "Schema requires name but payload does not provide it.",
+      "Payload references owner as temp key linked to sales_reps path currently paused.",
+      "No explicit cnpj/erp_code/external_id provided for deterministic idempotency."
+    ]
+  },
+  "payloadContacts": {
+    "origin": [
+      "scripts/migration/phase-22g-r2-baseline-dry-run.mjs::BASELINE_SIMULATION.contacts",
+      "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json::simulated_records_count.contacts",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-205752.json::plannedCountsByEntity.contacts"
+    ],
+    "plannedCount": 5,
+    "firstCandidate": {
+      "temp_key": "TMP-22F-R2-CONTACT-01",
+      "email": "tmp.contact01@qualyvac.local",
+      "company_temp_key": "TMP-22F-R2-COMPANY-01"
+    },
+    "availableFieldsInPayload": [
+      "temp_key",
+      "email",
+      "company_temp_key"
+    ],
+    "identificationFieldsObserved": {
+      "id": false,
+      "tenant_id": false,
+      "company_id": false,
+      "company_temp_key": true,
+      "company_cnpj": false,
+      "company_document": false,
+      "email": true,
+      "phone": false,
+      "name": false
+    },
+    "requiredFieldCoverageAgainstSchema": {
+      "first_name": false,
+      "tenant_id": false
+    },
+    "dependencyAssessment": {
+      "dependsOnCompany": true,
+      "linkProvidedAsCompanyTempKeyOnly": true,
+      "companyIdResolvableNow": false,
+      "orphanRiskIfWrittenNow": true
+    },
+    "strengthAssessment": "weak",
+    "notes": [
+      "Schema requires first_name but payload does not provide it.",
+      "Payload uses company_temp_key while schema links via company_id UUID.",
+      "No explicit contact external key beyond email."
+    ]
+  },
+  "schemaCompanies": {
+    "currentTotal": 0,
+    "requiredWithoutDefault": [
+      "name",
+      "tenant_id"
+    ],
+    "keyColumnsPresent": [
+      "name",
+      "tenant_id",
+      "cnpj",
+      "erp_code",
+      "owner_id",
+      "sales_rep_id",
+      "legal_entity_id"
+    ],
+    "keyColumnsMissing": [
+      "document",
+      "external_id",
+      "legal_name",
+      "temp_key"
+    ],
+    "pk": "PRIMARY KEY (id)",
+    "uniqueConstraints": [],
+    "uniqueIndexes": [
+      "idx_companies_cnpj_unique: UNIQUE(cnpj) where cnpj is not null and <> ''",
+      "idx_companies_tenant_cnpj: UNIQUE(tenant_id, cnpj) where cnpj is not null and <> ''"
+    ],
+    "foreignKeys": [
+      "tenant_id -> tenants(id)",
+      "legal_entity_id -> legal_entities(id)",
+      "sales_rep_id -> sales_reps(id)",
+      "owner_id -> auth.users(id)",
+      "created_by -> auth.users(id)",
+      "atividade_id -> atividades(id)",
+      "setor_id -> setores(id)",
+      "segmento_id -> segmentos(id)",
+      "default_carrier_id -> carriers(id)",
+      "economic_group_id -> economic_groups(id)",
+      "parent_company_id -> companies(id)"
+    ],
+    "rlsPoliciesDetected": true,
+    "triggersDetected": true,
+    "triggerHighlights": [
+      "check_matriz_constraint (before insert/update)",
+      "trg_set_default_sales_rep (before insert)",
+      "trg_compute_integration_status (before insert/update)",
+      "trg_uppercase_companies (before insert/update)"
+    ]
+  },
+  "schemaContacts": {
+    "currentTotal": 0,
+    "requiredWithoutDefault": [
+      "first_name",
+      "tenant_id"
+    ],
+    "keyColumnsPresent": [
+      "company_id",
+      "tenant_id",
+      "first_name",
+      "email",
+      "phone",
+      "erp_contact_code"
+    ],
+    "keyColumnsMissing": [
+      "company_temp_key",
+      "company_cnpj",
+      "company_document",
+      "external_id",
+      "name",
+      "temp_key"
+    ],
+    "pk": "PRIMARY KEY (id)",
+    "uniqueConstraints": [],
+    "uniqueIndexes": [
+      "idx_contacts_tenant_company_email_unique: UNIQUE(tenant_id, company_id, email) where email is not null and <> ''"
+    ],
+    "foreignKeys": [
+      "company_id -> companies(id) on delete set null",
+      "tenant_id -> tenants(id)",
+      "owner_id -> auth.users(id)",
+      "created_by -> auth.users(id)"
+    ],
+    "companyIdNullable": true,
+    "rlsPoliciesDetected": true,
+    "triggersDetected": true,
+    "triggerHighlights": [
+      "trg_uppercase_contacts (before insert/update)",
+      "update_contacts_updated_at (before update)"
+    ]
+  },
+  "companyContactsStatus": {
+    "toRegclass": null,
+    "tableExists": false,
+    "referenceOnly": true,
+    "writePlanIncluded": false,
+    "linkStrategyForFuture": "contacts.company_id",
+    "riskClassification": "controlled_reference_only"
+  },
+  "dependenciesAndFks": {
+    "companiesDependsOn": [
+      "tenants (mandatory via tenant_id)",
+      "sales_reps (optional via sales_rep_id FK)",
+      "legal_entities (optional via legal_entity_id FK)"
+    ],
+    "contactsDependsOn": [
+      "tenants (mandatory via tenant_id)",
+      "companies (optional via company_id FK)"
+    ],
+    "contactsCompanyRelationMode": "direct_contacts_company_id",
+    "safeWriteOrderRecommendation": [
+      "companies",
+      "contacts"
+    ]
+  },
+  "candidateIdempotencyKeys": {
+    "companies": {
+      "candidate": "(tenant_id, cnpj)",
+      "schemaSupport": "unique partial indexes present",
+      "payloadSupportNow": false,
+      "fallbacksObserved": [
+        "(tenant_id, erp_code) has non-unique index only",
+        "cnpj alone via unique partial index"
+      ],
+      "decision": "not_ready_for_write"
+    },
+    "contacts": {
+      "candidate": "(tenant_id, company_id, email)",
+      "schemaSupport": "unique partial index present",
+      "payloadSupportNow": false,
+      "fallbacksObserved": [
+        "(tenant_id, erp_contact_code) non-unique index only",
+        "(company_id, email) derivable but still depends on company_id resolution"
+      ],
+      "decision": "not_ready_for_write"
+    }
+  },
+  "collisions": {
+    "companies": {
+      "maxDuplicateTenantCnpj": 0,
+      "maxDuplicateTenantErpCode": 0,
+      "firstCandidateMarkerCollisionByTmpDocumentAgainstCnpjOrErpCode": 0
+    },
+    "contacts": {
+      "maxDuplicateTenantCompanyEmail": 0,
+      "maxDuplicateTenantErpContactCode": 0,
+      "firstCandidateEmailCollision": 0
+    }
+  },
+  "pilotCandidates": {
+    "companies": {
+      "selected": false,
+      "reason": "No strong candidate: first payload candidate lacks required name and deterministic natural key fields."
+    },
+    "contacts": {
+      "selected": false,
+      "reason": "No strong candidate: first payload candidate lacks required first_name and resolvable company_id."
+    }
+  },
+  "risks": [
+    "Payload/schema mismatch in both entities: required fields missing from simulated payload.",
+    "Company linkage depends on sales_rep path currently paused and not consolidated.",
+    "Contact linkage currently only via company_temp_key, requiring deterministic company_id resolution strategy."
+  ],
+  "decision": "NO-GO",
+  "reasons": [
+    "companies payload is not strong enough for controlled pilot write.",
+    "contacts payload is not strong enough for controlled pilot write.",
+    "Idempotency keys exist in schema but are unsupported by current payload fields."
+  ],
+  "confirmations": {
+    "newDbWrite": false,
+    "writeSqlExecuted": false,
+    "migration": false,
+    "seedCleanup": false,
+    "rollback": false,
+    "erpApiWebhookN8n": false,
+    "queueProcessing": false,
+    "deploy": false,
+    "commit": false,
+    "push": false,
+    "executorChanged": false,
+    "stagingProdChanged": false,
+    "expandedWriteExecution": false
+  }
+}

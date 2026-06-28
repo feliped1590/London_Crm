@@ -1,0 +1,51 @@
+{
+  "phase": "22BH-R2",
+  "timestamp": "2026-06-28T01:13:56.993Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationExecuted": "inserted",
+  "contactsCountAfter": 1,
+  "companiesCountAfter": 1,
+  "delta": 1,
+  "recordByTenantCompanyEmail": [
+    {
+      "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "created_by": null,
+      "email": "tmp.contact01@qualyvac.local",
+      "first_name": "TMP CONTACT 01",
+      "id": "06514c9c-24b8-49fd-b8e2-f744b24d307f",
+      "owner_id": null,
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "recordId": "06514c9c-24b8-49fd-b8e2-f744b24d307f",
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+  "first_name": "TMP Contact 01",
+  "email": "tmp.contact01@qualyvac.local",
+  "referencedCompanyExists": true,
+  "companiesNotWritten": true,
+  "companyContactsNotWritten": true,
+  "uniqueTenantCompanyEmailDuplicateCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "touchedEntity": "contacts",
+    "companiesTouched": false,
+    "companyContactsTouched": false,
+    "salesRepsTouched": false,
+    "profilesTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true,
+    "noOtherEntityTouched": true
+  },
+  "executionExpandedBlocked": true,
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM contacts. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

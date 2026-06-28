@@ -1,0 +1,62 @@
+{
+  "phase": "22BG-R2",
+  "timestamp": "2026-06-28T01:01:22.572Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationExecuted": "idempotent_noop",
+  "companiesCountAfter": 1,
+  "contactsCountAfter": 0,
+  "delta": 0,
+  "recordByTenantCnpj": [
+    {
+      "cnpj": "TMP-DOC-COMP-0001",
+      "cnpj_root": null,
+      "created_by": null,
+      "id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "legal_entity_id": null,
+      "name": "TMP COMPANY 01",
+      "owner_id": null,
+      "sales_rep_id": null,
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "recordId": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "name": "TMP Company 01",
+  "cnpj": "TMP-DOC-COMP-0001",
+  "cnpj_root": null,
+  "owner_id": null,
+  "sales_rep_id": null,
+  "legal_entity_id": null,
+  "created_by": null,
+  "omittedFieldsConfirmed": {
+    "owner_id_not_written": true,
+    "sales_rep_id_not_written": true,
+    "legal_entity_id_not_written": true,
+    "created_by_not_written": true
+  },
+  "contactsNotWritten": true,
+  "companyContactsNotWritten": true,
+  "uniqueTenantCnpjDuplicateCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "touchedEntity": "companies",
+    "contactsTouched": false,
+    "companyContactsTouched": false,
+    "salesRepsTouched": false,
+    "profilesTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true,
+    "noOtherEntityTouched": true
+  },
+  "executionExpandedBlocked": true,
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM companies. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

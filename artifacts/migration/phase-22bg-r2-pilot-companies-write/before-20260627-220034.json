@@ -1,0 +1,70 @@
+{
+  "phase": "22BG-R2",
+  "timestamp": "2026-06-28T01:00:54.315Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "companies",
+  "pilotPayloadPath": "artifacts/migration/phase-22bf-r2-companies-contacts-payload-sanitization/companies-contacts-sanitized-payload-20260627-212651.json",
+  "payloadUsed": {
+    "source": "baseline_simulation_22g_r2_sanitized",
+    "temp_key": "TMP-22F-R2-COMPANY-01",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "name": "TMP Company 01",
+    "cnpj": "TMP-DOC-COMP-0001",
+    "source_document": "TMP-DOC-COMP-0001",
+    "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+    "owner_write_policy": "reference_only_not_written",
+    "sales_rep_id_policy": "omit_or_null",
+    "legal_entity_id_policy": "omit_or_null",
+    "created_by_policy": "omit_or_null"
+  },
+  "companiesCountBefore": 1,
+  "contactsCountBefore": 0,
+  "lookupByTenantCnpj": [
+    {
+      "cnpj": "TMP-DOC-COMP-0001",
+      "cnpj_root": null,
+      "created_by": null,
+      "id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "legal_entity_id": null,
+      "name": "TMP COMPANY 01",
+      "owner_id": null,
+      "sales_rep_id": null,
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "lookupByName": [],
+  "tenantLookup": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "idempotencyKeyValidation": {
+    "unique_tenant_cnpj_index": true,
+    "unique_cnpj_index": true
+  },
+  "requiredFieldsValidation": {
+    "tenant_id_required": true,
+    "name_required": true,
+    "cnpj_text": true
+  },
+  "omittedFieldsValidation": {
+    "owner_id_omitted_or_null": true,
+    "sales_rep_id_omitted_or_null": true,
+    "legal_entity_id_omitted_or_null": true,
+    "created_by_omitted_or_null": true
+  },
+  "companyContactsReferenceOnly": {
+    "regclass": null,
+    "reference_only": true
+  },
+  "contactsWriteBlocked": true,
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

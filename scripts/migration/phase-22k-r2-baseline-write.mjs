@@ -16,6 +16,8 @@ const ALLOWED_PILOT_ENTITIES = new Set([
   "product_subgroups",
   "product_families",
   "product_classes",
+  "companies",
+  "contacts",
 ]);
 const EXPECTED_PILOT_AUTHORIZATION =
   "AUTORIZO A PRIMEIRA ESCRITA PILOTO DA BASELINE 22R-R2 SOMENTE EM legal_entities NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
@@ -29,6 +31,10 @@ const EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION =
   "AUTORIZO A SEXTA ESCRITA PILOTO DA BASELINE 22AY-R2 SOMENTE EM product_families NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION =
   "AUTORIZO A SÉTIMA ESCRITA PILOTO DA BASELINE 22BA-R2 SOMENTE EM product_classes NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_COMPANIES_PILOT_AUTHORIZATION =
+  "AUTORIZO A OITAVA ESCRITA PILOTO DA BASELINE 22BG-R2 SOMENTE EM companies NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_CONTACTS_PILOT_AUTHORIZATION =
+  "AUTORIZO A NONA ESCRITA PILOTO DA BASELINE 22BH-R2 SOMENTE EM contacts NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD = {
   phase: "22AD-R2",
   entity: "product_types",
@@ -88,6 +94,36 @@ const EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD = {
   sort_order_default: "0",
   is_active_default: "true",
   created_at_default: "now()",
+};
+const EXPECTED_COMPANIES_PILOT_PAYLOAD = {
+  phase: "22BF-R2",
+  entity: "companies",
+  source: "baseline_simulation_22g_r2_sanitized",
+  temp_key: "TMP-22F-R2-COMPANY-01",
+  tenant_id: "00000000-0000-0000-0000-000000000001",
+  name: "TMP Company 01",
+  cnpj: "TMP-DOC-COMP-0001",
+  source_document: "TMP-DOC-COMP-0001",
+  owner_temp_key: "TMP-22F-R2-SALESREP-01",
+  owner_write_policy: "reference_only_not_written",
+  legal_entity_id_policy: "omit_or_null",
+  sales_rep_id_policy: "omit_or_null",
+  created_by_policy: "omit_or_null",
+};
+const EXPECTED_CONTACTS_PILOT_PAYLOAD = {
+  phase: "22BF-R2",
+  entity: "contacts",
+  source: "baseline_simulation_22g_r2_sanitized",
+  temp_key: "TMP-22F-R2-CONTACT-01",
+  tenant_id: "00000000-0000-0000-0000-000000000001",
+  first_name: "TMP Contact 01",
+  email: "tmp.contact01@qualyvac.local",
+  company_temp_key: "TMP-22F-R2-COMPANY-01",
+  company_resolution_policy: "defer_until_company_exists",
+  company_id_policy: "lookup_after_company_insert",
+  write_contact_in_same_phase: false,
+  company_lookup_cnpj: "TMP-DOC-COMP-0001",
+  resolved_company_id: "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
 };
 
 const ALLOWED_ENTITIES = new Set([
@@ -1193,6 +1229,284 @@ function executeProductClassesPilotWrite(params) {
   };
 }
 
+function executeCompaniesPilotWrite(params) {
+  const {
+    pilotEntity,
+    pilotAuthorization,
+    tenant_id,
+    name,
+    cnpj,
+    owner_write_policy,
+    sales_rep_id_policy,
+    legal_entity_id_policy,
+    created_by_policy,
+    expectedTargetRef,
+    expectedTargetName,
+    batchId,
+    localTargetRef,
+    localTargetName,
+  } = params;
+
+  if (pilotEntity !== "companies") {
+    throw new Error("Pilot entity must be companies for 22BG-R2 real pilot write.");
+  }
+  if (pilotAuthorization !== EXPECTED_COMPANIES_PILOT_AUTHORIZATION) {
+    throw new Error("Pilot authorization phrase mismatch for companies pilot write.");
+  }
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for companies pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for companies pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for companies pilot write.");
+  }
+  if (tenant_id !== EXPECTED_COMPANIES_PILOT_PAYLOAD.tenant_id) {
+    throw new Error("companies pilot tenant_id mismatch.");
+  }
+  if (name !== EXPECTED_COMPANIES_PILOT_PAYLOAD.name) {
+    throw new Error("companies pilot name mismatch.");
+  }
+  if (cnpj !== EXPECTED_COMPANIES_PILOT_PAYLOAD.cnpj) {
+    throw new Error("companies pilot cnpj mismatch.");
+  }
+  if (owner_write_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_write_policy) {
+    throw new Error("companies pilot owner_write_policy mismatch.");
+  }
+  if (sales_rep_id_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.sales_rep_id_policy) {
+    throw new Error("companies pilot sales_rep_id_policy mismatch.");
+  }
+  if (legal_entity_id_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.legal_entity_id_policy) {
+    throw new Error("companies pilot legal_entity_id_policy mismatch.");
+  }
+  if (created_by_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.created_by_policy) {
+    throw new Error("companies pilot created_by_policy mismatch.");
+  }
+  const normalizedExpectedName = String(name).toUpperCase();
+
+  const companyContactsRows = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+  if (companyContactsRows[0]?.regclass !== null) {
+    throw new Error("company_contacts must remain reference-only/non-writable in companies pilot.");
+  }
+
+  const uniqueRows = runSupabaseDbQuery(`
+    select count(*)::bigint as matched_indexes
+    from pg_indexes
+    where schemaname='public'
+      and tablename='companies'
+      and indexname in ('idx_companies_tenant_cnpj','idx_companies_cnpj_unique')
+  `);
+  if (Number(uniqueRows[0]?.matched_indexes || 0) < 2) {
+    throw new Error("Required unique indexes for companies idempotency are missing.");
+  }
+
+  const tenantRows = runSupabaseDbQuery(
+    `select exists(select 1 from public.tenants where id='${escapeSqlLiteral(tenant_id)}') as tenant_exists`,
+  );
+  if (tenantRows[0]?.tenant_exists !== true) {
+    throw new Error("Pilot tenant does not exist for companies pilot write.");
+  }
+
+  const existingRows = runSupabaseDbQuery(`
+    select id, tenant_id, name, cnpj, cnpj_root, owner_id, sales_rep_id, legal_entity_id, created_by
+    from public.companies
+    where tenant_id = '${escapeSqlLiteral(tenant_id)}'
+      and cnpj = '${escapeSqlLiteral(cnpj)}'
+  `);
+  if (existingRows.length > 1) {
+    throw new Error("Unexpected duplicate rows for companies(tenant_id, cnpj) during pilot.");
+  }
+  if (existingRows.length === 1) {
+    const existing = existingRows[0];
+    const samePayload =
+      existing.tenant_id === tenant_id &&
+      (existing.name === name || existing.name === normalizedExpectedName) &&
+      existing.cnpj === cnpj &&
+      existing.owner_id === null &&
+      existing.sales_rep_id === null &&
+      existing.legal_entity_id === null &&
+      existing.created_by === null;
+    if (!samePayload) {
+      throw new Error("Existing companies row diverges from frozen pilot payload.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      inserted: false,
+    };
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.companies (tenant_id, name, cnpj)
+    values ('${escapeSqlLiteral(tenant_id)}', '${escapeSqlLiteral(name)}', '${escapeSqlLiteral(cnpj)}')
+    returning id, tenant_id, name, cnpj, cnpj_root, owner_id, sales_rep_id, legal_entity_id, created_by
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one companies row.");
+  }
+  const inserted = insertedRows[0];
+  if (inserted.owner_id !== null || inserted.sales_rep_id !== null || inserted.legal_entity_id !== null || inserted.created_by !== null) {
+    throw new Error("Forbidden dependent fields were unexpectedly written in companies pilot.");
+  }
+  return {
+    operation: "inserted",
+    record: inserted,
+    inserted: true,
+  };
+}
+
+function executeContactsPilotWrite(params) {
+  const {
+    pilotEntity,
+    pilotAuthorization,
+    tenant_id,
+    first_name,
+    email,
+    company_temp_key,
+    company_id_policy,
+    write_contact_in_same_phase,
+    company_lookup_cnpj,
+    expectedTargetRef,
+    expectedTargetName,
+    batchId,
+    localTargetRef,
+    localTargetName,
+  } = params;
+
+  if (pilotEntity !== "contacts") {
+    throw new Error("Pilot entity must be contacts for 22BH-R2 real pilot write.");
+  }
+  if (pilotAuthorization !== EXPECTED_CONTACTS_PILOT_AUTHORIZATION) {
+    throw new Error("Pilot authorization phrase mismatch for contacts pilot write.");
+  }
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for contacts pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for contacts pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for contacts pilot write.");
+  }
+  if (tenant_id !== EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id) {
+    throw new Error("contacts pilot tenant_id mismatch.");
+  }
+  if (first_name !== EXPECTED_CONTACTS_PILOT_PAYLOAD.first_name) {
+    throw new Error("contacts pilot first_name mismatch.");
+  }
+  if (email !== EXPECTED_CONTACTS_PILOT_PAYLOAD.email) {
+    throw new Error("contacts pilot email mismatch.");
+  }
+  if (company_temp_key !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_temp_key) {
+    throw new Error("contacts pilot company_temp_key mismatch.");
+  }
+  if (company_id_policy !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_id_policy) {
+    throw new Error("contacts pilot company_id_policy mismatch.");
+  }
+  if (write_contact_in_same_phase !== false) {
+    throw new Error("contacts pilot payload must keep write_contact_in_same_phase=false.");
+  }
+  if (company_lookup_cnpj !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_lookup_cnpj) {
+    throw new Error("contacts company lookup cnpj mismatch.");
+  }
+
+  const companyContactsRows = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+  if (companyContactsRows[0]?.regclass !== null) {
+    throw new Error("company_contacts must remain reference-only/non-writable in contacts pilot.");
+  }
+
+  const uniqueRows = runSupabaseDbQuery(`
+    select count(*)::bigint as matched_indexes
+    from pg_indexes
+    where schemaname='public'
+      and tablename='contacts'
+      and indexname = 'idx_contacts_tenant_company_email_unique'
+  `);
+  if (Number(uniqueRows[0]?.matched_indexes || 0) < 1) {
+    throw new Error("Required unique index for contacts idempotency is missing.");
+  }
+
+  const tenantRows = runSupabaseDbQuery(
+    `select exists(select 1 from public.tenants where id='${escapeSqlLiteral(tenant_id)}') as tenant_exists`,
+  );
+  if (tenantRows[0]?.tenant_exists !== true) {
+    throw new Error("Pilot tenant does not exist for contacts pilot write.");
+  }
+
+  const companyRows = runSupabaseDbQuery(`
+    select id, tenant_id, cnpj, name, owner_id, sales_rep_id, legal_entity_id
+    from public.companies
+    where tenant_id = '${escapeSqlLiteral(tenant_id)}'
+      and cnpj = '${escapeSqlLiteral(company_lookup_cnpj)}'
+  `);
+  if (companyRows.length !== 1) {
+    throw new Error("Company lookup by (tenant_id, cnpj) must return exactly one row.");
+  }
+  const resolvedCompany = companyRows[0];
+  if (resolvedCompany.id !== EXPECTED_CONTACTS_PILOT_PAYLOAD.resolved_company_id) {
+    throw new Error("Resolved company id differs from frozen pilot contract.");
+  }
+  if (resolvedCompany.owner_id !== null || resolvedCompany.sales_rep_id !== null || resolvedCompany.legal_entity_id !== null) {
+    throw new Error("Resolved company must keep owner/sales_rep/legal_entity null in this pilot.");
+  }
+
+  const normalizedExpectedFirstName = String(first_name).toUpperCase();
+  const existingRows = runSupabaseDbQuery(`
+    select id, tenant_id, company_id, first_name, email, owner_id, created_by
+    from public.contacts
+    where tenant_id = '${escapeSqlLiteral(tenant_id)}'
+      and company_id = '${escapeSqlLiteral(resolvedCompany.id)}'
+      and email = '${escapeSqlLiteral(email)}'
+  `);
+  if (existingRows.length > 1) {
+    throw new Error("Unexpected duplicate rows for contacts(tenant_id, company_id, email) during pilot.");
+  }
+  if (existingRows.length === 1) {
+    const existing = existingRows[0];
+    const samePayload =
+      existing.tenant_id === tenant_id &&
+      existing.company_id === resolvedCompany.id &&
+      (existing.first_name === first_name || existing.first_name === normalizedExpectedFirstName) &&
+      existing.email === email &&
+      existing.owner_id === null &&
+      existing.created_by === null;
+    if (!samePayload) {
+      throw new Error("Existing contacts row diverges from frozen pilot payload.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      resolvedCompany,
+      inserted: false,
+    };
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.contacts (tenant_id, company_id, first_name, email)
+    values (
+      '${escapeSqlLiteral(tenant_id)}',
+      '${escapeSqlLiteral(resolvedCompany.id)}',
+      '${escapeSqlLiteral(first_name)}',
+      '${escapeSqlLiteral(email)}'
+    )
+    returning id, tenant_id, company_id, first_name, email, owner_id, created_by
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one contacts row.");
+  }
+  const inserted = insertedRows[0];
+  if (inserted.owner_id !== null || inserted.created_by !== null) {
+    throw new Error("Forbidden dependent fields were unexpectedly written in contacts pilot.");
+  }
+  return {
+    operation: "inserted",
+    record: inserted,
+    resolvedCompany,
+    inserted: true,
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const noGoReasons = [];
@@ -1288,6 +1602,10 @@ function main() {
         ? EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION
       : selectedPilotEntity === "product_classes"
         ? EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION
+      : selectedPilotEntity === "companies"
+        ? EXPECTED_COMPANIES_PILOT_AUTHORIZATION
+      : selectedPilotEntity === "contacts"
+        ? EXPECTED_CONTACTS_PILOT_AUTHORIZATION
       : EXPECTED_PILOT_AUTHORIZATION;
 
   if (args.executePilotWrite && !selectedPilotEntity) {
@@ -1299,7 +1617,7 @@ function main() {
       validations,
       "pilot.entity.value",
       "FAIL",
-      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families or product_classes.",
+      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, companies or contacts.",
     );
   } else if (selectedPilotEntity === "legal_entities") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as legal_entities.");
@@ -1313,6 +1631,10 @@ function main() {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_families.");
   } else if (selectedPilotEntity === "product_classes") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_classes.");
+  } else if (selectedPilotEntity === "companies") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as companies.");
+  } else if (selectedPilotEntity === "contacts") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as contacts.");
   } else {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity not requested.");
   }
@@ -1334,7 +1656,9 @@ function main() {
       selectedPilotEntity === "product_groups" ||
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
-      selectedPilotEntity === "product_classes") &&
+      selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "companies" ||
+      selectedPilotEntity === "contacts") &&
     !args.pilotPayload
   ) {
     noGoReasons.push(`--pilot-payload is required when --pilot-entity ${selectedPilotEntity} is used.`);
@@ -1344,7 +1668,9 @@ function main() {
       selectedPilotEntity === "product_groups" ||
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
-      selectedPilotEntity === "product_classes") &&
+      selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "companies" ||
+      selectedPilotEntity === "contacts") &&
     args.pilotPayload
   ) {
     pushValidation(validations, "pilot.payload.flag", "PASS", `--pilot-payload provided for ${selectedPilotEntity} pilot.`);
@@ -1431,6 +1757,36 @@ function main() {
   let productClassesHasFkToProductGroups = false;
   let productClassesHasFkToProductSubgroups = false;
   let productClassesHasFkToProductFamilies = false;
+  let companiesCountCurrent = null;
+  let companiesTenantRequired = null;
+  let companiesNameRequired = null;
+  let companiesCnpjIsText = null;
+  let companiesUniqueTenantCnpjPresent = false;
+  let companiesUniqueCnpjPresent = false;
+  let companiesTenantExists = null;
+  let companiesNameCollisionCount = null;
+  let companiesCnpjCollisionCount = null;
+  let companiesOwnerNullable = null;
+  let companiesSalesRepNullable = null;
+  let companiesLegalEntityNullable = null;
+  let companiesCreatedByNullable = null;
+  let companiesCompanyContactsRegclass = null;
+  let companiesContactsCountCurrent = null;
+  let contactsCountCurrent = null;
+  let contactsTenantRequired = null;
+  let contactsFirstNameRequired = null;
+  let contactsEmailPresent = null;
+  let contactsCompanyIdPresent = null;
+  let contactsCompanyIdNullable = null;
+  let contactsUniqueTenantCompanyEmailPresent = false;
+  let contactsTenantExists = null;
+  let contactsEmailCollisionCount = null;
+  let contactsFirstNameCollisionCount = null;
+  let contactsCompanyFkPresent = false;
+  let contactsCompanyLookupCount = null;
+  let contactsResolvedCompanyId = null;
+  let contactsCompanyContactsRegclass = null;
+  let contactsCompaniesCountCurrent = null;
 
   if (!args.input) {
     noGoReasons.push("--input is required.");
@@ -2845,6 +3201,423 @@ function main() {
     }
   }
 
+  if (selectedPilotEntity === "companies") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_COMPANIES_PILOT_PAYLOAD.phase) pilotPayloadValidationErrors.push("phase mismatch");
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) pilotPayloadValidationErrors.push("targetRef mismatch");
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) pilotPayloadValidationErrors.push("targetName mismatch");
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) pilotPayloadValidationErrors.push("batchId mismatch");
+      if (!["GO", "PARCIAL"].includes(String(pilotPayloadJson?.finalDecision || "").toUpperCase())) {
+        pilotPayloadValidationErrors.push("final decision is not GO/PARCIAL");
+      }
+
+      const payload = pilotPayloadJson?.sanitizedCompanyPayload?.payload;
+      if (!payload || typeof payload !== "object") {
+        pilotPayloadValidationErrors.push("sanitizedCompanyPayload.payload missing");
+      } else {
+        if (payload.source !== EXPECTED_COMPANIES_PILOT_PAYLOAD.source) pilotPayloadValidationErrors.push("source mismatch");
+        if (payload.temp_key !== EXPECTED_COMPANIES_PILOT_PAYLOAD.temp_key) pilotPayloadValidationErrors.push("temp_key mismatch");
+        if (payload.tenant_id !== EXPECTED_COMPANIES_PILOT_PAYLOAD.tenant_id) pilotPayloadValidationErrors.push("tenant_id mismatch");
+        if (payload.name !== EXPECTED_COMPANIES_PILOT_PAYLOAD.name) pilotPayloadValidationErrors.push("name mismatch");
+        if (payload.cnpj !== EXPECTED_COMPANIES_PILOT_PAYLOAD.cnpj) pilotPayloadValidationErrors.push("cnpj mismatch");
+        if (payload.source_document !== EXPECTED_COMPANIES_PILOT_PAYLOAD.source_document) {
+          pilotPayloadValidationErrors.push("source_document mismatch");
+        }
+        if (payload.owner_temp_key !== EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_temp_key) {
+          pilotPayloadValidationErrors.push("owner_temp_key mismatch");
+        }
+        if (payload.owner_write_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_write_policy) {
+          pilotPayloadValidationErrors.push("owner_write_policy mismatch");
+        }
+        if (payload.sales_rep_id_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.sales_rep_id_policy) {
+          pilotPayloadValidationErrors.push("sales_rep_id_policy mismatch");
+        }
+        if (payload.legal_entity_id_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.legal_entity_id_policy) {
+          pilotPayloadValidationErrors.push("legal_entity_id_policy mismatch");
+        }
+        if (payload.created_by_policy !== EXPECTED_COMPANIES_PILOT_PAYLOAD.created_by_policy) {
+          pilotPayloadValidationErrors.push("created_by_policy mismatch");
+        }
+      }
+
+      const idempotencyPrimary = pilotPayloadJson?.idempotencyRules?.companies?.primaryKey;
+      if (!Array.isArray(idempotencyPrimary) || idempotencyPrimary.join(",") !== "tenant_id,cnpj") {
+        pilotPayloadValidationErrors.push("idempotency primary key must be tenant_id,cnpj");
+      }
+      const contactsDeferred = pilotPayloadJson?.sanitizedContactPayload?.payload?.write_contact_in_same_phase === false;
+      if (!contactsDeferred) {
+        pilotPayloadValidationErrors.push("sanitized contact payload must keep write_contact_in_same_phase=false");
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const rows = runSupabaseDbQuery(`
+        select column_name, data_type, is_nullable
+        from information_schema.columns
+        where table_schema='public'
+          and table_name='companies'
+          and column_name in ('tenant_id','name','cnpj','owner_id','sales_rep_id','legal_entity_id','created_by')
+      `);
+      const byColumn = new Map(rows.map((r) => [r.column_name, r]));
+      companiesTenantRequired = byColumn.get("tenant_id")?.is_nullable === "NO";
+      companiesNameRequired = byColumn.get("name")?.is_nullable === "NO";
+      companiesCnpjIsText = byColumn.get("cnpj")?.data_type === "text";
+      companiesOwnerNullable = byColumn.get("owner_id")?.is_nullable === "YES";
+      companiesSalesRepNullable = byColumn.get("sales_rep_id")?.is_nullable === "YES";
+      companiesLegalEntityNullable = byColumn.get("legal_entity_id")?.is_nullable === "YES";
+      companiesCreatedByNullable = byColumn.get("created_by")?.is_nullable === "YES";
+      if (companiesTenantRequired !== true) noGoReasons.push("companies.tenant_id must be required.");
+      if (companiesNameRequired !== true) noGoReasons.push("companies.name must be required.");
+      if (companiesCnpjIsText !== true) noGoReasons.push("companies.cnpj must be text.");
+      if (companiesOwnerNullable !== true) noGoReasons.push("companies.owner_id must be nullable.");
+      if (companiesSalesRepNullable !== true) noGoReasons.push("companies.sales_rep_id must be nullable.");
+      if (companiesLegalEntityNullable !== true) noGoReasons.push("companies.legal_entity_id must be nullable.");
+      if (companiesCreatedByNullable !== true) noGoReasons.push("companies.created_by must be nullable.");
+      pushValidation(validations, "pilot.companies.columns_and_nullable", "PASS", "Columns and nullable policies validated.");
+    } catch {
+      noGoReasons.push("Unable to validate companies columns and nullable policies.");
+      pushValidation(validations, "pilot.companies.columns_and_nullable", "FAIL", "Failed companies columns validation.");
+    }
+
+    try {
+      const indexRows = runSupabaseDbQuery(`
+        select indexname, indexdef
+        from pg_indexes
+        where schemaname='public'
+          and tablename='companies'
+          and indexname in ('idx_companies_tenant_cnpj','idx_companies_cnpj_unique')
+      `);
+      companiesUniqueTenantCnpjPresent = indexRows.some((r) => r.indexname === "idx_companies_tenant_cnpj");
+      companiesUniqueCnpjPresent = indexRows.some((r) => r.indexname === "idx_companies_cnpj_unique");
+      if (!companiesUniqueTenantCnpjPresent) noGoReasons.push("idx_companies_tenant_cnpj is required.");
+      if (!companiesUniqueCnpjPresent) noGoReasons.push("idx_companies_cnpj_unique is required.");
+      pushValidation(validations, "pilot.companies.unique_indexes", "PASS", "Unique indexes validated.");
+    } catch {
+      noGoReasons.push("Unable to validate companies unique indexes.");
+      pushValidation(validations, "pilot.companies.unique_indexes", "FAIL", "Failed companies unique index validation.");
+    }
+
+    try {
+      const tenantRows = runSupabaseDbQuery(`
+        select exists(select 1 from public.tenants where id = '${escapeSqlLiteral(EXPECTED_COMPANIES_PILOT_PAYLOAD.tenant_id)}') as tenant_exists
+      `);
+      companiesTenantExists = tenantRows[0]?.tenant_exists === true;
+      if (companiesTenantExists !== true) noGoReasons.push("Pilot tenant does not exist.");
+      pushValidation(validations, "pilot.companies.tenant_exists", "PASS", "Pilot tenant existence validated.");
+    } catch {
+      noGoReasons.push("Unable to validate pilot tenant existence.");
+      pushValidation(validations, "pilot.companies.tenant_exists", "FAIL", "Failed pilot tenant existence validation.");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      companiesCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.companies.current_count", "PASS", "Current companies count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.companies.");
+      pushValidation(validations, "pilot.companies.current_count", "FAIL", "Failed to read companies count.");
+    }
+
+    try {
+      const nameRows = runSupabaseDbQuery(
+        `select count(*)::bigint as collision_count from public.companies where name = '${escapeSqlLiteral(EXPECTED_COMPANIES_PILOT_PAYLOAD.name)}'`,
+      );
+      companiesNameCollisionCount = Number(nameRows[0]?.collision_count ?? 0);
+      pushValidation(validations, "pilot.companies.name_collision", "PASS", "Company name collision check executed.");
+    } catch {
+      noGoReasons.push("Unable to validate name collision for companies pilot payload.");
+      pushValidation(validations, "pilot.companies.name_collision", "FAIL", "Failed company name collision validation.");
+    }
+
+    try {
+      const cnpjRows = runSupabaseDbQuery(
+        `select count(*)::bigint as collision_count from public.companies where cnpj = '${escapeSqlLiteral(EXPECTED_COMPANIES_PILOT_PAYLOAD.cnpj)}'`,
+      );
+      companiesCnpjCollisionCount = Number(cnpjRows[0]?.collision_count ?? 0);
+      if (companiesCnpjCollisionCount > 1) {
+        noGoReasons.push("More than one existing row found for companies.cnpj candidate.");
+      }
+      pushValidation(validations, "pilot.companies.cnpj_collision", "PASS", "Company cnpj collision check executed.");
+    } catch {
+      noGoReasons.push("Unable to validate cnpj collision for companies pilot payload.");
+      pushValidation(validations, "pilot.companies.cnpj_collision", "FAIL", "Failed company cnpj collision validation.");
+    }
+
+    try {
+      const regRows = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+      companiesCompanyContactsRegclass = regRows[0]?.regclass ?? null;
+      if (companiesCompanyContactsRegclass !== null) {
+        noGoReasons.push("company_contacts must remain absent/reference-only for companies pilot.");
+      }
+      pushValidation(validations, "pilot.companies.company_contacts_reference_only", "PASS", "company_contacts reference-only validated.");
+    } catch {
+      noGoReasons.push("Unable to validate company_contacts reference-only status.");
+      pushValidation(
+        validations,
+        "pilot.companies.company_contacts_reference_only",
+        "FAIL",
+        "Failed company_contacts reference-only validation.",
+      );
+    }
+
+    try {
+      const contactRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      companiesContactsCountCurrent = Number(contactRows[0]?.total_rows ?? 0);
+      if (companiesContactsCountCurrent !== 0) {
+        noGoReasons.push("contacts must remain zero before companies pilot execution.");
+      }
+      pushValidation(validations, "pilot.companies.contacts_pre_count", "PASS", "Contacts pre-count validated.");
+    } catch {
+      noGoReasons.push("Unable to validate contacts pre-count for companies pilot.");
+      pushValidation(validations, "pilot.companies.contacts_pre_count", "FAIL", "Failed contacts pre-count validation.");
+    }
+  }
+
+  if (selectedPilotEntity === "contacts") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_CONTACTS_PILOT_PAYLOAD.phase) pilotPayloadValidationErrors.push("phase mismatch");
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) pilotPayloadValidationErrors.push("targetRef mismatch");
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) pilotPayloadValidationErrors.push("targetName mismatch");
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) pilotPayloadValidationErrors.push("batchId mismatch");
+
+      const payload = pilotPayloadJson?.sanitizedContactPayload?.payload;
+      if (!payload || typeof payload !== "object") {
+        pilotPayloadValidationErrors.push("sanitizedContactPayload.payload missing");
+      } else {
+        if (payload.source !== EXPECTED_CONTACTS_PILOT_PAYLOAD.source) pilotPayloadValidationErrors.push("source mismatch");
+        if (payload.temp_key !== EXPECTED_CONTACTS_PILOT_PAYLOAD.temp_key) pilotPayloadValidationErrors.push("temp_key mismatch");
+        if (payload.tenant_id !== EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id) pilotPayloadValidationErrors.push("tenant_id mismatch");
+        if (payload.first_name !== EXPECTED_CONTACTS_PILOT_PAYLOAD.first_name) pilotPayloadValidationErrors.push("first_name mismatch");
+        if (payload.email !== EXPECTED_CONTACTS_PILOT_PAYLOAD.email) pilotPayloadValidationErrors.push("email mismatch");
+        if (payload.company_temp_key !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_temp_key) {
+          pilotPayloadValidationErrors.push("company_temp_key mismatch");
+        }
+        if (payload.company_resolution_policy !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_resolution_policy) {
+          pilotPayloadValidationErrors.push("company_resolution_policy mismatch");
+        }
+        if (payload.company_id_policy !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_id_policy) {
+          pilotPayloadValidationErrors.push("company_id_policy mismatch");
+        }
+        if (payload.write_contact_in_same_phase !== EXPECTED_CONTACTS_PILOT_PAYLOAD.write_contact_in_same_phase) {
+          pilotPayloadValidationErrors.push("write_contact_in_same_phase mismatch");
+        }
+      }
+
+      const companyPayload = pilotPayloadJson?.sanitizedCompanyPayload?.payload;
+      if (!companyPayload || typeof companyPayload !== "object") {
+        pilotPayloadValidationErrors.push("sanitizedCompanyPayload.payload missing");
+      } else if (companyPayload.cnpj !== EXPECTED_CONTACTS_PILOT_PAYLOAD.company_lookup_cnpj) {
+        pilotPayloadValidationErrors.push("company lookup cnpj mismatch");
+      }
+
+      const idempotencyPrimary = pilotPayloadJson?.idempotencyRules?.contacts?.primaryKey;
+      if (!Array.isArray(idempotencyPrimary) || idempotencyPrimary.join(",") !== "tenant_id,company_id,email") {
+        pilotPayloadValidationErrors.push("idempotency primary key must be tenant_id,company_id,email");
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const rows = runSupabaseDbQuery(`
+        select column_name, data_type, is_nullable
+        from information_schema.columns
+        where table_schema='public'
+          and table_name='contacts'
+          and column_name in ('tenant_id','first_name','email','company_id')
+      `);
+      const byColumn = new Map(rows.map((r) => [r.column_name, r]));
+      contactsTenantRequired = byColumn.get("tenant_id")?.is_nullable === "NO";
+      contactsFirstNameRequired = byColumn.get("first_name")?.is_nullable === "NO";
+      contactsEmailPresent = byColumn.has("email");
+      contactsCompanyIdPresent = byColumn.has("company_id");
+      contactsCompanyIdNullable = byColumn.get("company_id")?.is_nullable === "YES";
+      if (contactsTenantRequired !== true) noGoReasons.push("contacts.tenant_id must be required.");
+      if (contactsFirstNameRequired !== true) noGoReasons.push("contacts.first_name must be required.");
+      if (contactsEmailPresent !== true) noGoReasons.push("contacts.email column must exist.");
+      if (contactsCompanyIdPresent !== true) noGoReasons.push("contacts.company_id column must exist.");
+      if (contactsCompanyIdNullable !== true) noGoReasons.push("contacts.company_id must be nullable.");
+      pushValidation(validations, "pilot.contacts.columns_and_nullable", "PASS", "Contacts columns and nullable policies validated.");
+    } catch {
+      noGoReasons.push("Unable to validate contacts columns and nullable policies.");
+      pushValidation(validations, "pilot.contacts.columns_and_nullable", "FAIL", "Failed contacts columns validation.");
+    }
+
+    try {
+      const indexRows = runSupabaseDbQuery(`
+        select indexname
+        from pg_indexes
+        where schemaname='public'
+          and tablename='contacts'
+          and indexname='idx_contacts_tenant_company_email_unique'
+      `);
+      contactsUniqueTenantCompanyEmailPresent = indexRows.some((r) => r.indexname === "idx_contacts_tenant_company_email_unique");
+      if (!contactsUniqueTenantCompanyEmailPresent) noGoReasons.push("idx_contacts_tenant_company_email_unique is required.");
+      pushValidation(validations, "pilot.contacts.unique_index", "PASS", "Contacts idempotency unique index validated.");
+    } catch {
+      noGoReasons.push("Unable to validate contacts idempotency unique index.");
+      pushValidation(validations, "pilot.contacts.unique_index", "FAIL", "Failed contacts unique index validation.");
+    }
+
+    try {
+      const fkRows = runSupabaseDbQuery(`
+        select count(*)::bigint as fk_count
+        from information_schema.table_constraints tc
+        join information_schema.key_column_usage kcu
+          on tc.constraint_name=kcu.constraint_name and tc.table_schema=kcu.table_schema
+        join information_schema.constraint_column_usage ccu
+          on tc.constraint_name=ccu.constraint_name and tc.table_schema=ccu.table_schema
+        where tc.table_schema='public'
+          and tc.table_name='contacts'
+          and tc.constraint_type='FOREIGN KEY'
+          and kcu.column_name='company_id'
+          and ccu.table_name='companies'
+          and ccu.column_name='id'
+      `);
+      contactsCompanyFkPresent = Number(fkRows[0]?.fk_count || 0) > 0;
+      if (!contactsCompanyFkPresent) noGoReasons.push("contacts.company_id FK to companies.id is required.");
+      pushValidation(validations, "pilot.contacts.company_fk", "PASS", "contacts.company_id FK validated.");
+    } catch {
+      noGoReasons.push("Unable to validate contacts.company_id FK.");
+      pushValidation(validations, "pilot.contacts.company_fk", "FAIL", "Failed contacts.company_id FK validation.");
+    }
+
+    try {
+      const tenantRows = runSupabaseDbQuery(
+        `select exists(select 1 from public.tenants where id = '${escapeSqlLiteral(EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id)}') as tenant_exists`,
+      );
+      contactsTenantExists = tenantRows[0]?.tenant_exists === true;
+      if (contactsTenantExists !== true) noGoReasons.push("Pilot tenant does not exist.");
+      pushValidation(validations, "pilot.contacts.tenant_exists", "PASS", "Pilot tenant existence validated.");
+    } catch {
+      noGoReasons.push("Unable to validate pilot tenant existence for contacts.");
+      pushValidation(validations, "pilot.contacts.tenant_exists", "FAIL", "Failed pilot tenant existence validation.");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      contactsCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.contacts.current_count", "PASS", "Current contacts count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.contacts.");
+      pushValidation(validations, "pilot.contacts.current_count", "FAIL", "Failed to read contacts count.");
+    }
+
+    try {
+      const companyRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      contactsCompaniesCountCurrent = Number(companyRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.contacts.companies_pre_count", "PASS", "Current companies count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.companies.");
+      pushValidation(validations, "pilot.contacts.companies_pre_count", "FAIL", "Failed to read companies count.");
+    }
+
+    try {
+      const emailRows = runSupabaseDbQuery(
+        `select count(*)::bigint as collision_count from public.contacts where email = '${escapeSqlLiteral(EXPECTED_CONTACTS_PILOT_PAYLOAD.email)}'`,
+      );
+      contactsEmailCollisionCount = Number(emailRows[0]?.collision_count ?? 0);
+      pushValidation(validations, "pilot.contacts.email_collision", "PASS", "Contacts email collision check executed.");
+    } catch {
+      noGoReasons.push("Unable to validate email collision for contacts pilot payload.");
+      pushValidation(validations, "pilot.contacts.email_collision", "FAIL", "Failed contacts email collision validation.");
+    }
+
+    try {
+      const firstNameRows = runSupabaseDbQuery(
+        `select count(*)::bigint as collision_count from public.contacts where first_name = '${escapeSqlLiteral(EXPECTED_CONTACTS_PILOT_PAYLOAD.first_name)}'`,
+      );
+      contactsFirstNameCollisionCount = Number(firstNameRows[0]?.collision_count ?? 0);
+      pushValidation(validations, "pilot.contacts.first_name_collision", "PASS", "Contacts first_name check executed.");
+    } catch {
+      noGoReasons.push("Unable to validate first_name check for contacts pilot payload.");
+      pushValidation(validations, "pilot.contacts.first_name_collision", "FAIL", "Failed contacts first_name check.");
+    }
+
+    try {
+      const companyRows = runSupabaseDbQuery(`
+        select id
+        from public.companies
+        where tenant_id='${escapeSqlLiteral(EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id)}'
+          and cnpj='${escapeSqlLiteral(EXPECTED_CONTACTS_PILOT_PAYLOAD.company_lookup_cnpj)}'
+      `);
+      contactsCompanyLookupCount = companyRows.length;
+      contactsResolvedCompanyId = companyRows[0]?.id || null;
+      if (contactsCompanyLookupCount !== 1) {
+        noGoReasons.push("Company lookup cardinality must be exactly 1.");
+      } else if (contactsResolvedCompanyId !== EXPECTED_CONTACTS_PILOT_PAYLOAD.resolved_company_id) {
+        noGoReasons.push("Resolved company id mismatch.");
+      }
+      pushValidation(validations, "pilot.contacts.company_lookup_cardinality", "PASS", "Company lookup cardinality validated.");
+    } catch {
+      noGoReasons.push("Unable to resolve company lookup for contacts pilot payload.");
+      pushValidation(validations, "pilot.contacts.company_lookup_cardinality", "FAIL", "Failed company lookup resolution.");
+    }
+
+    try {
+      const regRows = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+      contactsCompanyContactsRegclass = regRows[0]?.regclass ?? null;
+      if (contactsCompanyContactsRegclass !== null) {
+        noGoReasons.push("company_contacts must remain absent/reference-only for contacts pilot.");
+      }
+      pushValidation(validations, "pilot.contacts.company_contacts_reference_only", "PASS", "company_contacts reference-only validated.");
+    } catch {
+      noGoReasons.push("Unable to validate company_contacts reference-only status.");
+      pushValidation(
+        validations,
+        "pilot.contacts.company_contacts_reference_only",
+        "FAIL",
+        "Failed company_contacts reference-only validation.",
+      );
+    }
+  }
+
   const preflightDecision = classifyDecision(noGoReasons, partialReasons);
   const notWritableEntities = [...new Set([...blockedEntitiesFound, ...referenceOnlyEntitiesFound])].sort();
 
@@ -3042,6 +3815,35 @@ function main() {
             realExecutionBlocked: true,
             reason: "Execution remains blocked unless beforeDecision is GO in 22BB-R2 real pilot path.",
           }
+      : activePilotEntity === "companies"
+        ? {
+            entity: "companies",
+            action: "insert_pilot_planned",
+            tenant_id: EXPECTED_COMPANIES_PILOT_PAYLOAD.tenant_id,
+            name: EXPECTED_COMPANIES_PILOT_PAYLOAD.name,
+            cnpj: EXPECTED_COMPANIES_PILOT_PAYLOAD.cnpj,
+            omittedFields: ["owner_id", "sales_rep_id", "legal_entity_id", "created_by"],
+            idempotencyKey: ["tenant_id", "cnpj"],
+            executableIn22BG: true,
+            realExecutionBlocked: true,
+            reason: "Execution remains blocked unless beforeDecision is GO in 22BG-R2 real pilot path.",
+          }
+      : activePilotEntity === "contacts"
+        ? {
+            entity: "contacts",
+            action: "insert_pilot_planned",
+            tenant_id: EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id,
+            first_name: EXPECTED_CONTACTS_PILOT_PAYLOAD.first_name,
+            email: EXPECTED_CONTACTS_PILOT_PAYLOAD.email,
+            company_lookup: {
+              tenant_id: EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id,
+              cnpj: EXPECTED_CONTACTS_PILOT_PAYLOAD.company_lookup_cnpj,
+            },
+            idempotencyKey: ["tenant_id", "company_id", "email"],
+            executableIn22BH: true,
+            realExecutionBlocked: true,
+            reason: "Execution remains blocked unless beforeDecision is GO in 22BH-R2 real pilot path.",
+          }
       : {
           entity: "legal_entities",
           action: "upsert_pilot_planned",
@@ -3069,7 +3871,9 @@ function main() {
   }
 
   if (selectedPilotEntity && !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
-    pilotNoGoReasons.push("Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families or product_classes.");
+    pilotNoGoReasons.push(
+      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, companies or contacts.",
+    );
   }
   if (args.pilotAuthorization && args.pilotAuthorization !== expectedPilotAuthorization) {
     pilotNoGoReasons.push("Pilot authorization phrase is invalid.");
@@ -3087,7 +3891,9 @@ function main() {
         selectedPilotEntity === "product_groups" ||
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
-        selectedPilotEntity === "product_classes") &&
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts") &&
       (!args.pilotPayload || !pilotPayloadParsed)
     ) {
       pilotNoGoReasons.push(`Pilot mode armed for ${selectedPilotEntity} without validated --pilot-payload.`);
@@ -3155,6 +3961,18 @@ function main() {
   if (selectedPilotEntity === "product_classes" && productClassesUniqueValuePresent !== true) {
     pilotNoGoReasons.push("product_classes requires UNIQUE(value) for pilot.");
   }
+  if (selectedPilotEntity === "companies" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("companies pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "companies" && companiesUniqueTenantCnpjPresent !== true) {
+    pilotNoGoReasons.push("companies requires UNIQUE(tenant_id, cnpj) for pilot.");
+  }
+  if (selectedPilotEntity === "contacts" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("contacts pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "contacts" && contactsUniqueTenantCompanyEmailPresent !== true) {
+    pilotNoGoReasons.push("contacts requires idx_contacts_tenant_company_email_unique for pilot.");
+  }
 
   const pilotDecisionFinal = classifyDecision(pilotNoGoReasons, pilotPartialReasons);
 
@@ -3180,6 +3998,10 @@ function main() {
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_families. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22BBStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_classes. EXECUÇÃO AMPLIADA BLOQUEADA.";
+  const phase22BGStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM companies. EXECUÇÃO AMPLIADA BLOQUEADA.";
+  const phase22BHStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM contacts. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22TStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM legal_entities. EXECUÇÃO AMPLIADA BLOQUEADA.";
 
@@ -3418,6 +4240,8 @@ function main() {
         ? path.resolve("artifacts/migration/phase-22az-r2-pilot-product-families-write")
       : selectedPilotEntity === "product_classes"
         ? path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write")
+      : selectedPilotEntity === "contacts"
+        ? path.resolve("artifacts/migration/phase-22bh-r2-pilot-contacts-write")
       : path.resolve("artifacts/migration/phase-22s-r2-pilot-legal-entities");
   fs.mkdirSync(pilotEvidenceDir, { recursive: true });
   const pilotEvidencePath =
@@ -3431,6 +4255,8 @@ function main() {
         ? path.join(pilotEvidenceDir, `pilot-product-families-${nowStamp()}.json`)
       : selectedPilotEntity === "product_classes"
         ? path.join(pilotEvidenceDir, `pilot-product-classes-${nowStamp()}.json`)
+      : selectedPilotEntity === "contacts"
+        ? path.join(pilotEvidenceDir, `pilot-contacts-${nowStamp()}.json`)
       : path.join(pilotEvidenceDir, `pilot-legal-entities-${nowStamp()}.json`);
   const pilotEvidence = {
     phase:
@@ -3444,6 +4270,8 @@ function main() {
               ? "22AZ-R2"
             : selectedPilotEntity === "product_classes"
               ? "22BB-R2"
+            : selectedPilotEntity === "contacts"
+              ? "22BH-R2"
             : "22S-R2",
     timestamp: new Date().toISOString(),
     targetRef: EXPECTED_TARGET_REF,
@@ -3462,6 +4290,8 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes"
+      || selectedPilotEntity === "companies"
+      || selectedPilotEntity === "contacts"
         ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0
         : null,
     pilotPlannedCount,
@@ -3553,6 +4383,36 @@ function main() {
       selectedPilotEntity === "product_classes" ? productClassesHasFkToProductSubgroups : null,
     productClassesHasFkToProductFamilies:
       selectedPilotEntity === "product_classes" ? productClassesHasFkToProductFamilies : null,
+    companiesCurrentCount: selectedPilotEntity === "companies" ? companiesCountCurrent : null,
+    companiesTenantRequired: selectedPilotEntity === "companies" ? companiesTenantRequired : null,
+    companiesNameRequired: selectedPilotEntity === "companies" ? companiesNameRequired : null,
+    companiesCnpjIsText: selectedPilotEntity === "companies" ? companiesCnpjIsText : null,
+    companiesUniqueTenantCnpjPresent: selectedPilotEntity === "companies" ? companiesUniqueTenantCnpjPresent : null,
+    companiesUniqueCnpjPresent: selectedPilotEntity === "companies" ? companiesUniqueCnpjPresent : null,
+    companiesTenantExists: selectedPilotEntity === "companies" ? companiesTenantExists : null,
+    companiesNameCollisionCount: selectedPilotEntity === "companies" ? companiesNameCollisionCount : null,
+    companiesCnpjCollisionCount: selectedPilotEntity === "companies" ? companiesCnpjCollisionCount : null,
+    companiesOwnerNullable: selectedPilotEntity === "companies" ? companiesOwnerNullable : null,
+    companiesSalesRepNullable: selectedPilotEntity === "companies" ? companiesSalesRepNullable : null,
+    companiesLegalEntityNullable: selectedPilotEntity === "companies" ? companiesLegalEntityNullable : null,
+    companiesCreatedByNullable: selectedPilotEntity === "companies" ? companiesCreatedByNullable : null,
+    companiesCompanyContactsRegclass: selectedPilotEntity === "companies" ? companiesCompanyContactsRegclass : null,
+    companiesContactsCountCurrent: selectedPilotEntity === "companies" ? companiesContactsCountCurrent : null,
+    contactsCurrentCount: selectedPilotEntity === "contacts" ? contactsCountCurrent : null,
+    contactsTenantRequired: selectedPilotEntity === "contacts" ? contactsTenantRequired : null,
+    contactsFirstNameRequired: selectedPilotEntity === "contacts" ? contactsFirstNameRequired : null,
+    contactsEmailPresent: selectedPilotEntity === "contacts" ? contactsEmailPresent : null,
+    contactsCompanyIdPresent: selectedPilotEntity === "contacts" ? contactsCompanyIdPresent : null,
+    contactsCompanyIdNullable: selectedPilotEntity === "contacts" ? contactsCompanyIdNullable : null,
+    contactsUniqueTenantCompanyEmailPresent: selectedPilotEntity === "contacts" ? contactsUniqueTenantCompanyEmailPresent : null,
+    contactsTenantExists: selectedPilotEntity === "contacts" ? contactsTenantExists : null,
+    contactsEmailCollisionCount: selectedPilotEntity === "contacts" ? contactsEmailCollisionCount : null,
+    contactsFirstNameCollisionCount: selectedPilotEntity === "contacts" ? contactsFirstNameCollisionCount : null,
+    contactsCompanyFkPresent: selectedPilotEntity === "contacts" ? contactsCompanyFkPresent : null,
+    contactsCompanyLookupCount: selectedPilotEntity === "contacts" ? contactsCompanyLookupCount : null,
+    contactsResolvedCompanyId: selectedPilotEntity === "contacts" ? contactsResolvedCompanyId : null,
+    contactsCompanyContactsRegclass: selectedPilotEntity === "contacts" ? contactsCompanyContactsRegclass : null,
+    contactsCompaniesCountCurrent: selectedPilotEntity === "contacts" ? contactsCompaniesCountCurrent : null,
     pilotOperation,
     pilotValidation: {
       existsInWritePlanEligibleEntities: writePlanEligibleEntities.includes(activePilotEntity),
@@ -3567,19 +4427,29 @@ function main() {
         selectedPilotEntity === "product_groups" ||
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
-        selectedPilotEntity === "product_classes",
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts",
       productTypesWillNotBeTouchedAgain:
         selectedPilotEntity === "product_groups" ||
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
-        selectedPilotEntity === "product_classes",
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts",
       productGroupsWillNotBeTouchedAgain:
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
-        selectedPilotEntity === "product_classes",
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts",
       productSubgroupsWillNotBeTouchedAgain:
-        selectedPilotEntity === "product_families" || selectedPilotEntity === "product_classes",
-      productFamiliesWillNotBeTouchedAgain: selectedPilotEntity === "product_classes",
+        selectedPilotEntity === "product_families" ||
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts",
+      productFamiliesWillNotBeTouchedAgain:
+        selectedPilotEntity === "product_classes" || selectedPilotEntity === "companies" || selectedPilotEntity === "contacts",
       salesRepsBlocked: true,
       profilesExcluded: !executableEntitiesRoundOne22Q.includes("profiles"),
       companyContactsExcluded: !executableEntitiesRoundOne22Q.includes("company_contacts"),
@@ -3607,7 +4477,9 @@ function main() {
       selectedPilotEntity === "product_groups" ||
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
-      selectedPilotEntity === "product_classes"
+      selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts"
         ? Boolean(args.executePilotWrite && args.write)
         : false,
     finalHardStopMessage:
@@ -3621,6 +4493,10 @@ function main() {
           ? phase22AZStopAfterPilotMessage
         : selectedPilotEntity === "product_classes"
           ? phase22BBStopAfterPilotMessage
+        : selectedPilotEntity === "companies"
+          ? phase22BGStopAfterPilotMessage
+        : selectedPilotEntity === "contacts"
+          ? phase22BHStopAfterPilotMessage
         : phase22SHardStopMessage,
   };
   fs.writeFileSync(pilotEvidencePath, JSON.stringify(pilotEvidence, null, 2), "utf8");
@@ -3637,6 +4513,10 @@ function main() {
   fs.mkdirSync(phase22AZDir, { recursive: true });
   const phase22BBDir = path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write");
   fs.mkdirSync(phase22BBDir, { recursive: true });
+  const phase22BGDir = path.resolve("artifacts/migration/phase-22bg-r2-pilot-companies-write");
+  fs.mkdirSync(phase22BGDir, { recursive: true });
+  const phase22BHDir = path.resolve("artifacts/migration/phase-22bh-r2-pilot-contacts-write");
+  fs.mkdirSync(phase22BHDir, { recursive: true });
   let pilotWriteBeforePath = "not_generated";
   let pilotWriteAfterPath = "not_generated";
   let pilotWriteBeforeDecision = "GO";
@@ -3651,6 +4531,8 @@ function main() {
   const productSubgroupsPilotMode = selectedPilotEntity === "product_subgroups";
   const productFamiliesPilotMode = selectedPilotEntity === "product_families";
   const productClassesPilotMode = selectedPilotEntity === "product_classes";
+  const companiesPilotMode = selectedPilotEntity === "companies";
+  const contactsPilotMode = selectedPilotEntity === "contacts";
 
   if (productTypesPilotMode) {
     pilotWriteBeforePath = path.join(phase22AFDir, `before-${nowStamp()}.json`);
@@ -4883,6 +5765,615 @@ function main() {
       finalMessage: phase22BBStopAfterPilotMessage,
     };
     fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BB, null, 2), "utf8");
+  } else if (companiesPilotMode) {
+    pilotWriteBeforePath = path.join(phase22BGDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22BGDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
+
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_COMPANIES_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueTenantCnpjValidated = companiesUniqueTenantCnpjPresent === true && companiesUniqueCnpjPresent === true;
+
+    const candidateTenantId = EXPECTED_COMPANIES_PILOT_PAYLOAD.tenant_id;
+    const candidateName = EXPECTED_COMPANIES_PILOT_PAYLOAD.name;
+    const candidateCnpj = EXPECTED_COMPANIES_PILOT_PAYLOAD.cnpj;
+
+    let countBefore = null;
+    let contactsCountBefore = null;
+    let existingByTenantCnpj = [];
+    let lookupByName = [];
+    let tenantLookup = [];
+    let companyContactsLookup = [];
+    try {
+      const beforeRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      countBefore = Number(beforeRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read companies count before write.");
+    }
+    try {
+      const contactsRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      contactsCountBefore = Number(contactsRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read contacts count before write.");
+    }
+    try {
+      existingByTenantCnpj = runSupabaseDbQuery(`
+        select id, tenant_id, name, cnpj, cnpj_root, owner_id, sales_rep_id, legal_entity_id, created_by
+        from public.companies
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and cnpj='${escapeSqlLiteral(candidateCnpj)}'
+      `);
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup companies by (tenant_id, cnpj) before write.");
+    }
+    try {
+      lookupByName = runSupabaseDbQuery(
+        `select id, tenant_id, name, cnpj from public.companies where name='${escapeSqlLiteral(candidateName)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup companies by name before write.");
+    }
+    try {
+      tenantLookup = runSupabaseDbQuery(
+        `select id from public.tenants where id='${escapeSqlLiteral(candidateTenantId)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to validate tenant existence before write.");
+    }
+    try {
+      companyContactsLookup = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+    } catch {
+      beforeNoGoReasons.push("Unable to validate company_contacts reference-only status before write.");
+    }
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for companies pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for companies pilot real execution.");
+    if (activePilotEntity !== "companies") beforeNoGoReasons.push("Pilot entity must be companies.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueTenantCnpjValidated) beforeNoGoReasons.push("Idempotency key indexes for companies are not validated.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if (existingByTenantCnpj.length > 1) beforeNoGoReasons.push("More than one row found for companies(tenant_id, cnpj).");
+    if (tenantLookup.length !== 1) beforeNoGoReasons.push("Pilot tenant must exist with cardinality 1.");
+    if (companyContactsLookup[0]?.regclass !== null) beforeNoGoReasons.push("company_contacts must remain reference-only/non-writable.");
+    if (contactsCountBefore !== 0) beforeNoGoReasons.push("contacts must remain zero before companies pilot.");
+    if (companiesTenantRequired !== true) beforeNoGoReasons.push("companies.tenant_id must remain required.");
+    if (companiesNameRequired !== true) beforeNoGoReasons.push("companies.name must remain required.");
+    if (companiesCnpjIsText !== true) beforeNoGoReasons.push("companies.cnpj must remain text.");
+    if (companiesOwnerNullable !== true) beforeNoGoReasons.push("companies.owner_id must be nullable/omittable.");
+    if (companiesSalesRepNullable !== true) beforeNoGoReasons.push("companies.sales_rep_id must be nullable/omittable.");
+    if (companiesLegalEntityNullable !== true) beforeNoGoReasons.push("companies.legal_entity_id must be nullable/omittable.");
+    if (companiesCreatedByNullable !== true) beforeNoGoReasons.push("companies.created_by must be nullable/omittable.");
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22BG = {
+      phase: "22BG-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "companies",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: {
+        source: EXPECTED_COMPANIES_PILOT_PAYLOAD.source,
+        temp_key: EXPECTED_COMPANIES_PILOT_PAYLOAD.temp_key,
+        tenant_id: candidateTenantId,
+        name: candidateName,
+        cnpj: candidateCnpj,
+        source_document: EXPECTED_COMPANIES_PILOT_PAYLOAD.source_document,
+        owner_temp_key: EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_temp_key,
+        owner_write_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_write_policy,
+        sales_rep_id_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.sales_rep_id_policy,
+        legal_entity_id_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.legal_entity_id_policy,
+        created_by_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.created_by_policy,
+      },
+      companiesCountBefore: countBefore,
+      contactsCountBefore,
+      lookupByTenantCnpj: existingByTenantCnpj,
+      lookupByName,
+      tenantLookup,
+      idempotencyKeyValidation: {
+        unique_tenant_cnpj_index: companiesUniqueTenantCnpjPresent,
+        unique_cnpj_index: companiesUniqueCnpjPresent,
+      },
+      requiredFieldsValidation: {
+        tenant_id_required: companiesTenantRequired === true,
+        name_required: companiesNameRequired === true,
+        cnpj_text: companiesCnpjIsText === true,
+      },
+      omittedFieldsValidation: {
+        owner_id_omitted_or_null: companiesOwnerNullable === true,
+        sales_rep_id_omitted_or_null: companiesSalesRepNullable === true,
+        legal_entity_id_omitted_or_null: companiesLegalEntityNullable === true,
+        created_by_omitted_or_null: companiesCreatedByNullable === true,
+      },
+      companyContactsReferenceOnly: {
+        regclass: companyContactsLookup[0]?.regclass ?? null,
+        reference_only: companyContactsLookup[0]?.regclass === null,
+      },
+      contactsWriteBlocked: true,
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22BG, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeCompaniesPilotWrite({
+          pilotEntity: selectedPilotEntity,
+          pilotAuthorization: args.pilotAuthorization,
+          tenant_id: candidateTenantId,
+          name: candidateName,
+          cnpj: candidateCnpj,
+          owner_write_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.owner_write_policy,
+          sales_rep_id_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.sales_rep_id_policy,
+          legal_entity_id_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.legal_entity_id_policy,
+          created_by_policy: EXPECTED_COMPANIES_PILOT_PAYLOAD.created_by_policy,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          inserted: false,
+        };
+      }
+    }
+
+    let countAfter = null;
+    let contactsCountAfter = null;
+    let rowsByTenantCnpjAfter = [];
+    let duplicateByTenantCnpjCount = null;
+    let companyContactsAfter = [];
+    try {
+      const afterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      countAfter = Number(afterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      const contactsRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      contactsCountAfter = Number(contactsRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      rowsByTenantCnpjAfter = runSupabaseDbQuery(`
+        select id, tenant_id, name, cnpj, cnpj_root, owner_id, sales_rep_id, legal_entity_id, created_by
+        from public.companies
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and cnpj='${escapeSqlLiteral(candidateCnpj)}'
+      `);
+    } catch {}
+    try {
+      const dupRows = runSupabaseDbQuery(`
+        select count(*)::bigint as duplicate_count
+        from public.companies
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and cnpj='${escapeSqlLiteral(candidateCnpj)}'
+      `);
+      duplicateByTenantCnpjCount = Number(dupRows[0]?.duplicate_count || 0);
+    } catch {}
+    try {
+      companyContactsAfter = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = rowsByTenantCnpjAfter[0] || writeResult.record || null;
+    pilotWriteDelta = countAfter !== null && countBefore !== null ? countAfter - countBefore : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (!rowsByTenantCnpjAfter.length) afterNoGoReasons.push("No row found by (tenant_id, cnpj) after execution.");
+    if ((duplicateByTenantCnpjCount ?? 0) !== 1) afterNoGoReasons.push("Expected exactly one row for (tenant_id, cnpj) after execution.");
+    if (contactsCountBefore !== contactsCountAfter) afterNoGoReasons.push("contacts count changed unexpectedly.");
+    if (companyContactsAfter[0]?.regclass !== null) afterNoGoReasons.push("company_contacts must remain non-writable.");
+    if (rowsByTenantCnpjAfter.length === 1) {
+      const row = rowsByTenantCnpjAfter[0];
+      if (row.tenant_id !== candidateTenantId) afterNoGoReasons.push("After tenant_id mismatch.");
+      if (row.name !== candidateName && row.name !== candidateName.toUpperCase()) afterNoGoReasons.push("After name mismatch.");
+      if (row.cnpj !== candidateCnpj) afterNoGoReasons.push("After cnpj mismatch.");
+      if (row.owner_id !== null) afterNoGoReasons.push("owner_id must remain null.");
+      if (row.sales_rep_id !== null) afterNoGoReasons.push("sales_rep_id must remain null.");
+      if (row.legal_entity_id !== null) afterNoGoReasons.push("legal_entity_id must remain null.");
+      if (row.created_by !== null) afterNoGoReasons.push("created_by must remain null.");
+    }
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+
+    const afterEvidence22BG = {
+      phase: "22BG-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      companiesCountAfter: countAfter,
+      contactsCountAfter,
+      delta: pilotWriteDelta,
+      recordByTenantCnpj: rowsByTenantCnpjAfter,
+      recordId: rowsByTenantCnpjAfter[0]?.id || null,
+      tenant_id: candidateTenantId,
+      name: candidateName,
+      cnpj: candidateCnpj,
+      cnpj_root: rowsByTenantCnpjAfter[0]?.cnpj_root ?? null,
+      owner_id: rowsByTenantCnpjAfter[0]?.owner_id ?? null,
+      sales_rep_id: rowsByTenantCnpjAfter[0]?.sales_rep_id ?? null,
+      legal_entity_id: rowsByTenantCnpjAfter[0]?.legal_entity_id ?? null,
+      created_by: rowsByTenantCnpjAfter[0]?.created_by ?? null,
+      omittedFieldsConfirmed: {
+        owner_id_not_written: rowsByTenantCnpjAfter[0]?.owner_id === null,
+        sales_rep_id_not_written: rowsByTenantCnpjAfter[0]?.sales_rep_id === null,
+        legal_entity_id_not_written: rowsByTenantCnpjAfter[0]?.legal_entity_id === null,
+        created_by_not_written: rowsByTenantCnpjAfter[0]?.created_by === null,
+      },
+      contactsNotWritten: contactsCountBefore === contactsCountAfter,
+      companyContactsNotWritten: companyContactsAfter[0]?.regclass === null,
+      uniqueTenantCnpjDuplicateCount: duplicateByTenantCnpjCount,
+      scopeConfirmation: {
+        singleEntityExecution: true,
+        touchedEntity: "companies",
+        contactsTouched: false,
+        companyContactsTouched: false,
+        salesRepsTouched: false,
+        profilesTouched: false,
+        transactionalTouched: false,
+        queueTouched: false,
+        externalIntegrationsCalled: false,
+        expandedExecutionBlocked: true,
+        noOtherEntityTouched: true,
+      },
+      executionExpandedBlocked: true,
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22BGStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BG, null, 2), "utf8");
+  } else if (contactsPilotMode) {
+    pilotWriteBeforePath = path.join(phase22BHDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22BHDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
+
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_CONTACTS_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueIndexValidated = contactsUniqueTenantCompanyEmailPresent === true;
+
+    const candidateTenantId = EXPECTED_CONTACTS_PILOT_PAYLOAD.tenant_id;
+    const candidateFirstName = EXPECTED_CONTACTS_PILOT_PAYLOAD.first_name;
+    const candidateEmail = EXPECTED_CONTACTS_PILOT_PAYLOAD.email;
+    const candidateCompanyCnpj = EXPECTED_CONTACTS_PILOT_PAYLOAD.company_lookup_cnpj;
+    const candidateCompanyId = EXPECTED_CONTACTS_PILOT_PAYLOAD.resolved_company_id;
+
+    let contactsCountBefore = null;
+    let companiesCountBefore = null;
+    let companyLookupRows = [];
+    let companyIdLookupRows = [];
+    let lookupByKeyBefore = [];
+    let lookupByEmailBefore = [];
+    let tenantLookup = [];
+    let companyContactsLookup = [];
+    try {
+      const beforeRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      contactsCountBefore = Number(beforeRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read contacts count before write.");
+    }
+    try {
+      const companyCountRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      companiesCountBefore = Number(companyCountRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read companies count before write.");
+    }
+    try {
+      companyLookupRows = runSupabaseDbQuery(`
+        select id, tenant_id, cnpj, name, owner_id, sales_rep_id, legal_entity_id
+        from public.companies
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and cnpj='${escapeSqlLiteral(candidateCompanyCnpj)}'
+      `);
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup company by (tenant_id, cnpj) before write.");
+    }
+    if (companyLookupRows.length === 1) {
+      try {
+        lookupByKeyBefore = runSupabaseDbQuery(`
+          select id, tenant_id, company_id, first_name, email, owner_id, created_by
+          from public.contacts
+          where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+            and company_id='${escapeSqlLiteral(companyLookupRows[0].id)}'
+            and email='${escapeSqlLiteral(candidateEmail)}'
+        `);
+      } catch {
+        beforeNoGoReasons.push("Unable to lookup contacts by (tenant_id, company_id, email) before write.");
+      }
+    }
+    try {
+      lookupByEmailBefore = runSupabaseDbQuery(
+        `select id, tenant_id, company_id, first_name, email from public.contacts where email='${escapeSqlLiteral(candidateEmail)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup contacts by email before write.");
+    }
+    try {
+      tenantLookup = runSupabaseDbQuery(
+        `select id from public.tenants where id='${escapeSqlLiteral(candidateTenantId)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to validate tenant existence before write.");
+    }
+    try {
+      companyContactsLookup = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+    } catch {
+      beforeNoGoReasons.push("Unable to validate company_contacts reference-only status before write.");
+    }
+    try {
+      companyIdLookupRows = runSupabaseDbQuery(
+        `select id from public.companies where id='${escapeSqlLiteral(candidateCompanyId)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to validate resolved company_id existence before write.");
+    }
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for contacts pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for contacts pilot real execution.");
+    if (activePilotEntity !== "contacts") beforeNoGoReasons.push("Pilot entity must be contacts.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueIndexValidated) beforeNoGoReasons.push("Idempotency index for contacts is not validated.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if (tenantLookup.length !== 1) beforeNoGoReasons.push("Pilot tenant must exist with cardinality 1.");
+    if (contactsTenantRequired !== true) beforeNoGoReasons.push("contacts.tenant_id must remain required.");
+    if (contactsFirstNameRequired !== true) beforeNoGoReasons.push("contacts.first_name must remain required.");
+    if (contactsEmailPresent !== true) beforeNoGoReasons.push("contacts.email column must exist.");
+    if (contactsCompanyIdPresent !== true) beforeNoGoReasons.push("contacts.company_id column must exist.");
+    if (contactsCompanyIdNullable !== true) beforeNoGoReasons.push("contacts.company_id must remain nullable.");
+    if (contactsCompanyFkPresent !== true) beforeNoGoReasons.push("contacts.company_id FK must exist.");
+    if (companyContactsLookup[0]?.regclass !== null) beforeNoGoReasons.push("company_contacts must remain reference-only/non-writable.");
+    if (companyLookupRows.length !== 1) beforeNoGoReasons.push("Company lookup by (tenant_id, cnpj) must return cardinality 1.");
+    if (companyLookupRows.length === 1 && companyLookupRows[0].id !== candidateCompanyId) {
+      beforeNoGoReasons.push("Resolved company_id mismatch against deterministic lookup.");
+    }
+    if (companyLookupRows.length === 1 && companyLookupRows[0].name !== "TMP COMPANY 01") {
+      beforeNoGoReasons.push("Resolved company name mismatch.");
+    }
+    if (companyLookupRows.length === 1 && companyLookupRows[0].owner_id !== null) beforeNoGoReasons.push("Company owner_id must remain null.");
+    if (companyLookupRows.length === 1 && companyLookupRows[0].sales_rep_id !== null) beforeNoGoReasons.push("Company sales_rep_id must remain null.");
+    if (companyLookupRows.length === 1 && companyLookupRows[0].legal_entity_id !== null) beforeNoGoReasons.push("Company legal_entity_id must remain null.");
+    if (companyIdLookupRows.length !== 1) beforeNoGoReasons.push("Resolved company_id must exist with cardinality 1.");
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22BH = {
+      phase: "22BH-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "contacts",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: {
+        source: EXPECTED_CONTACTS_PILOT_PAYLOAD.source,
+        temp_key: EXPECTED_CONTACTS_PILOT_PAYLOAD.temp_key,
+        tenant_id: candidateTenantId,
+        first_name: candidateFirstName,
+        email: candidateEmail,
+        company_temp_key: EXPECTED_CONTACTS_PILOT_PAYLOAD.company_temp_key,
+        company_id_policy: EXPECTED_CONTACTS_PILOT_PAYLOAD.company_id_policy,
+        write_contact_in_same_phase: EXPECTED_CONTACTS_PILOT_PAYLOAD.write_contact_in_same_phase,
+      },
+      contactsCountBefore,
+      companiesCountBefore,
+      lookupCompanyByTenantCnpj: companyLookupRows,
+      resolvedCompanyId: companyLookupRows[0]?.id || null,
+      lookupByTenantCompanyEmail: lookupByKeyBefore,
+      lookupByEmail: lookupByEmailBefore,
+      tenantLookup,
+      idempotencyKeyValidation: {
+        unique_tenant_company_email_index: contactsUniqueTenantCompanyEmailPresent,
+      },
+      requiredFieldsValidation: {
+        tenant_id_required: contactsTenantRequired === true,
+        first_name_required: contactsFirstNameRequired === true,
+        email_present: contactsEmailPresent === true,
+        company_id_present: contactsCompanyIdPresent === true,
+      },
+      omittedFieldsValidation: {
+        owner_id_omitted_or_null: true,
+        created_by_omitted_or_null: true,
+      },
+      companyContactsReferenceOnly: {
+        regclass: companyContactsLookup[0]?.regclass ?? null,
+        reference_only: companyContactsLookup[0]?.regclass === null,
+      },
+      companiesWriteBlocked: true,
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22BH, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, resolvedCompany: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeContactsPilotWrite({
+          pilotEntity: selectedPilotEntity,
+          pilotAuthorization: args.pilotAuthorization,
+          tenant_id: candidateTenantId,
+          first_name: candidateFirstName,
+          email: candidateEmail,
+          company_temp_key: EXPECTED_CONTACTS_PILOT_PAYLOAD.company_temp_key,
+          company_id_policy: EXPECTED_CONTACTS_PILOT_PAYLOAD.company_id_policy,
+          write_contact_in_same_phase: EXPECTED_CONTACTS_PILOT_PAYLOAD.write_contact_in_same_phase,
+          company_lookup_cnpj: candidateCompanyCnpj,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          resolvedCompany: null,
+          inserted: false,
+        };
+      }
+    }
+
+    let contactsCountAfter = null;
+    let companiesCountAfter = null;
+    let rowsByKeyAfter = [];
+    let duplicateByKeyCount = null;
+    let companyContactsAfter = [];
+    let companyLookupAfter = [];
+    try {
+      const afterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.contacts");
+      contactsCountAfter = Number(afterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      const companyAfterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.companies");
+      companiesCountAfter = Number(companyAfterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      rowsByKeyAfter = runSupabaseDbQuery(`
+        select id, tenant_id, company_id, first_name, email, owner_id, created_by
+        from public.contacts
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and company_id='${escapeSqlLiteral(candidateCompanyId)}'
+          and email='${escapeSqlLiteral(candidateEmail)}'
+      `);
+    } catch {}
+    try {
+      const dupRows = runSupabaseDbQuery(`
+        select count(*)::bigint as duplicate_count
+        from public.contacts
+        where tenant_id='${escapeSqlLiteral(candidateTenantId)}'
+          and company_id='${escapeSqlLiteral(candidateCompanyId)}'
+          and email='${escapeSqlLiteral(candidateEmail)}'
+      `);
+      duplicateByKeyCount = Number(dupRows[0]?.duplicate_count || 0);
+    } catch {}
+    try {
+      companyLookupAfter = runSupabaseDbQuery(`
+        select id, tenant_id, cnpj, name, owner_id, sales_rep_id, legal_entity_id
+        from public.companies
+        where id='${escapeSqlLiteral(candidateCompanyId)}'
+      `);
+    } catch {}
+    try {
+      companyContactsAfter = runSupabaseDbQuery("select to_regclass('public.company_contacts') as regclass");
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = rowsByKeyAfter[0] || writeResult.record || null;
+    pilotWriteDelta = contactsCountAfter !== null && contactsCountBefore !== null ? contactsCountAfter - contactsCountBefore : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (!rowsByKeyAfter.length) afterNoGoReasons.push("No row found by (tenant_id, company_id, email) after execution.");
+    if ((duplicateByKeyCount ?? 0) !== 1) afterNoGoReasons.push("Expected exactly one row for (tenant_id, company_id, email) after execution.");
+    if (companiesCountAfter !== companiesCountBefore) afterNoGoReasons.push("companies count changed unexpectedly.");
+    if (companyLookupAfter.length !== 1) afterNoGoReasons.push("Referenced company_id must still exist with cardinality 1.");
+    if (companyContactsAfter[0]?.regclass !== null) afterNoGoReasons.push("company_contacts must remain non-writable.");
+    if (rowsByKeyAfter.length === 1) {
+      const row = rowsByKeyAfter[0];
+      if (row.tenant_id !== candidateTenantId) afterNoGoReasons.push("After tenant_id mismatch.");
+      if (row.company_id !== candidateCompanyId) afterNoGoReasons.push("After company_id mismatch.");
+      if (row.first_name !== candidateFirstName && row.first_name !== candidateFirstName.toUpperCase()) {
+        afterNoGoReasons.push("After first_name mismatch.");
+      }
+      if (row.email !== candidateEmail) afterNoGoReasons.push("After email mismatch.");
+      if (row.owner_id !== null) afterNoGoReasons.push("owner_id must remain null.");
+      if (row.created_by !== null) afterNoGoReasons.push("created_by must remain null.");
+    }
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+
+    const afterEvidence22BH = {
+      phase: "22BH-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      contactsCountAfter,
+      companiesCountAfter,
+      delta: pilotWriteDelta,
+      recordByTenantCompanyEmail: rowsByKeyAfter,
+      recordId: rowsByKeyAfter[0]?.id || null,
+      tenant_id: candidateTenantId,
+      company_id: candidateCompanyId,
+      first_name: candidateFirstName,
+      email: candidateEmail,
+      referencedCompanyExists: companyLookupAfter.length === 1,
+      companiesNotWritten: companiesCountAfter === companiesCountBefore,
+      companyContactsNotWritten: companyContactsAfter[0]?.regclass === null,
+      uniqueTenantCompanyEmailDuplicateCount: duplicateByKeyCount,
+      scopeConfirmation: {
+        singleEntityExecution: true,
+        touchedEntity: "contacts",
+        companiesTouched: false,
+        companyContactsTouched: false,
+        salesRepsTouched: false,
+        profilesTouched: false,
+        transactionalTouched: false,
+        queueTouched: false,
+        externalIntegrationsCalled: false,
+        expandedExecutionBlocked: true,
+        noOtherEntityTouched: true,
+      },
+      executionExpandedBlocked: true,
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22BHStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BH, null, 2), "utf8");
   } else if (legalPilotMode) {
     pilotWriteBeforePath = path.join(phase22TDir, `before-${nowStamp()}.json`);
     pilotWriteAfterPath = path.join(phase22TDir, `after-${nowStamp()}.json`);
@@ -4906,7 +6397,9 @@ function main() {
       selectedPilotEntity === "product_groups" ||
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
-      selectedPilotEntity === "product_classes"
+      selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "companies" ||
+      selectedPilotEntity === "contacts"
         ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0
         : "not_applicable"
     }`,
@@ -4933,6 +6426,10 @@ function main() {
         ? phase22AZStopAfterPilotMessage
       : selectedPilotEntity === "product_classes"
         ? phase22BBStopAfterPilotMessage
+      : selectedPilotEntity === "companies"
+        ? phase22BGStopAfterPilotMessage
+      : selectedPilotEntity === "contacts"
+        ? phase22BHStopAfterPilotMessage
       : phase22SHardStopMessage,
   );
   console.log(
@@ -4946,6 +6443,10 @@ function main() {
         ? phase22AZStopAfterPilotMessage
       : selectedPilotEntity === "product_classes"
         ? phase22BBStopAfterPilotMessage
+      : selectedPilotEntity === "companies"
+        ? phase22BGStopAfterPilotMessage
+      : selectedPilotEntity === "contacts"
+        ? phase22BHStopAfterPilotMessage
       : phase22TStopAfterPilotMessage,
   );
   console.log(writeStatusMessage);

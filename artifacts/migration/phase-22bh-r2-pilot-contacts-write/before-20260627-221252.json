@@ -1,0 +1,65 @@
+{
+  "phase": "22BH-R2",
+  "timestamp": "2026-06-28T01:13:17.840Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "contacts",
+  "pilotPayloadPath": "artifacts/migration/phase-22bf-r2-companies-contacts-payload-sanitization/companies-contacts-sanitized-payload-20260627-212651.json",
+  "payloadUsed": {
+    "source": "baseline_simulation_22g_r2_sanitized",
+    "temp_key": "TMP-22F-R2-CONTACT-01",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "first_name": "TMP Contact 01",
+    "email": "tmp.contact01@qualyvac.local",
+    "company_temp_key": "TMP-22F-R2-COMPANY-01",
+    "company_id_policy": "lookup_after_company_insert",
+    "write_contact_in_same_phase": false
+  },
+  "contactsCountBefore": 0,
+  "companiesCountBefore": 1,
+  "lookupCompanyByTenantCnpj": [
+    {
+      "cnpj": "TMP-DOC-COMP-0001",
+      "id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+      "legal_entity_id": null,
+      "name": "TMP COMPANY 01",
+      "owner_id": null,
+      "sales_rep_id": null,
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "resolvedCompanyId": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+  "lookupByTenantCompanyEmail": [],
+  "lookupByEmail": [],
+  "tenantLookup": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "idempotencyKeyValidation": {
+    "unique_tenant_company_email_index": true
+  },
+  "requiredFieldsValidation": {
+    "tenant_id_required": true,
+    "first_name_required": true,
+    "email_present": true,
+    "company_id_present": true
+  },
+  "omittedFieldsValidation": {
+    "owner_id_omitted_or_null": true,
+    "created_by_omitted_or_null": true
+  },
+  "companyContactsReferenceOnly": {
+    "regclass": null,
+    "reference_only": true
+  },
+  "companiesWriteBlocked": true,
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}
