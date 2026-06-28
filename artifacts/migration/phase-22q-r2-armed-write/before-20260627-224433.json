@@ -1,0 +1,317 @@
+{
+  "phase": "22Q-R2",
+  "timestamp": "2026-06-28T01:44:33.764Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "inputPath": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+  "writePlanPath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-205752.json",
+  "preflightDecision": "PARCIAL",
+  "writePlanDecisionFromInput": "GO",
+  "partialPolicyAccepted": true,
+  "partialPolicyReason": "PARCIAL accepted by policy 22N-R2: only company_contacts as reference-only.",
+  "executableEntitiesFutureRoundOne": [
+    "legal_entities",
+    "user_tenants",
+    "user_legal_entities",
+    "sales_reps",
+    "user_sales_reps",
+    "product_types",
+    "product_groups",
+    "product_subgroups",
+    "product_families",
+    "product_classes",
+    "products",
+    "companies",
+    "contacts"
+  ],
+  "excludedEntitiesRoundOne22Q": [
+    "company_contacts",
+    "profiles"
+  ],
+  "exclusionsReason": {
+    "profiles": "profiles is conditional and excluded from first armed round in 22Q-R2.",
+    "company_contacts": "company_contacts is reference-only and not writable."
+  },
+  "plannedOperations": [
+    {
+      "entity": "legal_entities",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "user_tenants",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 3
+    },
+    {
+      "entity": "user_legal_entities",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 3
+    },
+    {
+      "entity": "sales_reps",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 2
+    },
+    {
+      "entity": "user_sales_reps",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 2
+    },
+    {
+      "entity": "product_types",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "product_groups",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "product_subgroups",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "product_families",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "product_classes",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 1
+    },
+    {
+      "entity": "products",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 5
+    },
+    {
+      "entity": "companies",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 5
+    },
+    {
+      "entity": "contacts",
+      "action": "upsert_planned",
+      "executableIn22Q": false,
+      "reason": "Hard stop final active; no database mutation allowed in 22Q-R2",
+      "plannedCount": 5
+    }
+  ],
+  "blockedEntitiesFound": [],
+  "referenceOnlyEntitiesFound": [
+    "company_contacts"
+  ],
+  "unknownEntitiesFound": [],
+  "validations": [
+    {
+      "key": "flags.forbidden",
+      "status": "PASS",
+      "detail": "No forbidden flags detected."
+    },
+    {
+      "key": "flags.unknown",
+      "status": "PASS",
+      "detail": "Only allowed flags were used."
+    },
+    {
+      "key": "target.project_ref_file",
+      "status": "PASS",
+      "detail": "supabase/.temp/project-ref found."
+    },
+    {
+      "key": "target.project_ref_value",
+      "status": "PASS",
+      "detail": "Local project-ref matches expected target."
+    },
+    {
+      "key": "target.project_name_value",
+      "status": "PASS",
+      "detail": "Local project name matches expected name."
+    },
+    {
+      "key": "target.expected_target_flag",
+      "status": "PASS",
+      "detail": "--expected-target validated."
+    },
+    {
+      "key": "authorization.value",
+      "status": "PASS",
+      "detail": "Authorization phrase validated."
+    },
+    {
+      "key": "pilot.entity.value",
+      "status": "PASS",
+      "detail": "Pilot entity validated as companies_contacts_wave."
+    },
+    {
+      "key": "pilot.authorization.value",
+      "status": "PASS",
+      "detail": "Pilot authorization phrase validated."
+    },
+    {
+      "key": "pilot.payload.flag",
+      "status": "PASS",
+      "detail": "--pilot-payload provided for companies_contacts_wave pilot."
+    },
+    {
+      "key": "batch.value",
+      "status": "PASS",
+      "detail": "Batch id validated."
+    },
+    {
+      "key": "input.exists",
+      "status": "PASS",
+      "detail": "Input file exists."
+    },
+    {
+      "key": "input.parse_json",
+      "status": "PASS",
+      "detail": "Input JSON parsed successfully."
+    },
+    {
+      "key": "input.target_compatibility",
+      "status": "PASS",
+      "detail": "Input target metadata is compatible."
+    },
+    {
+      "key": "input.batch_compatibility",
+      "status": "PASS",
+      "detail": "Input batch metadata is compatible."
+    },
+    {
+      "key": "input.decision",
+      "status": "PASS",
+      "detail": "Input decision accepted: GO"
+    },
+    {
+      "key": "input.entities_blocked",
+      "status": "PASS",
+      "detail": "No blocked entities found in input."
+    },
+    {
+      "key": "input.entities_reference_only",
+      "status": "PARTIAL",
+      "detail": "Reference-only entities found and kept non-writable."
+    },
+    {
+      "key": "input.entities_policy_scope",
+      "status": "PASS",
+      "detail": "Input entities are within known policy sets."
+    },
+    {
+      "key": "input.write_plan_fields",
+      "status": "PASS",
+      "detail": "No write-plan fields found in input."
+    },
+    {
+      "key": "input.company_contacts_write_plan",
+      "status": "PASS",
+      "detail": "No company_contacts write-plan signal found."
+    },
+    {
+      "key": "input.write_text_scan",
+      "status": "PASS",
+      "detail": "No suspicious write command text detected."
+    },
+    {
+      "key": "input.external_text_scan",
+      "status": "PASS",
+      "detail": "No external integration keywords detected."
+    },
+    {
+      "key": "write_plan.exists",
+      "status": "PASS",
+      "detail": "Write plan file exists."
+    },
+    {
+      "key": "write_plan.parse_json",
+      "status": "PASS",
+      "detail": "Write plan JSON parsed successfully."
+    },
+    {
+      "key": "write_plan.compatibility",
+      "status": "PASS",
+      "detail": "Write plan metadata validated."
+    },
+    {
+      "key": "pilot.payload.exists",
+      "status": "PASS",
+      "detail": "Pilot payload file exists."
+    },
+    {
+      "key": "pilot.payload.parse_json",
+      "status": "PASS",
+      "detail": "Pilot payload parsed successfully."
+    },
+    {
+      "key": "pilot.payload.compatibility",
+      "status": "PASS",
+      "detail": "Pilot wave payload metadata validated."
+    },
+    {
+      "key": "pilot.wave.companies.columns_and_nullable",
+      "status": "PASS",
+      "detail": "Wave companies columns validated."
+    },
+    {
+      "key": "pilot.wave.contacts.columns_and_nullable",
+      "status": "PASS",
+      "detail": "Wave contacts columns validated."
+    },
+    {
+      "key": "pilot.wave.idempotency_indexes",
+      "status": "PASS",
+      "detail": "Wave idempotency indexes validated."
+    },
+    {
+      "key": "pilot.wave.contacts_company_fk",
+      "status": "PASS",
+      "detail": "Wave contacts FK validated."
+    }
+  ],
+  "guardsConfirmation": {
+    "targetValidated": true,
+    "batchValidated": true,
+    "authorizationValidated": true,
+    "forbiddenFlagsBlocked": true,
+    "unknownFlagsBlocked": true,
+    "writePlanValidated": true
+  },
+  "noOperationExecuted": true,
+  "realExecutionBlocked": true,
+  "armedWriteDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalHardStopMessage": "EXECUÇÃO REAL BLOQUEADA NA FASE 22Q-R2. Operações montadas em memória, mas nenhuma mutação foi executada."
+}

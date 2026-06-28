@@ -1,0 +1,469 @@
+{
+  "phase": "22BL-R2",
+  "timestamp": "2026-06-28T01:56:34.710Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "companies_contacts_wave",
+  "pilotPayloadPath": "artifacts/migration/phase-22bk-r2-companies-contacts-expansion-gate/companies-contacts-expansion-payload-20260627-223027.json",
+  "payloadFrozen": {
+    "phase": "22BK-R2",
+    "timestamp": "2026-06-28T01:30:27.000Z",
+    "targetRef": "nsnmlleplpzsefzkuxlb",
+    "targetName": "crm-qualyvac-restore-test",
+    "batchId": "baseline_22f_r2_restore_test_qualyvac",
+    "gitState": {
+      "branch": "main",
+      "statusShort": "",
+      "divergenceOriginMainMain": "0 0",
+      "lastCommit": "e30df857 feat(migration): add companies and contacts pilot writes",
+      "head": "e30df8572997e0aa5bc036596ba841fbf83146d8",
+      "originMain": "e30df8572997e0aa5bc036596ba841fbf83146d8",
+      "headEqualsOriginMain": true
+    },
+    "companiesCandidatesEvaluated": [
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-02",
+        "document": "TMP-DOC-COMP-0002",
+        "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+        "available_fields_in_payload": [
+          "temp_key",
+          "document",
+          "owner"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "name",
+          "cnpj",
+          "source_document"
+        ],
+        "existing_by_tenant_cnpj_count": 0,
+        "existing_by_document_global_count": 0,
+        "can_be_sanitized": true,
+        "paired_contact_temp_key": "TMP-22F-R2-CONTACT-02"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-03",
+        "document": "TMP-DOC-COMP-0003",
+        "owner_temp_key": "TMP-22F-R2-SALESREP-02",
+        "available_fields_in_payload": [
+          "temp_key",
+          "document",
+          "owner"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "name",
+          "cnpj",
+          "source_document"
+        ],
+        "existing_by_tenant_cnpj_count": 0,
+        "existing_by_document_global_count": 0,
+        "can_be_sanitized": true,
+        "paired_contact_temp_key": "TMP-22F-R2-CONTACT-03"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-04",
+        "document": "TMP-DOC-COMP-0004",
+        "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+        "available_fields_in_payload": [
+          "temp_key",
+          "document",
+          "owner"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "name",
+          "cnpj",
+          "source_document"
+        ],
+        "existing_by_tenant_cnpj_count": 0,
+        "existing_by_document_global_count": 0,
+        "can_be_sanitized": true,
+        "paired_contact_temp_key": "TMP-22F-R2-CONTACT-04"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-05",
+        "document": "TMP-DOC-COMP-0005",
+        "owner_temp_key": "TMP-22F-R2-SALESREP-02",
+        "available_fields_in_payload": [
+          "temp_key",
+          "document",
+          "owner"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "name",
+          "cnpj",
+          "source_document"
+        ],
+        "existing_by_tenant_cnpj_count": 0,
+        "existing_by_document_global_count": 0,
+        "can_be_sanitized": true,
+        "paired_contact_temp_key": "TMP-22F-R2-CONTACT-05"
+      }
+    ],
+    "contactsCandidatesEvaluated": [
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-02",
+        "email": "tmp.contact02@qualyvac.local",
+        "company_temp_key": "TMP-22F-R2-COMPANY-02",
+        "available_fields_in_payload": [
+          "temp_key",
+          "email",
+          "company_temp_key"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "first_name",
+          "company_id"
+        ],
+        "email_existing_count": 0,
+        "company_in_selected_wave": true,
+        "can_be_sanitized": true,
+        "depends_on_company_lookup": true
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-03",
+        "email": "tmp.contact03@qualyvac.local",
+        "company_temp_key": "TMP-22F-R2-COMPANY-03",
+        "available_fields_in_payload": [
+          "temp_key",
+          "email",
+          "company_temp_key"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "first_name",
+          "company_id"
+        ],
+        "email_existing_count": 0,
+        "company_in_selected_wave": true,
+        "can_be_sanitized": true,
+        "depends_on_company_lookup": true
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-04",
+        "email": "tmp.contact04@qualyvac.local",
+        "company_temp_key": "TMP-22F-R2-COMPANY-04",
+        "available_fields_in_payload": [
+          "temp_key",
+          "email",
+          "company_temp_key"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "first_name",
+          "company_id"
+        ],
+        "email_existing_count": 0,
+        "company_in_selected_wave": true,
+        "can_be_sanitized": true,
+        "depends_on_company_lookup": true
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-05",
+        "email": "tmp.contact05@qualyvac.local",
+        "company_temp_key": "TMP-22F-R2-COMPANY-05",
+        "available_fields_in_payload": [
+          "temp_key",
+          "email",
+          "company_temp_key"
+        ],
+        "missing_fields_in_payload": [
+          "tenant_id",
+          "first_name",
+          "company_id"
+        ],
+        "email_existing_count": 0,
+        "company_in_selected_wave": true,
+        "can_be_sanitized": true,
+        "depends_on_company_lookup": true
+      }
+    ],
+    "selectedWave": {
+      "limit": 4,
+      "companiesSelected": [
+        {
+          "temp_key": "TMP-22F-R2-COMPANY-02",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "name": "TMP Company 02",
+          "expected_persisted_name": "TMP COMPANY 02",
+          "cnpj": "TMP-DOC-COMP-0002",
+          "source_document": "TMP-DOC-COMP-0002",
+          "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+          "owner_write_policy": "reference_only_not_written",
+          "sales_rep_id_policy": "omit_or_null",
+          "legal_entity_id_policy": "omit_or_null",
+          "created_by_policy": "omit_or_null"
+        },
+        {
+          "temp_key": "TMP-22F-R2-COMPANY-03",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "name": "TMP Company 03",
+          "expected_persisted_name": "TMP COMPANY 03",
+          "cnpj": "TMP-DOC-COMP-0003",
+          "source_document": "TMP-DOC-COMP-0003",
+          "owner_temp_key": "TMP-22F-R2-SALESREP-02",
+          "owner_write_policy": "reference_only_not_written",
+          "sales_rep_id_policy": "omit_or_null",
+          "legal_entity_id_policy": "omit_or_null",
+          "created_by_policy": "omit_or_null"
+        },
+        {
+          "temp_key": "TMP-22F-R2-COMPANY-04",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "name": "TMP Company 04",
+          "expected_persisted_name": "TMP COMPANY 04",
+          "cnpj": "TMP-DOC-COMP-0004",
+          "source_document": "TMP-DOC-COMP-0004",
+          "owner_temp_key": "TMP-22F-R2-SALESREP-01",
+          "owner_write_policy": "reference_only_not_written",
+          "sales_rep_id_policy": "omit_or_null",
+          "legal_entity_id_policy": "omit_or_null",
+          "created_by_policy": "omit_or_null"
+        },
+        {
+          "temp_key": "TMP-22F-R2-COMPANY-05",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "name": "TMP Company 05",
+          "expected_persisted_name": "TMP COMPANY 05",
+          "cnpj": "TMP-DOC-COMP-0005",
+          "source_document": "TMP-DOC-COMP-0005",
+          "owner_temp_key": "TMP-22F-R2-SALESREP-02",
+          "owner_write_policy": "reference_only_not_written",
+          "sales_rep_id_policy": "omit_or_null",
+          "legal_entity_id_policy": "omit_or_null",
+          "created_by_policy": "omit_or_null"
+        }
+      ],
+      "contactsSelected": [
+        {
+          "temp_key": "TMP-22F-R2-CONTACT-02",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "first_name": "TMP Contact 02",
+          "expected_persisted_first_name": "TMP CONTACT 02",
+          "email": "tmp.contact02@qualyvac.local",
+          "company_temp_key": "TMP-22F-R2-COMPANY-02",
+          "company_resolution_policy": "lookup_after_company_insert",
+          "write_after_company": true
+        },
+        {
+          "temp_key": "TMP-22F-R2-CONTACT-03",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "first_name": "TMP Contact 03",
+          "expected_persisted_first_name": "TMP CONTACT 03",
+          "email": "tmp.contact03@qualyvac.local",
+          "company_temp_key": "TMP-22F-R2-COMPANY-03",
+          "company_resolution_policy": "lookup_after_company_insert",
+          "write_after_company": true
+        },
+        {
+          "temp_key": "TMP-22F-R2-CONTACT-04",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "first_name": "TMP Contact 04",
+          "expected_persisted_first_name": "TMP CONTACT 04",
+          "email": "tmp.contact04@qualyvac.local",
+          "company_temp_key": "TMP-22F-R2-COMPANY-04",
+          "company_resolution_policy": "lookup_after_company_insert",
+          "write_after_company": true
+        },
+        {
+          "temp_key": "TMP-22F-R2-CONTACT-05",
+          "tenant_id": "00000000-0000-0000-0000-000000000001",
+          "first_name": "TMP Contact 05",
+          "expected_persisted_first_name": "TMP CONTACT 05",
+          "email": "tmp.contact05@qualyvac.local",
+          "company_temp_key": "TMP-22F-R2-COMPANY-05",
+          "company_resolution_policy": "lookup_after_company_insert",
+          "write_after_company": true
+        }
+      ],
+      "pairs": [
+        {
+          "company_temp_key": "TMP-22F-R2-COMPANY-02",
+          "contact_temp_key": "TMP-22F-R2-CONTACT-02",
+          "email": "tmp.contact02@qualyvac.local"
+        },
+        {
+          "company_temp_key": "TMP-22F-R2-COMPANY-03",
+          "contact_temp_key": "TMP-22F-R2-CONTACT-03",
+          "email": "tmp.contact03@qualyvac.local"
+        },
+        {
+          "company_temp_key": "TMP-22F-R2-COMPANY-04",
+          "contact_temp_key": "TMP-22F-R2-CONTACT-04",
+          "email": "tmp.contact04@qualyvac.local"
+        },
+        {
+          "company_temp_key": "TMP-22F-R2-COMPANY-05",
+          "contact_temp_key": "TMP-22F-R2-CONTACT-05",
+          "email": "tmp.contact05@qualyvac.local"
+        }
+      ]
+    },
+    "idempotencyKeys": {
+      "companies": [
+        "tenant_id",
+        "cnpj"
+      ],
+      "contacts": [
+        "tenant_id",
+        "company_id",
+        "email"
+      ]
+    },
+    "triggerNormalizationsExpected": {
+      "companies_name_uppercase": true,
+      "contacts_first_name_uppercase": true
+    },
+    "collisions": {
+      "companiesByTenantCnpj": {
+        "TMP-DOC-COMP-0002": 0,
+        "TMP-DOC-COMP-0003": 0,
+        "TMP-DOC-COMP-0004": 0,
+        "TMP-DOC-COMP-0005": 0
+      },
+      "contactsByEmail": {
+        "tmp.contact02@qualyvac.local": 0,
+        "tmp.contact03@qualyvac.local": 0,
+        "tmp.contact04@qualyvac.local": 0,
+        "tmp.contact05@qualyvac.local": 0
+      }
+    },
+    "futureWritePlan": {
+      "step1": "generate global before evidence for frozen wave",
+      "step2": "write companies one by one in frozen order",
+      "step3": "after each company write, resolve company_id by (tenant_id, cnpj) with cardinality 1",
+      "step4": "write corresponding contact using (tenant_id, company_id, email)",
+      "step5": "stop immediately after N frozen pairs",
+      "step6": "generate global after evidence",
+      "step7": "validate deltas companies +N and contacts +N",
+      "step8": "emit hard stop and block expanded execution",
+      "errorPolicy": {
+        "companyFailure": "do_not_write_matching_contact",
+        "contactFailure": "stop_wave_and_report_partial",
+        "automaticRollback": false
+      }
+    },
+    "humanGateAuthorizationForNextPhase": "AUTORIZO A DÉCIMA ESCRITA CONTROLADA DA BASELINE 22BK-R2 SOMENTE EM companies E contacts, LIMITADA À ONDA CONGELADA, NO RESTORE-TEST nsnmlleplpzsefzkuxlb",
+    "waveLimitDecision": 4,
+    "decision": "GO",
+    "reasons": {
+      "noGoReasons": [],
+      "partialReasons": []
+    }
+  },
+  "waveLimit": 4,
+  "selectedPairs": [
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-02",
+      "email": "tmp.contact02@qualyvac.local"
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-03",
+      "email": "tmp.contact03@qualyvac.local"
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-04",
+      "email": "tmp.contact04@qualyvac.local"
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-05",
+      "email": "tmp.contact05@qualyvac.local"
+    }
+  ],
+  "companiesCountBefore": 1,
+  "contactsCountBefore": 1,
+  "lookupCompaniesByTenantCnpj": [
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "rows": [],
+      "cardinality": 0
+    }
+  ],
+  "lookupContactsByEmail": [
+    {
+      "contact_temp_key": "TMP-22F-R2-CONTACT-02",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "contact_temp_key": "TMP-22F-R2-CONTACT-03",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "contact_temp_key": "TMP-22F-R2-CONTACT-04",
+      "rows": [],
+      "cardinality": 0
+    },
+    {
+      "contact_temp_key": "TMP-22F-R2-CONTACT-05",
+      "rows": [],
+      "cardinality": 0
+    }
+  ],
+  "idempotencyKeyValidation": {
+    "companies_unique_tenant_cnpj": true,
+    "companies_unique_cnpj": true,
+    "contacts_unique_tenant_company_email": true
+  },
+  "tenantValidation": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "cardinality": 1
+  },
+  "requiredFieldsValidation": {
+    "companies_tenant_required": true,
+    "companies_name_required": true,
+    "contacts_tenant_required": true,
+    "contacts_first_name_required": true,
+    "contacts_email_present": true,
+    "contacts_company_id_present": true
+  },
+  "omittedFieldsValidation": {
+    "companies_owner_id_omitted_or_null": true,
+    "companies_sales_rep_id_omitted_or_null": true,
+    "companies_legal_entity_id_omitted_or_null": true,
+    "companies_created_by_omitted_or_null": true,
+    "contacts_owner_id_omitted_or_null": true,
+    "contacts_created_by_omitted_or_null": true
+  },
+  "companyContactsReferenceOnly": {
+    "regclass": null,
+    "reference_only": true
+  },
+  "negativeScopeBefore": {
+    "sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "proposals": 0
+  },
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "phase": "22BL-R2",
+  "timestamp": "2026-06-28T01:43:56.083Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationByPair": [],
+  "companiesIds": {},
+  "contactsIds": {},
+  "companiesDelta": 0,
+  "contactsDelta": 0,
+  "companiesCountAfter": 1,
+  "contactsCountAfter": 1,
+  "recordsByCompany": [
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-02",
+      "expected_persisted_name": "TMP COMPANY 02",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-03",
+      "expected_persisted_name": "TMP COMPANY 03",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-04",
+      "expected_persisted_name": "TMP COMPANY 04",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-05",
+      "expected_persisted_name": "TMP COMPANY 05",
+      "cardinality": 0,
+      "rows": []
+    }
+  ],
+  "recordsByContact": [
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-02",
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "expected_persisted_first_name": "TMP CONTACT 02",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-03",
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "expected_persisted_first_name": "TMP CONTACT 03",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-04",
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "expected_persisted_first_name": "TMP CONTACT 04",
+      "cardinality": 0,
+      "rows": []
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-05",
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "expected_persisted_first_name": "TMP CONTACT 05",
+      "cardinality": 0,
+      "rows": []
+    }
+  ],
+  "uppercaseValidation": {
+    "companies_name_uppercase": false,
+    "contacts_first_name_uppercase": false
+  },
+  "idempotencyValidation": {
+    "companies": [
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-02",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-03",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-04",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-05",
+        "cardinality": 0,
+        "operation": "unknown"
+      }
+    ],
+    "contacts": [
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-02",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-03",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-04",
+        "cardinality": 0,
+        "operation": "unknown"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-05",
+        "cardinality": 0,
+        "operation": "unknown"
+      }
+    ]
+  },
+  "linksValidation": [],
+  "companyContactsNotWritten": true,
+  "negativeScopeBefore": {
+    "sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "proposals": 0
+  },
+  "negativeScopeAfter": {
+    "sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "proposals": 0
+  },
+  "executionExpandedBlocked": true,
+  "afterDecision": "NO-GO",
+  "reasons": {
+    "noGoReasons": [
+      "beforeDecision is not GO.",
+      "beforeDecision_not_go",
+      "Each wave company must have cardinality 1 after execution.",
+      "Each wave contact must have cardinality 1 after execution."
+    ],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA CONTROLADA CONCLUÍDA SOMENTE EM companies E contacts, LIMITADA À ONDA 22BK-R2. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

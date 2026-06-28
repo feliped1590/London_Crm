@@ -1,0 +1,119 @@
+{
+  "phase": "22O-R2",
+  "timestamp": "2026-06-28T01:46:55.682Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "inputPath": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+  "preflightDecision": "PARCIAL",
+  "partialAcceptedByPolicy22NR2": true,
+  "partialPolicyReason": "PARCIAL accepted by policy 22N-R2: only company_contacts as reference-only.",
+  "eligibleEntitiesForWrite": [
+    "legal_entities",
+    "profiles",
+    "user_tenants",
+    "user_legal_entities",
+    "sales_reps",
+    "user_sales_reps",
+    "product_types",
+    "product_groups",
+    "product_subgroups",
+    "product_families",
+    "product_classes",
+    "products",
+    "companies",
+    "contacts"
+  ],
+  "ignoredEntities": [
+    "company_contacts"
+  ],
+  "referenceOnlyEntities": [
+    "company_contacts"
+  ],
+  "blockedEntitiesFound": [],
+  "unknownEntitiesFound": [],
+  "plannedWriteOrder": [
+    "tenant_context_validation_only",
+    "legal_entities",
+    "profiles",
+    "user_tenants",
+    "user_legal_entities",
+    "sales_reps",
+    "user_sales_reps",
+    "product_types",
+    "product_groups",
+    "product_subgroups",
+    "product_families",
+    "product_classes",
+    "products",
+    "companies",
+    "contacts"
+  ],
+  "plannedCountsByEntity": {
+    "legal_entities": 1,
+    "profiles": 3,
+    "user_tenants": 3,
+    "user_legal_entities": 3,
+    "sales_reps": 2,
+    "user_sales_reps": 2,
+    "product_types": 1,
+    "product_groups": 1,
+    "product_subgroups": 1,
+    "product_families": 1,
+    "product_classes": 1,
+    "products": 5,
+    "companies": 5,
+    "contacts": 5
+  },
+  "batchTraceabilityStrategy": {
+    "batchId": "baseline_22f_r2_restore_test_qualyvac",
+    "keyHint": "use batch id and temporary keys from 22F/22G evidence",
+    "tmpPrefixCounts": {
+      "companies": 0,
+      "contacts": 0,
+      "legal_entities": 0,
+      "product_classes": 0,
+      "product_families": 0,
+      "product_groups": 0,
+      "product_subgroups": 0,
+      "product_types": 0,
+      "products": 0,
+      "profiles": 0,
+      "sales_reps": 0,
+      "user_legal_entities": null,
+      "user_sales_reps": null,
+      "user_tenants": null
+    }
+  },
+  "companyContactsHandling": {
+    "writable": false,
+    "linkStrategy": "contacts.company_id",
+    "includedInPlan": false,
+    "reason": "company_contacts is reference-only and never eligible for write."
+  },
+  "confirmations": {
+    "companyContactsWillNotBeWritten": true,
+    "transactionalEntitiesWillNotBeWritten": true,
+    "queueEntitiesWillNotBeWritten": true,
+    "externalIntegrationsWillNotBeCalled": true,
+    "writeExecutionBlocked": true
+  },
+  "planDecision": "GO",
+  "planReasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "planGaps": [],
+  "negativeConfirmations": {
+    "noSqlWriteExecuted": true,
+    "noDbWriteExecuted": true,
+    "noMigrationExecuted": true,
+    "noSeedCleanupRollbackExecuted": true,
+    "noErpApiWebhookN8nCalls": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noPush": true,
+    "noStagingProdChanges": true
+  },
+  "finalMessage": "WRITE PLAN GERADO, MAS EXECUÇÃO REAL CONTINUA BLOQUEADA NA FASE 22O-R2."
+}

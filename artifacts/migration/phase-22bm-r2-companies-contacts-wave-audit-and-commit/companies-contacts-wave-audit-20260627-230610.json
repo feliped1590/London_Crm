@@ -1,0 +1,254 @@
+{
+  "phase": "22BM-R2",
+  "timestamp": "2026-06-28T02:06:10.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "statusShortContainsOnlyExpected22BK22BL22BM": true,
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "e30df857 feat(migration): add companies and contacts pilot writes",
+    "head": "e30df8572997e0aa5bc036596ba841fbf83146d8",
+    "originMain": "e30df8572997e0aa5bc036596ba841fbf83146d8",
+    "headEqualsOriginMain": true
+  },
+  "companiesAudit": {
+    "totalCurrent": 5,
+    "expectedByIdAndNaturalKey": [
+      {
+        "id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "cnpj": "TMP-DOC-COMP-0001",
+        "name": "TMP COMPANY 01",
+        "owner_id": null,
+        "sales_rep_id": null,
+        "legal_entity_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "cnpj": "TMP-DOC-COMP-0002",
+        "name": "TMP COMPANY 02",
+        "owner_id": null,
+        "sales_rep_id": null,
+        "legal_entity_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "cnpj": "TMP-DOC-COMP-0003",
+        "name": "TMP COMPANY 03",
+        "owner_id": null,
+        "sales_rep_id": null,
+        "legal_entity_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "cnpj": "TMP-DOC-COMP-0004",
+        "name": "TMP COMPANY 04",
+        "owner_id": null,
+        "sales_rep_id": null,
+        "legal_entity_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "cnpj": "TMP-DOC-COMP-0005",
+        "name": "TMP COMPANY 05",
+        "owner_id": null,
+        "sales_rep_id": null,
+        "legal_entity_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      }
+    ],
+    "idempotency": {
+      "requiredIndexesPresent": [
+        "idx_companies_tenant_cnpj",
+        "idx_companies_cnpj_unique"
+      ],
+      "duplicateNaturalKeys": 0,
+      "reexecutionExpectation": "idempotent_noop_for_all_5"
+    }
+  },
+  "contactsAudit": {
+    "totalCurrent": 5,
+    "expectedByIdAndNaturalKey": [
+      {
+        "id": "06514c9c-24b8-49fd-b8e2-f744b24d307f",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+        "email": "tmp.contact01@qualyvac.local",
+        "first_name": "TMP CONTACT 01",
+        "owner_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "a58db009-4425-4c56-8b7b-1659d16b9dd4",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "company_id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+        "email": "tmp.contact02@qualyvac.local",
+        "first_name": "TMP CONTACT 02",
+        "owner_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "a6f4298a-ad69-4e42-bf3d-2613030d7e55",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "company_id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+        "email": "tmp.contact03@qualyvac.local",
+        "first_name": "TMP CONTACT 03",
+        "owner_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "5af76ebf-202c-4096-aff9-468a60e7da72",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "company_id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+        "email": "tmp.contact04@qualyvac.local",
+        "first_name": "TMP CONTACT 04",
+        "owner_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      },
+      {
+        "id": "5c7e7c16-9298-4322-8967-a8f7ff68e944",
+        "tenant_id": "00000000-0000-0000-0000-000000000001",
+        "company_id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+        "email": "tmp.contact05@qualyvac.local",
+        "first_name": "TMP CONTACT 05",
+        "owner_id": null,
+        "created_by": null,
+        "naturalKeyCardinality": 1,
+        "idCardinality": 1
+      }
+    ],
+    "idempotency": {
+      "requiredIndexesPresent": [
+        "idx_contacts_tenant_company_email_unique"
+      ],
+      "duplicateNaturalKeys": 0,
+      "reexecutionExpectation": "idempotent_noop_for_all_5"
+    }
+  },
+  "linkValidation": {
+    "contactToCompanyByEmail": [
+      {
+        "email": "tmp.contact01@qualyvac.local",
+        "company_id": "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+        "company_cnpj": "TMP-DOC-COMP-0001",
+        "companyCardinality": 1
+      },
+      {
+        "email": "tmp.contact02@qualyvac.local",
+        "company_id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+        "company_cnpj": "TMP-DOC-COMP-0002",
+        "companyCardinality": 1
+      },
+      {
+        "email": "tmp.contact03@qualyvac.local",
+        "company_id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+        "company_cnpj": "TMP-DOC-COMP-0003",
+        "companyCardinality": 1
+      },
+      {
+        "email": "tmp.contact04@qualyvac.local",
+        "company_id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+        "company_cnpj": "TMP-DOC-COMP-0004",
+        "companyCardinality": 1
+      },
+      {
+        "email": "tmp.contact05@qualyvac.local",
+        "company_id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+        "company_cnpj": "TMP-DOC-COMP-0005",
+        "companyCardinality": 1
+      }
+    ],
+    "orphanContacts": 0,
+    "companyContactsRegclass": null
+  },
+  "deltaValidation": {
+    "wave22BL": {
+      "companiesBefore": 1,
+      "companiesCurrent": 5,
+      "companiesDelta": 4,
+      "contactsBefore": 1,
+      "contactsCurrent": 5,
+      "contactsDelta": 4
+    },
+    "accumulatedFunctionalFront": {
+      "companiesStart": 0,
+      "companiesCurrent": 5,
+      "contactsStart": 0,
+      "contactsCurrent": 5
+    }
+  },
+  "negativeScope": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "executorGuardsValidation": {
+    "hardStopsPresent": {
+      "companies": true,
+      "contacts": true,
+      "companies_contacts_wave": true
+    },
+    "waveLimitN4Present": true,
+    "pair02To05ValidationPresent": true,
+    "companyContactsReferenceOnlyPresent": true,
+    "salesRepsBlocked": true,
+    "profilesExcludedFromFirstRound": true,
+    "expandedExecutionAutomaticRelease": false,
+    "forbiddenFlagsBlocked": [
+      "--force",
+      "--skip-guards",
+      "--tables",
+      "--all"
+    ],
+    "bypassFlagFound": false
+  },
+  "auditDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

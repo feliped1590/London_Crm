@@ -1,0 +1,323 @@
+{
+  "phase": "22BL-R2",
+  "timestamp": "2026-06-28T01:59:00.704Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationByPair": [
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-02",
+      "company_operation": "inserted",
+      "contact_operation": "inserted",
+      "company_id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+      "contact_id": "a58db009-4425-4c56-8b7b-1659d16b9dd4",
+      "error": null
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-03",
+      "company_operation": "inserted",
+      "contact_operation": "inserted",
+      "company_id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+      "contact_id": "a6f4298a-ad69-4e42-bf3d-2613030d7e55",
+      "error": null
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-04",
+      "company_operation": "inserted",
+      "contact_operation": "inserted",
+      "company_id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+      "contact_id": "5af76ebf-202c-4096-aff9-468a60e7da72",
+      "error": null
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-05",
+      "company_operation": "inserted",
+      "contact_operation": "inserted",
+      "company_id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+      "contact_id": "5c7e7c16-9298-4322-8967-a8f7ff68e944",
+      "error": null
+    }
+  ],
+  "companiesIds": {
+    "TMP-22F-R2-COMPANY-02": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+    "TMP-22F-R2-COMPANY-03": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+    "TMP-22F-R2-COMPANY-04": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+    "TMP-22F-R2-COMPANY-05": "151971d7-1aa6-43b8-859c-4d570c3282d0"
+  },
+  "contactsIds": {
+    "TMP-22F-R2-CONTACT-02": "a58db009-4425-4c56-8b7b-1659d16b9dd4",
+    "TMP-22F-R2-CONTACT-03": "a6f4298a-ad69-4e42-bf3d-2613030d7e55",
+    "TMP-22F-R2-CONTACT-04": "5af76ebf-202c-4096-aff9-468a60e7da72",
+    "TMP-22F-R2-CONTACT-05": "5c7e7c16-9298-4322-8967-a8f7ff68e944"
+  },
+  "companiesDelta": 4,
+  "contactsDelta": 4,
+  "companiesCountAfter": 5,
+  "contactsCountAfter": 5,
+  "recordsByCompany": [
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-02",
+      "expected_persisted_name": "TMP COMPANY 02",
+      "cardinality": 1,
+      "rows": [
+        {
+          "cnpj": "TMP-DOC-COMP-0002",
+          "created_by": null,
+          "id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+          "legal_entity_id": null,
+          "name": "TMP COMPANY 02",
+          "owner_id": null,
+          "sales_rep_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-03",
+      "expected_persisted_name": "TMP COMPANY 03",
+      "cardinality": 1,
+      "rows": [
+        {
+          "cnpj": "TMP-DOC-COMP-0003",
+          "created_by": null,
+          "id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+          "legal_entity_id": null,
+          "name": "TMP COMPANY 03",
+          "owner_id": null,
+          "sales_rep_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-04",
+      "expected_persisted_name": "TMP COMPANY 04",
+      "cardinality": 1,
+      "rows": [
+        {
+          "cnpj": "TMP-DOC-COMP-0004",
+          "created_by": null,
+          "id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+          "legal_entity_id": null,
+          "name": "TMP COMPANY 04",
+          "owner_id": null,
+          "sales_rep_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-COMPANY-05",
+      "expected_persisted_name": "TMP COMPANY 05",
+      "cardinality": 1,
+      "rows": [
+        {
+          "cnpj": "TMP-DOC-COMP-0005",
+          "created_by": null,
+          "id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+          "legal_entity_id": null,
+          "name": "TMP COMPANY 05",
+          "owner_id": null,
+          "sales_rep_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    }
+  ],
+  "recordsByContact": [
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-02",
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "expected_persisted_first_name": "TMP CONTACT 02",
+      "cardinality": 1,
+      "rows": [
+        {
+          "company_id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+          "created_by": null,
+          "email": "tmp.contact02@qualyvac.local",
+          "first_name": "TMP CONTACT 02",
+          "id": "a58db009-4425-4c56-8b7b-1659d16b9dd4",
+          "owner_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-03",
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "expected_persisted_first_name": "TMP CONTACT 03",
+      "cardinality": 1,
+      "rows": [
+        {
+          "company_id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+          "created_by": null,
+          "email": "tmp.contact03@qualyvac.local",
+          "first_name": "TMP CONTACT 03",
+          "id": "a6f4298a-ad69-4e42-bf3d-2613030d7e55",
+          "owner_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-04",
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "expected_persisted_first_name": "TMP CONTACT 04",
+      "cardinality": 1,
+      "rows": [
+        {
+          "company_id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+          "created_by": null,
+          "email": "tmp.contact04@qualyvac.local",
+          "first_name": "TMP CONTACT 04",
+          "id": "5af76ebf-202c-4096-aff9-468a60e7da72",
+          "owner_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "temp_key": "TMP-22F-R2-CONTACT-05",
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "expected_persisted_first_name": "TMP CONTACT 05",
+      "cardinality": 1,
+      "rows": [
+        {
+          "company_id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+          "created_by": null,
+          "email": "tmp.contact05@qualyvac.local",
+          "first_name": "TMP CONTACT 05",
+          "id": "5c7e7c16-9298-4322-8967-a8f7ff68e944",
+          "owner_id": null,
+          "tenant_id": "00000000-0000-0000-0000-000000000001"
+        }
+      ]
+    }
+  ],
+  "uppercaseValidation": {
+    "companies_name_uppercase": true,
+    "contacts_first_name_uppercase": true
+  },
+  "idempotencyValidation": {
+    "companies": [
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-02",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-03",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-04",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-COMPANY-05",
+        "cardinality": 1,
+        "operation": "inserted"
+      }
+    ],
+    "contacts": [
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-02",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-03",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-04",
+        "cardinality": 1,
+        "operation": "inserted"
+      },
+      {
+        "temp_key": "TMP-22F-R2-CONTACT-05",
+        "cardinality": 1,
+        "operation": "inserted"
+      }
+    ]
+  },
+  "linksValidation": [
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-02",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-02",
+      "linked": true,
+      "rows": [
+        {
+          "company_id": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+          "company_id_ref": "feee1c46-cb1e-4d65-a6c7-a309b187d3b7",
+          "contact_id": "a58db009-4425-4c56-8b7b-1659d16b9dd4"
+        }
+      ]
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-03",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-03",
+      "linked": true,
+      "rows": [
+        {
+          "company_id": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+          "company_id_ref": "c4db0477-f726-4395-86e7-23e2fc102ba9",
+          "contact_id": "a6f4298a-ad69-4e42-bf3d-2613030d7e55"
+        }
+      ]
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-04",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-04",
+      "linked": true,
+      "rows": [
+        {
+          "company_id": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+          "company_id_ref": "76cc5c3d-ae91-46e9-93eb-8fe63467f323",
+          "contact_id": "5af76ebf-202c-4096-aff9-468a60e7da72"
+        }
+      ]
+    },
+    {
+      "company_temp_key": "TMP-22F-R2-COMPANY-05",
+      "contact_temp_key": "TMP-22F-R2-CONTACT-05",
+      "linked": true,
+      "rows": [
+        {
+          "company_id": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+          "company_id_ref": "151971d7-1aa6-43b8-859c-4d570c3282d0",
+          "contact_id": "5c7e7c16-9298-4322-8967-a8f7ff68e944"
+        }
+      ]
+    }
+  ],
+  "companyContactsNotWritten": true,
+  "negativeScopeBefore": {
+    "sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "proposals": 0
+  },
+  "negativeScopeAfter": {
+    "sales_reps": 0,
+    "products": 0,
+    "deals": 0,
+    "orders": 0,
+    "proposals": 0
+  },
+  "executionExpandedBlocked": true,
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA CONTROLADA CONCLUÍDA SOMENTE EM companies E contacts, LIMITADA À ONDA 22BK-R2. EXECUÇÃO AMPLIADA BLOQUEADA."
+}
