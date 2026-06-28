@@ -1,0 +1,9 @@
+{
+  "phase": "22CB-R2",
+  "entity": "products",
+  "execute_write": false,
+  "ready_candidate": 2,
+  "blocked_total": 1,
+  "decision": "candidate_ready_no_execution",
+  "idempotency_preferred": "(tenant_id, erp_product_code, versao_numero)"
+}

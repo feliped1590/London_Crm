@@ -1,0 +1,37 @@
+{
+  "phase": "22CA-R2",
+  "timestamp": "2026-06-28T14:23:04-03:00",
+  "entity": "products",
+  "source_summary_path": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-sample-summary-20260628-142430.json",
+  "sample_size": 3,
+  "ready_candidate": 3,
+  "collision_checks": {
+    "tenant_erp_code_version": "checked when version is available",
+    "sku_unique": "checked",
+    "sku_informative": "derived from masked sku hash"
+  },
+  "collisions": [
+    {
+      "sku_hash": "7e9d5c9142b0",
+      "erp_code_hash": "7e9d5c9142b0",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    },
+    {
+      "sku_hash": "b85dee31fba7",
+      "erp_code_hash": "b85dee31fba7",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    },
+    {
+      "sku_hash": "0cd1a214e755",
+      "erp_code_hash": "0cd1a214e755",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    }
+  ],
+  "decision_hint": "no_preliminary_collisions_detected"
+}

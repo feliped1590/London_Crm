@@ -1,0 +1,74 @@
+{
+  "phase": "22CB-R2",
+  "entity": "products",
+  "input_path": ".local/erp-samples/imp-products-operational-example.json",
+  "array_path": "records",
+  "command_group": null,
+  "sample_size": 3,
+  "ready_candidate": 2,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_missing_name": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "ready_candidate",
+      "sku_masked": "sku_hash_83776f0d720c",
+      "erp_code_masked": "erp_hash_83776f0d720c",
+      "name_masked": "name_hash_60151a4a8a04",
+      "version_masked": "version_hash_6b86b273ff34",
+      "sku_preview": "70***01",
+      "fields_present": [
+        "produto",
+        "desc_simples_item",
+        "codigo_tipo_item",
+        "codigo_grupo",
+        "codigo_subgrupo",
+        "codigo_familia",
+        "codigo_classe",
+        "versao"
+      ]
+    },
+    {
+      "index": 2,
+      "status": "ready_candidate",
+      "sku_masked": "sku_hash_48a7f3ab3307",
+      "erp_code_masked": "erp_hash_48a7f3ab3307",
+      "name_masked": "name_hash_3154552a13e9",
+      "version_masked": "version_hash_d4735e3a265e",
+      "sku_preview": "70***02",
+      "fields_present": [
+        "produto",
+        "desc_completa_item",
+        "codigo_tipo_item",
+        "codigo_grupo",
+        "codigo_subgrupo",
+        "codigo_familia",
+        "codigo_classe",
+        "versao_item"
+      ]
+    },
+    {
+      "index": 3,
+      "status": "blocked_missing_name",
+      "sku_masked": "sku_hash_432245e18e34",
+      "erp_code_masked": "erp_hash_432245e18e34",
+      "name_masked": null,
+      "version_masked": "version_hash_6b86b273ff34",
+      "sku_preview": "70***03",
+      "fields_present": [
+        "produto",
+        "codigo_tipo_item",
+        "codigo_grupo",
+        "codigo_subgrupo",
+        "versao"
+      ]
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

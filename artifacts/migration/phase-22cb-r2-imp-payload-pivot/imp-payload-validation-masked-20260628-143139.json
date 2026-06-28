@@ -1,0 +1,43 @@
+{
+  "phase": "22CB-R2",
+  "entity": "orders",
+  "input_path": ".local/erp-samples/imp-orders-operational-example.json",
+  "array_path": "records",
+  "command_group": null,
+  "sample_size": 2,
+  "ready_candidate": 1,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_missing_order_number": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "diagnostic_ready_structure",
+      "order_number_masked": "order_hash_2a8610aefdd0",
+      "customer_cnpj_masked": "cnpj_hash_09867f8ae29a",
+      "items_count": 1,
+      "fields_present": [
+        "pedido_terceiro",
+        "cpf_cnpj_cliente",
+        "empresa",
+        "fluxo_venda",
+        "itens",
+        "pagto"
+      ]
+    },
+    {
+      "index": 2,
+      "status": "blocked_missing_order_number",
+      "order_number_masked": null,
+      "customer_cnpj_masked": null,
+      "items_count": 0,
+      "fields_present": []
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

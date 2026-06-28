@@ -1,0 +1,44 @@
+{
+  "phase": "22CD-R2",
+  "generated_at": "2026-06-28T17:48:42.000Z",
+  "contracts": {
+    "companies": {
+      "payload": "IMP_CLIENTE_V4",
+      "template_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-cliente-v4-contract-template.json",
+      "contract_detected": true,
+      "real_payload_ready": false,
+      "ready_candidate": 0,
+      "blocked_by_status": {
+        "blocked_placeholder": 1
+      },
+      "placeholder_detected_count": 1
+    },
+    "products": {
+      "payload": "IMP_ITEM_VERSAO_TESTE",
+      "template_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-item-versao-teste-contract-template.json",
+      "contract_detected": true,
+      "real_payload_ready": false,
+      "ready_candidate": 0,
+      "blocked_by_status": {
+        "blocked_placeholder": 1
+      },
+      "placeholder_detected_count": 1
+    },
+    "orders": {
+      "payload": "IMP_PEDIDO_ESPECIFICO",
+      "template_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-pedido-especifico-contract-template.json",
+      "contract_detected": true,
+      "real_payload_ready": false,
+      "ready_candidate": 0,
+      "blocked_by_status": {
+        "blocked_placeholder": 1
+      },
+      "placeholder_detected_count": 1
+    }
+  },
+  "decision_basis": {
+    "contract_ready": true,
+    "requires_real_payloads_next_phase": true,
+    "no_write_executed": true
+  }
+}

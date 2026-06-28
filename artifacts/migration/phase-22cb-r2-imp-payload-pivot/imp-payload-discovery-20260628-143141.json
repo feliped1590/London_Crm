@@ -1,0 +1,117 @@
+{
+  "phase": "22CB-R2",
+  "timestamp": "2026-06-28T14:31:41-03:00",
+  "pivot_reason": "Operational flow prioritizes IMP payloads over EXP sampling.",
+  "imp_payload_sources": {
+    "companies": [
+      {
+        "file": "supabase/functions/_shared/projedata/company-mapper.ts",
+        "command": "IMP_CLIENTE_V4",
+        "fields_example": [
+          "cnpj_cpf",
+          "nome",
+          "fantasia",
+          "email",
+          "insc_estadual",
+          "enderecos",
+          "vendedores"
+        ],
+        "kind": "mapper_operational"
+      },
+      {
+        "file": "src/components/integrations/CustomerPayloadSimulator.tsx",
+        "command": "IMP_CLIENTE_V4",
+        "fields_example": [
+          "tipoComando",
+          "grupoComando",
+          "json",
+          "cnpj_cpf",
+          "nome",
+          "segmento_mercado"
+        ],
+        "kind": "simulator_example"
+      }
+    ],
+    "products": [
+      {
+        "file": "supabase/functions/_shared/projedata/product-mapper-v2.ts",
+        "command": "IMP_ITEM_VERSAO_TESTE",
+        "fields_example": [
+          "codigo",
+          "descricao",
+          "empresa",
+          "familia",
+          "classe",
+          "versoes",
+          "depositos"
+        ],
+        "kind": "mapper_operational"
+      },
+      {
+        "file": ".lovable/memory/integrations/erp-product-version-sync.md",
+        "command": "IMP_ITEM_VERSAO_TESTE",
+        "fields_example": [
+          "codigo",
+          "versoes[].versao",
+          "versoes[].detalhes"
+        ],
+        "kind": "technical_memory"
+      }
+    ],
+    "orders": [
+      {
+        "file": "supabase/functions/_shared/projedata/order-mapper.ts",
+        "command": "IMP_PEDIDO_ESPECIFICO",
+        "fields_example": [
+          "cpf_cnpj_cliente",
+          "pedido_terceiro",
+          "empresa",
+          "fluxo_venda",
+          "itens",
+          "pagto"
+        ],
+        "kind": "mapper_operational"
+      },
+      {
+        "file": "docs/04-workflows/critical-flows/order-erp-sync.md",
+        "command": "IMP_PEDIDO_V3",
+        "fields_example": [
+          "pedido_terceiro",
+          "itens",
+          "pagto"
+        ],
+        "kind": "workflow_doc"
+      },
+      {
+        "file": "src/components/integrations/OrderPayloadSimulator.tsx",
+        "command": "IMP_PEDIDO_ESPECIFICO",
+        "fields_example": [
+          "tipoComando",
+          "grupoComando",
+          "json",
+          "cpf_cnpj_cliente",
+          "itens",
+          "pagto"
+        ],
+        "kind": "simulator_example"
+      }
+    ]
+  },
+  "write_commands_identified_do_not_execute": [
+    "IMP_CLIENTE_V4",
+    "IMP_ITEM_VERSAO_TESTE",
+    "IMP_PEDIDO_V3",
+    "IMP_PEDIDO_ESPECIFICO"
+  ],
+  "input_used_for_no_write_validation": [
+    ".local/erp-samples/imp-companies-operational-example.json",
+    ".local/erp-samples/imp-products-operational-example.json",
+    ".local/erp-samples/imp-orders-operational-example.json"
+  ],
+  "safety": {
+    "erp_write_called": false,
+    "db_write_called": false,
+    "secrets_exposed": false,
+    "raw_real_payload_versioned": false
+  }
+}

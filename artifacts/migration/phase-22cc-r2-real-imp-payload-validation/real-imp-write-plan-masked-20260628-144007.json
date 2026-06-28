@@ -1,0 +1,34 @@
+{
+  "phase": "22CC-R2",
+  "timestamp": "2026-06-28T14:40:07-03:00",
+  "execute_write": false,
+  "ordered_entities": [
+    "companies",
+    "products",
+    "orders"
+  ],
+  "entities_ready": [],
+  "entities_blocked": [
+    {
+      "entity": "companies",
+      "reason": "missing_input_file",
+      "input_expected": ".local/erp-samples/imp-cliente-v4-real-01.json"
+    },
+    {
+      "entity": "products",
+      "reason": "missing_input_file",
+      "input_expected": ".local/erp-samples/imp-item-versao-teste-real-01.json"
+    },
+    {
+      "entity": "orders",
+      "reason": "missing_input_file",
+      "input_expected": ".local/erp-samples/imp-pedido-especifico-real-01.json"
+    }
+  ],
+  "idempotency_preferences": {
+    "companies": "(tenant_id, cnpj)",
+    "products": "(tenant_id, erp_product_code, versao_numero) or sku_unique",
+    "orders": "diagnostic_only_until_companies_and_products_ready"
+  },
+  "next_step": "Provide local real payload files with expected names and rerun validator in no-write mode."
+}

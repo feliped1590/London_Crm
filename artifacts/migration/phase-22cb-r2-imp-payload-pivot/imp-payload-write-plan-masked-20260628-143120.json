@@ -1,0 +1,9 @@
+{
+  "phase": "22CB-R2",
+  "entity": "companies",
+  "execute_write": false,
+  "ready_candidate": 1,
+  "blocked_total": 1,
+  "decision": "candidate_ready_no_execution",
+  "idempotency_preferred": "(tenant_id, cnpj)"
+}

@@ -1,0 +1,67 @@
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "IMP_PEDIDO_ESPECIFICO",
+  "records": [
+    {
+      "cpf_cnpj_cliente": "<11 ou 14 dígitos>",
+      "data_pedido": "DD/MM/AAAA HH:MM:SS",
+      "empresa": 1,
+      "fluxo_venda": 0,
+      "desconto_pedido": 0,
+      "id_moeda": 1,
+      "observacao": "<observações do pedido>",
+      "pedido_terceiro": 20260301,
+      "usuario": 0,
+      "vendedor": 0,
+      "frete": "<código ERP do tipo de frete>",
+      "transportador": 0,
+      "redespacho": 0,
+      "followup_pedido": [
+        {
+          "sequencia_followup": 1,
+          "tipo": 2,
+          "texto": "<follow-up para faturamento>",
+          "usuario": 0
+        }
+      ],
+      "itens": [
+        {
+          "item": "<erp_product_code>",
+          "seq_item": 1,
+          "tipo_venda": 1,
+          "desconto_item": 0,
+          "comissao": 0,
+          "unitario": 0.0,
+          "versao": "<erp_versao>",
+          "entregas": [
+            {
+              "ordem_compra": "0",
+              "observacao": "",
+              "observacao_pcp": "",
+              "previsao_entrega": "DD/MM/AAAA HH:MM:SS",
+              "previsao_ent_cliente": "DD/MM/AAAA HH:MM:SS",
+              "quantidade": 0
+            }
+          ],
+          "followup_item": [
+            {
+              "sequencia_followup": 1,
+              "tipo": 1,
+              "texto": "<mesmo texto do followup_pedido>",
+              "usuario": 0
+            }
+          ]
+        }
+      ],
+      "pagto": [
+        {
+          "parcela": 1,
+          "dias": 28,
+          "forma_recebimento": 0,
+          "tipo": "P",
+          "fator": 100
+        }
+      ]
+    }
+  ]
+}

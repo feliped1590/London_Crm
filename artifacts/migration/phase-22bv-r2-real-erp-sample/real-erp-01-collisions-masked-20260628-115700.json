@@ -1,0 +1,55 @@
+{
+  "phase": "22BV-R2",
+  "timestamp": "2026-06-28T11:57:00-03:00",
+  "target": {
+    "project_ref": "nsnmlleplpzsefzkuxlb",
+    "project_name": "crm-qualyvac-restore-test"
+  },
+  "collision_input_summary": {
+    "normalized_companies_records": 0,
+    "normalized_contacts_records": 0,
+    "normalized_products_records": 0
+  },
+  "companies_collision_checks": {
+    "checked": true,
+    "collision_by_tenant_cnpj": 0,
+    "collision_by_tenant_erp_code": 0,
+    "informative_name_collision": 0
+  },
+  "contacts_collision_checks": {
+    "checked": true,
+    "company_resolution_attempted": 0,
+    "blocked_missing_email": 0,
+    "collision_by_tenant_company_email": 0
+  },
+  "products_collision_checks": {
+    "checked": true,
+    "collision_by_tenant_erp_product_code_versao": 0,
+    "collision_by_sku_unique": 0,
+    "blocked_missing_classification_resolution": 0
+  },
+  "restore_test_reference_counts": {
+    "companies": 5,
+    "contacts": 5,
+    "products": 1
+  },
+  "collisions_masked": [],
+  "blocked_records_masked": [
+    {
+      "entity": "companies",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No source records retrieved in this phase."
+    },
+    {
+      "entity": "contacts",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No explicit safe contacts read-only source available."
+    },
+    {
+      "entity": "products",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No source records retrieved in this phase."
+    }
+  ],
+  "decision": "NO-GO"
+}

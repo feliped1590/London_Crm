@@ -1,0 +1,17 @@
+{
+  "phase": "22CC-R2",
+  "timestamp": "2026-06-28T14:40:07-03:00",
+  "inputs_expected": {
+    "companies": ".local/erp-samples/imp-cliente-v4-real-01.json",
+    "products": ".local/erp-samples/imp-item-versao-teste-real-01.json",
+    "orders": ".local/erp-samples/imp-pedido-especifico-real-01.json"
+  },
+  "collisions_executed": false,
+  "reason": "No real payload records available from expected real-01 inputs.",
+  "collisions": {
+    "companies_by_tenant_cnpj": [],
+    "products_by_tenant_erp_code_version": [],
+    "products_by_sku_unique": [],
+    "orders": []
+  }
+}

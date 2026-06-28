@@ -1,0 +1,50 @@
+{
+  "phase": "22CB-R2",
+  "entity": "products",
+  "input_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-item-versao-teste-contract-template.json",
+  "array_path": "records",
+  "command_group": "IMP_ITEM_VERSAO_TESTE",
+  "expected_command_group": "IMP_ITEM_VERSAO_TESTE",
+  "contract_detected": true,
+  "placeholder_detected_count": 1,
+  "real_payload_ready": false,
+  "sample_size": 1,
+  "ready_candidate": 0,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_placeholder": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "blocked_placeholder",
+      "sku_masked": "sku_hash_d018da409b43",
+      "erp_code_masked": "erp_hash_d018da409b43",
+      "name_masked": "name_hash_77a33a73b343",
+      "version_masked": "version_hash_6b86b273ff34",
+      "sku_preview": "<e***e>",
+      "fields_present": [
+        "classe",
+        "codigo",
+        "conta_contabil",
+        "descricao",
+        "empresa",
+        "familia",
+        "grupo",
+        "subgrupo",
+        "ncm",
+        "tipo_ficha",
+        "tipo_item",
+        "unidade",
+        "usuario",
+        "versoes",
+        "depositos"
+      ]
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

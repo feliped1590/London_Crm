@@ -1,0 +1,30 @@
+{
+  "phase": "22BX-R2",
+  "entity": "products",
+  "run_at": "2026-06-28T17:17:47.262Z",
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "sample_size": 3,
+  "collisions": [
+    {
+      "sku_hash": "7e9d5c9142b0",
+      "erp_code_hash": "7e9d5c9142b0",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    },
+    {
+      "sku_hash": "b85dee31fba7",
+      "erp_code_hash": "b85dee31fba7",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    },
+    {
+      "sku_hash": "0cd1a214e755",
+      "erp_code_hash": "0cd1a214e755",
+      "version_masked": null,
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    }
+  ]
+}

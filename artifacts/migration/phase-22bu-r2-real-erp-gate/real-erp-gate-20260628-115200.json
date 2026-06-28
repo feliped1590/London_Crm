@@ -1,0 +1,197 @@
+{
+  "phase": "22BU-R2",
+  "timestamp": "2026-06-28T11:52:00-03:00",
+  "target": {
+    "project_ref": "nsnmlleplpzsefzkuxlb",
+    "project_name": "crm-qualyvac-restore-test"
+  },
+  "batch": "real_erp_01_restore_test_gate",
+  "git_state": {
+    "branch": "main",
+    "working_tree_clean": true,
+    "divergence_origin_main_vs_main": "0 0",
+    "head": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "head_short": "e05137fb feat(migration): add products pilot write",
+    "origin_main": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "remote_origin": "https://github.com/feliped1590/Qualyvac_Migration.git"
+  },
+  "products_remote_closure": {
+    "remote_closed": true,
+    "reference_phase": "22BT-R2",
+    "push_result": "a52bab83..e05137fb main -> main"
+  },
+  "current_counts": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "products": 1,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "pilot_product_validation": {
+    "cardinality_sku_unique_tmp_sku_0001_001": 1,
+    "id": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "sku": "TMP-SKU-0001",
+    "sku_unique": "TMP-SKU-0001-001",
+    "name": "TMP PRODUCT 01",
+    "versao_numero": 1,
+    "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+    "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+    "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+    "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+    "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+    "erp_product_code": null,
+    "erp_versao": null,
+    "legal_entity_id": null
+  },
+  "erp_api_sources_mapped": {
+    "companies": [
+      {
+        "source": "supabase/functions/_shared/projedata/company-mapper.ts",
+        "command": "EXP_CLIENTES_V2",
+        "type": "read_only_lookup_by_cnpj",
+        "notes": "Consulta ERP para anti-duplicidade por CNPJ."
+      },
+      {
+        "source": "supabase/functions/_shared/projedata/company-mapper.ts",
+        "command": "IMP_CLIENTE_V4",
+        "type": "write_command",
+        "notes": "Mapeado, mas fora de escopo desta fase."
+      }
+    ],
+    "contacts": [
+      {
+        "source": "supabase/functions/erp-import-contacts/index.ts",
+        "command": "erp-import-contacts (records[] via payload)",
+        "type": "crm_write_from_external_source",
+        "notes": "Função de import com resolução por company erp_code; sem comando ERP explícito no arquivo."
+      }
+    ],
+    "products": [
+      {
+        "source": "supabase/functions/erp-import-products-staging/index.ts",
+        "command": "EXP_PRODUTOS_V1",
+        "type": "read_only_erp_fetch_to_staging",
+        "notes": "Busca dados do ERP com data_alteracao."
+      },
+      {
+        "source": "supabase/functions/_shared/projedata/product-mapper-v2.ts",
+        "command": "IMP_ITEM_VERSAO_TESTE",
+        "type": "write_command",
+        "notes": "Comando configurável por PROJEDATA_PRODUCT_COMMAND."
+      }
+    ],
+    "orders_out_of_scope_reference": [
+      {
+        "source": "docs/04-workflows/critical-flows/order-erp-sync.md",
+        "command": "IMP_PEDIDO_V3"
+      },
+      {
+        "source": "supabase/functions/_shared/projedata/order-mapper.ts",
+        "command": "IMP_PEDIDO_ESPECIFICO"
+      }
+    ]
+  },
+  "candidate_entities_real_erp_01": {
+    "companies": {
+      "candidate": true,
+      "minimal_fields": [
+        "tenant_id",
+        "name",
+        "cnpj",
+        "erp_code (when available)",
+        "fantasia (when available)",
+        "owner_id/sales_rep_id (when required)"
+      ],
+      "idempotency_key_primary": "(tenant_id, cnpj)",
+      "idempotency_key_alternative": "(tenant_id, erp_code)"
+    },
+    "contacts": {
+      "candidate": true,
+      "minimal_fields": [
+        "tenant_id",
+        "company_id (resolved)",
+        "first_name",
+        "email",
+        "phone (optional)",
+        "job_title/department (optional)"
+      ],
+      "idempotency_key_primary": "(tenant_id, company_id, email)",
+      "blocking_condition": "If email missing, block until alternative key is approved."
+    },
+    "products": {
+      "candidate": true,
+      "minimal_fields": [
+        "tenant_id",
+        "sku",
+        "name",
+        "erp_product_code (when available)",
+        "erp_versao (when available)",
+        "versao_numero",
+        "tipo_id",
+        "grupo_id",
+        "subgrupo_id",
+        "family_id",
+        "class_id"
+      ],
+      "idempotency_key_primary": "(tenant_id, erp_product_code, versao_numero)",
+      "idempotency_key_alternative": "sku_unique"
+    }
+  },
+  "real_erp_01_limits": {
+    "REAL_ERP_01_LIMIT_COMPANIES": 10,
+    "REAL_ERP_01_LIMIT_CONTACTS": 10,
+    "REAL_ERP_01_LIMIT_PRODUCTS": 10,
+    "orders": 0,
+    "proposals": 0,
+    "deals": 0
+  },
+  "blocking_criteria": [
+    "Missing CNPJ without trusted ERP code fallback.",
+    "Missing mandatory company or product name.",
+    "Contact without resolved company_id.",
+    "Contact without email when email is the chosen key.",
+    "Product without SKU and without ERP code.",
+    "Product without deterministic idempotency key.",
+    "Unresolved mandatory dependency or divergent collision.",
+    "Any flow requiring writes in non-authorized entities."
+  ],
+  "real_data_artifacts_plan": {
+    "next_phase_files": [
+      "real-erp-01-source-sample-YYYYMMDD-HHMMSS.json",
+      "real-erp-01-normalized-payload-YYYYMMDD-HHMMSS.json",
+      "real-erp-01-collisions-YYYYMMDD-HHMMSS.json",
+      "real-erp-01-write-plan-YYYYMMDD-HHMMSS.json"
+    ],
+    "versioning_policy": {
+      "full_raw_real_payload_in_git": false,
+      "cnpj_in_git": "masked_or_hashed_only",
+      "company_name_in_git": "masked_or_partial",
+      "emails_in_git": "masked_or_hashed_only",
+      "allowed_commit_content": "summaries, counts, collision diagnostics, masked evidence",
+      "local_only_sensitive_files": true
+    }
+  },
+  "payload_real_collected_in_this_phase": false,
+  "decision": "PARCIAL",
+  "decision_rationale": [
+    "Remote closure of products is confirmed and restore-test is consistent.",
+    "ERP/API sources are mappable for companies/products and partially mappable for contacts.",
+    "No real payload sample was collected in this phase; preparation can proceed but execution gate still requires source sample normalization evidence."
+  ],
+  "next_phase_recommendation": "22BV-R2 — Coleta read-only de amostra ERP real (max 10/10/10), normalização mascarada e plano de escrita controlado sem execução."
+}

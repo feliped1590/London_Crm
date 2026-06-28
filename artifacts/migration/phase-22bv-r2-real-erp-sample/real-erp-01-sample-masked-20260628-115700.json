@@ -1,0 +1,73 @@
+{
+  "phase": "22BV-R2",
+  "timestamp": "2026-06-28T11:57:00-03:00",
+  "target": {
+    "project_ref": "nsnmlleplpzsefzkuxlb",
+    "project_name": "crm-qualyvac-restore-test"
+  },
+  "batch": "real_erp_01_sample_readonly",
+  "limits_requested": {
+    "REAL_ERP_01_LIMIT_COMPANIES": 10,
+    "REAL_ERP_01_LIMIT_CONTACTS": 10,
+    "REAL_ERP_01_LIMIT_PRODUCTS": 10
+  },
+  "limits_effective": {
+    "companies": 0,
+    "contacts": 0,
+    "products": 0
+  },
+  "erp_readonly_execution": {
+    "executed": false,
+    "reason": "No explicit ERP read-only source configured in restore-test tenant settings and no preloaded ERP cache/staging rows available."
+  },
+  "sources_checked": {
+    "erp_clients_cache_rows": 0,
+    "erp_products_staging_rows": 0,
+    "contact_erp_data_rows": 0,
+    "product_erp_data_rows": 0,
+    "tenant_settings_erp_integration_rows": 0,
+    "companies_read_source": "EXP_CLIENTES_V2 (mapped, not executed)",
+    "products_read_source": "EXP_PRODUTOS_V1 (mapped, not executed)",
+    "contacts_read_source": "blocked_no_explicit_read_source"
+  },
+  "masked_sample": {
+    "companies": [],
+    "contacts": [],
+    "products": []
+  },
+  "status_counts": {
+    "ready_candidate": 0,
+    "blocked_missing_required": 0,
+    "blocked_collision": 0,
+    "blocked_dependency": 0,
+    "blocked_sensitive_policy": 0,
+    "blocked_no_explicit_read_source": 3
+  },
+  "missing_fields_summary": {
+    "companies": [
+      "source_records_not_available"
+    ],
+    "contacts": [
+      "source_records_not_available"
+    ],
+    "products": [
+      "source_records_not_available"
+    ]
+  },
+  "blocking_reasons": [
+    "No configured ERP read-only endpoint/token in tenant scope.",
+    "No cached ERP read-only rows available for masked sampling.",
+    "No explicit read-only contacts source confirmed."
+  ],
+  "real_payload_local_policy": {
+    "raw_payload_collected": false,
+    "raw_payload_saved_outside_git": false,
+    "note": "No real payload was retrieved in this phase due source unavailability."
+  },
+  "risks": [
+    "Cannot validate real data quality without source sample.",
+    "Cannot compute candidate readiness per entity without source sample.",
+    "Contacts remain blocked until explicit read-only source is confirmed."
+  ],
+  "decision": "NO-GO"
+}

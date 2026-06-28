@@ -1,0 +1,51 @@
+{
+  "phase": "22CB-R2",
+  "entity": "companies",
+  "input_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-cliente-v4-contract-template.json",
+  "array_path": "records",
+  "command_group": "IMP_CLIENTE_V4",
+  "expected_command_group": "IMP_CLIENTE_V4",
+  "contract_detected": true,
+  "placeholder_detected_count": 1,
+  "real_payload_ready": false,
+  "sample_size": 1,
+  "ready_candidate": 0,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_placeholder": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "blocked_placeholder",
+      "cnpj_masked": "cnpj_hash_90dbca35cc68",
+      "name_masked": "name_hash_e2432116dbcc",
+      "erp_code_masked": null,
+      "cnpj_preview": "1***",
+      "fields_present": [
+        "cnpj_cpf",
+        "pfpj",
+        "nome",
+        "fantasia",
+        "fone",
+        "email",
+        "insc_estadual",
+        "tipo_correntista",
+        "regiao",
+        "destino_mercadoria",
+        "usuario",
+        "banco_padrao",
+        "segmento_mercado",
+        "subsegmento_mercado",
+        "enderecos",
+        "enderecos_entrega",
+        "vendedores"
+      ]
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "phase": "22CA-R2",
+  "timestamp": "2026-06-28T14:23:04-03:00",
+  "entity": "products",
+  "raw_payload_local_path": ".local/erp-samples/real-erp-01-products-raw-20260628-141747.json",
+  "raw_array_path": "records",
+  "sample_size_inspected": 3,
+  "keys_found": [
+    "empresa",
+    "produto",
+    "desc_simples_item",
+    "desc_completa_item",
+    "desc_simples_versao",
+    "data_alteracao",
+    "codigo_tipo_item",
+    "codigo_grupo",
+    "codigo_subgrupo",
+    "codigo_familia",
+    "codigo_classe",
+    "referencia"
+  ],
+  "candidate_mapping": {
+    "sku_or_code": [
+      "produto",
+      "referencia"
+    ],
+    "name_or_description": [
+      "desc_simples_item",
+      "desc_completa_item",
+      "desc_simples_versao"
+    ],
+    "version": [
+      "versao",
+      "versao_item",
+      "seq_versao"
+    ],
+    "classification": [
+      "codigo_tipo_item",
+      "codigo_grupo",
+      "codigo_subgrupo",
+      "codigo_familia",
+      "codigo_classe"
+    ]
+  },
+  "runner_changes": {
+    "file": "scripts/migration/phase-22bx-r2-erp-readonly-sample.mjs",
+    "added_helper": "firstNonEmpty(record, keys)",
+    "product_name_fallbacks_added": [
+      "desc_simples_item",
+      "desc_completa_item",
+      "desc_simples_versao",
+      "descricao_item",
+      "desc_item",
+      "nome_item"
+    ],
+    "product_classification_fallbacks_added": [
+      "codigo_grupo",
+      "codigo_subgrupo",
+      "codigo_classe"
+    ]
+  },
+  "rerun_result_summary_path": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-sample-summary-20260628-142430.json",
+  "rerun_masked_products_path": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-products-masked-20260628-142430.json",
+  "rerun_collisions_path": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-collisions-masked-20260628-142430.json",
+  "ready_candidate_after_fix": 3,
+  "blocked_after_fix": 0,
+  "safety": {
+    "raw_payload_versioned": false,
+    "token_exposed": false,
+    "db_write_executed": false,
+    "staging_write_executed": false,
+    "imp_command_executed": false
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "phase": "22CB-R2",
+  "entity": "orders",
+  "input_path": "artifacts/migration/phase-22cd-r2-imp-contracts/imp-pedido-especifico-contract-template.json",
+  "array_path": "records",
+  "command_group": "IMP_PEDIDO_ESPECIFICO",
+  "expected_command_group": "IMP_PEDIDO_ESPECIFICO",
+  "contract_detected": true,
+  "placeholder_detected_count": 1,
+  "real_payload_ready": false,
+  "sample_size": 1,
+  "ready_candidate": 0,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_placeholder": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "blocked_placeholder",
+      "order_number_masked": "order_hash_23f33e32a6f4",
+      "customer_cnpj_masked": "cnpj_hash_793a84a351bd",
+      "items_count": 1,
+      "fields_present": [
+        "cpf_cnpj_cliente",
+        "data_pedido",
+        "empresa",
+        "fluxo_venda",
+        "desconto_pedido",
+        "id_moeda",
+        "observacao",
+        "pedido_terceiro",
+        "usuario",
+        "vendedor",
+        "frete",
+        "transportador",
+        "redespacho",
+        "followup_pedido",
+        "itens",
+        "pagto"
+      ]
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

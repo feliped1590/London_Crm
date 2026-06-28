@@ -1,0 +1,57 @@
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "IMP_CLIENTE_V4",
+  "records": [
+    {
+      "cnpj_cpf": "<14 ou 11 dígitos>",
+      "pfpj": "J",
+      "nome": "<razão social, máx 100>",
+      "fantasia": "<fantasia ou nome, máx 100>",
+      "fone": "<somente dígitos>",
+      "email": "<máx 120>",
+      "insc_estadual": "<máx 20>",
+      "obs_geral": "",
+      "tipo_correntista": "C",
+      "rg": "",
+      "tributacao_ir": "",
+      "regiao": "<SUL|SUDESTE|NORDESTE|NORTE|CENTRO OESTE>",
+      "destino_mercadoria": "C",
+      "usuario": 0,
+      "banco_padrao": 999,
+      "segmento_mercado": 0,
+      "subsegmento_mercado": 0,
+      "enderecos": [
+        {
+          "cidade": "<código ERP cidade>",
+          "tipo_endereco": "L",
+          "endereco": "<rua, máx 100>",
+          "complemento": "<máx 60>",
+          "numero_endereco": "<máx 20>",
+          "bairro": "<máx 60>",
+          "cep": "<somente dígitos>"
+        }
+      ],
+      "enderecos_entrega": [
+        {
+          "cidade": "<código ERP cidade>",
+          "codigo_entrega": 1,
+          "endereco": "<rua>",
+          "complemento": "<...>",
+          "numero_endereco": "<...>",
+          "bairro": "<...>",
+          "cep": "<...>",
+          "telefone": "<somente dígitos>"
+        }
+      ],
+      "vendedores": [
+        {
+          "empresa": 1,
+          "codigo_vendedor": 0,
+          "digita_pedidos": "S",
+          "exibir_historico": "S",
+          "remove_vendedor": "N"
+        }
+      ]
+    }
+  ]
+}

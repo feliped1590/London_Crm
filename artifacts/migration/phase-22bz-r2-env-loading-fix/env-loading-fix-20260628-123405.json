@@ -1,0 +1,60 @@
+{
+  "phase": "22BZ-R2-env-loading-fix",
+  "timestamp": "2026-06-28T12:34:05-03:00",
+  "diagnosis": {
+    "powershell_presence": {
+      "INIFLEX_API_URL": true,
+      "INIFLEX_API_TOKEN": false,
+      "PROJEDATA_API_URL": false,
+      "PROJEDATA_API_TOKEN": false
+    },
+    "node_presence": {
+      "INIFLEX_API_URL": true,
+      "INIFLEX_API_TOKEN": false,
+      "PROJEDATA_API_URL": false,
+      "PROJEDATA_API_TOKEN": false
+    },
+    "runner_env_behavior_before_fix": {
+      "loads_env_local": false,
+      "source": "process.env only"
+    },
+    "env_local_file": {
+      "exists": true,
+      "has_iniflex_api_url_key": false,
+      "has_iniflex_api_token_key": false
+    }
+  },
+  "change_applied": {
+    "file": "scripts/migration/phase-22bx-r2-erp-readonly-sample.mjs",
+    "summary": "Added safe fallback loader for .env.local and .env without printing values and without overriding already exported vars."
+  },
+  "post_fix_validation": {
+    "node_presence_after_fix": {
+      "INIFLEX_API_URL": true,
+      "INIFLEX_API_TOKEN": false,
+      "PROJEDATA_API_URL": false,
+      "PROJEDATA_API_TOKEN": false
+    },
+    "companies_retry": {
+      "executed": true,
+      "result": "PARCIAL",
+      "reason": "config_status_missing",
+      "summary_artifact": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-sample-summary-20260628-123311.json"
+    },
+    "products_retry": {
+      "executed": true,
+      "result": "PARCIAL",
+      "reason": "config_status_missing",
+      "summary_artifact": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-sample-summary-20260628-123320.json"
+    }
+  },
+  "security_confirmations": {
+    "token_printed": false,
+    "token_versioned": false,
+    "env_local_committed": false,
+    "write_executor_changed": false,
+    "db_write_performed": false
+  },
+  "decision": "PARCIAL",
+  "reason": "Token is still unavailable to Node process (and not present in .env.local keys)."
+}

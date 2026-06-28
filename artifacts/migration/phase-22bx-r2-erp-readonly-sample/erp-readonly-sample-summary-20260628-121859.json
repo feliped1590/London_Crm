@@ -1,0 +1,65 @@
+{
+  "phase": "22BX-R2",
+  "run_at": "2026-06-28T15:18:59.360Z",
+  "entity": "products",
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "limit_requested": 3,
+  "limit_effective": 3,
+  "no_write_mode": true,
+  "git": {
+    "branch": "main",
+    "head": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "origin_main": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "divergence_origin_main_vs_main": "0\t0",
+    "linked_project_name": "crm-qualyvac-restore-test"
+  },
+  "config": {
+    "config_status": "ready",
+    "config_source": "env",
+    "tenant_settings_checked": false,
+    "tenant_settings_present": false,
+    "has_api_url": true,
+    "has_api_token": true
+  },
+  "command_allowlist": [
+    "EXP_CLIENTES_V2",
+    "EXP_PRODUTOS_V1"
+  ],
+  "command_blocklist": [
+    "IMP_CLIENTE_V4",
+    "IMP_ITEM_VERSAO_TESTE",
+    "IMP_PEDIDO_V3",
+    "IMP_PEDIDO_ESPECIFICO",
+    "IMP_ATRIBFICHA_V1"
+  ],
+  "operation": "erp_readonly_call_failed",
+  "totals": {
+    "fetched_records": 0,
+    "sample_records": 0,
+    "ready_candidate": 0,
+    "blocked_total": 0
+  },
+  "blocked_by_status": {},
+  "artifacts": {
+    "local_raw_path": null,
+    "masked_entity_path": null,
+    "masked_collisions_path": null,
+    "masked_summary_path": "artifacts\\migration\\phase-22bx-r2-erp-readonly-sample\\erp-readonly-sample-summary-20260628-121859.json"
+  },
+  "errors": [
+    "Headers.append: \"Bearer \n(PINT002) Cadastro de Integrações\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n1/1\nGrupo\n1\n2\n\n3\n\n4\nIniflexBI - Biblioteca\nIniflexBI - PL/SQL\n\nNovafixBI - PL/SQL\nNovafixCRM - PL/SQL\n\n1\n6867786936\n\n\n\n\n\n\n\n\nFELIPE DUARTE\n-79$-36$-9$-12$-60$-32$-74$-13$-106$-55$-90$-95$-19$-81$-25$-91$-101$-45$-50$-108$-70$-40$-58$-99$-19$-72$-53$-53$-22$-90$-57$-67$-48$-44$-46$-14$-52$-2$-119$-80$-46$-18$-69$-38$-117$-35$-87$-21$-39$-76$-73$-114$-89$-28$-34$-115$-4$-101$-51$-29$-86$-121$-96$-46$-71$-114$-34$-91$-71$-100$-41$-124$-25$-83$-45$-111$-67$-13$-94$-93$-113$-107$-61$-44$-115$-33$-89$-112$-81$-28$-41$-32$-29$-82$-59$-81$-55$-82$-117$-56$-111$-105$-33$-66$-7$-24$-67$-115$-65$-103$-77$-104$-8$-3$-23$-76$-75$-69$-75$-42$-87$-82$-55$-21$-118$-9$-15$-46$-54$-73$-61$-48$-30$-26$-105$-62$-111$-17$-121$-48$-83$-122$-69$-100$-33$-27$-53$-12$-95$-88$-92$-35$-37$-80$-43$-39$-91$-69$-4$-82$-12$-104$-93$-98$-51$-110$-94$-110$-116$-15$-107$\n\n\n\n\n\n\n\n\n\nAtivo\n\nLogs de Acesso\n9396\n9395\n\n9394\n\n9393\n\n9392\n\n9391\n\n9390\n\n9389\n\n9388\n\n26/06/2026 16:49:17\n26/06/2026 16:49:15\n\n26/06/2026 16:49:14\n\n26/06/2026 16:49:12\n\n26/06/2026 16:49:09\n\n26/06/2026 16:30:48\n\n26/06/2026 16:30:47\n\n26/06/2026 16:30:44\n\n26/06/2026 16:30:43\n\nAcesso realizado! Host Remoto: [54.233.198.204]\nAcesso realizado! Host Remoto: [54.233.198.204]\n\nAcesso realizado! Host Remoto: [54.233.198.204]\n\nAcesso realizado! Host Remoto: [54.233.198.204]\n\nAcesso realizado! Host Remoto: [15.228.49.232]\n\nAcesso realizado! Host Remoto: [18.228.3.251]\n\nAcesso realizado! Host Remoto: [18.228.3.251]\n\nAcesso realizado! Host Remoto: [18.228.3.251]\n\nAcesso realizado! Host Remoto: [18.228.3.251]\n\n\nBiblioteca\nPL/SQL\n\n\nPL/SQL\n\nPL/SQL\n\nAtivo\nAtivo\n\n\nAtivo\n\nAtivo\n\nToken\nToken\n\n\nToken\n\nToken\n2000\n2000\n\n2000\n2000\nChave\n\n-79$-36$-9$-12$-60$-32$-74$-13$-106$-55$-90$-95$-19$-81$-25$-91$-101$-45$-50$-108$-70$-40$-58$-99$-19$-72$-53$-53$-22$-90$-57$-67$-48$-44$-46$-14$-52$-2$-119$-80$-46$-18$-69$-38$-117$-35$-87$-21$-39$-76$-73$-114$-89$-28$-34$-115$-4$-101$-51$-29$-86$-121$-96$-46$-71$-114$-34$-91$-71$-100$-41$-124$-25$-83$-45$-111$-67$-13$-94$-93$-113$-107$-61$-44$-115$-33$-89$-112$-81$-28$-41$-32$-29$-82$-59$-81$-55$-82$-117$-56$-111$-105$-33$-66$-7$-24$-67$-115$-65$-103$-77$-104$-8$-3$-23$-76$-75$-69$-75$-42$-87$-82$-55$-21$-118$-9$-15$-46$-54$-73$-61$-48$-30$-26$-105$-62$-111$-17$-121$-48$-83$-122$-69$-100$-33$-27$-53$-12$-95$-88$-92$-35$-37$-80$-43$-39$-91$-69$-4$-82$-12$-104$-93$-98$-51$-110$-94$-110$-116$-15$-107$\" is an invalid header value."
+  ],
+  "decision": "PARCIAL",
+  "reason": "external_error_or_timeout",
+  "confirmations": {
+    "no_db_write": true,
+    "no_sql_write": true,
+    "no_erp_write_api": true,
+    "no_staging_writes": true,
+    "no_queue_processing": true,
+    "no_deploy": true,
+    "no_commit": true,
+    "no_push": true,
+    "no_executor_change": true
+  }
+}

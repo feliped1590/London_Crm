@@ -1,0 +1,67 @@
+{
+  "phase": "22CE-R2",
+  "timestamp": "20260628-145351",
+  "git_state": {
+    "branch": "main",
+    "head": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "origin_main": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "divergence_origin_main_vs_main": "0 0",
+    "last_commit": "e05137fb feat(migration): add products pilot write"
+  },
+  "docs_22bu_22cd": [
+    "docs/migration/phase-22bu-r2-real-erp-gate.md",
+    "docs/migration/phase-22bv-r2-real-erp-sample.md",
+    "docs/migration/phase-22bw-r2-erp-readonly-source-diagnostics.md",
+    "docs/migration/phase-22bx-r2-erp-readonly-sample.md",
+    "docs/migration/phase-22by-r2-erp-readonly-configured-sample.md",
+    "docs/migration/phase-22bz-r2-erp-readonly-retry.md",
+    "docs/migration/phase-22bz-r2-env-loading-fix.md",
+    "docs/migration/phase-22ca-r2-products-mapper-and-companies-window.md",
+    "docs/migration/phase-22cb-r2-imp-payload-pivot.md",
+    "docs/migration/phase-22cc-r2-real-imp-payload-validation.md",
+    "docs/migration/phase-22cd-r2-imp-contracts.md"
+  ],
+  "artifacts_22bu_22cd": [
+    "artifacts/migration/phase-22bu-r2-real-erp-gate/",
+    "artifacts/migration/phase-22bv-r2-real-erp-sample/",
+    "artifacts/migration/phase-22bw-r2-erp-readonly-source-diagnostics/",
+    "artifacts/migration/phase-22bx-r2-erp-readonly-sample/",
+    "artifacts/migration/phase-22by-r2-erp-readonly-configured-sample/",
+    "artifacts/migration/phase-22bz-r2-erp-readonly-retry/",
+    "artifacts/migration/phase-22bz-r2-env-loading-fix/",
+    "artifacts/migration/phase-22ca-r2-products-mapper-and-companies-window/",
+    "artifacts/migration/phase-22cb-r2-imp-payload-pivot/",
+    "artifacts/migration/phase-22cc-r2-real-imp-payload-validation/",
+    "artifacts/migration/phase-22cd-r2-imp-contracts/"
+  ],
+  "erp_imp_front_status": {
+    "status": "frozen_documented_no_write",
+    "official_payload_contracts": [
+      "IMP_CLIENTE_V4",
+      "IMP_ITEM_VERSAO_TESTE",
+      "IMP_PEDIDO_ESPECIFICO"
+    ],
+    "real_payload_ready": false,
+    "pending_items": [
+      "Preencher payloads reais locais sem placeholders",
+      "Confirmar mapeamentos internos finais",
+      "Retomar frente ERP/IMP em fase dedicada"
+    ]
+  },
+  "sensitive_scan": {
+    "scope": "arquivos versionaveis 22BU-22CE",
+    "secrets_detected": false,
+    "tokens_exposed": false,
+    "raw_real_payload_versioned": false,
+    "notes": [
+      "Nao foram encontrados tokens/segredos em scripts e artifacts da trilha 22BU-22CE.",
+      "Ocorrencias textuais de INIFLEX_API_TOKEN em docs sao diagnosticas e sem valor secreto."
+    ]
+  },
+  "protection_checks": {
+    "dot_local_ignored": true,
+    "dot_env_local_ignored": true,
+    "payload_real_outside_git": true
+  },
+  "decision": "GO"
+}

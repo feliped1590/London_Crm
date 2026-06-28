@@ -1,0 +1,47 @@
+{
+  "phase": "22CB-R2",
+  "entity": "companies",
+  "input_path": ".local/erp-samples/imp-companies-operational-example.json",
+  "array_path": "records",
+  "command_group": null,
+  "sample_size": 2,
+  "ready_candidate": 1,
+  "blocked_total": 1,
+  "blocked_by_status": {
+    "blocked_missing_cnpj": 1
+  },
+  "rows": [
+    {
+      "index": 1,
+      "status": "ready_candidate",
+      "cnpj_masked": "cnpj_hash_09867f8ae29a",
+      "name_masked": "name_hash_6786ff9eca69",
+      "erp_code_masked": "erp_hash_e443169117a1",
+      "cnpj_preview": "12***99",
+      "fields_present": [
+        "cnpj_cpf",
+        "nome",
+        "codigo_erp",
+        "cidade",
+        "uf"
+      ]
+    },
+    {
+      "index": 2,
+      "status": "blocked_missing_cnpj",
+      "cnpj_masked": null,
+      "name_masked": "name_hash_39f1108be8e0",
+      "erp_code_masked": "erp_hash_56acd2f85500",
+      "cnpj_preview": null,
+      "fields_present": [
+        "nome",
+        "codigo_erp"
+      ]
+    }
+  ],
+  "safety": {
+    "no_db_write": true,
+    "no_erp_write_call": true,
+    "raw_payload_versioned": false
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "phase": "22CD-R2",
+  "next_real_inputs_required": [
+    {
+      "file": ".local/erp-samples/imp-cliente-v4-real-01.json",
+      "must_replace_placeholders": [
+        "cnpj_cpf",
+        "nome",
+        "fantasia",
+        "fone",
+        "email",
+        "enderecos[0].cidade",
+        "enderecos[0].endereco",
+        "enderecos[0].bairro",
+        "enderecos[0].cep"
+      ],
+      "must_satisfy": [
+        "cnpj_cpf com 11 ou 14 digitos",
+        "preferir pfpj=J e 14 digitos para primeira carga real"
+      ]
+    },
+    {
+      "file": ".local/erp-samples/imp-item-versao-teste-real-01.json",
+      "must_replace_placeholders": [
+        "codigo",
+        "descricao",
+        "classe",
+        "familia",
+        "grupo",
+        "subgrupo",
+        "tipo_item",
+        "versoes[0].detalhes"
+      ],
+      "must_satisfy": [
+        "codigo real para chave de idempotencia",
+        "descricao nao vazia",
+        "resolver FKs de classificacao"
+      ]
+    },
+    {
+      "file": ".local/erp-samples/imp-pedido-especifico-real-01.json",
+      "must_replace_placeholders": [
+        "cpf_cnpj_cliente",
+        "data_pedido",
+        "itens[0].item",
+        "itens[0].versao",
+        "itens[0].entregas[0].previsao_entrega",
+        "itens[0].entregas[0].previsao_ent_cliente"
+      ],
+      "must_satisfy": [
+        "pedido continua diagnostico ate cliente/produto resolvidos no CRM",
+        "pedido sem itens validos permanece bloqueado"
+      ]
+    }
+  ],
+  "gates": {
+    "contract_ready": true,
+    "real_payload_ready": false,
+    "require_new_real_payloads": true
+  }
+}

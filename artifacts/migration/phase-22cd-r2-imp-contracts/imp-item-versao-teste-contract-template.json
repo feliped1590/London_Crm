@@ -1,0 +1,39 @@
+{
+  "tipoComando": "ASDCOMANDO",
+  "grupoComando": "IMP_ITEM_VERSAO_TESTE",
+  "records": [
+    {
+      "classe": "<label de product_classes>",
+      "codigo": "<erp_product_code>",
+      "conta_contabil": 142,
+      "descricao": "<nome_impresso>",
+      "empresa": 1,
+      "familia": "<label de product_families>",
+      "grupo": "<erp_grupo>",
+      "subgrupo": "<erp_subgrupo>",
+      "ncm": "<somente dígitos>",
+      "tipo_ficha": 1,
+      "tipo_item": "<tipo_item>",
+      "unidade": "<UN/KG/...>",
+      "usuario": 0,
+      "versoes": [
+        {
+          "versao": "1",
+          "roteiro": 1,
+          "situacao": "A",
+          "detalhes": "<erp_versao, ex: 100x200x0,05>"
+        }
+      ],
+      "depositos": [
+        {
+          "sequencia": 1,
+          "deposito": 1,
+          "operacao": "A",
+          "centro_custo": 1,
+          "contabil": "N",
+          "remove_deposito": "N"
+        }
+      ]
+    }
+  ]
+}

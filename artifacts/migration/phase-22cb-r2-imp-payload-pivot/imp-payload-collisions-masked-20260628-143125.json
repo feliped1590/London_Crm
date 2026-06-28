@@ -1,0 +1,21 @@
+{
+  "phase": "22CB-R2",
+  "entity": "products",
+  "sample_size": 3,
+  "collisions": [
+    {
+      "sku_hash": "83776f0d720c",
+      "erp_code_hash": "83776f0d720c",
+      "version_masked": "version_hash_6b86b273ff34",
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    },
+    {
+      "sku_hash": "48a7f3ab3307",
+      "erp_code_hash": "48a7f3ab3307",
+      "version_masked": "version_hash_d4735e3a265e",
+      "by_tenant_erp_code_version": 0,
+      "by_sku_unique": 0
+    }
+  ]
+}

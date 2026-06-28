@@ -1,0 +1,78 @@
+{
+  "phase": "22CD-R2",
+  "official_contracts": {
+    "IMP_CLIENTE_V4": {
+      "required_fields": [
+        "cnpj_cpf",
+        "nome"
+      ],
+      "crm_mapping": [
+        { "crm_field": "companies.cnpj", "source": "cnpj_cpf", "required": true },
+        { "crm_field": "companies.name", "source": "nome", "required": true },
+        { "crm_field": "companies.trade_name", "source": "fantasia", "required": false },
+        { "crm_field": "companies.inscricao_estadual", "source": "insc_estadual", "required": false },
+        { "crm_field": "diagnostic_only.addresses", "source": "enderecos", "required": false },
+        { "crm_field": "diagnostic_only.delivery_addresses", "source": "enderecos_entrega", "required": false },
+        { "crm_field": "diagnostic_only.vendors", "source": "vendedores", "required": false }
+      ],
+      "blocking_rules": [
+        "blocked_missing_cnpj",
+        "blocked_missing_name",
+        "blocked_placeholder"
+      ],
+      "idempotency_preferred": "(tenant_id, cnpj)"
+    },
+    "IMP_ITEM_VERSAO_TESTE": {
+      "required_fields": [
+        "codigo",
+        "descricao",
+        "versoes[0].detalhes"
+      ],
+      "crm_mapping": [
+        { "crm_field": "products.erp_product_code", "source": "codigo", "required": true },
+        { "crm_field": "products.sku", "source": "codigo", "required": true },
+        { "crm_field": "products.name", "source": "descricao", "required": true },
+        { "crm_field": "products.ncm", "source": "ncm", "required": false },
+        { "crm_field": "products.erp_versao", "source": "versoes[0].detalhes", "required": true },
+        { "crm_field": "products.versao_numero", "source": "versoes[0].versao", "required": true },
+        { "crm_field": "products.tipo_id", "source": "tipo_item", "required": true },
+        { "crm_field": "products.group_id", "source": "grupo", "required": true },
+        { "crm_field": "products.subgroup_id", "source": "subgrupo", "required": true },
+        { "crm_field": "products.family_id", "source": "familia", "required": true },
+        { "crm_field": "products.class_id", "source": "classe", "required": true }
+      ],
+      "blocking_rules": [
+        "blocked_missing_sku_or_erp_code",
+        "blocked_missing_name",
+        "blocked_missing_version",
+        "blocked_missing_classification",
+        "blocked_placeholder"
+      ],
+      "idempotency_preferred": "(tenant_id, erp_product_code, versao_numero)"
+    },
+    "IMP_PEDIDO_ESPECIFICO": {
+      "required_fields": [
+        "cpf_cnpj_cliente",
+        "pedido_terceiro",
+        "itens[].item",
+        "itens[].versao"
+      ],
+      "crm_mapping_future_diagnostic": [
+        { "crm_field": "orders.customer_ref", "source": "cpf_cnpj_cliente", "required": true },
+        { "crm_field": "orders.external_order_number", "source": "pedido_terceiro", "required": true },
+        { "crm_field": "orders.company_ref", "source": "empresa", "required": true },
+        { "crm_field": "orders.seller_ref", "source": "vendedor", "required": false },
+        { "crm_field": "order_items.product_ref", "source": "itens[].item", "required": true },
+        { "crm_field": "order_items.version_ref", "source": "itens[].versao", "required": true }
+      ],
+      "blocking_rules": [
+        "blocked_missing_order_number",
+        "blocked_missing_customer_cnpj",
+        "blocked_missing_items",
+        "blocked_missing_product_code",
+        "blocked_placeholder"
+      ],
+      "diagnostic_only": true
+    }
+  }
+}

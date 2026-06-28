@@ -1,0 +1,11 @@
+{
+  "phase": "22CB-R2",
+  "entity": "companies",
+  "sample_size": 2,
+  "collisions": [
+    {
+      "cnpj_hash": "09867f8ae29a",
+      "by_tenant_cnpj": 0
+    }
+  ]
+}

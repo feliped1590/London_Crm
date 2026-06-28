@@ -1,0 +1,11 @@
+{
+  "phase": "22CB-R2",
+  "entity": "orders",
+  "execute_write": false,
+  "contract_detected": true,
+  "real_payload_ready": false,
+  "ready_candidate": 0,
+  "blocked_total": 1,
+  "decision": "contract_only_requires_real_values",
+  "idempotency_preferred": "orders_diagnostic_only"
+}

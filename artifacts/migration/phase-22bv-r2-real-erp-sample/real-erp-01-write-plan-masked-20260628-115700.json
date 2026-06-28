@@ -1,0 +1,60 @@
+{
+  "phase": "22BV-R2",
+  "timestamp": "2026-06-28T11:57:00-03:00",
+  "target": {
+    "project_ref": "nsnmlleplpzsefzkuxlb",
+    "project_name": "crm-qualyvac-restore-test"
+  },
+  "execution": {
+    "write_plan_generated": true,
+    "write_plan_executed": false,
+    "write_authorization_documented": false
+  },
+  "requested_limits": {
+    "companies": 10,
+    "contacts": 10,
+    "products": 10
+  },
+  "recommended_limits_next_phase": {
+    "companies": 0,
+    "contacts": 0,
+    "products": 0
+  },
+  "classification_totals": {
+    "ready_to_write": 0,
+    "blocked_missing_required": 0,
+    "blocked_collision": 0,
+    "blocked_dependency": 0,
+    "blocked_sensitive_policy": 0,
+    "blocked_no_explicit_read_source": 3
+  },
+  "order_for_future_execution": [
+    "companies",
+    "contacts",
+    "products"
+  ],
+  "records_masked": {
+    "companies": [],
+    "contacts": [],
+    "products": []
+  },
+  "blocked_summary": [
+    {
+      "entity": "companies",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No real ERP sample collected."
+    },
+    {
+      "entity": "contacts",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No explicit safe read-only source confirmed."
+    },
+    {
+      "entity": "products",
+      "status": "blocked_no_explicit_read_source",
+      "reason": "No real ERP sample collected."
+    }
+  ],
+  "next_action_required": "Enable a safe read-only ERP source and rerun 22BV sample collection before any real write authorization.",
+  "decision": "NO-GO"
+}

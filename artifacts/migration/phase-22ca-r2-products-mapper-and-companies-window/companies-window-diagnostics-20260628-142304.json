@@ -1,0 +1,54 @@
+{
+  "phase": "22CA-R2",
+  "timestamp": "2026-06-28T14:23:04-03:00",
+  "entity": "companies",
+  "current_status": "diagnosed_not_wide_retried_in_loop",
+  "latest_company_summary_path": "artifacts/migration/phase-22bx-r2-erp-readonly-sample/erp-readonly-sample-summary-20260628-141856.json",
+  "latest_company_result": {
+    "operation": "erp_readonly_call_failed",
+    "error": "This operation was aborted",
+    "sample_records": 0
+  },
+  "exp_clientes_v2_contract_evidence": {
+    "source_file": "supabase/functions/_shared/projedata/company-mapper.ts",
+    "command": "EXP_CLIENTES_V2",
+    "payload_fields_observed": [
+      "tipoComando",
+      "grupoComando",
+      "data_alteracao"
+    ],
+    "explicit_fields_not_evidenced": [
+      "cnpj",
+      "codigo_cliente",
+      "pagination",
+      "limit",
+      "empresa",
+      "status"
+    ],
+    "notes": "CNPJ filtering in existing mapper occurs after response retrieval, not as explicit ERP payload field."
+  },
+  "runner_preparation_done": {
+    "file": "scripts/migration/phase-22bx-r2-erp-readonly-sample.mjs",
+    "supported_optional_args": [
+      "--changed-since",
+      "--date-from",
+      "--date-to",
+      "--cnpj",
+      "--erp-code",
+      "--timeout-ms"
+    ],
+    "behavior": {
+      "changed_since": "mapped to ERP payload data_alteracao",
+      "cnpj_filter": "applied locally post-fetch",
+      "erp_code_filter": "applied locally post-fetch",
+      "date_range_filter": "applied locally post-fetch when data_alteracao exists"
+    }
+  },
+  "recommended_next_company_call": "node scripts/migration/phase-22bx-r2-erp-readonly-sample.mjs --entity companies --limit 3 --no-write --changed-since 2026-06-01 --timeout-ms 120000",
+  "safety": {
+    "db_write_executed": false,
+    "staging_write_executed": false,
+    "imp_command_executed": false,
+    "secrets_exposed": false
+  }
+}

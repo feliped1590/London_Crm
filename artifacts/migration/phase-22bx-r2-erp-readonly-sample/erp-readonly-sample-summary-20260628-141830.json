@@ -1,0 +1,68 @@
+{
+  "phase": "22BX-R2",
+  "run_at": "2026-06-28T17:18:30.387Z",
+  "entity": "companies",
+  "tenant_id": "00000000-0000-0000-0000-000000000001",
+  "limit_requested": 3,
+  "limit_effective": 3,
+  "no_write_mode": true,
+  "git": {
+    "branch": "main",
+    "head": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "origin_main": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "divergence_origin_main_vs_main": "0\t0",
+    "linked_project_name": "crm-qualyvac-restore-test"
+  },
+  "config": {
+    "config_status": "ready",
+    "config_source": "env_iniflex",
+    "provider": "iniflex",
+    "iniflex_api_url_present": true,
+    "iniflex_api_token_present": true,
+    "tenant_settings_checked": false,
+    "tenant_settings_present": false,
+    "has_api_url": true,
+    "has_api_token": true
+  },
+  "command_allowlist": [
+    "EXP_CLIENTES_V2",
+    "EXP_PRODUTOS_V1"
+  ],
+  "command_blocklist": [
+    "IMP_CLIENTE_V4",
+    "IMP_ITEM_VERSAO_TESTE",
+    "IMP_PEDIDO_V3",
+    "IMP_PEDIDO_ESPECIFICO",
+    "IMP_ATRIBFICHA_V1"
+  ],
+  "operation": "erp_readonly_call_failed",
+  "totals": {
+    "fetched_records": 0,
+    "sample_records": 0,
+    "ready_candidate": 0,
+    "blocked_total": 0
+  },
+  "blocked_by_status": {},
+  "artifacts": {
+    "local_raw_path": null,
+    "masked_entity_path": null,
+    "masked_collisions_path": null,
+    "masked_summary_path": "artifacts\\migration\\phase-22bx-r2-erp-readonly-sample\\erp-readonly-sample-summary-20260628-141830.json"
+  },
+  "errors": [
+    "This operation was aborted"
+  ],
+  "decision": "PARCIAL",
+  "reason": "external_error_or_timeout",
+  "confirmations": {
+    "no_db_write": true,
+    "no_sql_write": true,
+    "no_erp_write_api": true,
+    "no_staging_writes": true,
+    "no_queue_processing": true,
+    "no_deploy": true,
+    "no_commit": true,
+    "no_push": true,
+    "no_executor_change": true
+  }
+}

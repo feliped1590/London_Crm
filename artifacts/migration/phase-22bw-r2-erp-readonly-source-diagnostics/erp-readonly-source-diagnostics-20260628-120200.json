@@ -1,0 +1,132 @@
+{
+  "phase": "22BW-R2",
+  "timestamp": "2026-06-28T12:02:00-03:00",
+  "target": {
+    "project_ref": "nsnmlleplpzsefzkuxlb",
+    "project_name": "crm-qualyvac-restore-test"
+  },
+  "batch": "real_erp_01_readonly_source_diagnostics",
+  "git_state": {
+    "branch": "main",
+    "head_short": "e05137fb feat(migration): add products pilot write",
+    "head": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "origin_main": "e05137fbf3f02f58dc4e7f63ee4527bf418990ee",
+    "divergence_origin_main_vs_main": "0 0",
+    "working_tree_expected_pending_only_22bu_22bv": true
+  },
+  "code_search_summary": {
+    "search_command": "rg -n \"EXP_CLIENTES_V2|EXP_PRODUTOS_V1|IMP_CLIENTE_V4|IMP_ITEM_VERSAO_TESTE|erp-import-contacts|erp_clients_cache|erp_products_staging|contact_erp_data|product_erp_data|tenant_settings|Projedata|Iniflex|runtime/endpoint|ASDCOMANDO|ASDCOMANDOJSONTMP\" .",
+    "key_files": [
+      "supabase/functions/_shared/projedata/company-mapper.ts",
+      "supabase/functions/erp-import-products-staging/index.ts",
+      "supabase/functions/process-company-sync/index.ts",
+      "supabase/functions/erp-import-contacts/index.ts",
+      "src/pages/Integrations.tsx",
+      "src/components/settings/LegalEntityPermissionsManager.tsx"
+    ],
+    "wrappers_found": {
+      "customers_lookup": "searchClienteByCnpj() in company-mapper uses EXP_CLIENTES_V2",
+      "products_export_fetch": "fetchFromErp() in erp-import-products-staging uses EXP_PRODUTOS_V1",
+      "contacts_explicit_export": "not found"
+    }
+  },
+  "required_configuration_without_values": {
+    "tenant_settings_category": "erp_integration",
+    "tenant_settings_keys_expected": [
+      "endpoint",
+      "token"
+    ],
+    "function_env_fallbacks": [
+      "INIFLEX_API_URL",
+      "INIFLEX_API_TOKEN",
+      "PROJEDATA_API_URL",
+      "PROJEDATA_API_TOKEN",
+      "PROJEDATA_CLIENT_COMMAND",
+      "PROJEDATA_PRODUCT_COMMAND"
+    ],
+    "env_example_contains_erp_keys": false,
+    "env_example_file_present": true
+  },
+  "runtime_source_availability": {
+    "tenant_settings_erp_integration_rows": 0,
+    "erp_clients_cache_rows": 0,
+    "erp_products_staging_rows": 0,
+    "contact_erp_data_rows": 0,
+    "product_erp_data_rows": 0
+  },
+  "command_classification": {
+    "read_only_confirmed": [
+      {
+        "command": "EXP_CLIENTES_V2",
+        "evidence": "company-mapper builds ASDCOMANDOJSONTMP payload for lookup by CNPJ."
+      },
+      {
+        "command": "EXP_PRODUTOS_V1",
+        "evidence": "erp-import-products-staging fetchFromErp builds ASDCOMANDO payload for export."
+      }
+    ],
+    "write_blocked_this_phase": [
+      "IMP_CLIENTE_V4",
+      "IMP_ITEM_VERSAO_TESTE",
+      "IMP_PEDIDO_V3",
+      "IMP_PEDIDO_ESPECIFICO",
+      "IMP_ATRIBFICHA_V1"
+    ],
+    "unknown_blocked": [
+      "contacts export command is not explicit in repository mappings"
+    ]
+  },
+  "entity_sources": {
+    "companies": {
+      "source": "EXP_CLIENTES_V2",
+      "status": "confirmed_read_only_but_not_executable_now",
+      "blocker": "missing endpoint/token configuration and empty cache"
+    },
+    "products": {
+      "source": "EXP_PRODUTOS_V1",
+      "status": "confirmed_read_only_but_not_executable_now",
+      "blocker": "missing endpoint/token configuration and empty staging"
+    },
+    "contacts": {
+      "source": "not_explicitly_mapped_export_command",
+      "status": "blocked",
+      "blocker": "no explicit read-only command identified"
+    }
+  },
+  "readonly_tests": {
+    "companies_test_proposed": {
+      "can_execute_now": false,
+      "proposed_call": "Invoke read-only wrapper based on EXP_CLIENTES_V2 with max 1-3 records and no CRM persistence.",
+      "safety_requirements": [
+        "confirmed endpoint/token in tenant settings",
+        "explicit no-write mode",
+        "local-only raw payload storage"
+      ]
+    },
+    "products_test_proposed": {
+      "can_execute_now": false,
+      "proposed_call": "Invoke read-only wrapper based on EXP_PRODUTOS_V1 with max 1-3 records and no CRM persistence.",
+      "safety_requirements": [
+        "confirmed endpoint/token in tenant settings",
+        "disable staging insert path",
+        "local-only raw payload storage"
+      ]
+    },
+    "contacts_test_proposed": {
+      "can_execute_now": false,
+      "proposed_call": "Blocked until explicit read-only contacts source is confirmed."
+    },
+    "any_readonly_test_executed": false
+  },
+  "payload_real": {
+    "collected": false,
+    "raw_payload_committed": false
+  },
+  "risks": [
+    "No active ERP runtime configuration in restore-test tenant scope.",
+    "Current product export function mixes read fetch with staging writes and is unsafe for execution without no-write guard.",
+    "Contacts read-only source remains undefined."
+  ],
+  "decision": "PARCIAL",
+  "recommendation": "Prepare a dedicated read-only runner (or guarded mode) for EXP_CLIENTES_V2/EXP_PRODUTOS_V1, configure endpoint/token at tenant scope, and rerun a minimal 1-3 record sample before repeating 22BV."
+}

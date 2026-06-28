@@ -1,0 +1,43 @@
+{
+  "phase": "22CC-R2",
+  "timestamp": "2026-06-28T14:40:07-03:00",
+  "inputs_expected": {
+    "companies": ".local/erp-samples/imp-cliente-v4-real-01.json",
+    "products": ".local/erp-samples/imp-item-versao-teste-real-01.json",
+    "orders": ".local/erp-samples/imp-pedido-especifico-real-01.json"
+  },
+  "inputs_found": {
+    "companies": false,
+    "products": false,
+    "orders": false
+  },
+  "local_operational_examples_found": {
+    "companies": ".local/erp-samples/imp-companies-operational-example.json",
+    "products": ".local/erp-samples/imp-products-operational-example.json",
+    "orders": ".local/erp-samples/imp-orders-operational-example.json"
+  },
+  "validation_result": {
+    "companies": {
+      "status": "not_executed_missing_input_real_01",
+      "ready_candidate": 0
+    },
+    "products": {
+      "status": "not_executed_missing_input_real_01",
+      "ready_candidate": 0
+    },
+    "orders": {
+      "status": "not_executed_missing_input_real_01",
+      "diagnostic_ready_structure": 0
+    }
+  },
+  "security": {
+    "erp_call_executed": false,
+    "imp_command_executed": false,
+    "db_write_executed": false,
+    "sql_write_executed": false,
+    "raw_payload_real_committed": false,
+    "token_exposed": false
+  },
+  "decision": "PARCIAL",
+  "reason": "Expected real payload inputs (*-real-01.json) were not found locally."
+}
