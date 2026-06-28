@@ -16,6 +16,7 @@ const ALLOWED_PILOT_ENTITIES = new Set([
   "product_subgroups",
   "product_families",
   "product_classes",
+  "products",
   "companies",
   "contacts",
   "companies_contacts_wave",
@@ -38,6 +39,8 @@ const EXPECTED_CONTACTS_PILOT_AUTHORIZATION =
   "AUTORIZO A NONA ESCRITA PILOTO DA BASELINE 22BH-R2 SOMENTE EM contacts NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_COMPANIES_CONTACTS_WAVE_PILOT_AUTHORIZATION =
   "AUTORIZO A DÉCIMA ESCRITA CONTROLADA DA BASELINE 22BK-R2 SOMENTE EM companies E contacts, LIMITADA À ONDA CONGELADA, NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_PRODUCTS_PILOT_AUTHORIZATION =
+  "AUTORIZO A DÉCIMA PRIMEIRA ESCRITA PILOTO DA BASELINE 22BP-R2 SOMENTE EM products NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD = {
   phase: "22AD-R2",
   entity: "product_types",
@@ -127,6 +130,29 @@ const EXPECTED_CONTACTS_PILOT_PAYLOAD = {
   write_contact_in_same_phase: false,
   company_lookup_cnpj: "TMP-DOC-COMP-0001",
   resolved_company_id: "9eb4ba07-d4d4-4b45-9902-39244d6ad52c",
+};
+const EXPECTED_PRODUCTS_PILOT_PAYLOAD = {
+  phase: "22BP-R2",
+  entity: "products",
+  source: "baseline_simulation_22g_r2_sanitized",
+  temp_key: "TMP-22F-R2-PRODUCT-01",
+  tenant_id: "00000000-0000-0000-0000-000000000001",
+  sku: "TMP-SKU-0001",
+  expected_sku_unique: "TMP-SKU-0001-001",
+  name: "TMP Product 01",
+  expected_persisted_name: "TMP PRODUCT 01",
+  tipo_id: "522d0e75-641f-4161-bd41-94ebd50e8158",
+  grupo_id: "c5057853-15be-440d-886f-b0093de363fa",
+  subgrupo_id: "8f798403-516e-48cf-b675-e025240385f3",
+  family_id: "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+  class_id: "79b5d092-1669-4b39-b590-565b471c1360",
+  legal_entity_id_policy: "omit_or_null_unless_required",
+  erp_product_code_policy: "omit_or_null",
+  erp_versao_policy: "omit_or_null",
+  versao_numero_policy: "default_or_omit",
+  idempotency_key: "sku_unique",
+  idempotency_lookup_policy: "lookup_by_expected_sku_unique_before_insert",
+  write_policy: "single_product_pilot_only",
 };
 
 const ALLOWED_ENTITIES = new Set([
@@ -1510,6 +1536,188 @@ function executeContactsPilotWrite(params) {
   };
 }
 
+function executeProductsPilotWrite(params) {
+  const {
+    pilotEntity,
+    pilotAuthorization,
+    expectedTargetRef,
+    expectedTargetName,
+    batchId,
+    localTargetRef,
+    localTargetName,
+    payload,
+  } = params;
+
+  if (pilotEntity !== "products") {
+    throw new Error("Pilot entity must be products for 22BQ-R2 real pilot write.");
+  }
+  if (pilotAuthorization !== EXPECTED_PRODUCTS_PILOT_AUTHORIZATION) {
+    throw new Error("Pilot authorization phrase mismatch for products pilot write.");
+  }
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for products pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for products pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for products pilot write.");
+  }
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Products pilot payload must be a valid object.");
+  }
+
+  const requiredKeys = [
+    "temp_key",
+    "tenant_id",
+    "sku",
+    "expected_sku_unique",
+    "name",
+    "expected_persisted_name",
+    "tipo_id",
+    "grupo_id",
+    "subgrupo_id",
+    "family_id",
+    "class_id",
+    "idempotency_key",
+    "idempotency_lookup_policy",
+    "write_policy",
+  ];
+  for (const key of requiredKeys) {
+    if (!Object.prototype.hasOwnProperty.call(payload, key)) {
+      throw new Error(`Products pilot payload missing key: ${key}`);
+    }
+  }
+
+  const candidate = {
+    tenant_id: String(payload.tenant_id || ""),
+    sku: String(payload.sku || ""),
+    expected_sku_unique: String(payload.expected_sku_unique || ""),
+    name: String(payload.name || ""),
+    expected_persisted_name: String(payload.expected_persisted_name || ""),
+    tipo_id: String(payload.tipo_id || ""),
+    grupo_id: String(payload.grupo_id || ""),
+    subgrupo_id: String(payload.subgrupo_id || ""),
+    family_id: String(payload.family_id || ""),
+    class_id: String(payload.class_id || ""),
+  };
+
+  if (candidate.tenant_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.tenant_id) throw new Error("products pilot tenant_id mismatch.");
+  if (candidate.sku !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.sku) throw new Error("products pilot sku mismatch.");
+  if (candidate.expected_sku_unique !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_sku_unique) {
+    throw new Error("products pilot expected_sku_unique mismatch.");
+  }
+  if (candidate.name !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.name) throw new Error("products pilot name mismatch.");
+  if (candidate.expected_persisted_name !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_persisted_name) {
+    throw new Error("products pilot expected_persisted_name mismatch.");
+  }
+  if (candidate.tipo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.tipo_id) throw new Error("products pilot tipo_id mismatch.");
+  if (candidate.grupo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.grupo_id) throw new Error("products pilot grupo_id mismatch.");
+  if (candidate.subgrupo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.subgrupo_id) throw new Error("products pilot subgrupo_id mismatch.");
+  if (candidate.family_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.family_id) throw new Error("products pilot family_id mismatch.");
+  if (candidate.class_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.class_id) throw new Error("products pilot class_id mismatch.");
+  if (payload.idempotency_key !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.idempotency_key) throw new Error("products pilot idempotency_key mismatch.");
+  if (payload.idempotency_lookup_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.idempotency_lookup_policy) {
+    throw new Error("products pilot idempotency_lookup_policy mismatch.");
+  }
+  if (payload.write_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.write_policy) throw new Error("products pilot write_policy mismatch.");
+  if (payload.legal_entity_id_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.legal_entity_id_policy) {
+    throw new Error("products pilot legal_entity_id_policy mismatch.");
+  }
+  if (payload.erp_product_code_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.erp_product_code_policy) {
+    throw new Error("products pilot erp_product_code_policy mismatch.");
+  }
+  if (payload.erp_versao_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.erp_versao_policy) {
+    throw new Error("products pilot erp_versao_policy mismatch.");
+  }
+  if (payload.versao_numero_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.versao_numero_policy) {
+    throw new Error("products pilot versao_numero_policy mismatch.");
+  }
+
+  const bySkuUnique = runSupabaseDbQuery(`
+    select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id,
+           versao_numero, erp_product_code, erp_versao, legal_entity_id
+    from public.products
+    where sku_unique='${escapeSqlLiteral(candidate.expected_sku_unique)}'
+  `);
+  const bySku = runSupabaseDbQuery(`
+    select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id,
+           versao_numero, erp_product_code, erp_versao, legal_entity_id
+    from public.products
+    where sku='${escapeSqlLiteral(candidate.sku)}'
+  `);
+
+  if (bySkuUnique.length > 1) throw new Error("Unexpected duplicate rows for products.sku_unique during pilot.");
+  if (bySku.length > 1) throw new Error("Unexpected duplicate rows for products.sku during pilot.");
+
+  if (bySkuUnique.length === 1) {
+    const existing = bySkuUnique[0];
+    const samePayload =
+      existing.tenant_id === candidate.tenant_id &&
+      existing.sku === candidate.sku &&
+      existing.sku_unique === candidate.expected_sku_unique &&
+      existing.name === candidate.expected_persisted_name &&
+      existing.tipo_id === candidate.tipo_id &&
+      existing.grupo_id === candidate.grupo_id &&
+      existing.subgrupo_id === candidate.subgrupo_id &&
+      existing.family_id === candidate.family_id &&
+      existing.class_id === candidate.class_id &&
+      Number(existing.versao_numero) === 1 &&
+      existing.erp_product_code === null &&
+      existing.erp_versao === null &&
+      existing.legal_entity_id === null;
+    if (!samePayload) {
+      throw new Error("Existing products row diverges from frozen pilot payload.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      inserted: false,
+    };
+  }
+
+  if (bySku.length > 0) {
+    throw new Error("Found existing row by sku without expected sku_unique; deterministic idempotency blocked.");
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.products (tenant_id, sku, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id)
+    values (
+      '${escapeSqlLiteral(candidate.tenant_id)}',
+      '${escapeSqlLiteral(candidate.sku)}',
+      '${escapeSqlLiteral(candidate.name)}',
+      '${escapeSqlLiteral(candidate.tipo_id)}',
+      '${escapeSqlLiteral(candidate.grupo_id)}',
+      '${escapeSqlLiteral(candidate.subgrupo_id)}',
+      '${escapeSqlLiteral(candidate.family_id)}',
+      '${escapeSqlLiteral(candidate.class_id)}'
+    )
+    returning id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id,
+              versao_numero, erp_product_code, erp_versao, legal_entity_id
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one products row.");
+  }
+  const inserted = insertedRows[0];
+  if (inserted.sku_unique !== candidate.expected_sku_unique) {
+    throw new Error("products.sku_unique diverged from expected trigger result.");
+  }
+  if (inserted.name !== candidate.expected_persisted_name) {
+    throw new Error("products.name diverged from expected uppercase trigger result.");
+  }
+  if (Number(inserted.versao_numero) !== 1) {
+    throw new Error("products.versao_numero default mismatch after insert.");
+  }
+  if (inserted.erp_product_code !== null || inserted.erp_versao !== null || inserted.legal_entity_id !== null) {
+    throw new Error("Forbidden ERP/legal_entity fields were unexpectedly written in products pilot.");
+  }
+  return {
+    operation: "inserted",
+    record: inserted,
+    inserted: true,
+  };
+}
+
 function executeCompaniesContactsWaveWrite(params) {
   const {
     pilotEntity,
@@ -1938,6 +2146,8 @@ function main() {
         ? EXPECTED_CONTACTS_PILOT_AUTHORIZATION
       : selectedPilotEntity === "companies_contacts_wave"
         ? EXPECTED_COMPANIES_CONTACTS_WAVE_PILOT_AUTHORIZATION
+      : selectedPilotEntity === "products"
+        ? EXPECTED_PRODUCTS_PILOT_AUTHORIZATION
       : EXPECTED_PILOT_AUTHORIZATION;
 
   if (args.executePilotWrite && !selectedPilotEntity) {
@@ -1949,7 +2159,7 @@ function main() {
       validations,
       "pilot.entity.value",
       "FAIL",
-      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, companies, contacts or companies_contacts_wave.",
+      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, products, companies, contacts or companies_contacts_wave.",
     );
   } else if (selectedPilotEntity === "legal_entities") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as legal_entities.");
@@ -1963,6 +2173,8 @@ function main() {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_families.");
   } else if (selectedPilotEntity === "product_classes") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_classes.");
+  } else if (selectedPilotEntity === "products") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as products.");
   } else if (selectedPilotEntity === "companies") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as companies.");
   } else if (selectedPilotEntity === "contacts") {
@@ -1991,6 +2203,7 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "products" ||
       selectedPilotEntity === "companies" ||
       selectedPilotEntity === "companies_contacts_wave" ||
       selectedPilotEntity === "contacts") &&
@@ -2004,6 +2217,7 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "products" ||
       selectedPilotEntity === "companies" ||
       selectedPilotEntity === "companies_contacts_wave" ||
       selectedPilotEntity === "contacts") &&
@@ -2123,6 +2337,28 @@ function main() {
   let contactsResolvedCompanyId = null;
   let contactsCompanyContactsRegclass = null;
   let contactsCompaniesCountCurrent = null;
+  let productsCountCurrent = null;
+  let productsSkuCollisionCount = null;
+  let productsSkuUniqueCollisionCount = null;
+  let productsNameCollisionCount = null;
+  let productsNameOriginalCollisionCount = null;
+  let productsTenantRequired = null;
+  let productsSkuRequired = null;
+  let productsNameRequired = null;
+  let productsVersaoNumeroDefault = null;
+  let productsVersaoNumeroNullable = null;
+  let productsErpProductCodeNullable = null;
+  let productsErpVersaoNullable = null;
+  let productsLegalEntityNullable = null;
+  let productsUniqueSkuUniquePresent = false;
+  let productsTriggerGenerateSkuUniquePresent = false;
+  let productsTriggerUppercasePresent = false;
+  let productsTenantExists = null;
+  let productsTipoCardinality = null;
+  let productsGrupoCardinality = null;
+  let productsSubgrupoCardinality = null;
+  let productsFamilyCardinality = null;
+  let productsClassCardinality = null;
 
   if (!args.input) {
     noGoReasons.push("--input is required.");
@@ -3537,6 +3773,220 @@ function main() {
     }
   }
 
+  if (selectedPilotEntity === "products") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.phase) pilotPayloadValidationErrors.push("phase mismatch");
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) pilotPayloadValidationErrors.push("targetRef mismatch");
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) pilotPayloadValidationErrors.push("targetName mismatch");
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) pilotPayloadValidationErrors.push("batchId mismatch");
+      if (String(pilotPayloadJson?.decision || "").toUpperCase() !== "GO") pilotPayloadValidationErrors.push("decision must be GO");
+
+      const payload = pilotPayloadJson?.sanitizedPilotPayload;
+      if (!payload || typeof payload !== "object") {
+        pilotPayloadValidationErrors.push("sanitizedPilotPayload missing");
+      } else {
+        if (payload.source !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.source) pilotPayloadValidationErrors.push("source mismatch");
+        if (payload.temp_key !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.temp_key) pilotPayloadValidationErrors.push("temp_key mismatch");
+        if (payload.entity && payload.entity !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.entity) pilotPayloadValidationErrors.push("entity mismatch");
+        if (payload.tenant_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.tenant_id) pilotPayloadValidationErrors.push("tenant_id mismatch");
+        if (payload.sku !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.sku) pilotPayloadValidationErrors.push("sku mismatch");
+        if (payload.expected_sku_unique !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_sku_unique) {
+          pilotPayloadValidationErrors.push("expected_sku_unique mismatch");
+        }
+        if (payload.name !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.name) pilotPayloadValidationErrors.push("name mismatch");
+        if (payload.expected_persisted_name !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_persisted_name) {
+          pilotPayloadValidationErrors.push("expected_persisted_name mismatch");
+        }
+        if (payload.tipo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.tipo_id) pilotPayloadValidationErrors.push("tipo_id mismatch");
+        if (payload.grupo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.grupo_id) pilotPayloadValidationErrors.push("grupo_id mismatch");
+        if (payload.subgrupo_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.subgrupo_id) pilotPayloadValidationErrors.push("subgrupo_id mismatch");
+        if (payload.family_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.family_id) pilotPayloadValidationErrors.push("family_id mismatch");
+        if (payload.class_id !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.class_id) pilotPayloadValidationErrors.push("class_id mismatch");
+        if (payload.legal_entity_id_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.legal_entity_id_policy) {
+          pilotPayloadValidationErrors.push("legal_entity_id_policy mismatch");
+        }
+        if (payload.erp_product_code_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.erp_product_code_policy) {
+          pilotPayloadValidationErrors.push("erp_product_code_policy mismatch");
+        }
+        if (payload.erp_versao_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.erp_versao_policy) {
+          pilotPayloadValidationErrors.push("erp_versao_policy mismatch");
+        }
+        if (payload.versao_numero_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.versao_numero_policy) {
+          pilotPayloadValidationErrors.push("versao_numero_policy mismatch");
+        }
+        if (payload.idempotency_key !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.idempotency_key) {
+          pilotPayloadValidationErrors.push("idempotency_key mismatch");
+        }
+        if (payload.idempotency_lookup_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.idempotency_lookup_policy) {
+          pilotPayloadValidationErrors.push("idempotency_lookup_policy mismatch");
+        }
+        if (payload.write_policy !== EXPECTED_PRODUCTS_PILOT_PAYLOAD.write_policy) {
+          pilotPayloadValidationErrors.push("write_policy mismatch");
+        }
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const rows = runSupabaseDbQuery(`
+        select column_name, is_nullable, column_default
+        from information_schema.columns
+        where table_schema='public'
+          and table_name='products'
+          and column_name in ('tenant_id','sku','name','versao_numero','erp_product_code','erp_versao','legal_entity_id')
+      `);
+      const byColumn = new Map(rows.map((r) => [r.column_name, r]));
+      productsTenantRequired = byColumn.get("tenant_id")?.is_nullable === "NO";
+      productsSkuRequired = byColumn.get("sku")?.is_nullable === "NO";
+      productsNameRequired = byColumn.get("name")?.is_nullable === "NO";
+      productsVersaoNumeroNullable = byColumn.get("versao_numero")?.is_nullable === "YES";
+      productsVersaoNumeroDefault = byColumn.get("versao_numero")?.column_default || null;
+      productsErpProductCodeNullable = byColumn.get("erp_product_code")?.is_nullable === "YES";
+      productsErpVersaoNullable = byColumn.get("erp_versao")?.is_nullable === "YES";
+      productsLegalEntityNullable = byColumn.get("legal_entity_id")?.is_nullable === "YES";
+      if (productsTenantRequired !== true) noGoReasons.push("products.tenant_id must be required.");
+      if (productsSkuRequired !== true) noGoReasons.push("products.sku must be required.");
+      if (productsNameRequired !== true) noGoReasons.push("products.name must be required.");
+      if (productsVersaoNumeroNullable !== false) noGoReasons.push("products.versao_numero must be not null.");
+      if (String(productsVersaoNumeroDefault || "").trim() !== "1") noGoReasons.push("products.versao_numero default must be 1.");
+      if (productsErpProductCodeNullable !== true) noGoReasons.push("products.erp_product_code must be nullable.");
+      if (productsErpVersaoNullable !== true) noGoReasons.push("products.erp_versao must be nullable.");
+      if (productsLegalEntityNullable !== true) noGoReasons.push("products.legal_entity_id must be nullable.");
+      pushValidation(validations, "pilot.products.columns_and_nullable", "PASS", "Products columns and nullable/default policies validated.");
+    } catch {
+      noGoReasons.push("Unable to validate products columns and nullable/default policies.");
+      pushValidation(validations, "pilot.products.columns_and_nullable", "FAIL", "Failed products columns validation.");
+    }
+
+    try {
+      const indexRows = runSupabaseDbQuery(`
+        select indexname
+        from pg_indexes
+        where schemaname='public'
+          and tablename='products'
+          and indexname='products_sku_unique_key'
+      `);
+      productsUniqueSkuUniquePresent = indexRows.some((r) => r.indexname === "products_sku_unique_key");
+      if (!productsUniqueSkuUniquePresent) noGoReasons.push("products_sku_unique_key is required.");
+      pushValidation(validations, "pilot.products.unique_index", "PASS", "products_sku_unique_key validated.");
+    } catch {
+      noGoReasons.push("Unable to validate products_sku_unique_key index.");
+      pushValidation(validations, "pilot.products.unique_index", "FAIL", "Failed products unique index validation.");
+    }
+
+    try {
+      const triggerRows = runSupabaseDbQuery(`
+        select trigger_name
+        from information_schema.triggers
+        where event_object_schema='public'
+          and event_object_table='products'
+          and trigger_name in ('trg_generate_sku_unique','trg_uppercase_products')
+        group by trigger_name
+      `);
+      productsTriggerGenerateSkuUniquePresent = triggerRows.some((r) => r.trigger_name === "trg_generate_sku_unique");
+      productsTriggerUppercasePresent = triggerRows.some((r) => r.trigger_name === "trg_uppercase_products");
+      if (!productsTriggerGenerateSkuUniquePresent) noGoReasons.push("trg_generate_sku_unique is required.");
+      if (!productsTriggerUppercasePresent) noGoReasons.push("trg_uppercase_products is required.");
+      pushValidation(validations, "pilot.products.triggers", "PASS", "Products triggers validated.");
+    } catch {
+      noGoReasons.push("Unable to validate products triggers.");
+      pushValidation(validations, "pilot.products.triggers", "FAIL", "Failed products trigger validation.");
+    }
+
+    try {
+      const tenantRows = runSupabaseDbQuery(
+        `select exists(select 1 from public.tenants where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.tenant_id)}') as tenant_exists`,
+      );
+      productsTenantExists = tenantRows[0]?.tenant_exists === true;
+      if (productsTenantExists !== true) noGoReasons.push("Pilot tenant does not exist for products.");
+      pushValidation(validations, "pilot.products.tenant_exists", "PASS", "Pilot tenant existence validated.");
+    } catch {
+      noGoReasons.push("Unable to validate pilot tenant existence for products.");
+      pushValidation(validations, "pilot.products.tenant_exists", "FAIL", "Failed products tenant existence validation.");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.products");
+      productsCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.products.current_count", "PASS", "Current products count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.products.");
+      pushValidation(validations, "pilot.products.current_count", "FAIL", "Failed to read products count.");
+    }
+
+    try {
+      const collisionRows = runSupabaseDbQuery(`
+        select
+          (select count(*)::bigint from public.products where sku='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.sku)}') as by_sku,
+          (select count(*)::bigint from public.products where sku_unique='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_sku_unique)}') as by_sku_unique,
+          (select count(*)::bigint from public.products where name='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_persisted_name)}') as by_name_upper,
+          (select count(*)::bigint from public.products where name='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.name)}') as by_name_original
+      `);
+      productsSkuCollisionCount = Number(collisionRows[0]?.by_sku ?? 0);
+      productsSkuUniqueCollisionCount = Number(collisionRows[0]?.by_sku_unique ?? 0);
+      productsNameCollisionCount = Number(collisionRows[0]?.by_name_upper ?? 0);
+      productsNameOriginalCollisionCount = Number(collisionRows[0]?.by_name_original ?? 0);
+      if (productsSkuCollisionCount > 1) noGoReasons.push("Unexpected duplicate rows found for products.sku.");
+      if (productsSkuUniqueCollisionCount > 1) noGoReasons.push("Unexpected duplicate rows found for products.sku_unique.");
+      if (productsCountCurrent === 0 && productsSkuCollisionCount !== 0) noGoReasons.push("products.sku collision detected before pilot.");
+      if (productsCountCurrent === 0 && productsSkuUniqueCollisionCount !== 0) {
+        noGoReasons.push("products.sku_unique collision detected before pilot.");
+      }
+      pushValidation(validations, "pilot.products.collisions", "PASS", "Products collisions validated.");
+    } catch {
+      noGoReasons.push("Unable to validate products collisions.");
+      pushValidation(validations, "pilot.products.collisions", "FAIL", "Failed products collision validation.");
+    }
+
+    try {
+      const auxRows = runSupabaseDbQuery(`
+        select
+          (select count(*)::bigint from public.product_types where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.tipo_id)}') as tipo_count,
+          (select count(*)::bigint from public.product_groups where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.grupo_id)}') as grupo_count,
+          (select count(*)::bigint from public.product_subgroups where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.subgrupo_id)}') as subgrupo_count,
+          (select count(*)::bigint from public.product_families where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.family_id)}') as family_count,
+          (select count(*)::bigint from public.product_classes where id='${escapeSqlLiteral(EXPECTED_PRODUCTS_PILOT_PAYLOAD.class_id)}') as class_count
+      `);
+      productsTipoCardinality = Number(auxRows[0]?.tipo_count ?? 0);
+      productsGrupoCardinality = Number(auxRows[0]?.grupo_count ?? 0);
+      productsSubgrupoCardinality = Number(auxRows[0]?.subgrupo_count ?? 0);
+      productsFamilyCardinality = Number(auxRows[0]?.family_count ?? 0);
+      productsClassCardinality = Number(auxRows[0]?.class_count ?? 0);
+      if (productsTipoCardinality !== 1) noGoReasons.push("tipo_id auxiliary cardinality must be 1.");
+      if (productsGrupoCardinality !== 1) noGoReasons.push("grupo_id auxiliary cardinality must be 1.");
+      if (productsSubgrupoCardinality !== 1) noGoReasons.push("subgrupo_id auxiliary cardinality must be 1.");
+      if (productsFamilyCardinality !== 1) noGoReasons.push("family_id auxiliary cardinality must be 1.");
+      if (productsClassCardinality !== 1) noGoReasons.push("class_id auxiliary cardinality must be 1.");
+      pushValidation(validations, "pilot.products.auxiliary_cardinality", "PASS", "Products auxiliary cardinality validated.");
+    } catch {
+      noGoReasons.push("Unable to validate products auxiliary cardinalities.");
+      pushValidation(validations, "pilot.products.auxiliary_cardinality", "FAIL", "Failed products auxiliary cardinality validation.");
+    }
+  }
+
   if (selectedPilotEntity === "companies") {
     const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
     pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
@@ -4358,6 +4808,26 @@ function main() {
             realExecutionBlocked: true,
             reason: "Execution remains blocked unless beforeDecision is GO in 22BB-R2 real pilot path.",
           }
+      : activePilotEntity === "products"
+        ? {
+            entity: "products",
+            action: "insert_pilot_planned",
+            tenant_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.tenant_id,
+            sku: EXPECTED_PRODUCTS_PILOT_PAYLOAD.sku,
+            expected_sku_unique: EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_sku_unique,
+            name: EXPECTED_PRODUCTS_PILOT_PAYLOAD.name,
+            expected_persisted_name: EXPECTED_PRODUCTS_PILOT_PAYLOAD.expected_persisted_name,
+            tipo_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.tipo_id,
+            grupo_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.grupo_id,
+            subgrupo_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.subgrupo_id,
+            family_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.family_id,
+            class_id: EXPECTED_PRODUCTS_PILOT_PAYLOAD.class_id,
+            omittedFields: ["legal_entity_id", "erp_product_code", "erp_versao"],
+            idempotencyKey: ["sku_unique"],
+            executableIn22BQ: true,
+            realExecutionBlocked: true,
+            reason: "Execution remains blocked unless beforeDecision is GO in 22BQ-R2 real pilot path.",
+          }
       : activePilotEntity === "companies"
         ? {
             entity: "companies",
@@ -4430,7 +4900,7 @@ function main() {
 
   if (selectedPilotEntity && !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
     pilotNoGoReasons.push(
-      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, companies, contacts or companies_contacts_wave.",
+      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families, product_classes, products, companies, contacts or companies_contacts_wave.",
     );
   }
   if (args.pilotAuthorization && args.pilotAuthorization !== expectedPilotAuthorization) {
@@ -4450,6 +4920,7 @@ function main() {
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
         selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "companies_contacts_wave" ||
         selectedPilotEntity === "contacts") &&
@@ -4538,6 +5009,12 @@ function main() {
   if (selectedPilotEntity === "product_classes" && productClassesUniqueValuePresent !== true) {
     pilotNoGoReasons.push("product_classes requires UNIQUE(value) for pilot.");
   }
+  if (selectedPilotEntity === "products" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("products pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "products" && productsUniqueSkuUniquePresent !== true) {
+    pilotNoGoReasons.push("products requires products_sku_unique_key for pilot.");
+  }
   if (selectedPilotEntity === "companies" && pilotPayloadValidationErrors.length > 0) {
     pilotNoGoReasons.push("companies pilot payload compatibility is invalid.");
   }
@@ -4584,6 +5061,8 @@ function main() {
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_families. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22BBStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_classes. EXECUÇÃO AMPLIADA BLOQUEADA.";
+  const phase22BQStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM products. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22BGStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM companies. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22BHStopAfterPilotMessage =
@@ -4828,6 +5307,8 @@ function main() {
         ? path.resolve("artifacts/migration/phase-22az-r2-pilot-product-families-write")
       : selectedPilotEntity === "product_classes"
         ? path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write")
+      : selectedPilotEntity === "products"
+        ? path.resolve("artifacts/migration/phase-22bq-r2-pilot-products-write")
       : selectedPilotEntity === "contacts"
         ? path.resolve("artifacts/migration/phase-22bh-r2-pilot-contacts-write")
       : selectedPilotEntity === "companies_contacts_wave"
@@ -4845,6 +5326,8 @@ function main() {
         ? path.join(pilotEvidenceDir, `pilot-product-families-${nowStamp()}.json`)
       : selectedPilotEntity === "product_classes"
         ? path.join(pilotEvidenceDir, `pilot-product-classes-${nowStamp()}.json`)
+      : selectedPilotEntity === "products"
+        ? path.join(pilotEvidenceDir, `pilot-products-${nowStamp()}.json`)
       : selectedPilotEntity === "contacts"
         ? path.join(pilotEvidenceDir, `pilot-contacts-${nowStamp()}.json`)
       : selectedPilotEntity === "companies_contacts_wave"
@@ -4862,6 +5345,8 @@ function main() {
               ? "22AZ-R2"
             : selectedPilotEntity === "product_classes"
               ? "22BB-R2"
+            : selectedPilotEntity === "products"
+              ? "22BQ-R2"
             : selectedPilotEntity === "contacts"
               ? "22BH-R2"
             : selectedPilotEntity === "companies_contacts_wave"
@@ -4884,6 +5369,7 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes"
+      || selectedPilotEntity === "products"
       || selectedPilotEntity === "companies"
       || selectedPilotEntity === "companies_contacts_wave"
       || selectedPilotEntity === "contacts"
@@ -4978,6 +5464,30 @@ function main() {
       selectedPilotEntity === "product_classes" ? productClassesHasFkToProductSubgroups : null,
     productClassesHasFkToProductFamilies:
       selectedPilotEntity === "product_classes" ? productClassesHasFkToProductFamilies : null,
+    productsCurrentCount: selectedPilotEntity === "products" ? productsCountCurrent : null,
+    productsSkuCollisionCount: selectedPilotEntity === "products" ? productsSkuCollisionCount : null,
+    productsSkuUniqueCollisionCount: selectedPilotEntity === "products" ? productsSkuUniqueCollisionCount : null,
+    productsNameCollisionCount: selectedPilotEntity === "products" ? productsNameCollisionCount : null,
+    productsNameOriginalCollisionCount: selectedPilotEntity === "products" ? productsNameOriginalCollisionCount : null,
+    productsTenantRequired: selectedPilotEntity === "products" ? productsTenantRequired : null,
+    productsSkuRequired: selectedPilotEntity === "products" ? productsSkuRequired : null,
+    productsNameRequired: selectedPilotEntity === "products" ? productsNameRequired : null,
+    productsVersaoNumeroDefault: selectedPilotEntity === "products" ? productsVersaoNumeroDefault : null,
+    productsVersaoNumeroNullable: selectedPilotEntity === "products" ? productsVersaoNumeroNullable : null,
+    productsErpProductCodeNullable: selectedPilotEntity === "products" ? productsErpProductCodeNullable : null,
+    productsErpVersaoNullable: selectedPilotEntity === "products" ? productsErpVersaoNullable : null,
+    productsLegalEntityNullable: selectedPilotEntity === "products" ? productsLegalEntityNullable : null,
+    productsUniqueSkuUniquePresent: selectedPilotEntity === "products" ? productsUniqueSkuUniquePresent : null,
+    productsTriggerGenerateSkuUniquePresent:
+      selectedPilotEntity === "products" ? productsTriggerGenerateSkuUniquePresent : null,
+    productsTriggerUppercasePresent:
+      selectedPilotEntity === "products" ? productsTriggerUppercasePresent : null,
+    productsTenantExists: selectedPilotEntity === "products" ? productsTenantExists : null,
+    productsTipoCardinality: selectedPilotEntity === "products" ? productsTipoCardinality : null,
+    productsGrupoCardinality: selectedPilotEntity === "products" ? productsGrupoCardinality : null,
+    productsSubgrupoCardinality: selectedPilotEntity === "products" ? productsSubgrupoCardinality : null,
+    productsFamilyCardinality: selectedPilotEntity === "products" ? productsFamilyCardinality : null,
+    productsClassCardinality: selectedPilotEntity === "products" ? productsClassCardinality : null,
     companiesCurrentCount: selectedPilotEntity === "companies" ? companiesCountCurrent : null,
     companiesTenantRequired: selectedPilotEntity === "companies" ? companiesTenantRequired : null,
     companiesNameRequired: selectedPilotEntity === "companies" ? companiesNameRequired : null,
@@ -5023,6 +5533,7 @@ function main() {
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
         selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "contacts",
       productTypesWillNotBeTouchedAgain:
@@ -5030,21 +5541,27 @@ function main() {
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
         selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "contacts",
       productGroupsWillNotBeTouchedAgain:
         selectedPilotEntity === "product_subgroups" ||
         selectedPilotEntity === "product_families" ||
         selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "contacts",
       productSubgroupsWillNotBeTouchedAgain:
         selectedPilotEntity === "product_families" ||
         selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "contacts",
       productFamiliesWillNotBeTouchedAgain:
-        selectedPilotEntity === "product_classes" || selectedPilotEntity === "companies" || selectedPilotEntity === "contacts",
+        selectedPilotEntity === "product_classes" ||
+        selectedPilotEntity === "products" ||
+        selectedPilotEntity === "companies" ||
+        selectedPilotEntity === "contacts",
       salesRepsBlocked: true,
       profilesExcluded: !executableEntitiesRoundOne22Q.includes("profiles"),
       companyContactsExcluded: !executableEntitiesRoundOne22Q.includes("company_contacts"),
@@ -5073,6 +5590,7 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "products" ||
         selectedPilotEntity === "companies" ||
         selectedPilotEntity === "contacts"
         ? Boolean(args.executePilotWrite && args.write)
@@ -5088,6 +5606,8 @@ function main() {
           ? phase22AZStopAfterPilotMessage
         : selectedPilotEntity === "product_classes"
           ? phase22BBStopAfterPilotMessage
+        : selectedPilotEntity === "products"
+          ? phase22BQStopAfterPilotMessage
         : selectedPilotEntity === "companies"
           ? phase22BGStopAfterPilotMessage
         : selectedPilotEntity === "contacts"
@@ -5110,6 +5630,8 @@ function main() {
   fs.mkdirSync(phase22AZDir, { recursive: true });
   const phase22BBDir = path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write");
   fs.mkdirSync(phase22BBDir, { recursive: true });
+  const phase22BQDir = path.resolve("artifacts/migration/phase-22bq-r2-pilot-products-write");
+  fs.mkdirSync(phase22BQDir, { recursive: true });
   const phase22BGDir = path.resolve("artifacts/migration/phase-22bg-r2-pilot-companies-write");
   fs.mkdirSync(phase22BGDir, { recursive: true });
   const phase22BHDir = path.resolve("artifacts/migration/phase-22bh-r2-pilot-contacts-write");
@@ -5130,6 +5652,7 @@ function main() {
   const productSubgroupsPilotMode = selectedPilotEntity === "product_subgroups";
   const productFamiliesPilotMode = selectedPilotEntity === "product_families";
   const productClassesPilotMode = selectedPilotEntity === "product_classes";
+  const productsPilotMode = selectedPilotEntity === "products";
   const companiesPilotMode = selectedPilotEntity === "companies";
   const contactsPilotMode = selectedPilotEntity === "contacts";
   const companiesContactsWavePilotMode = selectedPilotEntity === "companies_contacts_wave";
@@ -6365,6 +6888,361 @@ function main() {
       finalMessage: phase22BBStopAfterPilotMessage,
     };
     fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BB, null, 2), "utf8");
+  } else if (productsPilotMode) {
+    pilotWriteBeforePath = path.join(phase22BQDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22BQDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
+
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_PRODUCTS_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueSkuUniqueValidated = productsUniqueSkuUniquePresent === true;
+    const candidate = EXPECTED_PRODUCTS_PILOT_PAYLOAD;
+    const guardTables = [
+      "legal_entities",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "companies",
+      "contacts",
+      "products",
+      "sales_reps",
+      "user_tenants",
+      "user_legal_entities",
+      "user_sales_reps",
+      "deals",
+      "orders",
+      "order_items",
+      "proposals",
+      "audit_logs",
+      "notifications",
+    ];
+    const readGuardCounts = () => {
+      const out = {};
+      for (const tableName of guardTables) {
+        const rows = runSupabaseDbQuery(`select count(*)::bigint as total_rows from public.${tableName}`);
+        out[tableName] = Number(rows[0]?.total_rows || 0);
+      }
+      return out;
+    };
+
+    let beforeGuardCounts = {};
+    let lookupBySkuBefore = [];
+    let lookupBySkuUniqueBefore = [];
+    let lookupByNameBefore = [];
+    let lookupByNameOriginalBefore = [];
+    let auxBefore = {};
+    try {
+      beforeGuardCounts = readGuardCounts();
+    } catch {
+      beforeNoGoReasons.push("Unable to collect guard table counts before products pilot.");
+    }
+    try {
+      lookupBySkuBefore = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, versao_numero,
+               erp_product_code, erp_versao, legal_entity_id
+        from public.products
+        where sku='${escapeSqlLiteral(candidate.sku)}'
+      `);
+      lookupBySkuUniqueBefore = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id, versao_numero,
+               erp_product_code, erp_versao, legal_entity_id
+        from public.products
+        where sku_unique='${escapeSqlLiteral(candidate.expected_sku_unique)}'
+      `);
+      lookupByNameBefore = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name
+        from public.products
+        where name='${escapeSqlLiteral(candidate.expected_persisted_name)}'
+      `);
+      lookupByNameOriginalBefore = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name
+        from public.products
+        where name='${escapeSqlLiteral(candidate.name)}'
+      `);
+    } catch {
+      beforeNoGoReasons.push("Unable to execute products key lookups before write.");
+    }
+    try {
+      auxBefore = {
+        tipo: Number(
+          runSupabaseDbQuery(
+            `select count(*)::bigint as total_rows from public.product_types where id='${escapeSqlLiteral(candidate.tipo_id)}'`,
+          )[0]?.total_rows || 0,
+        ),
+        grupo: Number(
+          runSupabaseDbQuery(
+            `select count(*)::bigint as total_rows from public.product_groups where id='${escapeSqlLiteral(candidate.grupo_id)}'`,
+          )[0]?.total_rows || 0,
+        ),
+        subgrupo: Number(
+          runSupabaseDbQuery(
+            `select count(*)::bigint as total_rows from public.product_subgroups where id='${escapeSqlLiteral(candidate.subgrupo_id)}'`,
+          )[0]?.total_rows || 0,
+        ),
+        family: Number(
+          runSupabaseDbQuery(
+            `select count(*)::bigint as total_rows from public.product_families where id='${escapeSqlLiteral(candidate.family_id)}'`,
+          )[0]?.total_rows || 0,
+        ),
+        class: Number(
+          runSupabaseDbQuery(
+            `select count(*)::bigint as total_rows from public.product_classes where id='${escapeSqlLiteral(candidate.class_id)}'`,
+          )[0]?.total_rows || 0,
+        ),
+      };
+    } catch {
+      beforeNoGoReasons.push("Unable to revalidate auxiliary product cardinalities before write.");
+    }
+
+    const productsCountBefore = beforeGuardCounts.products ?? null;
+    const existingBySkuUnique = lookupBySkuUniqueBefore[0] || null;
+    const existingBySku = lookupBySkuBefore[0] || null;
+    const existingIdempotentAdherent = Boolean(
+      existingBySkuUnique &&
+        existingBySku &&
+        existingBySkuUnique.id === existingBySku.id &&
+        existingBySkuUnique.tenant_id === candidate.tenant_id &&
+        existingBySkuUnique.sku === candidate.sku &&
+        existingBySkuUnique.sku_unique === candidate.expected_sku_unique &&
+        existingBySkuUnique.name === candidate.expected_persisted_name &&
+        existingBySkuUnique.tipo_id === candidate.tipo_id &&
+        existingBySkuUnique.grupo_id === candidate.grupo_id &&
+        existingBySkuUnique.subgrupo_id === candidate.subgrupo_id &&
+        existingBySkuUnique.family_id === candidate.family_id &&
+        existingBySkuUnique.class_id === candidate.class_id &&
+        Number(existingBySkuUnique.versao_numero) === 1 &&
+        existingBySkuUnique.erp_product_code === null &&
+        existingBySkuUnique.erp_versao === null &&
+        existingBySkuUnique.legal_entity_id === null,
+    );
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for products pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for products pilot real execution.");
+    if (activePilotEntity !== "products") beforeNoGoReasons.push("Pilot entity must be products.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueSkuUniqueValidated) beforeNoGoReasons.push("products_sku_unique_key is not validated.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if ((lookupBySkuBefore.length || 0) > 1) beforeNoGoReasons.push("Unexpected duplicate rows by sku before write.");
+    if ((lookupBySkuUniqueBefore.length || 0) > 1) beforeNoGoReasons.push("Unexpected duplicate rows by sku_unique before write.");
+    if (productsCountBefore === null) {
+      beforeNoGoReasons.push("Unable to determine products count before pilot.");
+    } else if (productsCountBefore === 0) {
+      if (lookupBySkuBefore.length !== 0) beforeNoGoReasons.push("SKU collision detected before write.");
+      if (lookupBySkuUniqueBefore.length !== 0) {
+        beforeNoGoReasons.push("SKU_UNIQUE collision detected before write.");
+      }
+    } else if (productsCountBefore >= 1) {
+      if (lookupBySkuBefore.length > 0 && lookupBySkuUniqueBefore.length === 0) {
+        beforeNoGoReasons.push(
+          "Existing sku found without expected sku_unique; blocked to avoid sequence drift (potential -002).",
+        );
+      }
+      if (lookupBySkuUniqueBefore.length !== 1) {
+        beforeNoGoReasons.push("Reexecution requires exactly one existing row by expected sku_unique.");
+      }
+      if (lookupBySkuBefore.length !== 1) {
+        beforeNoGoReasons.push("Reexecution requires exactly one existing row by sku.");
+      }
+      if (lookupBySkuBefore.length === 1 && lookupBySkuUniqueBefore.length === 1 && existingBySku.id !== existingBySkuUnique.id) {
+        beforeNoGoReasons.push("sku and sku_unique lookups resolve to different rows.");
+      }
+      if (lookupBySkuUniqueBefore.length === 1 && !existingIdempotentAdherent) {
+        beforeNoGoReasons.push("Existing row by sku_unique diverges from frozen pilot payload.");
+      }
+    }
+    if (productsTriggerGenerateSkuUniquePresent !== true) beforeNoGoReasons.push("trg_generate_sku_unique must be present.");
+    if (productsTriggerUppercasePresent !== true) beforeNoGoReasons.push("trg_uppercase_products must be present.");
+    if (productsTenantRequired !== true) beforeNoGoReasons.push("products.tenant_id must remain required.");
+    if (productsSkuRequired !== true) beforeNoGoReasons.push("products.sku must remain required.");
+    if (productsNameRequired !== true) beforeNoGoReasons.push("products.name must remain required.");
+    if (String(productsVersaoNumeroDefault || "").trim() !== "1") beforeNoGoReasons.push("products.versao_numero default must remain 1.");
+    if (productsErpProductCodeNullable !== true) beforeNoGoReasons.push("products.erp_product_code must remain nullable.");
+    if (productsErpVersaoNullable !== true) beforeNoGoReasons.push("products.erp_versao must remain nullable.");
+    if (productsLegalEntityNullable !== true) beforeNoGoReasons.push("products.legal_entity_id must remain nullable.");
+    if (auxBefore.tipo !== 1 || auxBefore.grupo !== 1 || auxBefore.subgrupo !== 1 || auxBefore.family !== 1 || auxBefore.class !== 1) {
+      beforeNoGoReasons.push("Auxiliary product cardinality must remain 1 for all required ids.");
+    }
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22BQ = {
+      phase: "22BQ-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "products",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: candidate,
+      guardTableCountsBefore: beforeGuardCounts,
+      productsCountBefore: beforeGuardCounts.products ?? null,
+      lookupBySku: lookupBySkuBefore,
+      lookupByExpectedSkuUnique: lookupBySkuUniqueBefore,
+      lookupByPersistedName: lookupByNameBefore,
+      lookupByOriginalName: lookupByNameOriginalBefore,
+      auxiliaryCardinality: auxBefore,
+      triggerValidation: {
+        trg_generate_sku_unique: productsTriggerGenerateSkuUniquePresent,
+        trg_uppercase_products: productsTriggerUppercasePresent,
+      },
+      requiredFieldsValidation: {
+        tenant_id_required: productsTenantRequired === true,
+        sku_required: productsSkuRequired === true,
+        name_required: productsNameRequired === true,
+        versao_numero_default_1: String(productsVersaoNumeroDefault || "").trim() === "1",
+      },
+      omittedFieldsValidation: {
+        legal_entity_id_nullable: productsLegalEntityNullable === true,
+        erp_product_code_nullable: productsErpProductCodeNullable === true,
+        erp_versao_nullable: productsErpVersaoNullable === true,
+      },
+      scopeNegativeInitial: Object.fromEntries(Object.entries(beforeGuardCounts).filter(([key]) => key !== "products")),
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22BQ, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeProductsPilotWrite({
+          pilotEntity: selectedPilotEntity,
+          pilotAuthorization: args.pilotAuthorization,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+          payload: pilotPayloadJson?.sanitizedPilotPayload,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          inserted: false,
+        };
+      }
+    }
+
+    let afterGuardCounts = {};
+    let lookupBySkuUniqueAfter = [];
+    let lookupBySkuAfter = [];
+    try {
+      afterGuardCounts = readGuardCounts();
+    } catch {}
+    try {
+      lookupBySkuUniqueAfter = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id,
+               versao_numero, erp_product_code, erp_versao, legal_entity_id
+        from public.products
+        where sku_unique='${escapeSqlLiteral(candidate.expected_sku_unique)}'
+      `);
+      lookupBySkuAfter = runSupabaseDbQuery(`
+        select id, tenant_id, sku, sku_unique, name, tipo_id, grupo_id, subgrupo_id, family_id, class_id,
+               versao_numero, erp_product_code, erp_versao, legal_entity_id
+        from public.products
+        where sku='${escapeSqlLiteral(candidate.sku)}'
+      `);
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = lookupBySkuUniqueAfter[0] || writeResult.record || null;
+    pilotWriteDelta =
+      typeof afterGuardCounts.products === "number" && typeof beforeGuardCounts.products === "number"
+        ? afterGuardCounts.products - beforeGuardCounts.products
+        : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (lookupBySkuUniqueAfter.length !== 1) afterNoGoReasons.push("Lookup by expected sku_unique must return cardinality 1.");
+    if (lookupBySkuAfter.length !== 1) afterNoGoReasons.push("Lookup by sku must return cardinality 1.");
+    const persisted = lookupBySkuUniqueAfter[0];
+    if (persisted) {
+      if (persisted.tenant_id !== candidate.tenant_id) afterNoGoReasons.push("After tenant_id mismatch.");
+      if (persisted.sku !== candidate.sku) afterNoGoReasons.push("After sku mismatch.");
+      if (persisted.sku_unique !== candidate.expected_sku_unique) afterNoGoReasons.push("After sku_unique mismatch.");
+      if (persisted.name !== candidate.expected_persisted_name) afterNoGoReasons.push("After uppercase name mismatch.");
+      if (persisted.tipo_id !== candidate.tipo_id) afterNoGoReasons.push("After tipo_id mismatch.");
+      if (persisted.grupo_id !== candidate.grupo_id) afterNoGoReasons.push("After grupo_id mismatch.");
+      if (persisted.subgrupo_id !== candidate.subgrupo_id) afterNoGoReasons.push("After subgrupo_id mismatch.");
+      if (persisted.family_id !== candidate.family_id) afterNoGoReasons.push("After family_id mismatch.");
+      if (persisted.class_id !== candidate.class_id) afterNoGoReasons.push("After class_id mismatch.");
+      if (Number(persisted.versao_numero) !== 1) afterNoGoReasons.push("After versao_numero mismatch.");
+      if (persisted.erp_product_code !== null) afterNoGoReasons.push("erp_product_code must remain null.");
+      if (persisted.erp_versao !== null) afterNoGoReasons.push("erp_versao must remain null.");
+      if (persisted.legal_entity_id !== null) afterNoGoReasons.push("legal_entity_id must remain null.");
+    }
+    const changedOutsideProducts = guardTables
+      .filter((tableName) => tableName !== "products")
+      .filter((tableName) => (afterGuardCounts[tableName] ?? null) !== (beforeGuardCounts[tableName] ?? null));
+    if (changedOutsideProducts.length > 0) {
+      afterNoGoReasons.push(`Unexpected delta outside products: ${changedOutsideProducts.join(", ")}`);
+    }
+
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+    const afterEvidence22BQ = {
+      phase: "22BQ-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      product: persisted || null,
+      id: persisted?.id || null,
+      tenant_id: persisted?.tenant_id || null,
+      sku: persisted?.sku || null,
+      sku_unique: persisted?.sku_unique || null,
+      name: persisted?.name || null,
+      tipo_id: persisted?.tipo_id || null,
+      grupo_id: persisted?.grupo_id || null,
+      subgrupo_id: persisted?.subgrupo_id || null,
+      family_id: persisted?.family_id || null,
+      class_id: persisted?.class_id || null,
+      versao_numero: persisted?.versao_numero ?? null,
+      erp_product_code: persisted?.erp_product_code ?? null,
+      erp_versao: persisted?.erp_versao ?? null,
+      legal_entity_id: persisted?.legal_entity_id ?? null,
+      delta: pilotWriteDelta,
+      productsCountBefore: beforeGuardCounts.products ?? null,
+      productsCountAfter: afterGuardCounts.products ?? null,
+      guardTableCountsBefore: beforeGuardCounts,
+      guardTableCountsAfter: afterGuardCounts,
+      skuUniqueValidation: persisted?.sku_unique === candidate.expected_sku_unique,
+      uppercaseValidation: persisted?.name === candidate.expected_persisted_name,
+      noOtherTableWritten: changedOutsideProducts.length === 0,
+      changedOutsideProducts,
+      executionExpandedBlocked: true,
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22BQStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BQ, null, 2), "utf8");
   } else if (companiesPilotMode) {
     pilotWriteBeforePath = path.join(phase22BGDir, `before-${nowStamp()}.json`);
     pilotWriteAfterPath = path.join(phase22BGDir, `after-${nowStamp()}.json`);
@@ -7464,6 +8342,7 @@ function main() {
       selectedPilotEntity === "product_subgroups" ||
       selectedPilotEntity === "product_families" ||
       selectedPilotEntity === "product_classes" ||
+      selectedPilotEntity === "products" ||
       selectedPilotEntity === "companies" ||
       selectedPilotEntity === "companies_contacts_wave" ||
       selectedPilotEntity === "contacts"
@@ -7493,6 +8372,8 @@ function main() {
         ? phase22AZStopAfterPilotMessage
       : selectedPilotEntity === "product_classes"
         ? phase22BBStopAfterPilotMessage
+      : selectedPilotEntity === "products"
+        ? phase22BQStopAfterPilotMessage
       : selectedPilotEntity === "companies"
         ? phase22BGStopAfterPilotMessage
       : selectedPilotEntity === "contacts"
@@ -7512,6 +8393,8 @@ function main() {
         ? phase22AZStopAfterPilotMessage
       : selectedPilotEntity === "product_classes"
         ? phase22BBStopAfterPilotMessage
+      : selectedPilotEntity === "products"
+        ? phase22BQStopAfterPilotMessage
       : selectedPilotEntity === "companies"
         ? phase22BGStopAfterPilotMessage
       : selectedPilotEntity === "contacts"

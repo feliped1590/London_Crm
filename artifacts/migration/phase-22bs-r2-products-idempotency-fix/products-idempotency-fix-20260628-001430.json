@@ -1,0 +1,85 @@
+{
+  "phase": "22BS-R2",
+  "timestamp": "2026-06-28T03:14:30.000Z",
+  "target": {
+    "ref": "nsnmlleplpzsefzkuxlb",
+    "name": "crm-qualyvac-restore-test"
+  },
+  "batch": "baseline_22f_r2_restore_test_qualyvac",
+  "git_initial_state": {
+    "branch": "main",
+    "status_short": "clean",
+    "divergence_origin_main_vs_main": "0 1",
+    "head_short": "78a718f4 feat(migration): add products pilot write",
+    "head": "78a718f4fbdd8a9a18d1fbcd3da6a1215274428a",
+    "origin_main": "a52bab83310e38818e148f816a7f4b602a9c6ff6"
+  },
+  "previous_phase_no_go_reason": "products count before pilot must be zero",
+  "guard_correction": {
+    "file": "scripts/migration/phase-22k-r2-baseline-write.mjs",
+    "summary": [
+      "Removed the fixed guard requiring products count equals zero before products pilot execution.",
+      "Added first-write path: allow insert only when products_total=0 and no sku/sku_unique collisions exist.",
+      "Added idempotent reexecution path: require exactly one row by sku_unique and sku with full frozen payload adherence.",
+      "Added divergence NO-GO and sequence-drift NO-GO to block TMP-SKU-0001-002 risk."
+    ]
+  },
+  "pre_audit": {
+    "products_total": 1,
+    "sku_unique_TMP_SKU_0001_001": 1,
+    "sku_TMP_SKU_0001": 1,
+    "sku_unique_TMP_SKU_0001_002": 0
+  },
+  "reexecution": {
+    "command": "node scripts/migration/phase-22k-r2-baseline-write.mjs --expected-target nsnmlleplpzsefzkuxlb --batch baseline_22f_r2_restore_test_qualyvac --authorization \"AUTORIZO A ESCRITA CONTROLADA DA BASELINE 22H-R2 NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --pilot-authorization \"AUTORIZO A DÉCIMA PRIMEIRA ESCRITA PILOTO DA BASELINE 22BP-R2 SOMENTE EM products NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --input artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json --write-plan artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json --pilot-payload artifacts/migration/phase-22bp-r2-products-payload-sanitization/products-sanitized-payload-20260627-232650.json --pilot-entity products --execute-pilot-write --write",
+    "attempts": [
+      {
+        "attempt": 1,
+        "result": "NO-GO",
+        "reason": "transient 504 while collecting guard table counts",
+        "before_path": "artifacts/migration/phase-22bq-r2-pilot-products-write/before-20260628-000159.json",
+        "after_path": "artifacts/migration/phase-22bq-r2-pilot-products-write/after-20260628-000159.json",
+        "operation": "aborted"
+      },
+      {
+        "attempt": 2,
+        "result": "GO",
+        "before_path": "artifacts/migration/phase-22bq-r2-pilot-products-write/before-20260628-000939.json",
+        "after_path": "artifacts/migration/phase-22bq-r2-pilot-products-write/after-20260628-000939.json",
+        "pilot_path": "artifacts/migration/phase-22bq-r2-pilot-products-write/pilot-products-20260628-000939.json",
+        "beforeDecision": "GO",
+        "afterDecision": "GO",
+        "operation": "idempotent_noop",
+        "delta": 0
+      }
+    ]
+  },
+  "post_validation": {
+    "products_total": 1,
+    "sku_unique_TMP_SKU_0001_001": 1,
+    "sku_TMP_SKU_0001": 1,
+    "sku_unique_TMP_SKU_0001_002": 0,
+    "negative_scope_counts": {
+      "legal_entities": 1,
+      "product_types": 13,
+      "product_groups": 22,
+      "product_subgroups": 54,
+      "product_families": 7,
+      "product_classes": 11,
+      "companies": 5,
+      "contacts": 5,
+      "products": 1,
+      "sales_reps": 0,
+      "deals": 0,
+      "orders": 0,
+      "order_items": 0,
+      "proposals": 0,
+      "audit_logs": 0,
+      "notifications": 0
+    }
+  },
+  "hard_stop_message": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM products. EXECUÇÃO AMPLIADA BLOQUEADA.",
+  "absence_of_tmp_sku_0001_002": true,
+  "negative_scope_preserved": true,
+  "decision": "GO"
+}

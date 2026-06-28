@@ -1,0 +1,448 @@
+{
+  "phase": "22K-R2",
+  "timestamp": "2026-06-28T03:09:39.163Z",
+  "expectedTargetRef": "nsnmlleplpzsefzkuxlb",
+  "expectedTargetName": "crm-qualyvac-restore-test",
+  "localTargetRef": "nsnmlleplpzsefzkuxlb",
+  "localTargetName": "crm-qualyvac-restore-test",
+  "expectedBatchId": "baseline_22f_r2_restore_test_qualyvac",
+  "receivedBatchId": "baseline_22f_r2_restore_test_qualyvac",
+  "authorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "products",
+  "pilotPayloadPath": "artifacts/migration/phase-22bp-r2-products-payload-sanitization/products-sanitized-payload-20260627-232650.json",
+  "pilotPayloadExists": true,
+  "pilotPayloadParsed": true,
+  "pilotPayloadValidationErrors": [],
+  "productTypesUniqueValuePresent": false,
+  "productTypesCountCurrent": null,
+  "productTypesValueCollisionCount": null,
+  "productTypesLabelCollisionCount": null,
+  "productGroupsUniqueValuePresent": false,
+  "productGroupsCountCurrent": null,
+  "productGroupsValueCollisionCount": null,
+  "productGroupsLabelCollisionCount": null,
+  "productGroupsTenantNullable": null,
+  "productGroupsCreatedByNullable": null,
+  "productGroupsDimensionDefault": null,
+  "productGroupsFichaDefault": null,
+  "productSubgroupsUniqueValuePresent": false,
+  "productSubgroupsCountCurrent": null,
+  "productSubgroupsValueCollisionCount": null,
+  "productSubgroupsLabelCollisionCount": null,
+  "productSubgroupsTenantNullable": null,
+  "productSubgroupsCreatedByNullable": null,
+  "productSubgroupsSortOrderDefault": null,
+  "productSubgroupsIsActiveDefault": null,
+  "productSubgroupsCreatedAtDefault": null,
+  "productSubgroupsHasProductGroupIdColumn": false,
+  "productSubgroupsHasFkToProductGroups": false,
+  "productFamiliesUniqueValuePresent": false,
+  "productFamiliesCountCurrent": null,
+  "productFamiliesValueCollisionCount": null,
+  "productFamiliesLabelCollisionCount": null,
+  "productFamiliesTenantNullable": null,
+  "productFamiliesCreatedByColumnPresent": false,
+  "productFamiliesSortOrderDefault": null,
+  "productFamiliesIsActiveDefault": null,
+  "productFamiliesCreatedAtDefault": null,
+  "productFamiliesHasProductGroupIdColumn": false,
+  "productFamiliesHasProductSubgroupIdColumn": false,
+  "productFamiliesHasFkToProductGroups": false,
+  "productFamiliesHasFkToProductSubgroups": false,
+  "productClassesUniqueValuePresent": false,
+  "productClassesCountCurrent": null,
+  "productClassesValueCollisionCount": null,
+  "productClassesLabelCollisionCount": null,
+  "productClassesTenantNullable": null,
+  "productClassesCreatedByColumnPresent": false,
+  "productClassesSortOrderDefault": null,
+  "productClassesIsActiveDefault": null,
+  "productClassesCreatedAtDefault": null,
+  "productClassesHasProductGroupIdColumn": false,
+  "productClassesHasProductSubgroupIdColumn": false,
+  "productClassesHasProductFamilyIdColumn": false,
+  "productClassesHasFkToProductGroups": false,
+  "productClassesHasFkToProductSubgroups": false,
+  "productClassesHasFkToProductFamilies": false,
+  "inputProvided": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+  "inputExists": true,
+  "inputParsed": true,
+  "entitiesFound": [
+    "companies",
+    "company_contacts",
+    "contacts",
+    "legal_entities",
+    "product_classes",
+    "product_families",
+    "product_groups",
+    "product_subgroups",
+    "product_types",
+    "products",
+    "profiles",
+    "sales_reps",
+    "user_legal_entities",
+    "user_sales_reps",
+    "user_tenants"
+  ],
+  "allowedEntitiesFound": [
+    "companies",
+    "contacts",
+    "legal_entities",
+    "product_classes",
+    "product_families",
+    "product_groups",
+    "product_subgroups",
+    "product_types",
+    "products",
+    "profiles",
+    "sales_reps",
+    "user_legal_entities",
+    "user_sales_reps",
+    "user_tenants"
+  ],
+  "allowedEntities": [
+    "companies",
+    "contacts",
+    "legal_entities",
+    "product_classes",
+    "product_families",
+    "product_groups",
+    "product_subgroups",
+    "product_types",
+    "products",
+    "profiles",
+    "sales_reps",
+    "user_legal_entities",
+    "user_sales_reps",
+    "user_tenants"
+  ],
+  "blockedEntities": [
+    "attachments",
+    "audit_logs",
+    "deal_stage_history",
+    "deals",
+    "erp_sync",
+    "n8n",
+    "notifications",
+    "order_items",
+    "orders",
+    "proposal_items",
+    "proposals",
+    "sales_proposal_items",
+    "sales_proposals",
+    "sessions",
+    "sync_queues",
+    "webhooks"
+  ],
+  "blockedEntitiesFound": [],
+  "referenceOnlyEntities": [
+    "company_contacts"
+  ],
+  "referenceOnlyEntitiesFound": [
+    "company_contacts"
+  ],
+  "unknownEntitiesFound": [],
+  "notWritableEntities": [
+    "company_contacts"
+  ],
+  "writePlanFieldsFound": [],
+  "companyContactsWritePlanSignals": [],
+  "companyContactsHandling": "company_contacts is accepted only as reference-only input metadata and remains prohibited for write operations.",
+  "companyContactsWritable": false,
+  "companyContactsLinkStrategy": "contacts.company_id",
+  "receivedFlags": [
+    "--expected-target",
+    "--batch",
+    "--authorization",
+    "--pilot-authorization",
+    "--input",
+    "--write-plan",
+    "--pilot-payload",
+    "--pilot-entity",
+    "--execute-pilot-write",
+    "--write"
+  ],
+  "forbiddenFlagsFound": [],
+  "unknownFlagsFound": [],
+  "validations": [
+    {
+      "key": "flags.forbidden",
+      "status": "PASS",
+      "detail": "No forbidden flags detected."
+    },
+    {
+      "key": "flags.unknown",
+      "status": "PASS",
+      "detail": "Only allowed flags were used."
+    },
+    {
+      "key": "target.project_ref_file",
+      "status": "PASS",
+      "detail": "supabase/.temp/project-ref found."
+    },
+    {
+      "key": "target.project_ref_value",
+      "status": "PASS",
+      "detail": "Local project-ref matches expected target."
+    },
+    {
+      "key": "target.project_name_value",
+      "status": "PASS",
+      "detail": "Local project name matches expected name."
+    },
+    {
+      "key": "target.expected_target_flag",
+      "status": "PASS",
+      "detail": "--expected-target validated."
+    },
+    {
+      "key": "authorization.value",
+      "status": "PASS",
+      "detail": "Authorization phrase validated."
+    },
+    {
+      "key": "pilot.entity.value",
+      "status": "PASS",
+      "detail": "Pilot entity validated as products."
+    },
+    {
+      "key": "pilot.authorization.value",
+      "status": "PASS",
+      "detail": "Pilot authorization phrase validated."
+    },
+    {
+      "key": "pilot.payload.flag",
+      "status": "PASS",
+      "detail": "--pilot-payload provided for products pilot."
+    },
+    {
+      "key": "batch.value",
+      "status": "PASS",
+      "detail": "Batch id validated."
+    },
+    {
+      "key": "input.exists",
+      "status": "PASS",
+      "detail": "Input file exists."
+    },
+    {
+      "key": "input.parse_json",
+      "status": "PASS",
+      "detail": "Input JSON parsed successfully."
+    },
+    {
+      "key": "input.target_compatibility",
+      "status": "PASS",
+      "detail": "Input target metadata is compatible."
+    },
+    {
+      "key": "input.batch_compatibility",
+      "status": "PASS",
+      "detail": "Input batch metadata is compatible."
+    },
+    {
+      "key": "input.decision",
+      "status": "PASS",
+      "detail": "Input decision accepted: GO"
+    },
+    {
+      "key": "input.entities_blocked",
+      "status": "PASS",
+      "detail": "No blocked entities found in input."
+    },
+    {
+      "key": "input.entities_reference_only",
+      "status": "PARTIAL",
+      "detail": "Reference-only entities found and kept non-writable."
+    },
+    {
+      "key": "input.entities_policy_scope",
+      "status": "PASS",
+      "detail": "Input entities are within known policy sets."
+    },
+    {
+      "key": "input.write_plan_fields",
+      "status": "PASS",
+      "detail": "No write-plan fields found in input."
+    },
+    {
+      "key": "input.company_contacts_write_plan",
+      "status": "PASS",
+      "detail": "No company_contacts write-plan signal found."
+    },
+    {
+      "key": "input.write_text_scan",
+      "status": "PASS",
+      "detail": "No suspicious write command text detected."
+    },
+    {
+      "key": "input.external_text_scan",
+      "status": "PASS",
+      "detail": "No external integration keywords detected."
+    },
+    {
+      "key": "write_plan.exists",
+      "status": "PASS",
+      "detail": "Write plan file exists."
+    },
+    {
+      "key": "write_plan.parse_json",
+      "status": "PASS",
+      "detail": "Write plan JSON parsed successfully."
+    },
+    {
+      "key": "write_plan.compatibility",
+      "status": "PASS",
+      "detail": "Write plan metadata validated."
+    },
+    {
+      "key": "pilot.payload.exists",
+      "status": "PASS",
+      "detail": "Pilot payload file exists."
+    },
+    {
+      "key": "pilot.payload.parse_json",
+      "status": "PASS",
+      "detail": "Pilot payload parsed successfully."
+    },
+    {
+      "key": "pilot.payload.compatibility",
+      "status": "PASS",
+      "detail": "Pilot payload metadata validated."
+    },
+    {
+      "key": "pilot.products.columns_and_nullable",
+      "status": "PASS",
+      "detail": "Products columns and nullable/default policies validated."
+    },
+    {
+      "key": "pilot.products.unique_index",
+      "status": "PASS",
+      "detail": "products_sku_unique_key validated."
+    },
+    {
+      "key": "pilot.products.triggers",
+      "status": "PASS",
+      "detail": "Products triggers validated."
+    },
+    {
+      "key": "pilot.products.tenant_exists",
+      "status": "PASS",
+      "detail": "Pilot tenant existence validated."
+    },
+    {
+      "key": "pilot.products.current_count",
+      "status": "PASS",
+      "detail": "Current products count collected."
+    },
+    {
+      "key": "pilot.products.collisions",
+      "status": "PASS",
+      "detail": "Products collisions validated."
+    },
+    {
+      "key": "pilot.products.auxiliary_cardinality",
+      "status": "PASS",
+      "detail": "Products auxiliary cardinality validated."
+    }
+  ],
+  "gaps": [
+    "Reference-only entities present in input; write remains prohibited for these entities."
+  ],
+  "decision": "PARCIAL",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": [
+      "Reference-only entities found in input: company_contacts. They remain non-writable."
+    ]
+  },
+  "partialPolicy22NR2": {
+    "accepted": true,
+    "reason": "PARCIAL accepted by policy 22N-R2: only company_contacts as reference-only.",
+    "criticalFailures": []
+  },
+  "writePlanPreview": {
+    "fixedWriteOrder": [
+      "tenant_context_validation_only",
+      "legal_entities",
+      "profiles",
+      "user_tenants",
+      "user_legal_entities",
+      "sales_reps",
+      "user_sales_reps",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "products",
+      "companies",
+      "contacts"
+    ],
+    "eligibleEntitiesForPlannedWrite": [
+      "legal_entities",
+      "profiles",
+      "user_tenants",
+      "user_legal_entities",
+      "sales_reps",
+      "user_sales_reps",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "products",
+      "companies",
+      "contacts"
+    ],
+    "ignoredEntities": [
+      "company_contacts"
+    ],
+    "referenceOnlyEntitiesFound": [
+      "company_contacts"
+    ],
+    "plannedCountsByEntity": {
+      "legal_entities": 1,
+      "profiles": 3,
+      "user_tenants": 3,
+      "user_legal_entities": 3,
+      "sales_reps": 2,
+      "user_sales_reps": 2,
+      "product_types": 1,
+      "product_groups": 1,
+      "product_subgroups": 1,
+      "product_families": 1,
+      "product_classes": 1,
+      "products": 5,
+      "companies": 5,
+      "contacts": 5
+    },
+    "planDecision": "GO",
+    "executableEntitiesRoundOne22Q": [
+      "legal_entities",
+      "user_tenants",
+      "user_legal_entities",
+      "sales_reps",
+      "user_sales_reps",
+      "product_types",
+      "product_groups",
+      "product_subgroups",
+      "product_families",
+      "product_classes",
+      "products",
+      "companies",
+      "contacts"
+    ],
+    "excludedEntitiesRoundOne22Q": [
+      "company_contacts",
+      "profiles"
+    ]
+  },
+  "writePlanArg": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json",
+  "writePlanExists": true,
+  "writePlanParsed": true,
+  "writePlanValidationErrors": [],
+  "writeFunctionalEnabled": false,
+  "message": "WRITE MODE ARMED: execution remains restricted by phase-specific guard rails."
+}

@@ -1,0 +1,330 @@
+{
+  "phase": "22BO-R2",
+  "timestamp": "2026-06-28T02:20:01.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "projectName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "statusShort": "",
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "a52bab83 feat(migration): add companies contacts wave write",
+    "head": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "originMain": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "headEqualsOriginMain": true,
+    "originRemote": "https://github.com/feliped1590/Qualyvac_Migration.git"
+  },
+  "remoteClosure22BK22BN": {
+    "pushCommit": "a52bab83",
+    "remoteSyncConfirmed": true,
+    "notes": "Push 22BN-R2 confirmed and repository remained clean/synced."
+  },
+  "currentCounts": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "products": 0,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "payloadProductsFound": {
+    "sourcePriority": [
+      "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-205752.json",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json",
+      "scripts/migration/phase-22g-r2-baseline-dry-run.mjs"
+    ],
+    "latestJsonProductsPayloadFound": false,
+    "latestJsonProductsPlannedCount": 5,
+    "writePlanRequestedProductsPlannedCount": 5,
+    "writePlanLatestApplicable": {
+      "path": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json",
+      "productsPlannedCount": 5
+    },
+    "resolvedPayloadSource": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs::BASELINE_SIMULATION.products",
+    "recordsCount": 5,
+    "availableFields": [
+      "temp_key",
+      "sku",
+      "name"
+    ],
+    "candidateRecords": [
+      {
+        "temp_key": "TMP-22F-R2-PRODUCT-01",
+        "sku": "TMP-SKU-0001",
+        "name": "TMP Product 01",
+        "item": null,
+        "code": null,
+        "erp_code": null,
+        "erp_product_code": null,
+        "description": null,
+        "version": null,
+        "erp_versao": null,
+        "dependencies": {
+          "product_type": null,
+          "product_group": null,
+          "product_subgroup": null,
+          "product_family": null,
+          "product_class": null
+        },
+        "commercialTechnical": {
+          "unit": null,
+          "status": null,
+          "price": null,
+          "dimensions": null,
+          "ncm": null
+        }
+      },
+      {
+        "temp_key": "TMP-22F-R2-PRODUCT-02",
+        "sku": "TMP-SKU-0002",
+        "name": "TMP Product 02"
+      },
+      {
+        "temp_key": "TMP-22F-R2-PRODUCT-03",
+        "sku": "TMP-SKU-0003",
+        "name": "TMP Product 03"
+      },
+      {
+        "temp_key": "TMP-22F-R2-PRODUCT-04",
+        "sku": "TMP-SKU-0004",
+        "name": "TMP Product 04"
+      },
+      {
+        "temp_key": "TMP-22F-R2-PRODUCT-05",
+        "sku": "TMP-SKU-0005",
+        "name": "TMP Product 05"
+      }
+    ]
+  },
+  "productsSchema": {
+    "tableExists": true,
+    "rls": {
+      "enabled": true,
+      "forced": false,
+      "policiesCount": 5
+    },
+    "totalCurrent": 0,
+    "requiredWithoutDefault": [
+      "sku",
+      "name"
+    ],
+    "requiredWithDefaultExamples": [
+      "id",
+      "created_at",
+      "updated_at",
+      "tenant_id",
+      "ficha_tecnica",
+      "versao_numero"
+    ],
+    "importantColumnsPresent": [
+      "sku",
+      "name",
+      "description",
+      "tenant_id",
+      "erp_product_code",
+      "erp_versao",
+      "versao_numero",
+      "tipo_id",
+      "grupo_id",
+      "subgrupo_id",
+      "family_id",
+      "class_id",
+      "active",
+      "unit_measure",
+      "unit_sale",
+      "unit_price",
+      "width",
+      "length",
+      "thickness",
+      "ncm_code",
+      "ncm_id",
+      "legal_entity_id"
+    ],
+    "importantColumnsAbsent": [
+      "item",
+      "code",
+      "erp_code",
+      "version",
+      "product_type_id",
+      "product_group_id",
+      "product_subgroup_id",
+      "product_family_id",
+      "product_class_id"
+    ],
+    "primaryKey": [
+      "id"
+    ],
+    "uniqueConstraints": [
+      "products_sku_unique_key"
+    ],
+    "relevantUniqueIndexes": [
+      "products_sku_unique_key",
+      "products_tenant_erp_code_unique",
+      "idx_products_technical_uniqueness",
+      "products_parent_versao_unique"
+    ],
+    "foreignKeys": {
+      "tipo_id": "product_types.id",
+      "grupo_id": "product_groups.id",
+      "subgrupo_id": "product_subgroups.id",
+      "family_id": "product_families.id",
+      "class_id": "product_classes.id",
+      "legal_entity_id": "legal_entities.id",
+      "tenant_id": "tenants.id"
+    },
+    "triggers": [
+      "trg_uppercase_products",
+      "trg_generate_sku_unique",
+      "trg_assign_product_versao_numero",
+      "a_auto_erp_versao",
+      "trg_compute_structure_hash",
+      "trg_product_sync_before",
+      "trg_product_sync_after"
+    ]
+  },
+  "dependenciesValidation": {
+    "payloadHasTechnicalDependencyFields": false,
+    "auxiliaryLookupByValue": {
+      "TMP-PT-001": {
+        "entity": "product_types",
+        "cardinality": 1,
+        "id": "522d0e75-641f-4161-bd41-94ebd50e8158"
+      },
+      "TMP-PG-001": {
+        "entity": "product_groups",
+        "cardinality": 1,
+        "id": "c5057853-15be-440d-886f-b0093de363fa"
+      },
+      "TMP-PSG-001": {
+        "entity": "product_subgroups",
+        "cardinality": 1,
+        "id": "8f798403-516e-48cf-b675-e025240385f3"
+      },
+      "TMP-PF-001": {
+        "entity": "product_families",
+        "cardinality": 1,
+        "id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92"
+      },
+      "TMP-PC-001": {
+        "entity": "product_classes",
+        "cardinality": 1,
+        "id": "79b5d092-1669-4b39-b590-565b471c1360"
+      }
+    },
+    "result": "Auxiliaries exist with cardinality 1, but products payload does not carry FK/value links to bind candidates deterministically."
+  },
+  "idempotencyAssessment": {
+    "preferredOrderEvaluation": [
+      {
+        "candidate": "(tenant_id, erp_code, erp_versao)",
+        "schemaSupport": false,
+        "payloadSupport": false,
+        "notes": "Schema uses erp_product_code + versao_numero unique index; payload misses these fields."
+      },
+      {
+        "candidate": "(tenant_id, item, version)",
+        "schemaSupport": false,
+        "payloadSupport": false,
+        "notes": "item/version columns not present as such in products schema and absent in payload."
+      },
+      {
+        "candidate": "(tenant_id, sku)",
+        "schemaSupport": "partial",
+        "payloadSupport": true,
+        "notes": "SKU exists and payload has value, but no unique constraint by (tenant_id, sku)."
+      },
+      {
+        "candidate": "(tenant_id, code)",
+        "schemaSupport": false,
+        "payloadSupport": false,
+        "notes": "No code column in products and payload has no equivalent."
+      }
+    ],
+    "otherRealUniqueOptions": [
+      "(tenant_id, erp_product_code, versao_numero) [partial unique index]",
+      "(sku_unique) [unique, but generated by trigger and not explicit in payload]"
+    ],
+    "selectedCandidate": null,
+    "idempotencyDecision": "not_closed"
+  },
+  "collisions": {
+    "bySkuForSimulatedCandidates": {
+      "TMP-SKU-0001": 0,
+      "TMP-SKU-0002": 0,
+      "TMP-SKU-0003": 0,
+      "TMP-SKU-0004": 0,
+      "TMP-SKU-0005": 0
+    },
+    "byNameForSimulatedCandidates": {
+      "TMP Product 01": 0,
+      "TMP Product 02": 0,
+      "TMP Product 03": 0,
+      "TMP Product 04": 0,
+      "TMP Product 05": 0
+    },
+    "existingTmpProducts": 0,
+    "divergentExistingRecords": "not_detected_for_current_tmp_candidates"
+  },
+  "selection": {
+    "strategyPreferred": "pilot_unitario",
+    "selectedMode": "none_blocked_pending_sanitization",
+    "selectedCandidates": [],
+    "reason": "No deterministic idempotency key closed with current payload + schema."
+  },
+  "frozenPayload": {
+    "status": "blocked_partial",
+    "proposedPilot": {
+      "temp_key": "TMP-22F-R2-PRODUCT-01",
+      "sku": "TMP-SKU-0001",
+      "name": "TMP Product 01"
+    },
+    "missingForWriteUnlock": [
+      "deterministic idempotency key in payload",
+      "explicit binding to auxiliary FKs or equivalent semantic mapping",
+      "chosen canonical key contract documented for executor"
+    ]
+  },
+  "humanGateForNextPhase": null,
+  "risks": [
+    "Payload currently carries only temp_key/sku/name and is weak for deterministic idempotent write.",
+    "Unique key available in schema is tied to generated/ERP fields not present in current payload.",
+    "Products triggers may transform fields (uppercase, sku_unique generation, ERP/version automation), requiring strict before/after tolerance rules."
+  ],
+  "decision": "PARCIAL",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": [
+      "Products payload exists only in simulation source and lacks strong idempotency fields.",
+      "No safe deterministic candidate key is closed for write authorization.",
+      "Dependencies exist but are not referenced by the products payload candidates."
+    ]
+  },
+  "negativeConfirmations": {
+    "noDbWriteExecuted": true,
+    "noSqlWriteExecuted": true,
+    "noMigrationExecuted": true,
+    "noSeedCleanupRollbackExecuted": true,
+    "noErpApiWebhookN8nCalls": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true
+  }
+}

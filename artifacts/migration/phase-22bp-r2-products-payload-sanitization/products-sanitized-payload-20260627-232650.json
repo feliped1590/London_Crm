@@ -1,0 +1,269 @@
+{
+  "phase": "22BP-R2",
+  "timestamp": "2026-06-28T02:26:50.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "projectName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "statusShort": "?? artifacts/migration/phase-22bo-r2-products-gate/\n?? docs/migration/phase-22bo-r2-products-gate.md",
+    "divergenceOriginMainMain": "0 0",
+    "lastCommit": "a52bab83 feat(migration): add companies contacts wave write",
+    "head": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "originMain": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "headEqualsOriginMain": true,
+    "onlyExpectedPendingFrom22BO": true
+  },
+  "writePlanReference": {
+    "requestedPath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json",
+    "latestApplicablePath": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json",
+    "productsPlannedCount": 5
+  },
+  "findingsFrom22BO": {
+    "decision": "PARCIAL",
+    "productsTotal": 0,
+    "payloadSource": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs::BASELINE_SIMULATION.products",
+    "payloadAvailableFields": [
+      "temp_key",
+      "sku",
+      "name"
+    ],
+    "blockingPoints": [
+      "idempotency was not closed",
+      "dependencies were not bound in payload",
+      "payload was minimalist"
+    ]
+  },
+  "pilotExtracted": {
+    "source": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "record": {
+      "temp_key": "TMP-22F-R2-PRODUCT-01",
+      "sku": "TMP-SKU-0001",
+      "name": "TMP Product 01"
+    },
+    "otherFieldsAvailableInSourceRecord": []
+  },
+  "productsSchemaDetailed": {
+    "requiredWithoutDefault": [
+      "sku",
+      "name"
+    ],
+    "requiredWithDefault": [
+      "id",
+      "tenant_id",
+      "created_at",
+      "updated_at",
+      "ficha_tecnica",
+      "versao_numero"
+    ],
+    "keyColumns": {
+      "tenant_id": {
+        "nullable": false,
+        "default": "'00000000-0000-0000-0000-000000000001'::uuid"
+      },
+      "tipo_id": {
+        "nullable": true,
+        "default": null
+      },
+      "grupo_id": {
+        "nullable": true,
+        "default": null
+      },
+      "subgrupo_id": {
+        "nullable": true,
+        "default": null
+      },
+      "family_id": {
+        "nullable": true,
+        "default": null
+      },
+      "class_id": {
+        "nullable": true,
+        "default": null
+      },
+      "legal_entity_id": {
+        "nullable": true,
+        "default": null
+      },
+      "sku_unique": {
+        "nullable": true,
+        "default": null
+      },
+      "erp_product_code": {
+        "nullable": true,
+        "default": null
+      },
+      "erp_versao": {
+        "nullable": true,
+        "default": null
+      },
+      "versao_numero": {
+        "nullable": false,
+        "default": "1"
+      }
+    },
+    "foreignKeys": {
+      "tipo_id": "product_types.id",
+      "grupo_id": "product_groups.id",
+      "subgrupo_id": "product_subgroups.id",
+      "family_id": "product_families.id",
+      "class_id": "product_classes.id",
+      "legal_entity_id": "legal_entities.id",
+      "tenant_id": "tenants.id"
+    },
+    "uniqueConstraintsAndIndexes": [
+      "products_sku_unique_key -> unique(sku_unique)",
+      "products_tenant_erp_code_unique -> unique(tenant_id, erp_product_code, versao_numero) where erp_product_code not null/empty",
+      "idx_products_technical_uniqueness -> partial unique technical index"
+    ]
+  },
+  "triggerSkuUniqueAnalysis": {
+    "triggerName": "trg_generate_sku_unique",
+    "triggerDefinition": "CREATE TRIGGER trg_generate_sku_unique BEFORE INSERT OR UPDATE ON public.products FOR EACH ROW EXECUTE FUNCTION generate_sku_unique()",
+    "functionName": "generate_sku_unique",
+    "functionBehavior": {
+      "regeneratesOnInsert": true,
+      "regeneratesOnNullSkuUnique": true,
+      "regeneratesOnSkuChange": true,
+      "usesTenantId": false,
+      "usesSku": true,
+      "usesName": false,
+      "normalizesCase": false,
+      "sanitizesSpecialCharsInComparisonOnly": true,
+      "formula": "sku_unique = sku || '-' || lpad(seq,3,'0'), seq = max(existing for same sku)+1"
+    },
+    "uppercaseTriggerForProducts": {
+      "triggerName": "trg_uppercase_products",
+      "columnsAffected": [
+        "name",
+        "nome_impresso",
+        "description"
+      ],
+      "skuAffected": false
+    },
+    "pilotPrediction": {
+      "skuInput": "TMP-SKU-0001",
+      "sameSkuRowsCurrent": 0,
+      "expectedSkuUnique": "TMP-SKU-0001-001",
+      "predictability": "deterministic_for_current_state"
+    }
+  },
+  "dependenciesResolved": {
+    "product_type": {
+      "value": "TMP-PT-001",
+      "id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "cardinality": 1,
+      "fkColumn": "tipo_id",
+      "fkExists": true,
+      "columnRequired": false
+    },
+    "product_group": {
+      "value": "TMP-PG-001",
+      "id": "c5057853-15be-440d-886f-b0093de363fa",
+      "cardinality": 1,
+      "fkColumn": "grupo_id",
+      "fkExists": true,
+      "columnRequired": false
+    },
+    "product_subgroup": {
+      "value": "TMP-PSG-001",
+      "id": "8f798403-516e-48cf-b675-e025240385f3",
+      "cardinality": 1,
+      "fkColumn": "subgrupo_id",
+      "fkExists": true,
+      "columnRequired": false
+    },
+    "product_family": {
+      "value": "TMP-PF-001",
+      "id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+      "cardinality": 1,
+      "fkColumn": "family_id",
+      "fkExists": true,
+      "columnRequired": false
+    },
+    "product_class": {
+      "value": "TMP-PC-001",
+      "id": "79b5d092-1669-4b39-b590-565b471c1360",
+      "cardinality": 1,
+      "fkColumn": "class_id",
+      "fkExists": true,
+      "columnRequired": false
+    }
+  },
+  "tenantAndLegalEntity": {
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "tenantExistsCardinality": 1,
+    "productsTenantPolicy": "fill_explicit_for_determinism",
+    "legalEntitiesCardinality": 1,
+    "legalEntityResolvedId": "973a686d-e87f-4114-9d1d-455ed80a92de",
+    "productsLegalEntityRequired": false,
+    "legalEntityPolicy": "omit_or_null_unless_required"
+  },
+  "sanitizedPilotPayload": {
+    "source": "baseline_simulation_22g_r2_sanitized",
+    "temp_key": "TMP-22F-R2-PRODUCT-01",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "sku": "TMP-SKU-0001",
+    "expected_sku_unique": "TMP-SKU-0001-001",
+    "name": "TMP Product 01",
+    "expected_persisted_name": "TMP PRODUCT 01",
+    "tipo_value": "TMP-PT-001",
+    "grupo_value": "TMP-PG-001",
+    "subgrupo_value": "TMP-PSG-001",
+    "family_value": "TMP-PF-001",
+    "class_value": "TMP-PC-001",
+    "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+    "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+    "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+    "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+    "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+    "legal_entity_id_policy": "omit_or_null_unless_required",
+    "erp_product_code_policy": "omit_or_null",
+    "erp_versao_policy": "omit_or_null",
+    "versao_numero_policy": "default_or_omit",
+    "idempotency_key": "sku_unique",
+    "idempotency_lookup_policy": "lookup_by_expected_sku_unique_before_insert",
+    "write_policy": "single_product_pilot_only"
+  },
+  "idempotency": {
+    "chosenKey": "sku_unique",
+    "keyStrength": "strong_with_current_trigger_contract",
+    "notes": [
+      "Unique constraint exists on sku_unique.",
+      "Expected sku_unique is predictable for current state (same sku rows = 0).",
+      "Pre-write lookup by expected_sku_unique is mandatory to preserve idempotent_noop behavior."
+    ]
+  },
+  "collisions": {
+    "productsTotal": 0,
+    "sameSkuRows": 0,
+    "sameExpectedSkuUniqueRows": 0,
+    "nameOrUppercaseRows": 0,
+    "divergentCollisionFound": false
+  },
+  "humanGateForNextPhase": "AUTORIZO A DÉCIMA PRIMEIRA ESCRITA PILOTO DA BASELINE 22BP-R2 SOMENTE EM products NO RESTORE-TEST nsnmlleplpzsefzkuxlb",
+  "risks": [
+    "sku_unique sequence depends on existing rows with same sku; a pre-write lookup guard remains mandatory.",
+    "Products triggers may mutate name/description to uppercase and set ERP/version related fields.",
+    "If future payload changes sku format, expected_sku_unique derivation must be revalidated."
+  ],
+  "decision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "negativeConfirmations": {
+    "noDbWriteExecuted": true,
+    "noSqlWriteExecuted": true,
+    "noMigrationExecuted": true,
+    "noSeedCleanupRollbackExecuted": true,
+    "noErpApiWebhookN8nCalls": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true
+  }
+}

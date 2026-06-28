@@ -1,0 +1,149 @@
+{
+  "phase": "22BQ-R2",
+  "timestamp": "2026-06-28T03:11:13.329Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "products",
+  "pilotPayloadPath": "artifacts/migration/phase-22bp-r2-products-payload-sanitization/products-sanitized-payload-20260627-232650.json",
+  "payloadUsed": {
+    "phase": "22BP-R2",
+    "entity": "products",
+    "source": "baseline_simulation_22g_r2_sanitized",
+    "temp_key": "TMP-22F-R2-PRODUCT-01",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "sku": "TMP-SKU-0001",
+    "expected_sku_unique": "TMP-SKU-0001-001",
+    "name": "TMP Product 01",
+    "expected_persisted_name": "TMP PRODUCT 01",
+    "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+    "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+    "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+    "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+    "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+    "legal_entity_id_policy": "omit_or_null_unless_required",
+    "erp_product_code_policy": "omit_or_null",
+    "erp_versao_policy": "omit_or_null",
+    "versao_numero_policy": "default_or_omit",
+    "idempotency_key": "sku_unique",
+    "idempotency_lookup_policy": "lookup_by_expected_sku_unique_before_insert",
+    "write_policy": "single_product_pilot_only"
+  },
+  "guardTableCountsBefore": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "products": 1,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "productsCountBefore": 1,
+  "lookupBySku": [
+    {
+      "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+      "erp_product_code": null,
+      "erp_versao": null,
+      "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+      "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+      "id": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+      "legal_entity_id": null,
+      "name": "TMP PRODUCT 01",
+      "sku": "TMP-SKU-0001",
+      "sku_unique": "TMP-SKU-0001-001",
+      "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "versao_numero": 1
+    }
+  ],
+  "lookupByExpectedSkuUnique": [
+    {
+      "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+      "erp_product_code": null,
+      "erp_versao": null,
+      "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+      "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+      "id": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+      "legal_entity_id": null,
+      "name": "TMP PRODUCT 01",
+      "sku": "TMP-SKU-0001",
+      "sku_unique": "TMP-SKU-0001-001",
+      "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "versao_numero": 1
+    }
+  ],
+  "lookupByPersistedName": [
+    {
+      "id": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+      "name": "TMP PRODUCT 01",
+      "sku": "TMP-SKU-0001",
+      "sku_unique": "TMP-SKU-0001-001",
+      "tenant_id": "00000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "lookupByOriginalName": [],
+  "auxiliaryCardinality": {
+    "tipo": 1,
+    "grupo": 1,
+    "subgrupo": 1,
+    "family": 1,
+    "class": 1
+  },
+  "triggerValidation": {
+    "trg_generate_sku_unique": true,
+    "trg_uppercase_products": true
+  },
+  "requiredFieldsValidation": {
+    "tenant_id_required": true,
+    "sku_required": true,
+    "name_required": true,
+    "versao_numero_default_1": true
+  },
+  "omittedFieldsValidation": {
+    "legal_entity_id_nullable": true,
+    "erp_product_code_nullable": true,
+    "erp_versao_nullable": true
+  },
+  "scopeNegativeInitial": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "phase": "22BR-R2",
+  "timestamp": "2026-06-28T02:54:20.000Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "gitState": {
+    "branch": "main",
+    "lastCommit": "a52bab83 feat(migration): add companies contacts wave write",
+    "head": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "originMain": "a52bab83310e38818e148f816a7f4b602a9c6ff6",
+    "headEqualsOriginMain": true,
+    "divergenceOriginMainMain": "0 0",
+    "statusShortBeforePhase22BR": [
+      "M scripts/migration/phase-22k-r2-baseline-write.mjs",
+      "?? artifacts/migration/phase-22bo-r2-products-gate/",
+      "?? artifacts/migration/phase-22bp-r2-products-payload-sanitization/",
+      "?? artifacts/migration/phase-22bq-r2-pilot-products-write/",
+      "?? artifacts/migration/phase-22k-r2-baseline-write/preflight-20260627-234146.json",
+      "?? artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-234146.json",
+      "?? artifacts/migration/phase-22q-r2-armed-write/before-20260627-234146.json",
+      "?? docs/migration/phase-22bo-r2-products-gate.md",
+      "?? docs/migration/phase-22bp-r2-products-payload-sanitization.md",
+      "?? docs/migration/phase-22bq-r2-pilot-products-write.md"
+    ]
+  },
+  "pilotAudit": {
+    "expectedProductId": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+    "lookupByIdCardinality": 1,
+    "lookupBySkuUniqueCardinality": 1,
+    "lookupBySkuCardinality": 1,
+    "record": {
+      "id": "01c62ae4-4204-413d-80b5-1054e0dba08d",
+      "tenant_id": "00000000-0000-0000-0000-000000000001",
+      "sku": "TMP-SKU-0001",
+      "sku_unique": "TMP-SKU-0001-001",
+      "name": "TMP PRODUCT 01",
+      "tipo_id": "522d0e75-641f-4161-bd41-94ebd50e8158",
+      "grupo_id": "c5057853-15be-440d-886f-b0093de363fa",
+      "subgrupo_id": "8f798403-516e-48cf-b675-e025240385f3",
+      "family_id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+      "class_id": "79b5d092-1669-4b39-b590-565b471c1360",
+      "versao_numero": 1,
+      "erp_product_code": null,
+      "erp_versao": null,
+      "legal_entity_id": null
+    }
+  },
+  "idempotencyReadOnly": {
+    "products_sku_unique_key_count": 1,
+    "trg_generate_sku_unique_count": 2,
+    "trg_uppercase_products_count": 2,
+    "bySkuUnique": 1,
+    "sameSkuDivergentRows": 0,
+    "bySkuUnique002": 0
+  },
+  "auxiliaryDependencies": {
+    "tipo_join_cardinality": 1,
+    "grupo_join_cardinality": 1,
+    "subgrupo_join_cardinality": 1,
+    "family_join_cardinality": 1,
+    "class_join_cardinality": 1
+  },
+  "negativeScopeReadOnly": {
+    "legal_entities": 1,
+    "product_types": 13,
+    "product_groups": 22,
+    "product_subgroups": 54,
+    "product_families": 7,
+    "product_classes": 11,
+    "companies": 5,
+    "contacts": 5,
+    "products": 1,
+    "sales_reps": 0,
+    "user_tenants": 0,
+    "user_legal_entities": 0,
+    "user_sales_reps": 0,
+    "deals": 0,
+    "orders": 0,
+    "order_items": 0,
+    "proposals": 0,
+    "audit_logs": 0,
+    "notifications": 0
+  },
+  "idempotentRerun": {
+    "commandReexecuted": true,
+    "command": "node scripts/migration/phase-22k-r2-baseline-write.mjs --expected-target nsnmlleplpzsefzkuxlb --batch baseline_22f_r2_restore_test_qualyvac --authorization \"AUTORIZO A ESCRITA CONTROLADA DA BASELINE 22H-R2 NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --pilot-authorization \"AUTORIZO A DÉCIMA PRIMEIRA ESCRITA PILOTO DA BASELINE 22BP-R2 SOMENTE EM products NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --input artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json --write-plan artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-225537.json --pilot-payload artifacts/migration/phase-22bp-r2-products-payload-sanitization/products-sanitized-payload-20260627-232650.json --pilot-entity products --execute-pilot-write --write",
+    "processExitCode": 1,
+    "pilotWriteOperation": "aborted",
+    "pilotWriteBeforeDecision": "NO-GO",
+    "pilotWriteAfterDecision": "NO-GO",
+    "pilotWriteDelta": 0,
+    "hardStopEmitted": true,
+    "hardStopMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM products. EXECUÇÃO AMPLIADA BLOQUEADA.",
+    "beforeArtifact": "artifacts/migration/phase-22bq-r2-pilot-products-write/before-20260627-235011.json",
+    "afterArtifact": "artifacts/migration/phase-22bq-r2-pilot-products-write/after-20260627-235011.json",
+    "pilotArtifact": "artifacts/migration/phase-22bq-r2-pilot-products-write/pilot-products-20260627-235011.json",
+    "beforeNoGoReasons": [
+      "products count before pilot must be zero."
+    ],
+    "afterNoGoReasons": [
+      "beforeDecision is not GO.",
+      "Pilot operation aborted.",
+      "Unexpected pilot operation result."
+    ]
+  },
+  "postRerunChecks": {
+    "productsTotal": 1,
+    "bySkuUnique001": 1,
+    "bySku0001": 1,
+    "bySkuUnique002": 0,
+    "noNewProductCreated": true,
+    "noChangeOutsideProducts": true
+  },
+  "decision": "NO-GO",
+  "reasons": {
+    "noGoReasons": [
+      "Reexecução do mesmo comando não retornou idempotent_noop; retornou aborted por guard de beforeDecision.",
+      "Critério GO da fase 22BR-R2 exige operação idempotent_noop na reexecução."
+    ],
+    "partialReasons": []
+  }
+}
