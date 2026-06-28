@@ -1,0 +1,65 @@
+{
+  "phase": "22AZ-R2",
+  "timestamp": "2026-06-27T23:39:16.421Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "operationExecuted": "inserted",
+  "productFamiliesCountAfter": 7,
+  "delta": 1,
+  "recordByValue": [
+    {
+      "created_at": "2026-06-27 23:39:01.0434+00",
+      "id": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+      "is_active": true,
+      "label": "TMP Product Family",
+      "sort_order": 0,
+      "tenant_id": null,
+      "value": "TMP-PF-001"
+    }
+  ],
+  "recordId": "d1720ddd-f0a1-42eb-9428-51ca8df02c92",
+  "value": "TMP-PF-001",
+  "label": "TMP Product Family",
+  "tenant_id": null,
+  "sort_order": 0,
+  "is_active": true,
+  "created_at": "2026-06-27 23:39:01.0434+00",
+  "defaultsApplied": {
+    "sort_order": true,
+    "is_active": true,
+    "created_at": true
+  },
+  "noTechnicalLinkToProductGroups": {
+    "product_group_id_column_absent": true,
+    "fk_to_product_groups_absent": true
+  },
+  "noTechnicalLinkToProductSubgroups": {
+    "product_subgroup_id_column_absent": true,
+    "fk_to_product_subgroups_absent": true
+  },
+  "uniqueValueDuplicateCount": 1,
+  "scopeConfirmation": {
+    "singleEntityExecution": true,
+    "touchedEntity": "product_families",
+    "legalEntitiesTouchedAgain": false,
+    "productTypesTouchedAgain": false,
+    "productGroupsTouchedAgain": false,
+    "productSubgroupsTouchedAgain": false,
+    "salesRepsTouched": false,
+    "profilesTouched": false,
+    "companyContactsTouched": false,
+    "transactionalTouched": false,
+    "queueTouched": false,
+    "externalIntegrationsCalled": false,
+    "expandedExecutionBlocked": true,
+    "noOtherEntityTouched": true
+  },
+  "executionExpandedBlocked": true,
+  "afterDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  },
+  "finalMessage": "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_families. EXECUÇÃO AMPLIADA BLOQUEADA."
+}

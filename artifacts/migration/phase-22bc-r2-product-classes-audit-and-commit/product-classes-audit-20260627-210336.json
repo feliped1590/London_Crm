@@ -1,0 +1,153 @@
+{
+  "phase": "22BC-R2",
+  "timestamp": "2026-06-27T21:03:36-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "latestApplicableEvidenceUsed": {
+    "phase22BBBefore": "artifacts/migration/phase-22bb-r2-pilot-product-classes-write/before-20260627-205752.json",
+    "phase22BBAfter": "artifacts/migration/phase-22bb-r2-pilot-product-classes-write/after-20260627-205752.json",
+    "phase22BBPilot": "artifacts/migration/phase-22bb-r2-pilot-product-classes-write/pilot-product-classes-20260627-205752.json"
+  },
+  "gitPrecheck": {
+    "branch": "main",
+    "lastCommit": "7f213984 feat(migration): add product subgroups pilot baseline write",
+    "divergenceOriginMainMain": "0 0",
+    "statusClassification": "expected_pending_files_22AX_22BB_no_critical_unexpected"
+  },
+  "productClassesAudit": {
+    "pilotReference": {
+      "id": "79b5d092-1669-4b39-b590-565b471c1360",
+      "value": "TMP-PC-001",
+      "label": "TMP Product Class"
+    },
+    "lookupById": {
+      "count": 1,
+      "row": {
+        "id": "79b5d092-1669-4b39-b590-565b471c1360",
+        "value": "TMP-PC-001",
+        "label": "TMP Product Class",
+        "tenant_id": null,
+        "sort_order": 0,
+        "is_active": true,
+        "created_at": "2026-06-27 23:58:17.567953+00"
+      }
+    },
+    "lookupByValue": {
+      "count": 1
+    },
+    "lookupByLabel": {
+      "count": 1
+    },
+    "defaultsValidation": {
+      "tenant_id_is_null": true,
+      "sort_order_is_zero": true,
+      "is_active_is_true": true,
+      "created_at_not_null": true
+    },
+    "idempotencyValidation": {
+      "uniqueValuePresent": true,
+      "countByValueTMP_PC_001": 1,
+      "maxDuplicateByValue": 1,
+      "divergentSameValueCount": 0,
+      "expectedIfReexecuted": "idempotent_noop",
+      "pilotReexecutionPerformed": false
+    },
+    "deltaValidation": {
+      "before22BB": 10,
+      "after22BB": 11,
+      "current": 11,
+      "deltaBeforeAfter": 1,
+      "deltaAfterCurrent": 0
+    },
+    "technicalLinkValidation": {
+      "hasProductGroupIdColumn": false,
+      "hasProductSubgroupIdColumn": false,
+      "hasProductFamilyIdColumn": false,
+      "fkToProductGroups": false,
+      "fkToProductSubgroups": false,
+      "fkToProductFamilies": false,
+      "fkDefinitions": [
+        "FOREIGN KEY (tenant_id) REFERENCES tenants(id)"
+      ]
+    },
+    "auditDecision": "GO",
+    "auditReasons": [
+      "Pilot row remains present and exactly adherent to frozen payload/defaults.",
+      "UNIQUE(value) remains present and value cardinality is 1.",
+      "Delta remains coherent: 10 -> 11 and current remains 11.",
+      "No technical links to product_groups/product_subgroups/product_families were introduced."
+    ]
+  },
+  "negativeScopeValidation": {
+    "counts": {
+      "legal_entities": 1,
+      "product_types": 13,
+      "product_groups": 22,
+      "product_subgroups": 54,
+      "product_families": 7,
+      "product_classes": 11,
+      "sales_reps": 0,
+      "user_tenants": 0,
+      "user_legal_entities": 0,
+      "user_sales_reps": 0,
+      "companies": 0,
+      "contacts": 0,
+      "products": 0,
+      "deals": 0,
+      "orders": 0,
+      "order_items": 0,
+      "proposals": 0,
+      "audit_logs": 0,
+      "notifications": 0
+    },
+    "explicitGuardChecks": {
+      "legal_entities_equals_1": true,
+      "product_types_equals_13": true,
+      "product_groups_equals_22": true,
+      "product_subgroups_equals_54": true,
+      "product_families_equals_7": true,
+      "product_classes_equals_11": true,
+      "sales_reps_equals_0": true,
+      "companies_equals_0": true,
+      "contacts_equals_0": true,
+      "products_equals_0": true,
+      "transactional_entities_zero": true
+    }
+  },
+  "executorBlockValidation": {
+    "sales_reps_still_blocked_for_pilot": true,
+    "profiles_excluded_from_first_round": true,
+    "company_contacts_reference_only": true,
+    "hard_stop_product_types_present": true,
+    "hard_stop_product_groups_present": true,
+    "hard_stop_product_subgroups_present": true,
+    "hard_stop_product_families_present": true,
+    "hard_stop_product_classes_present": true,
+    "no_automatic_expanded_execution": true,
+    "forbidden_flags_still_blocked": {
+      "--force": true,
+      "--skip-guards": true,
+      "--tables": true,
+      "--all": true
+    },
+    "new_bypass_flag_detected": false
+  },
+  "phaseConstraints": {
+    "new_db_write_executed": false,
+    "write_sql_executed": false,
+    "migration_executed": false,
+    "seed_cleanup_rollback_executed": false,
+    "erp_api_webhook_n8n_called": false,
+    "queue_processing_executed": false,
+    "executor_altered_in_22BC": false,
+    "push_executed": false
+  },
+  "finalDecision": "GO",
+  "finalReasons": [
+    "Post-pilot product_classes audit closed GO.",
+    "Idempotency contract remains valid and re-execution expectation is idempotent_noop.",
+    "Negative scope remained preserved across guard entities.",
+    "Executor guard rails and hard stops remained active with no bypass."
+  ]
+}

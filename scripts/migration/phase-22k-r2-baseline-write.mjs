@@ -9,7 +9,14 @@ const EXPECTED_BATCH_ID = "baseline_22f_r2_restore_test_qualyvac";
 const EXPECTED_AUTHORIZATION =
   "AUTORIZO A ESCRITA CONTROLADA DA BASELINE 22H-R2 NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PILOT_ENTITY = "legal_entities";
-const ALLOWED_PILOT_ENTITIES = new Set(["legal_entities", "product_types", "product_groups", "product_subgroups"]);
+const ALLOWED_PILOT_ENTITIES = new Set([
+  "legal_entities",
+  "product_types",
+  "product_groups",
+  "product_subgroups",
+  "product_families",
+  "product_classes",
+]);
 const EXPECTED_PILOT_AUTHORIZATION =
   "AUTORIZO A PRIMEIRA ESCRITA PILOTO DA BASELINE 22R-R2 SOMENTE EM legal_entities NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_TYPES_PILOT_AUTHORIZATION =
@@ -18,6 +25,10 @@ const EXPECTED_PRODUCT_GROUPS_PILOT_AUTHORIZATION =
   "AUTORIZO A QUARTA ESCRITA PILOTO DA BASELINE 22AK-R2 SOMENTE EM product_groups NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_SUBGROUPS_PILOT_AUTHORIZATION =
   "AUTORIZO A QUINTA ESCRITA PILOTO DA BASELINE 22AR-R2 SOMENTE EM product_subgroups NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION =
+  "AUTORIZO A SEXTA ESCRITA PILOTO DA BASELINE 22AY-R2 SOMENTE EM product_families NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
+const EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION =
+  "AUTORIZO A SÉTIMA ESCRITA PILOTO DA BASELINE 22BA-R2 SOMENTE EM product_classes NO RESTORE-TEST nsnmlleplpzsefzkuxlb";
 const EXPECTED_PRODUCT_TYPES_PILOT_PAYLOAD = {
   phase: "22AD-R2",
   entity: "product_types",
@@ -48,6 +59,32 @@ const EXPECTED_PRODUCT_SUBGROUPS_PILOT_PAYLOAD = {
   label: "TMP Product Subgroup",
   tenant_id: null,
   created_by: null,
+  sort_order_default: "0",
+  is_active_default: "true",
+  created_at_default: "now()",
+};
+const EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD = {
+  phase: "22AY-R2",
+  entity: "product_families",
+  source: "baseline_simulation_22g_r2",
+  temp_key: "TMP-22F-R2-PRODFAMILY-01",
+  value: "TMP-PF-001",
+  label: "TMP Product Family",
+  tenant_id: null,
+  created_by: "not_applicable",
+  sort_order_default: "0",
+  is_active_default: "true",
+  created_at_default: "now()",
+};
+const EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD = {
+  phase: "22BA-R2",
+  entity: "product_classes",
+  source: "baseline_simulation_22g_r2",
+  temp_key: "TMP-22F-R2-PRODCLASS-01",
+  value: "TMP-PC-001",
+  label: "TMP Product Class",
+  tenant_id: null,
+  created_by: "not_applicable",
   sort_order_default: "0",
   is_active_default: "true",
   created_at_default: "now()",
@@ -775,6 +812,387 @@ function executeProductSubgroupsPilotWrite(params) {
   };
 }
 
+function executeProductFamiliesPilotWrite(params) {
+  const {
+    pilotEntity,
+    pilotAuthorization,
+    value,
+    label,
+    tenant_id,
+    created_by,
+    expectedTargetRef,
+    expectedTargetName,
+    batchId,
+    localTargetRef,
+    localTargetName,
+  } = params;
+
+  if (pilotEntity !== "product_families") {
+    throw new Error("Pilot entity must be product_families for 22AZ-R2 real pilot write.");
+  }
+  if (pilotAuthorization !== EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION) {
+    throw new Error("Pilot authorization phrase mismatch for product_families pilot write.");
+  }
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for product_families pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for product_families pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for product_families pilot write.");
+  }
+  if (value !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.value) {
+    throw new Error("product_families pilot value mismatch.");
+  }
+  if (label !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.label) {
+    throw new Error("product_families pilot label mismatch.");
+  }
+  if (tenant_id !== null) {
+    throw new Error("product_families pilot tenant_id must be null.");
+  }
+  if (created_by !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by) {
+    throw new Error("product_families pilot created_by policy mismatch.");
+  }
+
+  const uniqueRows = runSupabaseDbQuery(`
+    select exists(
+      select 1
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace
+      where n.nspname = 'public'
+        and t.relname = 'product_families'
+        and c.contype = 'u'
+        and pg_get_constraintdef(c.oid) ilike '%(value)%'
+    ) as has_unique_value
+  `);
+  if (uniqueRows[0]?.has_unique_value !== true) {
+    throw new Error("UNIQUE(value) missing for product_families.");
+  }
+
+  const columnsRows = runSupabaseDbQuery(`
+    select column_name, is_nullable, column_default
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'product_families'
+  `);
+  let tenantNullable = false;
+  let hasCreatedByColumn = false;
+  let sortOrderDefault = "";
+  let isActiveDefault = "";
+  let createdAtDefault = "";
+  let hasProductGroupIdColumn = false;
+  let hasProductSubgroupIdColumn = false;
+  for (const row of columnsRows) {
+    if (row.column_name === "tenant_id") tenantNullable = row.is_nullable === "YES";
+    if (row.column_name === "created_by") hasCreatedByColumn = true;
+    if (row.column_name === "sort_order") sortOrderDefault = String(row.column_default || "");
+    if (row.column_name === "is_active") isActiveDefault = String(row.column_default || "");
+    if (row.column_name === "created_at") createdAtDefault = String(row.column_default || "");
+    if (row.column_name === "product_group_id") hasProductGroupIdColumn = true;
+    if (row.column_name === "product_subgroup_id") hasProductSubgroupIdColumn = true;
+  }
+  if (hasCreatedByColumn) {
+    throw new Error("product_families must not define created_by in current pilot contract.");
+  }
+  if (hasProductGroupIdColumn) {
+    throw new Error("product_families must not define product_group_id in current pilot contract.");
+  }
+  if (hasProductSubgroupIdColumn) {
+    throw new Error("product_families must not define product_subgroup_id in current pilot contract.");
+  }
+  if (!tenantNullable) {
+    throw new Error("product_families.tenant_id must be nullable.");
+  }
+  if (!sortOrderDefault.trim().startsWith(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.sort_order_default)) {
+    throw new Error("product_families.sort_order default must be 0.");
+  }
+  if (!isActiveDefault.trim().toLowerCase().startsWith(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.is_active_default)) {
+    throw new Error("product_families.is_active default must be true.");
+  }
+  if (!createdAtDefault.toLowerCase().includes(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_at_default)) {
+    throw new Error("product_families.created_at default must be now().");
+  }
+
+  const fkRows = runSupabaseDbQuery(`
+    select pg_get_constraintdef(c.oid) as fk_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where c.contype = 'f'
+      and n.nspname='public'
+      and t.relname='product_families'
+  `);
+  const hasFkToProductGroups = fkRows.some((r) =>
+    String(r.fk_def || "").toLowerCase().includes("product_groups"),
+  );
+  const hasFkToProductSubgroups = fkRows.some((r) =>
+    String(r.fk_def || "").toLowerCase().includes("product_subgroups"),
+  );
+  if (hasFkToProductGroups) {
+    throw new Error("product_families must not have FK to product_groups for 22AZ-R2 pilot.");
+  }
+  if (hasFkToProductSubgroups) {
+    throw new Error("product_families must not have FK to product_subgroups for 22AZ-R2 pilot.");
+  }
+
+  const existingRows = runSupabaseDbQuery(`
+    select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at
+    from public.product_families
+    where value = '${escapeSqlLiteral(value)}'
+  `);
+  if (existingRows.length > 1) {
+    throw new Error("Unexpected duplicate rows for product_families.value during pilot.");
+  }
+  if (existingRows.length === 1) {
+    const existing = existingRows[0];
+    const samePayload =
+      existing.value === value &&
+      existing.label === label &&
+      existing.tenant_id === null &&
+      Number(existing.sort_order) === 0 &&
+      existing.is_active === true &&
+      typeof existing.created_at === "string" &&
+      existing.created_at.length > 0;
+    if (!samePayload) {
+      throw new Error("Existing product_families row diverges from frozen pilot payload/defaults.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      inserted: false,
+    };
+  }
+
+  const labelRows = runSupabaseDbQuery(
+    `select count(*)::bigint as label_count from public.product_families where label = '${escapeSqlLiteral(label)}'`,
+  );
+  const labelCount = Number(labelRows[0]?.label_count || 0);
+  if (labelCount > 0) {
+    throw new Error("Label collision detected without value match for product_families pilot.");
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.product_families (value, label, tenant_id)
+    values ('${escapeSqlLiteral(value)}', '${escapeSqlLiteral(label)}', null)
+    returning id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one row.");
+  }
+  const inserted = insertedRows[0];
+  if (
+    Number(inserted.sort_order) !== 0 ||
+    inserted.is_active !== true ||
+    typeof inserted.created_at !== "string" ||
+    inserted.created_at.length === 0
+  ) {
+    throw new Error("product_families defaults were not applied as expected after insert.");
+  }
+  return {
+    operation: "inserted",
+    record: inserted,
+    inserted: true,
+  };
+}
+
+function executeProductClassesPilotWrite(params) {
+  const {
+    pilotEntity,
+    pilotAuthorization,
+    value,
+    label,
+    tenant_id,
+    created_by,
+    expectedTargetRef,
+    expectedTargetName,
+    batchId,
+    localTargetRef,
+    localTargetName,
+  } = params;
+
+  if (pilotEntity !== "product_classes") {
+    throw new Error("Pilot entity must be product_classes for 22BB-R2 real pilot write.");
+  }
+  if (pilotAuthorization !== EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION) {
+    throw new Error("Pilot authorization phrase mismatch for product_classes pilot write.");
+  }
+  if (expectedTargetRef !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+    throw new Error("Target ref mismatch for product_classes pilot write.");
+  }
+  if (expectedTargetName !== EXPECTED_TARGET_NAME || localTargetName !== EXPECTED_TARGET_NAME) {
+    throw new Error("Target name mismatch for product_classes pilot write.");
+  }
+  if (batchId !== EXPECTED_BATCH_ID) {
+    throw new Error("Batch mismatch for product_classes pilot write.");
+  }
+  if (value !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.value) {
+    throw new Error("product_classes pilot value mismatch.");
+  }
+  if (label !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.label) {
+    throw new Error("product_classes pilot label mismatch.");
+  }
+  if (tenant_id !== null) {
+    throw new Error("product_classes pilot tenant_id must be null.");
+  }
+  if (created_by !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by) {
+    throw new Error("product_classes pilot created_by policy mismatch.");
+  }
+
+  const uniqueRows = runSupabaseDbQuery(`
+    select exists(
+      select 1
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace
+      where n.nspname = 'public'
+        and t.relname = 'product_classes'
+        and c.contype = 'u'
+        and pg_get_constraintdef(c.oid) ilike '%(value)%'
+    ) as has_unique_value
+  `);
+  if (uniqueRows[0]?.has_unique_value !== true) {
+    throw new Error("UNIQUE(value) missing for product_classes.");
+  }
+
+  const columnsRows = runSupabaseDbQuery(`
+    select column_name, is_nullable, column_default
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'product_classes'
+  `);
+  let tenantNullable = false;
+  let hasCreatedByColumn = false;
+  let sortOrderDefault = "";
+  let isActiveDefault = "";
+  let createdAtDefault = "";
+  let hasProductGroupIdColumn = false;
+  let hasProductSubgroupIdColumn = false;
+  let hasProductFamilyIdColumn = false;
+  for (const row of columnsRows) {
+    if (row.column_name === "tenant_id") tenantNullable = row.is_nullable === "YES";
+    if (row.column_name === "created_by") hasCreatedByColumn = true;
+    if (row.column_name === "sort_order") sortOrderDefault = String(row.column_default || "");
+    if (row.column_name === "is_active") isActiveDefault = String(row.column_default || "");
+    if (row.column_name === "created_at") createdAtDefault = String(row.column_default || "");
+    if (row.column_name === "product_group_id") hasProductGroupIdColumn = true;
+    if (row.column_name === "product_subgroup_id") hasProductSubgroupIdColumn = true;
+    if (row.column_name === "product_family_id") hasProductFamilyIdColumn = true;
+  }
+  if (hasCreatedByColumn) {
+    throw new Error("product_classes must not define created_by in current pilot contract.");
+  }
+  if (hasProductGroupIdColumn) {
+    throw new Error("product_classes must not define product_group_id in current pilot contract.");
+  }
+  if (hasProductSubgroupIdColumn) {
+    throw new Error("product_classes must not define product_subgroup_id in current pilot contract.");
+  }
+  if (hasProductFamilyIdColumn) {
+    throw new Error("product_classes must not define product_family_id in current pilot contract.");
+  }
+  if (!tenantNullable) {
+    throw new Error("product_classes.tenant_id must be nullable.");
+  }
+  if (!sortOrderDefault.trim().startsWith(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.sort_order_default)) {
+    throw new Error("product_classes.sort_order default must be 0.");
+  }
+  if (!isActiveDefault.trim().toLowerCase().startsWith(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.is_active_default)) {
+    throw new Error("product_classes.is_active default must be true.");
+  }
+  if (!createdAtDefault.toLowerCase().includes(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_at_default)) {
+    throw new Error("product_classes.created_at default must be now().");
+  }
+
+  const fkRows = runSupabaseDbQuery(`
+    select pg_get_constraintdef(c.oid) as fk_def
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    where c.contype = 'f'
+      and n.nspname='public'
+      and t.relname='product_classes'
+  `);
+  const hasFkToProductGroups = fkRows.some((r) =>
+    String(r.fk_def || "").toLowerCase().includes("product_groups"),
+  );
+  const hasFkToProductSubgroups = fkRows.some((r) =>
+    String(r.fk_def || "").toLowerCase().includes("product_subgroups"),
+  );
+  const hasFkToProductFamilies = fkRows.some((r) =>
+    String(r.fk_def || "").toLowerCase().includes("product_families"),
+  );
+  if (hasFkToProductGroups) {
+    throw new Error("product_classes must not have FK to product_groups for 22BB-R2 pilot.");
+  }
+  if (hasFkToProductSubgroups) {
+    throw new Error("product_classes must not have FK to product_subgroups for 22BB-R2 pilot.");
+  }
+  if (hasFkToProductFamilies) {
+    throw new Error("product_classes must not have FK to product_families for 22BB-R2 pilot.");
+  }
+
+  const existingRows = runSupabaseDbQuery(`
+    select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at
+    from public.product_classes
+    where value = '${escapeSqlLiteral(value)}'
+  `);
+  if (existingRows.length > 1) {
+    throw new Error("Unexpected duplicate rows for product_classes.value during pilot.");
+  }
+  if (existingRows.length === 1) {
+    const existing = existingRows[0];
+    const samePayload =
+      existing.value === value &&
+      existing.label === label &&
+      existing.tenant_id === null &&
+      Number(existing.sort_order) === 0 &&
+      existing.is_active === true &&
+      typeof existing.created_at === "string" &&
+      existing.created_at.length > 0;
+    if (!samePayload) {
+      throw new Error("Existing product_classes row diverges from frozen pilot payload/defaults.");
+    }
+    return {
+      operation: "idempotent_noop",
+      record: existing,
+      inserted: false,
+    };
+  }
+
+  const labelRows = runSupabaseDbQuery(
+    `select count(*)::bigint as label_count from public.product_classes where label = '${escapeSqlLiteral(label)}'`,
+  );
+  const labelCount = Number(labelRows[0]?.label_count || 0);
+  if (labelCount > 0) {
+    throw new Error("Label collision detected without value match for product_classes pilot.");
+  }
+
+  const insertedRows = runSupabaseDbQuery(`
+    insert into public.product_classes (value, label, tenant_id)
+    values ('${escapeSqlLiteral(value)}', '${escapeSqlLiteral(label)}', null)
+    returning id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at
+  `);
+  if (insertedRows.length !== 1) {
+    throw new Error("Pilot insert did not return exactly one row.");
+  }
+  const inserted = insertedRows[0];
+  if (
+    Number(inserted.sort_order) !== 0 ||
+    inserted.is_active !== true ||
+    typeof inserted.created_at !== "string" ||
+    inserted.created_at.length === 0
+  ) {
+    throw new Error("product_classes defaults were not applied as expected after insert.");
+  }
+  return {
+    operation: "inserted",
+    record: inserted,
+    inserted: true,
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2));
   const noGoReasons = [];
@@ -866,6 +1284,10 @@ function main() {
         ? EXPECTED_PRODUCT_GROUPS_PILOT_AUTHORIZATION
       : selectedPilotEntity === "product_subgroups"
         ? EXPECTED_PRODUCT_SUBGROUPS_PILOT_AUTHORIZATION
+      : selectedPilotEntity === "product_families"
+        ? EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION
+      : selectedPilotEntity === "product_classes"
+        ? EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION
       : EXPECTED_PILOT_AUTHORIZATION;
 
   if (args.executePilotWrite && !selectedPilotEntity) {
@@ -877,7 +1299,7 @@ function main() {
       validations,
       "pilot.entity.value",
       "FAIL",
-      "Pilot entity must be legal_entities, product_types, product_groups or product_subgroups.",
+      "Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families or product_classes.",
     );
   } else if (selectedPilotEntity === "legal_entities") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as legal_entities.");
@@ -887,6 +1309,10 @@ function main() {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_groups.");
   } else if (selectedPilotEntity === "product_subgroups") {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_subgroups.");
+  } else if (selectedPilotEntity === "product_families") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_families.");
+  } else if (selectedPilotEntity === "product_classes") {
+    pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity validated as product_classes.");
   } else {
     pushValidation(validations, "pilot.entity.value", "PASS", "Pilot entity not requested.");
   }
@@ -906,7 +1332,9 @@ function main() {
   if (
     (selectedPilotEntity === "product_types" ||
       selectedPilotEntity === "product_groups" ||
-      selectedPilotEntity === "product_subgroups") &&
+      selectedPilotEntity === "product_subgroups" ||
+      selectedPilotEntity === "product_families" ||
+      selectedPilotEntity === "product_classes") &&
     !args.pilotPayload
   ) {
     noGoReasons.push(`--pilot-payload is required when --pilot-entity ${selectedPilotEntity} is used.`);
@@ -914,7 +1342,9 @@ function main() {
   } else if (
     (selectedPilotEntity === "product_types" ||
       selectedPilotEntity === "product_groups" ||
-      selectedPilotEntity === "product_subgroups") &&
+      selectedPilotEntity === "product_subgroups" ||
+      selectedPilotEntity === "product_families" ||
+      selectedPilotEntity === "product_classes") &&
     args.pilotPayload
   ) {
     pushValidation(validations, "pilot.payload.flag", "PASS", `--pilot-payload provided for ${selectedPilotEntity} pilot.`);
@@ -973,6 +1403,34 @@ function main() {
   let productSubgroupsCreatedAtDefault = null;
   let productSubgroupsHasProductGroupIdColumn = false;
   let productSubgroupsHasFkToProductGroups = false;
+  let productFamiliesCountCurrent = null;
+  let productFamiliesValueCollisionCount = null;
+  let productFamiliesLabelCollisionCount = null;
+  let productFamiliesUniqueValuePresent = false;
+  let productFamiliesTenantNullable = null;
+  let productFamiliesCreatedByColumnPresent = false;
+  let productFamiliesSortOrderDefault = null;
+  let productFamiliesIsActiveDefault = null;
+  let productFamiliesCreatedAtDefault = null;
+  let productFamiliesHasProductGroupIdColumn = false;
+  let productFamiliesHasProductSubgroupIdColumn = false;
+  let productFamiliesHasFkToProductGroups = false;
+  let productFamiliesHasFkToProductSubgroups = false;
+  let productClassesCountCurrent = null;
+  let productClassesValueCollisionCount = null;
+  let productClassesLabelCollisionCount = null;
+  let productClassesUniqueValuePresent = false;
+  let productClassesTenantNullable = null;
+  let productClassesCreatedByColumnPresent = false;
+  let productClassesSortOrderDefault = null;
+  let productClassesIsActiveDefault = null;
+  let productClassesCreatedAtDefault = null;
+  let productClassesHasProductGroupIdColumn = false;
+  let productClassesHasProductSubgroupIdColumn = false;
+  let productClassesHasProductFamilyIdColumn = false;
+  let productClassesHasFkToProductGroups = false;
+  let productClassesHasFkToProductSubgroups = false;
+  let productClassesHasFkToProductFamilies = false;
 
   if (!args.input) {
     noGoReasons.push("--input is required.");
@@ -1828,6 +2286,565 @@ function main() {
     }
   }
 
+  if (selectedPilotEntity === "product_families") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.phase) {
+        pilotPayloadValidationErrors.push("phase mismatch");
+      }
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) {
+        pilotPayloadValidationErrors.push("targetRef mismatch");
+      }
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) {
+        pilotPayloadValidationErrors.push("targetName mismatch");
+      }
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) {
+        pilotPayloadValidationErrors.push("batchId mismatch");
+      }
+      if (!["GO", "PARCIAL"].includes(String(pilotPayloadJson?.payloadDecision || "").toUpperCase())) {
+        pilotPayloadValidationErrors.push("payload decision is not GO/PARCIAL");
+      }
+      const sourceOk =
+        typeof pilotPayloadJson?.frozenPayload?.source === "string" &&
+        pilotPayloadJson.frozenPayload.source === EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.source;
+      if (!sourceOk) {
+        pilotPayloadValidationErrors.push("payload origin source mismatch");
+      }
+      const sectionOk = String(pilotPayloadJson?.payloadOrigin?.section || "").includes("BASELINE_SIMULATION.product_families");
+      if (!sectionOk) {
+        pilotPayloadValidationErrors.push("payload origin section mismatch");
+      }
+
+      const frozenRecords = pilotPayloadJson?.frozenPayload?.records;
+      if (!Array.isArray(frozenRecords) || frozenRecords.length !== 1) {
+        pilotPayloadValidationErrors.push("frozen payload must contain exactly 1 record");
+      } else {
+        const [record] = frozenRecords;
+        if (pilotPayloadJson?.frozenPayload?.entity !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.entity) {
+          pilotPayloadValidationErrors.push("frozen payload entity mismatch");
+        }
+        if (record?.temp_key !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.temp_key) {
+          pilotPayloadValidationErrors.push("temp_key mismatch");
+        }
+        if (record?.value !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.value) {
+          pilotPayloadValidationErrors.push("value mismatch");
+        }
+        if (record?.label !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.label) {
+          pilotPayloadValidationErrors.push("label mismatch");
+        }
+        if (record?.tenant_id !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.tenant_id) {
+          pilotPayloadValidationErrors.push("tenant_id mismatch");
+        }
+        if (record?.created_by !== EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by) {
+          pilotPayloadValidationErrors.push("created_by policy mismatch");
+        }
+      }
+
+      const tenantPolicyIsNull =
+        pilotPayloadJson?.tenantPolicy?.tenant_id === null &&
+        String(pilotPayloadJson?.tenantPolicy?.mode || "").toLowerCase().includes("null");
+      if (!tenantPolicyIsNull) {
+        pilotPayloadValidationErrors.push("tenant policy must be null scope");
+      }
+
+      const createdByNotApplicable =
+        pilotPayloadJson?.createdByPolicy?.created_by === EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by &&
+        String(pilotPayloadJson?.createdByPolicy?.mode || "").toLowerCase().includes("not_applicable");
+      if (!createdByNotApplicable) {
+        pilotPayloadValidationErrors.push("created_by policy must be not_applicable");
+      }
+
+      const sortOrderDefaultOk = String(pilotPayloadJson?.defaultsPolicy?.sort_order?.default || "")
+        .trim()
+        .toLowerCase() === EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.sort_order_default;
+      const isActiveDefaultOk = String(pilotPayloadJson?.defaultsPolicy?.is_active?.default || "")
+        .trim()
+        .toLowerCase() === EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.is_active_default;
+      const createdAtDefaultOk = String(pilotPayloadJson?.defaultsPolicy?.created_at?.default || "")
+        .toLowerCase()
+        .includes(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_at_default);
+      if (!sortOrderDefaultOk) pilotPayloadValidationErrors.push("sort_order default must be 0");
+      if (!isActiveDefaultOk) pilotPayloadValidationErrors.push("is_active default must be true");
+      if (!createdAtDefaultOk) pilotPayloadValidationErrors.push("created_at default must be now()");
+
+      const noTechnicalLinkToProductGroups =
+        pilotPayloadJson?.technicalLinks?.toProductGroups?.hasProductGroupIdColumn === false &&
+        pilotPayloadJson?.technicalLinks?.toProductGroups?.hasForeignKey === false;
+      const noTechnicalLinkToProductSubgroups =
+        pilotPayloadJson?.technicalLinks?.toProductSubgroups?.hasProductSubgroupIdColumn === false &&
+        pilotPayloadJson?.technicalLinks?.toProductSubgroups?.hasForeignKey === false;
+      if (!noTechnicalLinkToProductGroups) {
+        pilotPayloadValidationErrors.push("technical link to product_groups must be absent");
+      }
+      if (!noTechnicalLinkToProductSubgroups) {
+        pilotPayloadValidationErrors.push("technical link to product_subgroups must be absent");
+      }
+
+      const idempotencyByValue = String(pilotPayloadJson?.idempotencyRule?.key || "") === "value";
+      if (!idempotencyByValue) {
+        pilotPayloadValidationErrors.push("idempotency key must be value");
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const uniqueRows = runSupabaseDbQuery(`
+        select exists(
+          select 1
+          from pg_constraint c
+          join pg_class t on t.oid = c.conrelid
+          join pg_namespace n on n.oid = t.relnamespace
+          where n.nspname = 'public'
+            and t.relname = 'product_families'
+            and c.contype = 'u'
+            and pg_get_constraintdef(c.oid) ilike '%(value)%'
+        ) as has_unique_value
+      `);
+      productFamiliesUniqueValuePresent = uniqueRows[0]?.has_unique_value === true;
+      if (!productFamiliesUniqueValuePresent) {
+        noGoReasons.push("UNIQUE(value) was not found for public.product_families.");
+        pushValidation(validations, "pilot.product_families.unique_value", "FAIL", "UNIQUE(value) is required.");
+      } else {
+        pushValidation(validations, "pilot.product_families.unique_value", "PASS", "UNIQUE(value) validated.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate UNIQUE(value) for public.product_families.");
+      pushValidation(validations, "pilot.product_families.unique_value", "FAIL", "Failed to validate UNIQUE(value).");
+    }
+
+    try {
+      const cols = runSupabaseDbQuery(`
+        select column_name, is_nullable, column_default
+        from information_schema.columns
+        where table_schema = 'public' and table_name = 'product_families'
+      `);
+      const colNames = new Set(cols.map((r) => r.column_name));
+      productFamiliesHasProductGroupIdColumn = colNames.has("product_group_id");
+      productFamiliesHasProductSubgroupIdColumn = colNames.has("product_subgroup_id");
+      productFamiliesCreatedByColumnPresent = colNames.has("created_by");
+      for (const row of cols) {
+        if (row.column_name === "tenant_id") productFamiliesTenantNullable = row.is_nullable === "YES";
+        if (row.column_name === "sort_order") productFamiliesSortOrderDefault = row.column_default || null;
+        if (row.column_name === "is_active") productFamiliesIsActiveDefault = row.column_default || null;
+        if (row.column_name === "created_at") productFamiliesCreatedAtDefault = row.column_default || null;
+      }
+      if (productFamiliesTenantNullable !== true) noGoReasons.push("product_families.tenant_id must be nullable.");
+      if (productFamiliesCreatedByColumnPresent) noGoReasons.push("product_families must not define created_by in current pilot contract.");
+      if (productFamiliesHasProductGroupIdColumn) noGoReasons.push("product_families must not define product_group_id in current pilot contract.");
+      if (productFamiliesHasProductSubgroupIdColumn) noGoReasons.push("product_families must not define product_subgroup_id in current pilot contract.");
+      if (!String(productFamiliesSortOrderDefault || "").trim().startsWith("0")) noGoReasons.push("product_families.sort_order default must be 0.");
+      if (!String(productFamiliesIsActiveDefault || "").trim().toLowerCase().startsWith("true")) {
+        noGoReasons.push("product_families.is_active default must be true.");
+      }
+      if (!String(productFamiliesCreatedAtDefault || "").toLowerCase().includes("now()")) {
+        noGoReasons.push("product_families.created_at default must be now().");
+      }
+      pushValidation(validations, "pilot.product_families.defaults_and_nullable", "PASS", "Defaults and nullable policies validated.");
+    } catch {
+      noGoReasons.push("Unable to validate product_families defaults/nullable metadata.");
+      pushValidation(
+        validations,
+        "pilot.product_families.defaults_and_nullable",
+        "FAIL",
+        "Failed to validate product_families defaults/nullable metadata.",
+      );
+    }
+
+    try {
+      const fkRows = runSupabaseDbQuery(`
+        select pg_get_constraintdef(c.oid) as fk_def
+        from pg_constraint c
+        join pg_class t on t.oid = c.conrelid
+        join pg_namespace n on n.oid = t.relnamespace
+        where n.nspname='public'
+          and t.relname='product_families'
+          and c.contype='f'
+      `);
+      productFamiliesHasFkToProductGroups = fkRows.some((r) =>
+        String(r.fk_def || "").toLowerCase().includes("product_groups"),
+      );
+      productFamiliesHasFkToProductSubgroups = fkRows.some((r) =>
+        String(r.fk_def || "").toLowerCase().includes("product_subgroups"),
+      );
+      if (productFamiliesHasFkToProductGroups) {
+        noGoReasons.push("product_families must not have FK to product_groups for 22AZ-R2 assumptions.");
+      }
+      if (productFamiliesHasFkToProductSubgroups) {
+        noGoReasons.push("product_families must not have FK to product_subgroups for 22AZ-R2 assumptions.");
+      }
+      pushValidation(validations, "pilot.product_families.no_fk_product_groups", "PASS", "No FK to product_groups detected.");
+      pushValidation(
+        validations,
+        "pilot.product_families.no_fk_product_subgroups",
+        "PASS",
+        "No FK to product_subgroups detected.",
+      );
+    } catch {
+      noGoReasons.push("Unable to validate FK absence to product_groups/product_subgroups for product_families.");
+      pushValidation(validations, "pilot.product_families.no_fk_product_groups", "FAIL", "Failed FK absence validation.");
+      pushValidation(validations, "pilot.product_families.no_fk_product_subgroups", "FAIL", "Failed FK absence validation.");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_families");
+      productFamiliesCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.product_families.current_count", "PASS", "Current product_families count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.product_families.");
+      pushValidation(validations, "pilot.product_families.current_count", "FAIL", "Failed to read product_families count.");
+    }
+
+    const candidateValue = EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.label;
+    try {
+      const valueRows = runSupabaseDbQuery(
+        `select count(*)::bigint as value_count from public.product_families where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      productFamiliesValueCollisionCount = Number(valueRows[0]?.value_count ?? 0);
+      if (productFamiliesValueCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_families.value_collision",
+          "PASS",
+          "Value exists; full idempotent payload/default match must be checked in pilot write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_families.value_collision", "PASS", "No value collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate value collision for product_families pilot payload.");
+      pushValidation(validations, "pilot.product_families.value_collision", "FAIL", "Failed to validate value collision.");
+    }
+
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_families where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      productFamiliesLabelCollisionCount = Number(labelRows[0]?.label_count ?? 0);
+      if (productFamiliesLabelCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_families.label_collision",
+          "PASS",
+          "Label exists; collision will be validated against value/idempotency in pilot write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_families.label_collision", "PASS", "No label collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate label collision for product_families pilot payload.");
+      pushValidation(validations, "pilot.product_families.label_collision", "FAIL", "Failed to validate label collision.");
+    }
+  }
+
+  if (selectedPilotEntity === "product_classes") {
+    const payloadPath = args.pilotPayload ? path.resolve(args.pilotPayload) : null;
+    pilotPayloadExists = Boolean(payloadPath && fs.existsSync(payloadPath));
+    if (!pilotPayloadExists) {
+      noGoReasons.push(`Pilot payload file does not exist: ${args.pilotPayload || "missing"}`);
+      pushValidation(validations, "pilot.payload.exists", "FAIL", "Pilot payload file was not found.");
+    } else {
+      pushValidation(validations, "pilot.payload.exists", "PASS", "Pilot payload file exists.");
+      try {
+        pilotPayloadJson = JSON.parse(fs.readFileSync(payloadPath, "utf8"));
+        pilotPayloadParsed = true;
+        pushValidation(validations, "pilot.payload.parse_json", "PASS", "Pilot payload parsed successfully.");
+      } catch {
+        noGoReasons.push("Pilot payload is not valid JSON.");
+        pushValidation(validations, "pilot.payload.parse_json", "FAIL", "Pilot payload parsing failed.");
+      }
+    }
+
+    if (pilotPayloadParsed) {
+      if (pilotPayloadJson?.phase !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.phase) {
+        pilotPayloadValidationErrors.push("phase mismatch");
+      }
+      if (pilotPayloadJson?.targetRef !== EXPECTED_TARGET_REF) {
+        pilotPayloadValidationErrors.push("targetRef mismatch");
+      }
+      if (pilotPayloadJson?.targetName !== EXPECTED_TARGET_NAME) {
+        pilotPayloadValidationErrors.push("targetName mismatch");
+      }
+      if (pilotPayloadJson?.batchId !== EXPECTED_BATCH_ID) {
+        pilotPayloadValidationErrors.push("batchId mismatch");
+      }
+      if (!["GO", "PARCIAL"].includes(String(pilotPayloadJson?.finalDecision || "").toUpperCase())) {
+        pilotPayloadValidationErrors.push("final decision is not GO/PARCIAL");
+      }
+      const sourceOk =
+        typeof pilotPayloadJson?.frozenPayload?.source === "string" &&
+        pilotPayloadJson.frozenPayload.source === EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.source;
+      if (!sourceOk) {
+        pilotPayloadValidationErrors.push("payload origin source mismatch");
+      }
+      const sectionOk = String(pilotPayloadJson?.productClassesGate?.payloadOrigin?.section || "").includes(
+        "BASELINE_SIMULATION.product_classes",
+      );
+      if (!sectionOk) {
+        pilotPayloadValidationErrors.push("payload origin section mismatch");
+      }
+
+      const frozenRecords = pilotPayloadJson?.frozenPayload?.records;
+      if (!Array.isArray(frozenRecords) || frozenRecords.length !== 1) {
+        pilotPayloadValidationErrors.push("frozen payload must contain exactly 1 record");
+      } else {
+        const [record] = frozenRecords;
+        if (pilotPayloadJson?.frozenPayload?.entity !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.entity) {
+          pilotPayloadValidationErrors.push("frozen payload entity mismatch");
+        }
+        if (record?.temp_key !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.temp_key) {
+          pilotPayloadValidationErrors.push("temp_key mismatch");
+        }
+        if (record?.value !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.value) {
+          pilotPayloadValidationErrors.push("value mismatch");
+        }
+        if (record?.label !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.label) {
+          pilotPayloadValidationErrors.push("label mismatch");
+        }
+        if (record?.tenant_id !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.tenant_id) {
+          pilotPayloadValidationErrors.push("tenant_id mismatch");
+        }
+        if (record?.created_by !== EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by) {
+          pilotPayloadValidationErrors.push("created_by policy mismatch");
+        }
+      }
+
+      const tenantPolicyIsNull =
+        pilotPayloadJson?.productClassesGate?.policies?.tenant_id?.value === null &&
+        String(pilotPayloadJson?.productClassesGate?.policies?.tenant_id?.mode || "").toLowerCase().includes("null");
+      if (!tenantPolicyIsNull) {
+        pilotPayloadValidationErrors.push("tenant policy must be null scope");
+      }
+
+      const createdByNotApplicable =
+        pilotPayloadJson?.productClassesGate?.policies?.created_by?.value === EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by &&
+        String(pilotPayloadJson?.productClassesGate?.policies?.created_by?.mode || "").toLowerCase().includes("not_applicable");
+      if (!createdByNotApplicable) {
+        pilotPayloadValidationErrors.push("created_by policy must be not_applicable");
+      }
+
+      const sortOrderDefaultOk = String(pilotPayloadJson?.productClassesGate?.policies?.defaults?.sort_order || "")
+        .trim()
+        .toLowerCase() === EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.sort_order_default;
+      const isActiveDefaultOk = String(pilotPayloadJson?.productClassesGate?.policies?.defaults?.is_active || "")
+        .trim()
+        .toLowerCase() === EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.is_active_default;
+      const createdAtDefaultOk = String(pilotPayloadJson?.productClassesGate?.policies?.defaults?.created_at || "")
+        .toLowerCase()
+        .includes(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_at_default);
+      if (!sortOrderDefaultOk) pilotPayloadValidationErrors.push("sort_order default must be 0");
+      if (!isActiveDefaultOk) pilotPayloadValidationErrors.push("is_active default must be true");
+      if (!createdAtDefaultOk) pilotPayloadValidationErrors.push("created_at default must be now()");
+
+      const noTechnicalLinkToProductGroups =
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.has_product_group_id_column === false &&
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.fk_to_product_groups === false;
+      const noTechnicalLinkToProductSubgroups =
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.has_product_subgroup_id_column === false &&
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.fk_to_product_subgroups === false;
+      const noTechnicalLinkToProductFamilies =
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.has_product_family_id_column === false &&
+        pilotPayloadJson?.productClassesGate?.dependenciesAndFks?.fk_to_product_families === false;
+      if (!noTechnicalLinkToProductGroups) {
+        pilotPayloadValidationErrors.push("technical link to product_groups must be absent");
+      }
+      if (!noTechnicalLinkToProductSubgroups) {
+        pilotPayloadValidationErrors.push("technical link to product_subgroups must be absent");
+      }
+      if (!noTechnicalLinkToProductFamilies) {
+        pilotPayloadValidationErrors.push("technical link to product_families must be absent");
+      }
+
+      const idempotencyByValue = String(pilotPayloadJson?.productClassesGate?.idempotencyRule?.key || "") === "value";
+      if (!idempotencyByValue) {
+        pilotPayloadValidationErrors.push("idempotency key must be value");
+      }
+
+      if (pilotPayloadValidationErrors.length > 0) {
+        noGoReasons.push(`Pilot payload validation failed: ${pilotPayloadValidationErrors.join(", ")}`);
+        pushValidation(validations, "pilot.payload.compatibility", "FAIL", "Pilot payload metadata incompatible.");
+      } else {
+        pushValidation(validations, "pilot.payload.compatibility", "PASS", "Pilot payload metadata validated.");
+      }
+    }
+
+    try {
+      const uniqueRows = runSupabaseDbQuery(`
+        select exists(
+          select 1
+          from pg_constraint c
+          join pg_class t on t.oid = c.conrelid
+          join pg_namespace n on n.oid = t.relnamespace
+          where n.nspname = 'public'
+            and t.relname = 'product_classes'
+            and c.contype = 'u'
+            and pg_get_constraintdef(c.oid) ilike '%(value)%'
+        ) as has_unique_value
+      `);
+      productClassesUniqueValuePresent = uniqueRows[0]?.has_unique_value === true;
+      if (!productClassesUniqueValuePresent) {
+        noGoReasons.push("UNIQUE(value) was not found for public.product_classes.");
+        pushValidation(validations, "pilot.product_classes.unique_value", "FAIL", "UNIQUE(value) is required.");
+      } else {
+        pushValidation(validations, "pilot.product_classes.unique_value", "PASS", "UNIQUE(value) validated.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate UNIQUE(value) for public.product_classes.");
+      pushValidation(validations, "pilot.product_classes.unique_value", "FAIL", "Failed to validate UNIQUE(value).");
+    }
+
+    try {
+      const cols = runSupabaseDbQuery(`
+        select column_name, is_nullable, column_default
+        from information_schema.columns
+        where table_schema = 'public' and table_name = 'product_classes'
+      `);
+      const colNames = new Set(cols.map((r) => r.column_name));
+      productClassesHasProductGroupIdColumn = colNames.has("product_group_id");
+      productClassesHasProductSubgroupIdColumn = colNames.has("product_subgroup_id");
+      productClassesHasProductFamilyIdColumn = colNames.has("product_family_id");
+      productClassesCreatedByColumnPresent = colNames.has("created_by");
+      for (const row of cols) {
+        if (row.column_name === "tenant_id") productClassesTenantNullable = row.is_nullable === "YES";
+        if (row.column_name === "sort_order") productClassesSortOrderDefault = row.column_default || null;
+        if (row.column_name === "is_active") productClassesIsActiveDefault = row.column_default || null;
+        if (row.column_name === "created_at") productClassesCreatedAtDefault = row.column_default || null;
+      }
+      if (productClassesTenantNullable !== true) noGoReasons.push("product_classes.tenant_id must be nullable.");
+      if (productClassesCreatedByColumnPresent) noGoReasons.push("product_classes must not define created_by in current pilot contract.");
+      if (productClassesHasProductGroupIdColumn) noGoReasons.push("product_classes must not define product_group_id in current pilot contract.");
+      if (productClassesHasProductSubgroupIdColumn) noGoReasons.push("product_classes must not define product_subgroup_id in current pilot contract.");
+      if (productClassesHasProductFamilyIdColumn) noGoReasons.push("product_classes must not define product_family_id in current pilot contract.");
+      if (!String(productClassesSortOrderDefault || "").trim().startsWith("0")) noGoReasons.push("product_classes.sort_order default must be 0.");
+      if (!String(productClassesIsActiveDefault || "").trim().toLowerCase().startsWith("true")) {
+        noGoReasons.push("product_classes.is_active default must be true.");
+      }
+      if (!String(productClassesCreatedAtDefault || "").toLowerCase().includes("now()")) {
+        noGoReasons.push("product_classes.created_at default must be now().");
+      }
+      pushValidation(validations, "pilot.product_classes.defaults_and_nullable", "PASS", "Defaults and nullable policies validated.");
+    } catch {
+      noGoReasons.push("Unable to validate product_classes defaults/nullable metadata.");
+      pushValidation(
+        validations,
+        "pilot.product_classes.defaults_and_nullable",
+        "FAIL",
+        "Failed to validate product_classes defaults/nullable metadata.",
+      );
+    }
+
+    try {
+      const fkRows = runSupabaseDbQuery(`
+        select pg_get_constraintdef(c.oid) as fk_def
+        from pg_constraint c
+        join pg_class t on t.oid = c.conrelid
+        join pg_namespace n on n.oid = t.relnamespace
+        where n.nspname='public'
+          and t.relname='product_classes'
+          and c.contype='f'
+      `);
+      productClassesHasFkToProductGroups = fkRows.some((r) =>
+        String(r.fk_def || "").toLowerCase().includes("product_groups"),
+      );
+      productClassesHasFkToProductSubgroups = fkRows.some((r) =>
+        String(r.fk_def || "").toLowerCase().includes("product_subgroups"),
+      );
+      productClassesHasFkToProductFamilies = fkRows.some((r) =>
+        String(r.fk_def || "").toLowerCase().includes("product_families"),
+      );
+      if (productClassesHasFkToProductGroups) {
+        noGoReasons.push("product_classes must not have FK to product_groups for 22BB-R2 assumptions.");
+      }
+      if (productClassesHasFkToProductSubgroups) {
+        noGoReasons.push("product_classes must not have FK to product_subgroups for 22BB-R2 assumptions.");
+      }
+      if (productClassesHasFkToProductFamilies) {
+        noGoReasons.push("product_classes must not have FK to product_families for 22BB-R2 assumptions.");
+      }
+      pushValidation(validations, "pilot.product_classes.no_fk_product_groups", "PASS", "No FK to product_groups detected.");
+      pushValidation(validations, "pilot.product_classes.no_fk_product_subgroups", "PASS", "No FK to product_subgroups detected.");
+      pushValidation(validations, "pilot.product_classes.no_fk_product_families", "PASS", "No FK to product_families detected.");
+    } catch {
+      noGoReasons.push("Unable to validate FK absence to product groups/subgroups/families for product_classes.");
+      pushValidation(validations, "pilot.product_classes.no_fk_product_groups", "FAIL", "Failed FK absence validation.");
+      pushValidation(validations, "pilot.product_classes.no_fk_product_subgroups", "FAIL", "Failed FK absence validation.");
+      pushValidation(validations, "pilot.product_classes.no_fk_product_families", "FAIL", "Failed FK absence validation.");
+    }
+
+    try {
+      const countRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_classes");
+      productClassesCountCurrent = Number(countRows[0]?.total_rows ?? 0);
+      pushValidation(validations, "pilot.product_classes.current_count", "PASS", "Current product_classes count collected.");
+    } catch {
+      noGoReasons.push("Unable to read current count from public.product_classes.");
+      pushValidation(validations, "pilot.product_classes.current_count", "FAIL", "Failed to read product_classes count.");
+    }
+
+    const candidateValue = EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.label;
+    try {
+      const valueRows = runSupabaseDbQuery(
+        `select count(*)::bigint as value_count from public.product_classes where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      productClassesValueCollisionCount = Number(valueRows[0]?.value_count ?? 0);
+      if (productClassesValueCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_classes.value_collision",
+          "PASS",
+          "Value exists; full idempotent payload/default match must be checked in pilot write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_classes.value_collision", "PASS", "No value collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate value collision for product_classes pilot payload.");
+      pushValidation(validations, "pilot.product_classes.value_collision", "FAIL", "Failed to validate value collision.");
+    }
+
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_classes where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      productClassesLabelCollisionCount = Number(labelRows[0]?.label_count ?? 0);
+      if (productClassesLabelCollisionCount > 0) {
+        pushValidation(
+          validations,
+          "pilot.product_classes.label_collision",
+          "PASS",
+          "Label exists; collision will be validated against value/idempotency in pilot write stage.",
+        );
+      } else {
+        pushValidation(validations, "pilot.product_classes.label_collision", "PASS", "No label collision detected.");
+      }
+    } catch {
+      noGoReasons.push("Unable to validate label collision for product_classes pilot payload.");
+      pushValidation(validations, "pilot.product_classes.label_collision", "FAIL", "Failed to validate label collision.");
+    }
+  }
+
   const preflightDecision = classifyDecision(noGoReasons, partialReasons);
   const notWritableEntities = [...new Set([...blockedEntitiesFound, ...referenceOnlyEntitiesFound])].sort();
 
@@ -1971,6 +2988,60 @@ function main() {
             realExecutionBlocked: true,
             reason: "Execution remains blocked unless beforeDecision is GO in 22AT-R2 real pilot path.",
           }
+      : activePilotEntity === "product_families"
+        ? {
+            entity: "product_families",
+            action: "insert_pilot_planned",
+            value: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.value,
+            label: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.label,
+            tenant_id: null,
+            created_by: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by,
+            defaultsExpected: {
+              sort_order: 0,
+              is_active: true,
+              created_at: "now()",
+            },
+            productGroupLink: {
+              technicallySupported: false,
+              reason: "product_families has no product_group_id column/FK in current schema",
+            },
+            productSubgroupLink: {
+              technicallySupported: false,
+              reason: "product_families has no product_subgroup_id column/FK in current schema",
+            },
+            executableIn22AZ: true,
+            realExecutionBlocked: true,
+            reason: "Execution remains blocked unless beforeDecision is GO in 22AZ-R2 real pilot path.",
+          }
+      : activePilotEntity === "product_classes"
+        ? {
+            entity: "product_classes",
+            action: "insert_pilot_planned",
+            value: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.value,
+            label: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.label,
+            tenant_id: null,
+            created_by: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by,
+            defaultsExpected: {
+              sort_order: 0,
+              is_active: true,
+              created_at: "now()",
+            },
+            productGroupLink: {
+              technicallySupported: false,
+              reason: "product_classes has no product_group_id column/FK in current schema",
+            },
+            productSubgroupLink: {
+              technicallySupported: false,
+              reason: "product_classes has no product_subgroup_id column/FK in current schema",
+            },
+            productFamilyLink: {
+              technicallySupported: false,
+              reason: "product_classes has no product_family_id column/FK in current schema",
+            },
+            executableIn22BB: true,
+            realExecutionBlocked: true,
+            reason: "Execution remains blocked unless beforeDecision is GO in 22BB-R2 real pilot path.",
+          }
       : {
           entity: "legal_entities",
           action: "upsert_pilot_planned",
@@ -1998,7 +3069,7 @@ function main() {
   }
 
   if (selectedPilotEntity && !ALLOWED_PILOT_ENTITIES.has(selectedPilotEntity)) {
-    pilotNoGoReasons.push("Pilot entity must be legal_entities, product_types, product_groups or product_subgroups.");
+    pilotNoGoReasons.push("Pilot entity must be legal_entities, product_types, product_groups, product_subgroups, product_families or product_classes.");
   }
   if (args.pilotAuthorization && args.pilotAuthorization !== expectedPilotAuthorization) {
     pilotNoGoReasons.push("Pilot authorization phrase is invalid.");
@@ -2014,7 +3085,9 @@ function main() {
     if (
       (selectedPilotEntity === "product_types" ||
         selectedPilotEntity === "product_groups" ||
-        selectedPilotEntity === "product_subgroups") &&
+        selectedPilotEntity === "product_subgroups" ||
+        selectedPilotEntity === "product_families" ||
+        selectedPilotEntity === "product_classes") &&
       (!args.pilotPayload || !pilotPayloadParsed)
     ) {
       pilotNoGoReasons.push(`Pilot mode armed for ${selectedPilotEntity} without validated --pilot-payload.`);
@@ -2070,6 +3143,18 @@ function main() {
   if (selectedPilotEntity === "product_subgroups" && productSubgroupsUniqueValuePresent !== true) {
     pilotNoGoReasons.push("product_subgroups requires UNIQUE(value) for pilot.");
   }
+  if (selectedPilotEntity === "product_families" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("product_families pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "product_families" && productFamiliesUniqueValuePresent !== true) {
+    pilotNoGoReasons.push("product_families requires UNIQUE(value) for pilot.");
+  }
+  if (selectedPilotEntity === "product_classes" && pilotPayloadValidationErrors.length > 0) {
+    pilotNoGoReasons.push("product_classes pilot payload compatibility is invalid.");
+  }
+  if (selectedPilotEntity === "product_classes" && productClassesUniqueValuePresent !== true) {
+    pilotNoGoReasons.push("product_classes requires UNIQUE(value) for pilot.");
+  }
 
   const pilotDecisionFinal = classifyDecision(pilotNoGoReasons, pilotPartialReasons);
 
@@ -2091,6 +3176,10 @@ function main() {
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_types. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22ATStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_subgroups. EXECUÇÃO AMPLIADA BLOQUEADA.";
+  const phase22AZStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_families. EXECUÇÃO AMPLIADA BLOQUEADA.";
+  const phase22BBStopAfterPilotMessage =
+    "ESCRITA PILOTO CONCLUÍDA SOMENTE EM product_classes. EXECUÇÃO AMPLIADA BLOQUEADA.";
   const phase22TStopAfterPilotMessage =
     "ESCRITA PILOTO CONCLUÍDA SOMENTE EM legal_entities. EXECUÇÃO AMPLIADA BLOQUEADA.";
 
@@ -2137,6 +3226,34 @@ function main() {
     productSubgroupsCreatedAtDefault,
     productSubgroupsHasProductGroupIdColumn,
     productSubgroupsHasFkToProductGroups,
+    productFamiliesUniqueValuePresent,
+    productFamiliesCountCurrent,
+    productFamiliesValueCollisionCount,
+    productFamiliesLabelCollisionCount,
+    productFamiliesTenantNullable,
+    productFamiliesCreatedByColumnPresent,
+    productFamiliesSortOrderDefault,
+    productFamiliesIsActiveDefault,
+    productFamiliesCreatedAtDefault,
+    productFamiliesHasProductGroupIdColumn,
+    productFamiliesHasProductSubgroupIdColumn,
+    productFamiliesHasFkToProductGroups,
+    productFamiliesHasFkToProductSubgroups,
+    productClassesUniqueValuePresent,
+    productClassesCountCurrent,
+    productClassesValueCollisionCount,
+    productClassesLabelCollisionCount,
+    productClassesTenantNullable,
+    productClassesCreatedByColumnPresent,
+    productClassesSortOrderDefault,
+    productClassesIsActiveDefault,
+    productClassesCreatedAtDefault,
+    productClassesHasProductGroupIdColumn,
+    productClassesHasProductSubgroupIdColumn,
+    productClassesHasProductFamilyIdColumn,
+    productClassesHasFkToProductGroups,
+    productClassesHasFkToProductSubgroups,
+    productClassesHasFkToProductFamilies,
     inputProvided: args.input || null,
     inputExists,
     inputParsed,
@@ -2297,6 +3414,10 @@ function main() {
         ? path.resolve("artifacts/migration/phase-22al-r2-pilot-product-groups")
       : selectedPilotEntity === "product_subgroups"
         ? path.resolve("artifacts/migration/phase-22as-r2-pilot-product-subgroups")
+      : selectedPilotEntity === "product_families"
+        ? path.resolve("artifacts/migration/phase-22az-r2-pilot-product-families-write")
+      : selectedPilotEntity === "product_classes"
+        ? path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write")
       : path.resolve("artifacts/migration/phase-22s-r2-pilot-legal-entities");
   fs.mkdirSync(pilotEvidenceDir, { recursive: true });
   const pilotEvidencePath =
@@ -2306,6 +3427,10 @@ function main() {
         ? path.join(pilotEvidenceDir, `pilot-product-groups-${nowStamp()}.json`)
       : selectedPilotEntity === "product_subgroups"
         ? path.join(pilotEvidenceDir, `pilot-product-subgroups-${nowStamp()}.json`)
+      : selectedPilotEntity === "product_families"
+        ? path.join(pilotEvidenceDir, `pilot-product-families-${nowStamp()}.json`)
+      : selectedPilotEntity === "product_classes"
+        ? path.join(pilotEvidenceDir, `pilot-product-classes-${nowStamp()}.json`)
       : path.join(pilotEvidenceDir, `pilot-legal-entities-${nowStamp()}.json`);
   const pilotEvidence = {
     phase:
@@ -2315,6 +3440,10 @@ function main() {
           ? "22AM-R2"
           : selectedPilotEntity === "product_subgroups"
             ? "22AT-R2"
+            : selectedPilotEntity === "product_families"
+              ? "22AZ-R2"
+            : selectedPilotEntity === "product_classes"
+              ? "22BB-R2"
             : "22S-R2",
     timestamp: new Date().toISOString(),
     targetRef: EXPECTED_TARGET_REF,
@@ -2330,7 +3459,9 @@ function main() {
     pilotPayloadValidated:
       selectedPilotEntity === "product_types" ||
       selectedPilotEntity === "product_groups" ||
-      selectedPilotEntity === "product_subgroups"
+      selectedPilotEntity === "product_subgroups" ||
+      selectedPilotEntity === "product_families" ||
+      selectedPilotEntity === "product_classes"
         ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0
         : null,
     pilotPlannedCount,
@@ -2368,6 +3499,60 @@ function main() {
       selectedPilotEntity === "product_subgroups" ? productSubgroupsHasProductGroupIdColumn : null,
     productSubgroupsHasFkToProductGroups:
       selectedPilotEntity === "product_subgroups" ? productSubgroupsHasFkToProductGroups : null,
+    productFamiliesCurrentCount: selectedPilotEntity === "product_families" ? productFamiliesCountCurrent : null,
+    productFamiliesValueCollisionCount:
+      selectedPilotEntity === "product_families" ? productFamiliesValueCollisionCount : null,
+    productFamiliesLabelCollisionCount:
+      selectedPilotEntity === "product_families" ? productFamiliesLabelCollisionCount : null,
+    productFamiliesUniqueValueValidated:
+      selectedPilotEntity === "product_families" ? productFamiliesUniqueValuePresent : null,
+    productFamiliesTenantNullable:
+      selectedPilotEntity === "product_families" ? productFamiliesTenantNullable : null,
+    productFamiliesCreatedByColumnPresent:
+      selectedPilotEntity === "product_families" ? productFamiliesCreatedByColumnPresent : null,
+    productFamiliesSortOrderDefault:
+      selectedPilotEntity === "product_families" ? productFamiliesSortOrderDefault : null,
+    productFamiliesIsActiveDefault:
+      selectedPilotEntity === "product_families" ? productFamiliesIsActiveDefault : null,
+    productFamiliesCreatedAtDefault:
+      selectedPilotEntity === "product_families" ? productFamiliesCreatedAtDefault : null,
+    productFamiliesHasProductGroupIdColumn:
+      selectedPilotEntity === "product_families" ? productFamiliesHasProductGroupIdColumn : null,
+    productFamiliesHasProductSubgroupIdColumn:
+      selectedPilotEntity === "product_families" ? productFamiliesHasProductSubgroupIdColumn : null,
+    productFamiliesHasFkToProductGroups:
+      selectedPilotEntity === "product_families" ? productFamiliesHasFkToProductGroups : null,
+    productFamiliesHasFkToProductSubgroups:
+      selectedPilotEntity === "product_families" ? productFamiliesHasFkToProductSubgroups : null,
+    productClassesCurrentCount: selectedPilotEntity === "product_classes" ? productClassesCountCurrent : null,
+    productClassesValueCollisionCount:
+      selectedPilotEntity === "product_classes" ? productClassesValueCollisionCount : null,
+    productClassesLabelCollisionCount:
+      selectedPilotEntity === "product_classes" ? productClassesLabelCollisionCount : null,
+    productClassesUniqueValueValidated:
+      selectedPilotEntity === "product_classes" ? productClassesUniqueValuePresent : null,
+    productClassesTenantNullable:
+      selectedPilotEntity === "product_classes" ? productClassesTenantNullable : null,
+    productClassesCreatedByColumnPresent:
+      selectedPilotEntity === "product_classes" ? productClassesCreatedByColumnPresent : null,
+    productClassesSortOrderDefault:
+      selectedPilotEntity === "product_classes" ? productClassesSortOrderDefault : null,
+    productClassesIsActiveDefault:
+      selectedPilotEntity === "product_classes" ? productClassesIsActiveDefault : null,
+    productClassesCreatedAtDefault:
+      selectedPilotEntity === "product_classes" ? productClassesCreatedAtDefault : null,
+    productClassesHasProductGroupIdColumn:
+      selectedPilotEntity === "product_classes" ? productClassesHasProductGroupIdColumn : null,
+    productClassesHasProductSubgroupIdColumn:
+      selectedPilotEntity === "product_classes" ? productClassesHasProductSubgroupIdColumn : null,
+    productClassesHasProductFamilyIdColumn:
+      selectedPilotEntity === "product_classes" ? productClassesHasProductFamilyIdColumn : null,
+    productClassesHasFkToProductGroups:
+      selectedPilotEntity === "product_classes" ? productClassesHasFkToProductGroups : null,
+    productClassesHasFkToProductSubgroups:
+      selectedPilotEntity === "product_classes" ? productClassesHasFkToProductSubgroups : null,
+    productClassesHasFkToProductFamilies:
+      selectedPilotEntity === "product_classes" ? productClassesHasFkToProductFamilies : null,
     pilotOperation,
     pilotValidation: {
       existsInWritePlanEligibleEntities: writePlanEligibleEntities.includes(activePilotEntity),
@@ -2380,10 +3565,21 @@ function main() {
       legalEntitiesWillNotBeTouchedAgain:
         selectedPilotEntity === "product_types" ||
         selectedPilotEntity === "product_groups" ||
-        selectedPilotEntity === "product_subgroups",
+        selectedPilotEntity === "product_subgroups" ||
+        selectedPilotEntity === "product_families" ||
+        selectedPilotEntity === "product_classes",
       productTypesWillNotBeTouchedAgain:
-        selectedPilotEntity === "product_groups" || selectedPilotEntity === "product_subgroups",
-      productGroupsWillNotBeTouchedAgain: selectedPilotEntity === "product_subgroups",
+        selectedPilotEntity === "product_groups" ||
+        selectedPilotEntity === "product_subgroups" ||
+        selectedPilotEntity === "product_families" ||
+        selectedPilotEntity === "product_classes",
+      productGroupsWillNotBeTouchedAgain:
+        selectedPilotEntity === "product_subgroups" ||
+        selectedPilotEntity === "product_families" ||
+        selectedPilotEntity === "product_classes",
+      productSubgroupsWillNotBeTouchedAgain:
+        selectedPilotEntity === "product_families" || selectedPilotEntity === "product_classes",
+      productFamiliesWillNotBeTouchedAgain: selectedPilotEntity === "product_classes",
       salesRepsBlocked: true,
       profilesExcluded: !executableEntitiesRoundOne22Q.includes("profiles"),
       companyContactsExcluded: !executableEntitiesRoundOne22Q.includes("company_contacts"),
@@ -2408,7 +3604,10 @@ function main() {
       partialReasons: pilotPartialReasons,
     },
     hardStopTriggered:
-      selectedPilotEntity === "product_groups" || selectedPilotEntity === "product_subgroups"
+      selectedPilotEntity === "product_groups" ||
+      selectedPilotEntity === "product_subgroups" ||
+      selectedPilotEntity === "product_families" ||
+      selectedPilotEntity === "product_classes"
         ? Boolean(args.executePilotWrite && args.write)
         : false,
     finalHardStopMessage:
@@ -2418,6 +3617,10 @@ function main() {
           ? phase22AMStopAfterPilotMessage
         : selectedPilotEntity === "product_subgroups"
           ? phase22ATStopAfterPilotMessage
+        : selectedPilotEntity === "product_families"
+          ? phase22AZStopAfterPilotMessage
+        : selectedPilotEntity === "product_classes"
+          ? phase22BBStopAfterPilotMessage
         : phase22SHardStopMessage,
   };
   fs.writeFileSync(pilotEvidencePath, JSON.stringify(pilotEvidence, null, 2), "utf8");
@@ -2430,6 +3633,10 @@ function main() {
   fs.mkdirSync(phase22AMDir, { recursive: true });
   const phase22ATDir = path.resolve("artifacts/migration/phase-22at-r2-pilot-product-subgroups-write");
   fs.mkdirSync(phase22ATDir, { recursive: true });
+  const phase22AZDir = path.resolve("artifacts/migration/phase-22az-r2-pilot-product-families-write");
+  fs.mkdirSync(phase22AZDir, { recursive: true });
+  const phase22BBDir = path.resolve("artifacts/migration/phase-22bb-r2-pilot-product-classes-write");
+  fs.mkdirSync(phase22BBDir, { recursive: true });
   let pilotWriteBeforePath = "not_generated";
   let pilotWriteAfterPath = "not_generated";
   let pilotWriteBeforeDecision = "GO";
@@ -2442,6 +3649,8 @@ function main() {
   const productTypesPilotMode = selectedPilotEntity === "product_types";
   const productGroupsPilotMode = selectedPilotEntity === "product_groups";
   const productSubgroupsPilotMode = selectedPilotEntity === "product_subgroups";
+  const productFamiliesPilotMode = selectedPilotEntity === "product_families";
+  const productClassesPilotMode = selectedPilotEntity === "product_classes";
 
   if (productTypesPilotMode) {
     pilotWriteBeforePath = path.join(phase22AFDir, `before-${nowStamp()}.json`);
@@ -3097,6 +4306,583 @@ function main() {
       finalMessage: phase22ATStopAfterPilotMessage,
     };
     fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22AT, null, 2), "utf8");
+  } else if (productFamiliesPilotMode) {
+    pilotWriteBeforePath = path.join(phase22AZDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22AZDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
+
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_PRODUCT_FAMILIES_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueValueValidated = productFamiliesUniqueValuePresent === true;
+    const candidateValue = EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.label;
+
+    let countBefore = null;
+    let existingByValue = [];
+    let labelCountBefore = null;
+    let lookupByLabel = [];
+    try {
+      const beforeRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_families");
+      countBefore = Number(beforeRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read product_families count before write.");
+    }
+    try {
+      existingByValue = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_families where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_families by value before write.");
+    }
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_families where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      labelCountBefore = Number(labelRows[0]?.label_count || 0);
+      lookupByLabel = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_families where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_families by label before write.");
+    }
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for product_families pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for product_families pilot real execution.");
+    if (activePilotEntity !== "product_families") beforeNoGoReasons.push("Pilot entity must be product_families.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueValueValidated) beforeNoGoReasons.push("UNIQUE(value) is not validated for product_families.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if (existingByValue.length > 1) beforeNoGoReasons.push("More than one row found for product_families.value.");
+    if (existingByValue.length === 0 && (labelCountBefore ?? 0) > 0) {
+      beforeNoGoReasons.push("Label collision found without matching value for product_families pilot payload.");
+    }
+    if (executableEntitiesRoundOne22Q.includes("profiles")) beforeNoGoReasons.push("profiles must remain excluded.");
+    if (executableEntitiesRoundOne22Q.includes("company_contacts")) beforeNoGoReasons.push("company_contacts must remain excluded.");
+    if (productFamiliesTenantNullable !== true) beforeNoGoReasons.push("product_families.tenant_id must remain nullable.");
+    if (productFamiliesCreatedByColumnPresent) beforeNoGoReasons.push("product_families must not define created_by in current pilot contract.");
+    if (!String(productFamiliesSortOrderDefault || "").trim().startsWith(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.sort_order_default)) {
+      beforeNoGoReasons.push("product_families.sort_order default must be 0.");
+    }
+    if (
+      !String(productFamiliesIsActiveDefault || "")
+        .trim()
+        .toLowerCase()
+        .startsWith(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.is_active_default)
+    ) {
+      beforeNoGoReasons.push("product_families.is_active default must be true.");
+    }
+    if (!String(productFamiliesCreatedAtDefault || "").toLowerCase().includes(EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_at_default)) {
+      beforeNoGoReasons.push("product_families.created_at default must be now().");
+    }
+    if (productFamiliesHasProductGroupIdColumn) {
+      beforeNoGoReasons.push("product_families must not define product_group_id in current pilot contract.");
+    }
+    if (productFamiliesHasProductSubgroupIdColumn) {
+      beforeNoGoReasons.push("product_families must not define product_subgroup_id in current pilot contract.");
+    }
+    if (productFamiliesHasFkToProductGroups) {
+      beforeNoGoReasons.push("product_families must not have FK to product_groups.");
+    }
+    if (productFamiliesHasFkToProductSubgroups) {
+      beforeNoGoReasons.push("product_families must not have FK to product_subgroups.");
+    }
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22AZ = {
+      phase: "22AZ-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "product_families",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: {
+        value: candidateValue,
+        label: candidateLabel,
+        tenant_id: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.tenant_id,
+        created_by: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by,
+        temp_key: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.temp_key,
+      },
+      productFamiliesCountBefore: countBefore,
+      lookupByValue: existingByValue,
+      lookupByLabel,
+      lookupByLabelCount: labelCountBefore,
+      uniqueValueValidated,
+      tenantNullableValidated: productFamiliesTenantNullable === true,
+      createdByNotApplicable: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by,
+      createdByColumnAbsent: !productFamiliesCreatedByColumnPresent,
+      defaultsValidated: {
+        sort_order: productFamiliesSortOrderDefault,
+        is_active: productFamiliesIsActiveDefault,
+        created_at: productFamiliesCreatedAtDefault,
+      },
+      noTechnicalLinkToProductGroups: {
+        product_group_id_column_absent: !productFamiliesHasProductGroupIdColumn,
+        fk_to_product_groups_absent: !productFamiliesHasFkToProductGroups,
+      },
+      noTechnicalLinkToProductSubgroups: {
+        product_subgroup_id_column_absent: !productFamiliesHasProductSubgroupIdColumn,
+        fk_to_product_subgroups_absent: !productFamiliesHasFkToProductSubgroups,
+      },
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22AZ, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeProductFamiliesPilotWrite({
+          pilotEntity: selectedPilotEntity,
+          pilotAuthorization: args.pilotAuthorization,
+          value: candidateValue,
+          label: candidateLabel,
+          tenant_id: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.tenant_id,
+          created_by: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.created_by,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          inserted: false,
+        };
+      }
+    }
+
+    let countAfter = null;
+    let rowsByValueAfter = [];
+    let duplicateByValueCount = null;
+    try {
+      const afterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_families");
+      countAfter = Number(afterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      rowsByValueAfter = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_families where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {}
+    try {
+      const dupRows = runSupabaseDbQuery(
+        `select count(*)::bigint as duplicate_count from public.product_families where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      duplicateByValueCount = Number(dupRows[0]?.duplicate_count || 0);
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = rowsByValueAfter[0] || writeResult.record || null;
+    pilotWriteDelta = countAfter !== null && countBefore !== null ? countAfter - countBefore : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (!rowsByValueAfter.length) afterNoGoReasons.push("No row found by pilot value after execution.");
+    if ((duplicateByValueCount ?? 0) !== 1) afterNoGoReasons.push("Expected exactly one row for pilot value after execution.");
+    if (rowsByValueAfter.length === 1) {
+      const row = rowsByValueAfter[0];
+      if (row.value !== candidateValue) afterNoGoReasons.push("After value mismatch.");
+      if (row.label !== candidateLabel) afterNoGoReasons.push("After label mismatch.");
+      if (row.tenant_id !== null) afterNoGoReasons.push("After tenant_id must be null.");
+      if (Number(row.sort_order) !== 0) afterNoGoReasons.push("After sort_order default mismatch.");
+      if (row.is_active !== true) afterNoGoReasons.push("After is_active default mismatch.");
+      if (typeof row.created_at !== "string" || row.created_at.length === 0) {
+        afterNoGoReasons.push("After created_at default mismatch.");
+      }
+    }
+    if (productFamiliesHasProductGroupIdColumn) {
+      afterNoGoReasons.push("product_families must not define product_group_id in current pilot contract.");
+    }
+    if (productFamiliesHasProductSubgroupIdColumn) {
+      afterNoGoReasons.push("product_families must not define product_subgroup_id in current pilot contract.");
+    }
+    if (productFamiliesHasFkToProductGroups) {
+      afterNoGoReasons.push("product_families must not have FK to product_groups.");
+    }
+    if (productFamiliesHasFkToProductSubgroups) {
+      afterNoGoReasons.push("product_families must not have FK to product_subgroups.");
+    }
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+
+    const afterEvidence22AZ = {
+      phase: "22AZ-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      productFamiliesCountAfter: countAfter,
+      delta: pilotWriteDelta,
+      recordByValue: rowsByValueAfter,
+      recordId: rowsByValueAfter[0]?.id || null,
+      value: candidateValue,
+      label: candidateLabel,
+      tenant_id: EXPECTED_PRODUCT_FAMILIES_PILOT_PAYLOAD.tenant_id,
+      sort_order: rowsByValueAfter[0]?.sort_order ?? null,
+      is_active: rowsByValueAfter[0]?.is_active ?? null,
+      created_at: rowsByValueAfter[0]?.created_at ?? null,
+      defaultsApplied: {
+        sort_order: Number(rowsByValueAfter[0]?.sort_order) === 0,
+        is_active: rowsByValueAfter[0]?.is_active === true,
+        created_at: typeof rowsByValueAfter[0]?.created_at === "string" && rowsByValueAfter[0]?.created_at.length > 0,
+      },
+      noTechnicalLinkToProductGroups: {
+        product_group_id_column_absent: !productFamiliesHasProductGroupIdColumn,
+        fk_to_product_groups_absent: !productFamiliesHasFkToProductGroups,
+      },
+      noTechnicalLinkToProductSubgroups: {
+        product_subgroup_id_column_absent: !productFamiliesHasProductSubgroupIdColumn,
+        fk_to_product_subgroups_absent: !productFamiliesHasFkToProductSubgroups,
+      },
+      uniqueValueDuplicateCount: duplicateByValueCount,
+      scopeConfirmation: {
+        singleEntityExecution: true,
+        touchedEntity: "product_families",
+        legalEntitiesTouchedAgain: false,
+        productTypesTouchedAgain: false,
+        productGroupsTouchedAgain: false,
+        productSubgroupsTouchedAgain: false,
+        salesRepsTouched: false,
+        profilesTouched: false,
+        companyContactsTouched: false,
+        transactionalTouched: false,
+        queueTouched: false,
+        externalIntegrationsCalled: false,
+        expandedExecutionBlocked: true,
+        noOtherEntityTouched: true,
+      },
+      executionExpandedBlocked: true,
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22AZStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22AZ, null, 2), "utf8");
+  } else if (productClassesPilotMode) {
+    pilotWriteBeforePath = path.join(phase22BBDir, `before-${nowStamp()}.json`);
+    pilotWriteAfterPath = path.join(phase22BBDir, `after-${nowStamp()}.json`);
+    const beforeNoGoReasons = [];
+    const beforePartialReasons = [];
+
+    const generalAuthorizationValid = args.authorization === EXPECTED_AUTHORIZATION;
+    const pilotAuthorizationValid = args.pilotAuthorization === EXPECTED_PRODUCT_CLASSES_PILOT_AUTHORIZATION;
+    const payloadValidated = pilotPayloadParsed && pilotPayloadValidationErrors.length === 0;
+    const uniqueValueValidated = productClassesUniqueValuePresent === true;
+    const candidateValue = EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.value;
+    const candidateLabel = EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.label;
+
+    let countBefore = null;
+    let existingByValue = [];
+    let labelCountBefore = null;
+    let lookupByLabel = [];
+    try {
+      const beforeRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_classes");
+      countBefore = Number(beforeRows[0]?.total_rows || 0);
+    } catch {
+      beforeNoGoReasons.push("Unable to read product_classes count before write.");
+    }
+    try {
+      existingByValue = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_classes where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_classes by value before write.");
+    }
+    try {
+      const labelRows = runSupabaseDbQuery(
+        `select count(*)::bigint as label_count from public.product_classes where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+      labelCountBefore = Number(labelRows[0]?.label_count || 0);
+      lookupByLabel = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_classes where label = '${escapeSqlLiteral(candidateLabel)}'`,
+      );
+    } catch {
+      beforeNoGoReasons.push("Unable to lookup product_classes by label before write.");
+    }
+
+    if (!args.write) beforeNoGoReasons.push("--write is required for product_classes pilot real execution.");
+    if (!args.executePilotWrite) beforeNoGoReasons.push("--execute-pilot-write is required for product_classes pilot real execution.");
+    if (activePilotEntity !== "product_classes") beforeNoGoReasons.push("Pilot entity must be product_classes.");
+    if (!generalAuthorizationValid) beforeNoGoReasons.push("General authorization is invalid.");
+    if (!pilotAuthorizationValid) beforeNoGoReasons.push("Pilot authorization is invalid.");
+    if (!payloadValidated) beforeNoGoReasons.push("Pilot payload is not validated.");
+    if (!uniqueValueValidated) beforeNoGoReasons.push("UNIQUE(value) is not validated for product_classes.");
+    if (args.expectedTarget !== EXPECTED_TARGET_REF || localTargetRef !== EXPECTED_TARGET_REF) {
+      beforeNoGoReasons.push("Target ref mismatch.");
+    }
+    if (localTargetName !== EXPECTED_TARGET_NAME) beforeNoGoReasons.push("Target name mismatch.");
+    if (args.batch !== EXPECTED_BATCH_ID) beforeNoGoReasons.push("Batch mismatch.");
+    if (pilotDecisionFinal !== "GO") beforeNoGoReasons.push("pilot_validation_decision is not GO.");
+    if (blockedEntitiesFound.length > 0) beforeNoGoReasons.push("Blocked entities detected.");
+    if (args.forbiddenFlags.length > 0 || args.unknownFlags.length > 0) beforeNoGoReasons.push("Forbidden/unknown flags detected.");
+    if (existingByValue.length > 1) beforeNoGoReasons.push("More than one row found for product_classes.value.");
+    if (existingByValue.length === 0 && (labelCountBefore ?? 0) > 0) {
+      beforeNoGoReasons.push("Label collision found without matching value for product_classes pilot payload.");
+    }
+    if (executableEntitiesRoundOne22Q.includes("profiles")) beforeNoGoReasons.push("profiles must remain excluded.");
+    if (executableEntitiesRoundOne22Q.includes("company_contacts")) beforeNoGoReasons.push("company_contacts must remain excluded.");
+    if (productClassesTenantNullable !== true) beforeNoGoReasons.push("product_classes.tenant_id must remain nullable.");
+    if (productClassesCreatedByColumnPresent) beforeNoGoReasons.push("product_classes must not define created_by in current pilot contract.");
+    if (!String(productClassesSortOrderDefault || "").trim().startsWith(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.sort_order_default)) {
+      beforeNoGoReasons.push("product_classes.sort_order default must be 0.");
+    }
+    if (
+      !String(productClassesIsActiveDefault || "")
+        .trim()
+        .toLowerCase()
+        .startsWith(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.is_active_default)
+    ) {
+      beforeNoGoReasons.push("product_classes.is_active default must be true.");
+    }
+    if (!String(productClassesCreatedAtDefault || "").toLowerCase().includes(EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_at_default)) {
+      beforeNoGoReasons.push("product_classes.created_at default must be now().");
+    }
+    if (productClassesHasProductGroupIdColumn) {
+      beforeNoGoReasons.push("product_classes must not define product_group_id in current pilot contract.");
+    }
+    if (productClassesHasProductSubgroupIdColumn) {
+      beforeNoGoReasons.push("product_classes must not define product_subgroup_id in current pilot contract.");
+    }
+    if (productClassesHasProductFamilyIdColumn) {
+      beforeNoGoReasons.push("product_classes must not define product_family_id in current pilot contract.");
+    }
+    if (productClassesHasFkToProductGroups) {
+      beforeNoGoReasons.push("product_classes must not have FK to product_groups.");
+    }
+    if (productClassesHasFkToProductSubgroups) {
+      beforeNoGoReasons.push("product_classes must not have FK to product_subgroups.");
+    }
+    if (productClassesHasFkToProductFamilies) {
+      beforeNoGoReasons.push("product_classes must not have FK to product_families.");
+    }
+
+    pilotWriteBeforeDecision = classifyDecision(beforeNoGoReasons, beforePartialReasons);
+    const beforeEvidence22BB = {
+      phase: "22BB-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      generalAuthorizationValid,
+      pilotAuthorizationValid,
+      pilotEntity: "product_classes",
+      pilotPayloadPath: args.pilotPayload || null,
+      payloadUsed: {
+        value: candidateValue,
+        label: candidateLabel,
+        tenant_id: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.tenant_id,
+        created_by: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by,
+        temp_key: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.temp_key,
+      },
+      productClassesCountBefore: countBefore,
+      lookupByValue: existingByValue,
+      lookupByLabel,
+      lookupByLabelCount: labelCountBefore,
+      uniqueValueValidated,
+      tenantNullableValidated: productClassesTenantNullable === true,
+      createdByNotApplicable: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by,
+      createdByColumnAbsent: !productClassesCreatedByColumnPresent,
+      defaultsValidated: {
+        sort_order: productClassesSortOrderDefault,
+        is_active: productClassesIsActiveDefault,
+        created_at: productClassesCreatedAtDefault,
+      },
+      noTechnicalLinkToProductGroups: {
+        product_group_id_column_absent: !productClassesHasProductGroupIdColumn,
+        fk_to_product_groups_absent: !productClassesHasFkToProductGroups,
+      },
+      noTechnicalLinkToProductSubgroups: {
+        product_subgroup_id_column_absent: !productClassesHasProductSubgroupIdColumn,
+        fk_to_product_subgroups_absent: !productClassesHasFkToProductSubgroups,
+      },
+      noTechnicalLinkToProductFamilies: {
+        product_family_id_column_absent: !productClassesHasProductFamilyIdColumn,
+        fk_to_product_families_absent: !productClassesHasFkToProductFamilies,
+      },
+      beforeDecision: pilotWriteBeforeDecision,
+      reasons: {
+        noGoReasons: beforeNoGoReasons,
+        partialReasons: beforePartialReasons,
+      },
+    };
+    fs.writeFileSync(pilotWriteBeforePath, JSON.stringify(beforeEvidence22BB, null, 2), "utf8");
+
+    let writeResult = { operation: "aborted", record: null, inserted: false };
+    if (pilotWriteBeforeDecision === "GO") {
+      try {
+        writeResult = executeProductClassesPilotWrite({
+          pilotEntity: selectedPilotEntity,
+          pilotAuthorization: args.pilotAuthorization,
+          value: candidateValue,
+          label: candidateLabel,
+          tenant_id: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.tenant_id,
+          created_by: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.created_by,
+          expectedTargetRef: args.expectedTarget,
+          expectedTargetName: localTargetName,
+          batchId: args.batch,
+          localTargetRef,
+          localTargetName,
+        });
+      } catch (error) {
+        writeResult = {
+          operation: "aborted",
+          record: { error: error instanceof Error ? error.message : String(error) },
+          inserted: false,
+        };
+      }
+    }
+
+    let countAfter = null;
+    let rowsByValueAfter = [];
+    let duplicateByValueCount = null;
+    try {
+      const afterRows = runSupabaseDbQuery("select count(*)::bigint as total_rows from public.product_classes");
+      countAfter = Number(afterRows[0]?.total_rows || 0);
+    } catch {}
+    try {
+      rowsByValueAfter = runSupabaseDbQuery(
+        `select id, value, label, tenant_id, sort_order, is_active, created_at::text as created_at from public.product_classes where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+    } catch {}
+    try {
+      const dupRows = runSupabaseDbQuery(
+        `select count(*)::bigint as duplicate_count from public.product_classes where value = '${escapeSqlLiteral(candidateValue)}'`,
+      );
+      duplicateByValueCount = Number(dupRows[0]?.duplicate_count || 0);
+    } catch {}
+
+    pilotWriteOperation = writeResult.operation;
+    pilotWriteRecord = rowsByValueAfter[0] || writeResult.record || null;
+    pilotWriteDelta = countAfter !== null && countBefore !== null ? countAfter - countBefore : null;
+    recordsAffected = writeResult.record ? [writeResult.record] : [];
+
+    const afterNoGoReasons = [];
+    const afterPartialReasons = [];
+    if (pilotWriteBeforeDecision !== "GO") afterNoGoReasons.push("beforeDecision is not GO.");
+    if (writeResult.operation === "aborted") afterNoGoReasons.push("Pilot operation aborted.");
+    if (!["inserted", "idempotent_noop"].includes(writeResult.operation)) afterNoGoReasons.push("Unexpected pilot operation result.");
+    if (writeResult.operation === "inserted" && pilotWriteDelta !== 1) afterNoGoReasons.push("Delta must be 1 for inserted operation.");
+    if (writeResult.operation === "idempotent_noop" && pilotWriteDelta !== 0) afterNoGoReasons.push("Delta must be 0 for idempotent_noop.");
+    if (!rowsByValueAfter.length) afterNoGoReasons.push("No row found by pilot value after execution.");
+    if ((duplicateByValueCount ?? 0) !== 1) afterNoGoReasons.push("Expected exactly one row for pilot value after execution.");
+    if (rowsByValueAfter.length === 1) {
+      const row = rowsByValueAfter[0];
+      if (row.value !== candidateValue) afterNoGoReasons.push("After value mismatch.");
+      if (row.label !== candidateLabel) afterNoGoReasons.push("After label mismatch.");
+      if (row.tenant_id !== null) afterNoGoReasons.push("After tenant_id must be null.");
+      if (Number(row.sort_order) !== 0) afterNoGoReasons.push("After sort_order default mismatch.");
+      if (row.is_active !== true) afterNoGoReasons.push("After is_active default mismatch.");
+      if (typeof row.created_at !== "string" || row.created_at.length === 0) {
+        afterNoGoReasons.push("After created_at default mismatch.");
+      }
+    }
+    if (productClassesHasProductGroupIdColumn) {
+      afterNoGoReasons.push("product_classes must not define product_group_id in current pilot contract.");
+    }
+    if (productClassesHasProductSubgroupIdColumn) {
+      afterNoGoReasons.push("product_classes must not define product_subgroup_id in current pilot contract.");
+    }
+    if (productClassesHasProductFamilyIdColumn) {
+      afterNoGoReasons.push("product_classes must not define product_family_id in current pilot contract.");
+    }
+    if (productClassesHasFkToProductGroups) {
+      afterNoGoReasons.push("product_classes must not have FK to product_groups.");
+    }
+    if (productClassesHasFkToProductSubgroups) {
+      afterNoGoReasons.push("product_classes must not have FK to product_subgroups.");
+    }
+    if (productClassesHasFkToProductFamilies) {
+      afterNoGoReasons.push("product_classes must not have FK to product_families.");
+    }
+    pilotWriteAfterDecision = classifyDecision(afterNoGoReasons, afterPartialReasons);
+
+    const afterEvidence22BB = {
+      phase: "22BB-R2",
+      timestamp: new Date().toISOString(),
+      targetRef: EXPECTED_TARGET_REF,
+      targetName: EXPECTED_TARGET_NAME,
+      batchId: EXPECTED_BATCH_ID,
+      operationExecuted: writeResult.operation,
+      productClassesCountAfter: countAfter,
+      delta: pilotWriteDelta,
+      recordByValue: rowsByValueAfter,
+      recordId: rowsByValueAfter[0]?.id || null,
+      value: candidateValue,
+      label: candidateLabel,
+      tenant_id: EXPECTED_PRODUCT_CLASSES_PILOT_PAYLOAD.tenant_id,
+      sort_order: rowsByValueAfter[0]?.sort_order ?? null,
+      is_active: rowsByValueAfter[0]?.is_active ?? null,
+      created_at: rowsByValueAfter[0]?.created_at ?? null,
+      defaultsApplied: {
+        sort_order: Number(rowsByValueAfter[0]?.sort_order) === 0,
+        is_active: rowsByValueAfter[0]?.is_active === true,
+        created_at: typeof rowsByValueAfter[0]?.created_at === "string" && rowsByValueAfter[0]?.created_at.length > 0,
+      },
+      noTechnicalLinkToProductGroups: {
+        product_group_id_column_absent: !productClassesHasProductGroupIdColumn,
+        fk_to_product_groups_absent: !productClassesHasFkToProductGroups,
+      },
+      noTechnicalLinkToProductSubgroups: {
+        product_subgroup_id_column_absent: !productClassesHasProductSubgroupIdColumn,
+        fk_to_product_subgroups_absent: !productClassesHasFkToProductSubgroups,
+      },
+      noTechnicalLinkToProductFamilies: {
+        product_family_id_column_absent: !productClassesHasProductFamilyIdColumn,
+        fk_to_product_families_absent: !productClassesHasFkToProductFamilies,
+      },
+      uniqueValueDuplicateCount: duplicateByValueCount,
+      scopeConfirmation: {
+        singleEntityExecution: true,
+        touchedEntity: "product_classes",
+        legalEntitiesTouchedAgain: false,
+        productTypesTouchedAgain: false,
+        productGroupsTouchedAgain: false,
+        productSubgroupsTouchedAgain: false,
+        productFamiliesTouchedAgain: false,
+        salesRepsTouched: false,
+        profilesTouched: false,
+        companyContactsTouched: false,
+        transactionalTouched: false,
+        queueTouched: false,
+        externalIntegrationsCalled: false,
+        expandedExecutionBlocked: true,
+        noOtherEntityTouched: true,
+      },
+      executionExpandedBlocked: true,
+      afterDecision: pilotWriteAfterDecision,
+      reasons: {
+        noGoReasons: afterNoGoReasons,
+        partialReasons: afterPartialReasons,
+      },
+      finalMessage: phase22BBStopAfterPilotMessage,
+    };
+    fs.writeFileSync(pilotWriteAfterPath, JSON.stringify(afterEvidence22BB, null, 2), "utf8");
   } else if (legalPilotMode) {
     pilotWriteBeforePath = path.join(phase22TDir, `before-${nowStamp()}.json`);
     pilotWriteAfterPath = path.join(phase22TDir, `after-${nowStamp()}.json`);
@@ -3118,7 +4904,9 @@ function main() {
     `pilot_payload_validated=${
       selectedPilotEntity === "product_types" ||
       selectedPilotEntity === "product_groups" ||
-      selectedPilotEntity === "product_subgroups"
+      selectedPilotEntity === "product_subgroups" ||
+      selectedPilotEntity === "product_families" ||
+      selectedPilotEntity === "product_classes"
         ? pilotPayloadParsed && pilotPayloadValidationErrors.length === 0
         : "not_applicable"
     }`,
@@ -3141,6 +4929,10 @@ function main() {
         ? phase22AMStopAfterPilotMessage
       : selectedPilotEntity === "product_subgroups"
         ? phase22ATStopAfterPilotMessage
+      : selectedPilotEntity === "product_families"
+        ? phase22AZStopAfterPilotMessage
+      : selectedPilotEntity === "product_classes"
+        ? phase22BBStopAfterPilotMessage
       : phase22SHardStopMessage,
   );
   console.log(
@@ -3150,6 +4942,10 @@ function main() {
         ? phase22AMStopAfterPilotMessage
       : selectedPilotEntity === "product_subgroups"
         ? phase22ATStopAfterPilotMessage
+      : selectedPilotEntity === "product_families"
+        ? phase22AZStopAfterPilotMessage
+      : selectedPilotEntity === "product_classes"
+        ? phase22BBStopAfterPilotMessage
       : phase22TStopAfterPilotMessage,
   );
   console.log(writeStatusMessage);

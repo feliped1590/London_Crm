@@ -1,0 +1,189 @@
+{
+  "phase": "22AX-R2",
+  "timestamp": "2026-06-27T20:20:28-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "inputEvidence": {
+    "baselineDryRun": "artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json",
+    "writePlan": "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-192122.json",
+    "sourceSimulation": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs#BASELINE_SIMULATION.product_families[0]"
+  },
+  "payloadFound": {
+    "temp_key": "TMP-22F-R2-PRODFAMILY-01",
+    "code": "TMP-PF-001",
+    "name": "TMP Product Family",
+    "mapped": {
+      "value": "TMP-PF-001",
+      "label": "TMP Product Family"
+    },
+    "additionalDependencyFieldsInPayload": {
+      "product_group_id": false,
+      "product_subgroup_id": false,
+      "group_value": false,
+      "subgroup_value": false,
+      "parent_id": false,
+      "tenant_id": false,
+      "created_by": false
+    }
+  },
+  "planningPresence": {
+    "presentInBaselineEntities": true,
+    "plannedCount": 1,
+    "presentInWritePlanEligibleEntities": true,
+    "presentInPlannedWriteOrder": true
+  },
+  "schemaSummary": {
+    "table": "public.product_families",
+    "columns": [
+      {
+        "column_name": "id",
+        "data_type": "uuid",
+        "is_nullable": false,
+        "default": "gen_random_uuid()"
+      },
+      {
+        "column_name": "value",
+        "data_type": "text",
+        "is_nullable": false,
+        "default": null
+      },
+      {
+        "column_name": "label",
+        "data_type": "text",
+        "is_nullable": false,
+        "default": null
+      },
+      {
+        "column_name": "sort_order",
+        "data_type": "integer",
+        "is_nullable": false,
+        "default": "0"
+      },
+      {
+        "column_name": "is_active",
+        "data_type": "boolean",
+        "is_nullable": false,
+        "default": "true"
+      },
+      {
+        "column_name": "created_at",
+        "data_type": "timestamp with time zone",
+        "is_nullable": false,
+        "default": "now()"
+      },
+      {
+        "column_name": "tenant_id",
+        "data_type": "uuid",
+        "is_nullable": true,
+        "default": null
+      }
+    ],
+    "requiredWithoutDefault": [
+      "value",
+      "label"
+    ],
+    "requiredWithDefault": [
+      "id",
+      "sort_order",
+      "is_active",
+      "created_at"
+    ],
+    "tenantPolicyFeasible": true,
+    "createdByColumnPresent": false
+  },
+  "constraintsAndIndexes": {
+    "constraints": [
+      {
+        "name": "product_families_pkey",
+        "type": "PRIMARY_KEY",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "name": "product_families_value_key",
+        "type": "UNIQUE",
+        "definition": "UNIQUE (value)"
+      },
+      {
+        "name": "product_families_tenant_id_fkey",
+        "type": "FOREIGN_KEY",
+        "definition": "FOREIGN KEY (tenant_id) REFERENCES tenants(id)"
+      }
+    ],
+    "indexes": [
+      "product_families_pkey",
+      "product_families_value_key"
+    ],
+    "uniqueValuePresent": true
+  },
+  "dependencyEvaluation": {
+    "has_product_group_id_column": false,
+    "has_product_subgroup_id_column": false,
+    "has_group_value_column": false,
+    "has_subgroup_value_column": false,
+    "has_parent_id_column": false,
+    "fk_to_product_groups": 0,
+    "fk_to_product_subgroups": 0,
+    "mandatory_fk_to_group_or_subgroup": false,
+    "productGroupPilotCardinalityByValue_TMP_PG_001": 1,
+    "productSubgroupPilotCardinalityByValue_TMP_PSG_001": 1,
+    "futureLookupRuleNeeded": false
+  },
+  "collisionChecks": {
+    "currentTotalRows": 6,
+    "candidateValueCount": 0,
+    "candidateLabelCount": 0,
+    "maxDuplicateByValue": 1,
+    "maxDuplicateByTenantValue": 1,
+    "hasCandidateCollision": false
+  },
+  "idempotencyProposal": {
+    "naturalKey": "value",
+    "expectedBehavior": [
+      "If value does not exist, allow controlled insert in a future pilot phase.",
+      "If value exists and fields match payload/default policy, treat as idempotent_noop.",
+      "If value exists with divergent fields, abort as NO-GO.",
+      "No automatic overwrite/delete/cleanup."
+    ],
+    "isPlausible": true
+  },
+  "proposedPolicies": {
+    "tenant_id": {
+      "policy": "null_scope",
+      "value": null,
+      "justification": "Column exists and is nullable; aligned with prior auxiliary product pilots."
+    },
+    "created_by": {
+      "policy": "not_applicable_column_absent",
+      "value": null,
+      "justification": "public.product_families does not contain created_by."
+    }
+  },
+  "decision": "GO",
+  "decisionReasons": [
+    "Payload is line-by-line strong and traceable from BASELINE_SIMULATION.product_families[0].",
+    "Schema supports future isolated write with required fields clear (value, label).",
+    "No FK dependency to product_groups/product_subgroups is present or mandatory.",
+    "UNIQUE(value) exists, enabling deterministic idempotency by natural key.",
+    "No current collision for candidate value/label (TMP-PF-001 / TMP Product Family).",
+    "No write was executed and executor remained unchanged in this phase."
+  ],
+  "residualRisks": [
+    "Business semantics could later require explicit hierarchy links not present in current schema.",
+    "Future pilot still needs frozen payload artifact and dedicated human authorization gate."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

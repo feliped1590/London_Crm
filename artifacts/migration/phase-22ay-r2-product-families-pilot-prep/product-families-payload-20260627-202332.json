@@ -1,0 +1,212 @@
+{
+  "phase": "22AY-R2",
+  "timestamp": "2026-06-27T20:23:32-03:00",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "payloadOrigin": {
+    "primarySource": "scripts/migration/phase-22g-r2-baseline-dry-run.mjs",
+    "section": "BASELINE_SIMULATION.product_families[0]",
+    "supportingEvidence": [
+      "docs/migration/phase-22ax-r2-product-families-gate.md",
+      "artifacts/migration/phase-22ax-r2-product-families-gate/product-families-gate-20260627-202028.json",
+      "artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-192122.json"
+    ],
+    "rawSourceRecord": {
+      "temp_key": "TMP-22F-R2-PRODFAMILY-01",
+      "code": "TMP-PF-001",
+      "name": "TMP Product Family"
+    }
+  },
+  "mappingRules": {
+    "value": "code (direct mapping, no transformation)",
+    "label": "name (direct mapping, no transformation)"
+  },
+  "frozenPayload": {
+    "entity": "product_families",
+    "source": "baseline_simulation_22g_r2",
+    "records": [
+      {
+        "temp_key": "TMP-22F-R2-PRODFAMILY-01",
+        "value": "TMP-PF-001",
+        "label": "TMP Product Family",
+        "tenant_id": null,
+        "created_by": "not_applicable"
+      }
+    ],
+    "omittedFieldsByPolicy": [
+      "sort_order (expect DB default 0)",
+      "is_active (expect DB default true)",
+      "created_at (expect DB default now())"
+    ]
+  },
+  "tenantPolicy": {
+    "mode": "global_null_scope",
+    "tenant_id": null,
+    "decision": "GO",
+    "rationale": [
+      "Source payload does not carry tenant_id.",
+      "product_families.tenant_id is nullable.",
+      "UNIQUE(value) is global and enables deterministic idempotency by value.",
+      "No current collision for TMP-PF-001.",
+      "Aligned with prior auxiliary pilots: product_types, product_groups, product_subgroups."
+    ]
+  },
+  "createdByPolicy": {
+    "mode": "not_applicable",
+    "created_by": "not_applicable",
+    "decision": "GO",
+    "rationale": [
+      "public.product_families does not contain created_by.",
+      "No user lookup or identity binding is required for this entity."
+    ]
+  },
+  "defaultsPolicy": {
+    "sort_order": {
+      "nullable": false,
+      "default": "0",
+      "omitInPilotPayload": true,
+      "status": "GO"
+    },
+    "is_active": {
+      "nullable": false,
+      "default": "true",
+      "omitInPilotPayload": true,
+      "status": "GO"
+    },
+    "created_at": {
+      "nullable": false,
+      "default": "now()",
+      "omitInPilotPayload": true,
+      "status": "GO"
+    },
+    "summary": "Defaults are present; future controlled write can omit these fields."
+  },
+  "technicalLinks": {
+    "toProductGroups": {
+      "hasProductGroupIdColumn": false,
+      "hasForeignKey": false
+    },
+    "toProductSubgroups": {
+      "hasProductSubgroupIdColumn": false,
+      "hasForeignKey": false
+    },
+    "payloadHasGroupReference": false,
+    "payloadHasSubgroupReference": false,
+    "conclusion": "No technical links can or should be enforced in this phase."
+  },
+  "semanticRisk": {
+    "description": "Business semantics may expect hierarchy relation with groups/subgroups, but current schema/payload has no explicit link.",
+    "handlingInThisPhase": "Document risk only; do not infer or create linkage.",
+    "blocking": false
+  },
+  "schemaSummary": {
+    "table": "public.product_families",
+    "requiredWithoutDefault": [
+      "value",
+      "label"
+    ],
+    "requiredWithDefault": [
+      "id",
+      "sort_order",
+      "is_active",
+      "created_at"
+    ],
+    "nullableRelevant": [
+      "tenant_id"
+    ],
+    "createdByColumnPresent": false,
+    "uniqueConstraints": [
+      "UNIQUE(value)"
+    ],
+    "foreignKeys": [
+      "tenant_id -> tenants(id)"
+    ],
+    "indexes": [
+      "product_families_pkey",
+      "product_families_value_key"
+    ]
+  },
+  "constraintsValidation": {
+    "uniqueValuePresent": true,
+    "tenantNullable": true,
+    "createdByNotApplicable": true,
+    "sortOrderDefaultPresent": true,
+    "isActiveDefaultPresent": true,
+    "createdAtDefaultPresent": true,
+    "productGroupIdAbsent": true,
+    "productSubgroupIdAbsent": true,
+    "fkToProductGroupsAbsent": true,
+    "fkToProductSubgroupsAbsent": true
+  },
+  "collisionValidation": {
+    "currentRowCount": 6,
+    "candidateValue": "TMP-PF-001",
+    "candidateLabel": "TMP Product Family",
+    "candidateValueCount": 0,
+    "candidateLabelCount": 0,
+    "maxDuplicateByValue": 1,
+    "maxDuplicateByTenantValue": 1,
+    "hasCollision": false
+  },
+  "idempotencyRule": {
+    "key": "value",
+    "policy": [
+      "If value does not exist, future controlled phase may INSERT one record.",
+      "If value exists and payload/defaults match expected fields, treat as idempotent_noop.",
+      "If value exists and diverges in label, tenant_id, sort_order or is_active, ABORT with NO-GO.",
+      "No upsert overwrite, no delete, no cleanup, no automatic correction."
+    ]
+  },
+  "humanGate": {
+    "pilotAuthorizationPhrase": "AUTORIZO A SEXTA ESCRITA PILOTO DA BASELINE 22AY-R2 SOMENTE EM product_families NO RESTORE-TEST nsnmlleplpzsefzkuxlb",
+    "documentedOnly": true
+  },
+  "futureCommandProposed": "node scripts/migration/phase-22k-r2-baseline-write.mjs --expected-target nsnmlleplpzsefzkuxlb --batch baseline_22f_r2_restore_test_qualyvac --authorization \"AUTORIZO A ESCRITA CONTROLADA DA BASELINE 22H-R2 NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --pilot-authorization \"AUTORIZO A SEXTA ESCRITA PILOTO DA BASELINE 22AY-R2 SOMENTE EM product_families NO RESTORE-TEST nsnmlleplpzsefzkuxlb\" --input artifacts/migration/phase-22g-r2-baseline-dry-run/latest.json --write-plan artifacts/migration/phase-22o-r2-baseline-write-plan/write-plan-20260627-192122.json --pilot-payload artifacts/migration/phase-22ay-r2-product-families-pilot-prep/product-families-payload-20260627-202332.json --pilot-entity product_families --execute-pilot-write --write",
+  "futureBeforeAfterContract": {
+    "beforeMustContain": [
+      "target/project/batch",
+      "general and pilot authorizations",
+      "pilot entity product_families",
+      "frozen payload",
+      "count before",
+      "lookup by candidate value and label",
+      "tenant/created_by/default policies",
+      "confirmation of no FK to product_groups",
+      "confirmation of no FK to product_subgroups",
+      "negative scope and no transactional/queue/ERP execution"
+    ],
+    "afterMustContain": [
+      "count after and delta",
+      "record created/found",
+      "value/label/tenant_id/sort_order/is_active/created_at",
+      "operation result",
+      "errors if any",
+      "single-scope confirmation",
+      "expanded execution blocked confirmation"
+    ]
+  },
+  "payloadDecision": "GO",
+  "payloadDecisionReasons": [
+    "Payload origin is strong and line-by-line traceable from BASELINE_SIMULATION.",
+    "Schema supports isolated future write and defaults are confirmed.",
+    "Tenant policy is explicit and conservative.",
+    "created_by is correctly marked as not_applicable for this table.",
+    "No technical FK links to product_groups/product_subgroups exist and this is explicitly documented.",
+    "No current collision for candidate value/label."
+  ],
+  "confirmations": {
+    "noDbWrite": true,
+    "noSqlWrite": true,
+    "noMigration": true,
+    "noSeedCleanupRollback": true,
+    "noExternalIntegrations": true,
+    "noQueueProcessing": true,
+    "noDeploy": true,
+    "noCommit": true,
+    "noPush": true,
+    "executorChanged": false,
+    "noStagingProdChanges": true,
+    "noExpandedExecution": true
+  }
+}

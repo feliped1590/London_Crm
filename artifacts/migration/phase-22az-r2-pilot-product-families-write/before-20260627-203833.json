@@ -1,0 +1,44 @@
+{
+  "phase": "22AZ-R2",
+  "timestamp": "2026-06-27T23:38:47.006Z",
+  "targetRef": "nsnmlleplpzsefzkuxlb",
+  "targetName": "crm-qualyvac-restore-test",
+  "batchId": "baseline_22f_r2_restore_test_qualyvac",
+  "generalAuthorizationValid": true,
+  "pilotAuthorizationValid": true,
+  "pilotEntity": "product_families",
+  "pilotPayloadPath": "artifacts/migration/phase-22ay-r2-product-families-pilot-prep/product-families-payload-20260627-202332.json",
+  "payloadUsed": {
+    "value": "TMP-PF-001",
+    "label": "TMP Product Family",
+    "tenant_id": null,
+    "created_by": "not_applicable",
+    "temp_key": "TMP-22F-R2-PRODFAMILY-01"
+  },
+  "productFamiliesCountBefore": 6,
+  "lookupByValue": [],
+  "lookupByLabel": [],
+  "lookupByLabelCount": 0,
+  "uniqueValueValidated": true,
+  "tenantNullableValidated": true,
+  "createdByNotApplicable": "not_applicable",
+  "createdByColumnAbsent": true,
+  "defaultsValidated": {
+    "sort_order": "0",
+    "is_active": "true",
+    "created_at": "now()"
+  },
+  "noTechnicalLinkToProductGroups": {
+    "product_group_id_column_absent": true,
+    "fk_to_product_groups_absent": true
+  },
+  "noTechnicalLinkToProductSubgroups": {
+    "product_subgroup_id_column_absent": true,
+    "fk_to_product_subgroups_absent": true
+  },
+  "beforeDecision": "GO",
+  "reasons": {
+    "noGoReasons": [],
+    "partialReasons": []
+  }
+}
