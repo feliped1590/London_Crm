@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { OrderDialog } from '@/components/orders/OrderDialog';
 import { OrderSyncBadge, OrderSyncButton } from '@/components/orders/OrderSyncStatus';
+import { ERP_ENABLED } from '@/config/features';
 
 interface CustomerOrdersTabProps {
   companyId: string;
@@ -209,7 +210,9 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
               <CardDescription>
                 {source === 'crm'
                   ? 'Pedidos registrados no CRM — clique na linha para editar'
-                  : 'Pedidos sincronizados do ERP Iniflex'
+                  : ERP_ENABLED
+                    ? 'Pedidos sincronizados do ERP'
+                    : 'Pedidos de origem legada'
                 }
               </CardDescription>
             </div>
@@ -232,13 +235,13 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
               <TableHeader>
                 <TableRow>
                   <TableHead>Número</TableHead>
-                  <TableHead>Cód. ERP</TableHead>
+                  {ERP_ENABLED && <TableHead>Cód. ERP</TableHead>}
                   <TableHead>Data</TableHead>
                   <TableHead>Entrega</TableHead>
                   <TableHead>Status</TableHead>
-                  {source === 'crm' && <TableHead>Sync ERP</TableHead>}
+                  {ERP_ENABLED && source === 'crm' && <TableHead>Sync ERP</TableHead>}
                   <TableHead className="text-right">Valor</TableHead>
-                  {source === 'crm' && <TableHead className="text-right">Ações</TableHead>}
+                  {ERP_ENABLED && source === 'crm' && <TableHead className="text-right">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -250,9 +253,11 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                         onClick={() => setEditingOrderId(order.id)}
                       >
                         <TableCell className="font-medium">{order.number}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {order.erp_order_id || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
+                        {ERP_ENABLED && (
+                          <TableCell className="font-mono text-xs">
+                            {order.erp_order_id || <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                        )}
                         <TableCell>{formatDate(order.created_at)}</TableCell>
                         <TableCell>{formatDate(order.delivery_date)}</TableCell>
                         <TableCell>
@@ -260,29 +265,33 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                             {statusLabels[order.status]?.label || order.status}
                           </Badge>
                         </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <OrderSyncBadge
-                            orderId={order.id}
-                            erpOrderId={order.erp_order_id as any}
-                            erpSyncedAt={order.erp_synced_at}
-                            updatedAt={order.updated_at}
-                          />
-                        </TableCell>
+                        {ERP_ENABLED && (
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <OrderSyncBadge
+                              orderId={order.id}
+                              erpOrderId={order.erp_order_id as any}
+                              erpSyncedAt={order.erp_synced_at}
+                              updatedAt={order.updated_at}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="text-right font-medium">
                           {formatCurrency(order.total_value)}
                         </TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                          <OrderSyncButton
-                            orderId={order.id}
-                            orderNumber={order.number}
-                            erpOrderId={order.erp_order_id as any}
-                            onSyncTriggered={() => {
-                              queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
-                              queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
-                              queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
-                            }}
-                          />
-                        </TableCell>
+                        {ERP_ENABLED && (
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <OrderSyncButton
+                              orderId={order.id}
+                              orderNumber={order.number}
+                              erpOrderId={order.erp_order_id as any}
+                              onSyncTriggered={() => {
+                                queryClient.invalidateQueries({ queryKey: ['customer-orders-crm', companyId] });
+                                queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                                queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
+                              }}
+                            />
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   : (orders as ERPOrder[]).map((order) => (
@@ -290,9 +299,11 @@ export function CustomerOrdersTab({ companyId, source, cnpj, canManageOrders = t
                         <TableCell className="font-medium">
                           {order.numero_pedido || '-'}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {order.numero_pedido || <span className="text-muted-foreground">—</span>}
-                        </TableCell>
+                        {ERP_ENABLED && (
+                          <TableCell className="font-mono text-xs">
+                            {order.numero_pedido || <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                        )}
                         <TableCell>{formatDate(order.data_emissao)}</TableCell>
                         <TableCell>{formatDate(order.data_entrega)}</TableCell>
                         <TableCell>

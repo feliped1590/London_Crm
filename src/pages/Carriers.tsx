@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Truck, Plus, Pencil, Search, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
+import { ERP_ENABLED } from '@/config/features';
 
 interface Carrier {
   id: string;
@@ -59,6 +60,7 @@ export default function Carriers() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCarrier, setEditingCarrier] = useState<Carrier | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const tableColSpan = ERP_ENABLED ? 8 : 7;
 
   const { data: carriers, isLoading } = useQuery({
     queryKey: ['carriers', showInactive],
@@ -91,7 +93,7 @@ export default function Carriers() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const erpCodeNum = form.erp_code !== '' ? Number(form.erp_code) : null;
-      if (!erpCodeNum || isNaN(erpCodeNum) || erpCodeNum <= 0) {
+      if (ERP_ENABLED && (!erpCodeNum || isNaN(erpCodeNum) || erpCodeNum <= 0)) {
         throw new Error('Código ERP é obrigatório e deve ser um número maior que zero');
       }
 
@@ -108,7 +110,7 @@ export default function Carriers() {
         city: form.city || null,
         state: form.state || null,
         zip_code: form.zip_code || null,
-        erp_code: erpCodeNum,
+        erp_code: ERP_ENABLED ? erpCodeNum : (editingCarrier?.erp_code ?? null),
         active: form.active,
       };
 
@@ -205,7 +207,7 @@ export default function Carriers() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Nome Fantasia</TableHead>
-                <TableHead>Cód. ERP</TableHead>
+                {ERP_ENABLED && <TableHead>Cód. ERP</TableHead>}
                 <TableHead>CNPJ</TableHead>
                 <TableHead>Cidade / UF</TableHead>
                 <TableHead>Telefone</TableHead>
@@ -217,11 +219,11 @@ export default function Carriers() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">Carregando...</TableCell>
+                  <TableCell colSpan={tableColSpan} className="text-center py-8">Carregando...</TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={tableColSpan} className="text-center py-8 text-muted-foreground">
                     <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     Nenhuma transportadora encontrada
                   </TableCell>
@@ -230,11 +232,13 @@ export default function Carriers() {
                 <TableRow key={carrier.id}>
                   <TableCell className="font-medium">{carrier.name}</TableCell>
                   <TableCell>{carrier.trade_name || '-'}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {carrier.erp_code != null ? carrier.erp_code : (
-                      <Badge variant="destructive" className="text-[10px]">Pendente</Badge>
-                    )}
-                  </TableCell>
+                  {ERP_ENABLED && (
+                    <TableCell className="font-mono text-xs">
+                      {carrier.erp_code != null ? carrier.erp_code : (
+                        <Badge variant="destructive" className="text-[10px]">Pendente</Badge>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="font-mono text-xs">{carrier.cnpj || '-'}</TableCell>
                   <TableCell>{carrier.city && carrier.state ? `${carrier.city} / ${carrier.state}` : '-'}</TableCell>
                   <TableCell>{carrier.phone || '-'}</TableCell>
@@ -273,17 +277,19 @@ export default function Carriers() {
               <Label>Razão Social *</Label>
               <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Razão Social" />
             </div>
-            <div className="col-span-2">
-              <Label>Código ERP *</Label>
-              <Input
-                type="number"
-                value={form.erp_code}
-                onChange={e => setForm({ ...form, erp_code: e.target.value })}
-                placeholder="Ex: 2824"
-                min={1}
-              />
-              <p className="text-xs text-muted-foreground mt-1">Obrigatório para sincronização de pedidos com o ERP.</p>
-            </div>
+            {ERP_ENABLED && (
+              <div className="col-span-2">
+                <Label>Código ERP *</Label>
+                <Input
+                  type="number"
+                  value={form.erp_code}
+                  onChange={e => setForm({ ...form, erp_code: e.target.value })}
+                  placeholder="Ex: 2824"
+                  min={1}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Obrigatório para sincronização de pedidos com o ERP.</p>
+              </div>
+            )}
 
             <div>
               <Label>Nome Fantasia</Label>

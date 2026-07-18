@@ -70,7 +70,7 @@ import { ProductSyncBadge, ProductSyncButton } from '@/components/products/Produ
 import { ProductSyncProvider } from '@/components/sync/SyncBatchProviders';
 import { FichaTecnicaSection, type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { ClipboardList, Paperclip } from 'lucide-react';
-import { ERP_SYNC_PAUSED } from '@/config/features';
+import { ERP_ENABLED, ERP_SYNC_PAUSED } from '@/config/features';
 
 type SortField = 'sku' | 'name' | 'tipo' | 'unit_price' | 'updated_at' | 'family_id' | 'unit_measure' | 'ncm_code' | 'width' | 'length' | 'thickness';
 type SortDirection = 'asc' | 'desc';
@@ -189,6 +189,10 @@ export default function Products() {
   };
 
   const handleSyncNow = async () => {
+    if (!ERP_ENABLED) {
+      toast.info('Sincronização externa desativada neste ambiente.');
+      return;
+    }
     if (ERP_SYNC_PAUSED) {
       toast.warning('Sincronização ERP temporariamente bloqueada.');
       return;
@@ -754,7 +758,7 @@ export default function Products() {
       if (createForCompanyId) {
         setSearchParams({}, { replace: true });
       }
-      if (!ERP_SYNC_PAUSED) {
+      if (ERP_ENABLED && !ERP_SYNC_PAUSED) {
         supabase.functions
           .invoke('process-product-sync', { body: { product_id: createdProduct.id } })
           .catch((err) => console.warn('[createMutation] process-product-sync falhou (cron fará fallback):', err));
@@ -786,8 +790,12 @@ export default function Products() {
       const versionsKey = (updatedProduct as any).parent_product_id ?? updatedProduct.id;
       queryClient.invalidateQueries({ queryKey: ['product-versions', versionsKey] });
       recordProductInteraction({ entityId: updatedProduct.id, tenantId: updatedProduct.tenant_id, interactionType: 'update' });
-      toast.success(ERP_SYNC_PAUSED ? 'Produto atualizado! Sincronização ERP pausada.' : 'Produto atualizado! Sincronização com ERP enfileirada.');
-      if (!ERP_SYNC_PAUSED) {
+      if (!ERP_ENABLED) {
+        toast.success('Produto atualizado!');
+      } else {
+        toast.success(ERP_SYNC_PAUSED ? 'Produto atualizado! Sincronização ERP pausada.' : 'Produto atualizado! Sincronização com ERP enfileirada.');
+      }
+      if (ERP_ENABLED && !ERP_SYNC_PAUSED) {
         supabase.functions
           .invoke('process-product-sync', { body: { product_id: updatedProduct.id } })
           .catch((err) => console.warn('[updateMutation] process-product-sync falhou (cron fará fallback):', err));
@@ -1581,10 +1589,10 @@ export default function Products() {
                         }}
                       />
                     </div>
-                    {/* Descrição + Código ERP lado a lado (3/4 + 1/4) */}
-                    <div className="col-span-2 grid grid-cols-4 gap-4">
+                    {/* Descrição + Código externo lado a lado quando ERP estiver ativo */}
+                    <div className={`col-span-2 grid gap-4 ${ERP_ENABLED ? 'grid-cols-4' : 'grid-cols-1'}`}>
                       {/* Descrição */}
-                      <div className="col-span-3">
+                      <div className={ERP_ENABLED ? 'col-span-3' : 'col-span-1'}>
                         <div className="flex items-center justify-between h-7">
                           <Label htmlFor="name">Descrição *</Label>
                           {isAdmin && (
@@ -1638,46 +1646,48 @@ export default function Products() {
 
 
                       {/* Código ERP */}
-                      <div className="col-span-1">
-                        <div className="flex items-center justify-between h-7">
-                          <Label htmlFor="erp_product_code">Código ERP</Label>
-                          {isAdmin && !!(editingProduct as any)?.erp_product_code && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                if (unlockErpCode) {
-                                  setUnlockErpCode(false);
-                                  return;
-                                }
-                                const ok = window.confirm(
-                                  'Atenção: alterar o Código ERP pode quebrar o vínculo com o ERP. Use apenas para corrigir um código enviado errado pelo ERP. Deseja continuar?'
-                                );
-                                if (ok) setUnlockErpCode(true);
-                              }}
-                            >
-                              {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
-                            </Button>
-                          )}
+                      {ERP_ENABLED && (
+                        <div className="col-span-1">
+                          <div className="flex items-center justify-between h-7">
+                            <Label htmlFor="erp_product_code">Código ERP</Label>
+                            {isAdmin && !!(editingProduct as any)?.erp_product_code && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  if (unlockErpCode) {
+                                    setUnlockErpCode(false);
+                                    return;
+                                  }
+                                  const ok = window.confirm(
+                                    'Atenção: alterar o Código ERP pode quebrar o vínculo com o ERP. Use apenas para corrigir um código enviado errado pelo ERP. Deseja continuar?'
+                                  );
+                                  if (ok) setUnlockErpCode(true);
+                                }}
+                              >
+                                {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
+                              </Button>
+                            )}
+                          </div>
+                          <Input
+                            id="erp_product_code"
+                            value={formData.erp_product_code || ''}
+                            onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
+                            placeholder="Opcional"
+                            readOnly={!!(editingProduct as any)?.erp_product_code && !unlockErpCode}
+                            className={(editingProduct as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {(editingProduct as any)?.erp_product_code && !unlockErpCode
+                              ? 'Vinculado ao ERP — bloqueado. Admins podem desbloquear.'
+                              : unlockErpCode
+                                ? 'Edição liberada. Limpe para forçar nova geração.'
+                                : 'Deixe em branco para o ERP gerar no 1º envio.'}
+                          </p>
                         </div>
-                        <Input
-                          id="erp_product_code"
-                          value={formData.erp_product_code || ''}
-                          onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
-                          placeholder="Opcional"
-                          readOnly={!!(editingProduct as any)?.erp_product_code && !unlockErpCode}
-                          className={(editingProduct as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {(editingProduct as any)?.erp_product_code && !unlockErpCode
-                            ? 'Vinculado ao ERP — bloqueado. Admins podem desbloquear.'
-                            : unlockErpCode
-                              ? 'Edição liberada. Limpe para forçar nova geração.'
-                              : 'Deixe em branco para o ERP gerar no 1º envio.'}
-                        </p>
-                      </div>
+                      )}
                     </div>
                     {/* Tipo */}
                     <div>

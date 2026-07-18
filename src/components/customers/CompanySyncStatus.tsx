@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useCompanySyncEntry } from '@/components/sync/SyncBatchProviders';
-import { ERP_SYNC_PAUSED } from '@/config/features';
+import { ERP_ENABLED, ERP_SYNC_PAUSED } from '@/config/features';
 
 interface CompanySyncStatusProps {
   companyId: string;
@@ -61,6 +61,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const { entry: batchEntry, isInBatch } = useCompanySyncEntry(companyId);
   // Fetch erp_code from companies if not provided
   const { data: companyData } = useQuery({
@@ -167,6 +168,7 @@ export function CompanySyncBadge({ companyId, erpCode: erpCodeProp }: CompanySyn
 }
 
 export function CompanySyncButton({ companyId, erpCode, onSyncTriggered }: CompanySyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);

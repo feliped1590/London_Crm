@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Building2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { ActiveSessionModal } from '@/components/auth/ActiveSessionModal';
 import { setSessionId, clearSessionId } from '@/hooks/useSessionGuard';
@@ -43,6 +43,21 @@ function isAccessWindowBlockError(error: { message?: string; details?: string } 
   );
 }
 
+function isSessionRpcUnavailableError(error: { message?: string; details?: string; code?: string } | null) {
+  if (!error) return false;
+  const code = String(error.code || '').toUpperCase();
+  const message = String(error.message || '').toLowerCase();
+  const details = String(error.details || '').toLowerCase();
+
+  return (
+    code === 'PGRST202' ||
+    message.includes('could not find the function public.create_app_session') ||
+    message.includes('could not find the function public.check_existing_session') ||
+    message.includes('could not find the function public.force_replace_session') ||
+    details.includes('does not exist')
+  );
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { user, loading, signIn, signOut } = useAuth();
@@ -66,7 +81,13 @@ export default function Auth() {
     }
   }, [user, loading, navigate, showSessionModal, pendingUserId]);
 
-  const createSessionAndNavigate = async (userId: string) => {
+  const fallbackLoginWithoutAppSession = () => {
+    clearSessionId();
+    toast.success('Login realizado com sucesso!');
+    navigate('/today', { replace: true });
+  };
+
+  const createSessionAndNavigate = async (userId: string): Promise<boolean> => {
     const deviceInfo = getDeviceInfo();
     const { data, error } = await supabase.rpc('create_app_session', {
       p_user_id: userId,
@@ -78,11 +99,16 @@ export default function Auth() {
     if (error) {
       if (isAccessWindowBlockError(error)) {
         await redirectToAccessBlocked(userId);
-        return;
+        return false;
+      }
+      if (isSessionRpcUnavailableError(error)) {
+        console.warn('RPC de sessão indisponível. Seguindo com login padrão.', error);
+        fallbackLoginWithoutAppSession();
+        return true;
       }
       console.error('Error creating session:', error);
       toast.error('Erro ao criar sessão');
-      return;
+      return false;
     }
 
     const result = data as any;
@@ -90,9 +116,11 @@ export default function Auth() {
       setSessionId(result.session_id);
       toast.success('Login realizado com sucesso!');
       navigate('/today', { replace: true });
+      return true;
     } else if (result?.error === 'OUTSIDE_ALLOWED_HOURS') {
       // Janela de acesso bloqueia login — single source of truth no banco
       await redirectToAccessBlocked(userId);
+      return false;
     } else if (result?.error === 'ACTIVE_SESSION_EXISTS') {
       // Race condition fallback — check again
       const { data: checkData } = await supabase.rpc('check_existing_session', { p_user_id: userId });
@@ -102,10 +130,12 @@ export default function Auth() {
         setActiveSessionInfo(check.session);
         setShowSessionModal(true);
       }
+      return false;
     } else {
       // Fallback: resposta inesperada (não-success sem erro conhecido)
       console.error('Resposta inesperada de create_app_session:', result);
       toast.error('Erro inesperado ao validar acesso');
+      return false;
     }
   };
 
@@ -158,6 +188,12 @@ export default function Auth() {
     });
 
     if (checkError) {
+      if (isSessionRpcUnavailableError(checkError)) {
+        console.warn('RPC de sessão indisponível em check_existing_session. Seguindo com login padrão.', checkError);
+        fallbackLoginWithoutAppSession();
+        setIsSubmitting(false);
+        return;
+      }
       console.error('Error checking session:', checkError);
       // Proceed to create session anyway
       await createSessionAndNavigate(currentUser.id);
@@ -209,6 +245,15 @@ export default function Auth() {
         setIsReplacingSession(false);
         return;
       }
+      if (isSessionRpcUnavailableError(error)) {
+        console.warn('RPC de sessão indisponível em force_replace_session. Seguindo com login padrão.', error);
+        setShowSessionModal(false);
+        setPendingUserId(null);
+        setActiveSessionInfo(null);
+        fallbackLoginWithoutAppSession();
+        setIsReplacingSession(false);
+        return;
+      }
       toast.error('Erro ao substituir sessão');
       setIsReplacingSession(false);
       return;
@@ -254,11 +299,9 @@ export default function Auth() {
       <div className="w-full max-w-md relative">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden mb-4 ring-1 ring-border-subtle shadow-[var(--shadow-md)]">
-            <img src="/images/logo-qualyvac.jpeg" alt="Qualyvac" className="w-full h-full object-cover" />
-          </div>
+          <img src="/london-logo.png" alt="London" className="mx-auto h-16 w-16 rounded-2xl ring-1 ring-border-subtle shadow-[var(--shadow-md)] object-cover mb-4" />
           <h1 className="font-display text-3xl font-semibold tracking-tight">
-            CRM <span className="text-gradient-brand">Qualyvac Group</span>
+            CRM <span className="text-gradient-brand">London</span>
           </h1>
           <p className="text-muted-foreground mt-2 text-sm">
             Sistema de gestão de relacionamento com clientes

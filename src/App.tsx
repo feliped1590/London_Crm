@@ -20,6 +20,7 @@ import { useLegalEntities } from "@/hooks/useLegalEntities";
 import { LegalEntityGuard } from "@/components/auth/LegalEntityGuard";
 import { prefetchTopRoutesIdle } from "@/lib/routePrefetch";
 import { clearAllDrafts } from "@/workspace/drafts";
+import { ERP_ENABLED, WHATSAPP_ENABLED } from "@/config/features";
 
 
 // Auth-critical (manter eager para evitar flash em rotas públicas/iniciais)
@@ -53,6 +54,7 @@ const Prospecting = lazy(() => import("./pages/Prospecting"));
 const Stock = lazy(() => import("./pages/Stock"));
 const Carriers = lazy(() => import("./pages/Carriers"));
 const ImportCompanies = lazy(() => import("./pages/ImportCompanies"));
+const ImportData = lazy(() => import("./pages/ImportData"));
 const BICenter = lazy(() => import("./pages/BICenter"));
 const NotificationsPage = lazy(() => import("./pages/Notifications"));
 
@@ -187,8 +189,7 @@ const App = () => (
                 <Route path="/stock" element={<Stock />} />
                 <Route path="/carriers" element={<Carriers />} />
                 <Route path="/tasks" element={<Tasks />} />
-                {/* WhatsApp desativado (auditoria perf 2026-05). Reativar trocando WHATSAPP_ENABLED em src/config/features.ts */}
-                <Route path="/whatsapp" element={<Navigate to="/today" replace />} />
+                <Route path="/whatsapp" element={WHATSAPP_ENABLED ? <WhatsApp /> : <Navigate to="/today" replace />} />
                 
                 <Route path="/bots/:id" element={<BotBuilder />} />
                 <Route path="/emails" element={<Emails />} />
@@ -201,6 +202,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/integrations" element={<Integrations />} />
                 <Route path="/import-companies" element={<ImportCompanies />} />
+                <Route path="/import-data" element={ERP_ENABLED ? <ImportData /> : <Navigate to="/today" replace />} />
                 <Route path="/notifications" element={<NotificationsPage />} />
                 
                 

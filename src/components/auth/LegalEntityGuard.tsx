@@ -29,6 +29,7 @@ export function LegalEntityGuard({ children }: { children: ReactNode }) {
     switchEntity,
     isSwitching,
     activeLegalEntityId,
+    activeLegalEntity,
   } = useLegalEntities();
 
   const [autoSelected, setAutoSelected] = useState(false);
@@ -45,6 +46,13 @@ export function LegalEntityGuard({ children }: { children: ReactNode }) {
       switchEntity(accessibleEntities[0].id);
     }
   }, [blockReason, accessibleEntities, isSwitching, autoSelected, switchEntity]);
+
+  // Se já temos entidade efetiva por fallback, persiste no perfil em background.
+  useEffect(() => {
+    if (!isLoading && activeLegalEntity && !activeLegalEntityId && !isSwitching) {
+      switchEntity(activeLegalEntity.id);
+    }
+  }, [isLoading, activeLegalEntity, activeLegalEntityId, isSwitching, switchEntity]);
 
   if (isLoading) {
     return (
@@ -111,8 +119,8 @@ export function LegalEntityGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  // Sanity guard: contexto pronto exige activeLegalEntityId
-  if (!activeLegalEntityId) {
+  // Sanity guard: contexto pronto exige uma entidade efetiva resolvida.
+  if (!activeLegalEntity) {
     return <NoLegalEntityScreen reason="no_active" />;
   }
 

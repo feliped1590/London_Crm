@@ -28,6 +28,7 @@ import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
 import { formatCurrency } from '@/lib/formatters';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { CityStateSelect } from '@/components/customer/CityStateSelect';
+import { ERP_ENABLED } from '@/config/features';
 
 const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 const STAGE_LABELS: Record<string, string> = {
@@ -165,7 +166,9 @@ export function CustomerOverviewTab({
           <CardTitle>Informações do Cliente</CardTitle>
           <CardDescription>
             {isErpCustomer
-              ? 'Dados sincronizados do ERP Iniflex (somente leitura)'
+              ? ERP_ENABLED
+                ? 'Dados sincronizados do ERP (somente leitura)'
+                : 'Dados de origem legada (somente leitura)'
               : 'Dados cadastrais e informações de contato'}
           </CardDescription>
         </CardHeader>
@@ -183,11 +186,13 @@ export function CustomerOverviewTab({
               <Label htmlFor="cnpj">CNPJ/CPF <span className="text-destructive">*</span></Label>
               <Input id="cnpj" value={companyForm.cnpj} onChange={(e) => setCompanyForm({ ...companyForm, cnpj: formatCNPJ(e.target.value) })} disabled={!isEditing || isErpCustomer} maxLength={18} required />
             </div>
-            <div>
-              <Label htmlFor="erp_code">Código ERP</Label>
-              <Input id="erp_code" value={companyForm.erp_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, erp_code: e.target.value })} disabled={!isEditing} placeholder="Ex: 12345" />
-              <p className="text-xs text-muted-foreground mt-1">Preencha manualmente se o sistema não retornou</p>
-            </div>
+            {ERP_ENABLED && (
+              <div>
+                <Label htmlFor="erp_code">Código ERP</Label>
+                <Input id="erp_code" value={companyForm.erp_code || ''} onChange={(e) => setCompanyForm({ ...companyForm, erp_code: e.target.value })} disabled={!isEditing} placeholder="Ex: 12345" />
+                <p className="text-xs text-muted-foreground mt-1">Preencha manualmente se o sistema não retornou</p>
+              </div>
+            )}
             <div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="inscricao_estadual">Inscrição Estadual <span className="text-destructive">*</span></Label>
@@ -211,26 +216,28 @@ export function CustomerOverviewTab({
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
-              <div className="flex gap-2">
-                <Input
-                  id="banco_padrao_erp"
-                  type="number"
-                  value={bancoPadraoErp}
-                  onChange={(e) => setBancoPadraoErp(Number(e.target.value))}
-                  disabled={!isEditing}
-                  placeholder="999"
-                  className="flex-1"
-                />
-                {isEditing && bancoPadraoErp !== (erpFinancial?.banco_padrao_erp ?? 999) && (
-                  <Button size="sm" variant="outline" onClick={() => saveBancoPadraoMutation.mutate(bancoPadraoErp)} disabled={saveBancoPadraoMutation.isPending}>
-                    Salvar
-                  </Button>
-                )}
+            {ERP_ENABLED && (
+              <div>
+                <Label htmlFor="banco_padrao_erp">Banco Padrão ERP <span className="text-destructive">*</span></Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="banco_padrao_erp"
+                    type="number"
+                    value={bancoPadraoErp}
+                    onChange={(e) => setBancoPadraoErp(Number(e.target.value))}
+                    disabled={!isEditing}
+                    placeholder="999"
+                    className="flex-1"
+                  />
+                  {isEditing && bancoPadraoErp !== (erpFinancial?.banco_padrao_erp ?? 999) && (
+                    <Button size="sm" variant="outline" onClick={() => saveBancoPadraoMutation.mutate(bancoPadraoErp)} disabled={saveBancoPadraoMutation.isPending}>
+                      Salvar
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Código do banco no ERP (999 = Caixa/Carteira)</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Código do banco no ERP (999 = Caixa/Carteira)</p>
-            </div>
+            )}
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <Label htmlFor="contribuinte_ipi" className="text-sm font-medium">Contribuinte de IPI</Label>
@@ -241,7 +248,7 @@ export function CustomerOverviewTab({
             <div className="col-span-2">
               {isErpCustomer ? (
                 <>
-                  <Label>Segmento (ERP)</Label>
+                  <Label>{ERP_ENABLED ? 'Segmento (ERP)' : 'Segmento (origem legada)'}</Label>
                   <Input value={customer.segmento || ''} disabled />
                 </>
               ) : (

@@ -23,6 +23,7 @@ import {
 import { parseProductRetorno, toLogPayload } from '../_shared/erp/projedata-parser.ts';
 import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
+import { envFlagEnabled, disabledIntegrationResponse } from '../_shared/integration-gates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +56,10 @@ function resolveDryRun(req: Request, body: Record<string, unknown>): boolean {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('ERP_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('ERP', corsHeaders);
   }
 
   const supabase = createClient(

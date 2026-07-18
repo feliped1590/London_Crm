@@ -205,16 +205,13 @@ export function AppSidebar() {
           effectiveEntity?.logo_url ? (
             <img src={effectiveEntity.logo_url} alt={effectiveEntity.name} className="h-7 max-w-[140px] object-contain" />
           ) : (
-            <span className="font-display text-lg font-semibold tracking-tight">
-              <span className="text-gradient-brand">Qualyvac</span>
-              <span className="text-sidebar-muted ml-1.5 text-xs font-normal">CRM</span>
-            </span>
+            <img src="/london-logo.png" alt="London" className="h-8 max-w-[140px] object-contain" />
           )
         ) : (
           effectiveEntity?.logo_url ? (
             <img src={effectiveEntity.logo_url} alt="" className="h-7 w-7 object-contain mx-auto" />
           ) : (
-            <div className="h-7 w-7 rounded-md bg-gradient-brand mx-auto" />
+            <img src="/london-logo.png" alt="" className="h-7 w-7 object-contain mx-auto" />
           )
         )}
         {isMobile ? (

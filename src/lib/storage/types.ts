@@ -1,5 +1,5 @@
 /**
- * Abstração de storage — preparada para múltiplos providers (Lovable Cloud agora,
+ * Abstração de storage — preparada para múltiplos providers (Supabase agora,
  * AWS S3 / Cloudflare R2 no futuro). Toda a aplicação consome apenas estes tipos.
  */
 

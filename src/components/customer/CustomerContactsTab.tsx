@@ -14,6 +14,7 @@ import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import type { CustomerContact, UnifiedCustomer } from '@/hooks/useCustomerDetail';
 import type { Json } from '@/integrations/supabase/types';
+import { ERP_ENABLED } from '@/config/features';
 
 interface CustomerContactsTabProps {
   customer: UnifiedCustomer;
@@ -81,7 +82,11 @@ export function CustomerContactsTab({ customer, contacts, saveContactMutation, d
           <div>
             <CardTitle>Contatos</CardTitle>
             <CardDescription>
-              {isErpCustomer ? 'Contatos não disponíveis para clientes sincronizados do ERP' : 'Pessoas de contato vinculadas a este cliente'}
+              {isErpCustomer
+                ? ERP_ENABLED
+                  ? 'Contatos não disponíveis para clientes sincronizados do ERP'
+                  : 'Contatos não disponíveis para clientes de origem legada'
+                : 'Pessoas de contato vinculadas a este cliente'}
             </CardDescription>
           </div>
           {!isErpCustomer && canManageContacts && (
@@ -122,7 +127,11 @@ export function CustomerContactsTab({ customer, contacts, saveContactMutation, d
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <Database className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold">Contatos não disponíveis</h3>
-            <p className="text-muted-foreground max-w-md">Os contatos de clientes sincronizados do ERP são gerenciados diretamente no sistema de origem.</p>
+            <p className="text-muted-foreground max-w-md">
+              {ERP_ENABLED
+                ? 'Os contatos de clientes sincronizados do ERP são gerenciados diretamente no sistema de origem.'
+                : 'Os contatos de clientes de origem legada são gerenciados diretamente no sistema de origem.'}
+            </p>
           </div>
         ) : contacts.length === 0 && customer.contact_name ? (
           <div className="space-y-3">

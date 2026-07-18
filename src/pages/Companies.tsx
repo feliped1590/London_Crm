@@ -27,6 +27,7 @@ import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
+import { ERP_ENABLED } from '@/config/features';
 
 // Explicit column list used by the table + edit form. Avoids `select('*')`
 // pulling heavy JSON / unused payload from every row.
@@ -507,7 +508,7 @@ export default function Companies() {
                     </div>
                   </TableHead>
                   <TableHead className="hidden xl:table-cell">Contato</TableHead>
-                  <TableHead className="hidden md:table-cell">Iniflex</TableHead>
+                  {ERP_ENABLED && <TableHead className="hidden md:table-cell">Iniflex</TableHead>}
                   <TableHead className="text-right sticky-col-end">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -569,47 +570,51 @@ export default function Companies() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {syncStatus.synced ? (
-                                <Badge variant="secondary" className="gap-1">
-                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                  Sincronizado
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="gap-1 text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  Pendente
-                                </Badge>
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {syncStatus.synced 
-                                ? `Sincronizado em ${syncStatus.date}` 
-                                : 'Não sincronizado com Iniflex'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell className="text-right sticky-col-end">
-                        <div className="flex justify-end gap-1">
+                      {ERP_ENABLED && (
+                        <TableCell className="hidden md:table-cell">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => syncInflexMutation.mutate(company.id)}
-                                  disabled={syncInflexMutation.isPending}
-                                >
-                                  <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
-                                </Button>
+                                {syncStatus.synced ? (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                    Sincronizado
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    Pendente
+                                  </Badge>
+                                )}
                               </TooltipTrigger>
-                              <TooltipContent>Sincronizar com Iniflex</TooltipContent>
+                              <TooltipContent>
+                                {syncStatus.synced
+                                  ? `Sincronizado em ${syncStatus.date}`
+                                  : 'Não sincronizado com Iniflex'}
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
+                        </TableCell>
+                      )}
+                      <TableCell className="text-right sticky-col-end">
+                        <div className="flex justify-end gap-1">
+                          {ERP_ENABLED && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => syncInflexMutation.mutate(company.id)}
+                                    disabled={syncInflexMutation.isPending}
+                                  >
+                                    <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Sincronizar com Iniflex</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(company)}>
                             <Pencil className="h-4 w-4" />
                           </Button>

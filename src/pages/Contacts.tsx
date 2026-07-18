@@ -24,6 +24,7 @@ import { formatCPF, cleanDocument } from '@/lib/cpfCnpjMask';
 import type { Tables, TablesInsert, Json } from '@/integrations/supabase/types';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ServerPagination } from '@/components/ui/server-pagination';
+import { ERP_ENABLED } from '@/config/features';
 
 const CONTACT_LIST_COLUMNS = `
   id, first_name, last_name, email, phone, mobile, job_title, department,
@@ -482,7 +483,7 @@ export default function Contacts() {
                     </div>
                   </TableHead>
                   <TableHead>Contato</TableHead>
-                  <TableHead>Iniflex</TableHead>
+                  {ERP_ENABLED && <TableHead>Iniflex</TableHead>}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -544,30 +545,32 @@ export default function Contacts() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              {syncStatus.synced ? (
-                                <Badge variant="secondary" className="gap-1">
-                                  <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                  Sincronizado
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="gap-1 text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  Pendente
-                                </Badge>
-                              )}
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {syncStatus.synced 
-                                ? `Sincronizado em ${syncStatus.date}` 
-                                : 'Não sincronizado com Iniflex'}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
+                      {ERP_ENABLED && (
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                {syncStatus.synced ? (
+                                  <Badge variant="secondary" className="gap-1">
+                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                    Sincronizado
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="gap-1 text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    Pendente
+                                  </Badge>
+                                )}
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {syncStatus.synced
+                                  ? `Sincronizado em ${syncStatus.date}`
+                                  : 'Não sincronizado com Iniflex'}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                      )}
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           <TooltipProvider>
@@ -586,21 +589,23 @@ export default function Contacts() {
                               <TooltipContent>WhatsApp (Em Desenvolvimento)</TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  onClick={() => syncInflexMutation.mutate(contact.id)}
-                                  disabled={syncInflexMutation.isPending}
-                                >
-                                  <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Sincronizar com Iniflex</TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+                          {ERP_ENABLED && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => syncInflexMutation.mutate(contact.id)}
+                                    disabled={syncInflexMutation.isPending}
+                                  >
+                                    <RefreshCw className={`h-4 w-4 ${syncInflexMutation.isPending ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Sincronizar com Iniflex</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <Button variant="ghost" size="icon" onClick={() => handleEdit(contact)}>
                             <Pencil className="h-4 w-4" />
                           </Button>

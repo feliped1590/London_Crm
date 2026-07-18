@@ -2,7 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { StorageProvider, UploadInput, UploadResult } from './types';
 
 /**
- * Adapter do Lovable Cloud (Supabase Storage).
+ * Adapter de storage no Supabase.
  * Trocar por adapter S3/R2 no futuro é só implementar a mesma interface.
  */
 export const lovableStorageProvider: StorageProvider = {

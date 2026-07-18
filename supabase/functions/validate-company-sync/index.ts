@@ -7,6 +7,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { validateCompanyForSync, type CompanyValidationResult } from '../_shared/projedata/company-validator.ts';
 import { getSegmentoBySetor } from '../_shared/projedata/company-mapper.ts';
+import { envFlagEnabled, disabledIntegrationResponse } from '../_shared/integration-gates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,10 @@ function jsonResponse(data: unknown, status = 200) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('ERP_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('ERP', corsHeaders);
   }
 
   const supabase = createClient(

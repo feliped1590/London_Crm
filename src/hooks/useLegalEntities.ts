@@ -46,13 +46,53 @@ export function useLegalEntities() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, active_legal_entity_id')
+        .select('id, active_legal_entity_id, active_tenant_id')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
+      // Perfil pode não existir em bases migradas; tratamos como null e usamos fallback por tenant.
+      if (error) return null;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: userTenants = [], isLoading: userTenantsLoading } = useQuery({
+    queryKey: ['user_tenants_legal_entities', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('user_tenants')
+        .select('tenant_id')
+        .eq('user_id', user.id);
       if (error) throw error;
       return data;
     },
     enabled: !!user?.id,
+  });
+
+  const tenantIds = (() => {
+    const ids = new Set<string>();
+    if (profile?.active_tenant_id) ids.add(profile.active_tenant_id);
+    userTenants.forEach((t: any) => {
+      if (t?.tenant_id) ids.add(t.tenant_id);
+    });
+    return Array.from(ids);
+  })();
+
+  const { data: tenantEntities = [], isLoading: tenantEntitiesLoading } = useQuery({
+    queryKey: ['legal_entities_by_tenants', tenantIds.slice().sort().join(',')],
+    queryFn: async () => {
+      if (tenantIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('legal_entities')
+        .select('*')
+        .eq('active', true)
+        .in('tenant_id', tenantIds)
+        .order('name');
+      if (error) throw error;
+      return data as LegalEntity[];
+    },
+    enabled: !!user?.id && tenantIds.length > 0,
   });
 
   const { data: userLinks = [], isLoading: linksLoading } = useQuery({
@@ -97,18 +137,28 @@ export function useLegalEntities() {
 
   const isPrivileged = !!isAdmin || !!isDeveloper;
 
-  // Acessíveis: admin/dev veem todas; demais SOMENTE as vinculadas (sem fallback "todas").
+  // Acessíveis:
+  // - admin/dev veem todas;
+  // - demais: prioriza vínculo explícito em user_legal_entities;
+  // - fallback para bases legadas: mapeia por tenant em user_tenants.
   const accessibleEntities = (() => {
     if (isPrivileged) return allEntities;
+    const baseEntities = tenantEntities;
     const linkedIds = new Set(userLinks.map(l => l.legal_entity_id));
-    return allEntities.filter(e => linkedIds.has(e.id));
+    if (linkedIds.size > 0) {
+      return baseEntities.filter(e => linkedIds.has(e.id));
+    }
+    if (baseEntities.length > 0) return baseEntities;
+    // Fallback de compatibilidade para ambientes legados com vínculo incompleto.
+    return allEntities;
   })();
 
   const activeLegalEntityId = profile?.active_legal_entity_id ?? null;
   const activeLegalEntity =
-    accessibleEntities.find(e => e.id === activeLegalEntityId) ?? null;
+    (accessibleEntities.find(e => e.id === activeLegalEntityId) ?? null) ||
+    (accessibleEntities.length > 0 ? accessibleEntities[0] : null);
 
-  const isLoading = entitiesLoading || profileLoading || linksLoading || adminLoading || devLoading;
+  const isLoading = entitiesLoading || profileLoading || linksLoading || userTenantsLoading || tenantEntitiesLoading || adminLoading || devLoading;
 
   const blockReason: LegalEntityBlockReason = (() => {
     if (isLoading) return null;

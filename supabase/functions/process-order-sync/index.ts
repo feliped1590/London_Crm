@@ -17,6 +17,7 @@ import { trackParserResult } from '../_shared/erp/parser-telemetry.ts';
 import { resolveOrderErpConfig, isOrderErpConfigError } from '../_shared/erp/order-endpoint-resolver.ts';
 import { checkAccessWindowForTenant, AccessWindowError, AccessCheckUnavailableError } from '../_shared/accessControl.ts';
 import { permissionErrorResponse, requireModulePermission } from '../_shared/permissionEngine.ts';
+import { envFlagEnabled, disabledIntegrationResponse } from '../_shared/integration-gates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,6 +40,10 @@ function isPermanentOrderSyncError(message: string): boolean {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('ERP_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('ERP', corsHeaders);
   }
 
   const supabase = createClient(

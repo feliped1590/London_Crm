@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductSyncEntry } from '@/components/sync/SyncBatchProviders';
-import { ERP_SYNC_PAUSED } from '@/config/features';
+import { ERP_ENABLED, ERP_SYNC_PAUSED } from '@/config/features';
 
 type ProductSyncSnapshot = {
   id: string;
@@ -140,6 +140,7 @@ function useProductQueueEntry(productId: string, enabled: boolean) {
 }
 
 export function ProductSyncBadge({ productId, erpProductCode, onProductUpdated }: ProductSyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const { entry: batchEntry, isInBatch } = useProductSyncEntry(productId);
   useProductSyncRealtime(productId, !isInBatch, onProductUpdated);
   const erpCode = useProductErpCode(productId, erpProductCode);
@@ -185,6 +186,7 @@ export function ProductSyncBadge({ productId, erpProductCode, onProductUpdated }
 }
 
 export function ProductSyncButton({ productId, erpProductCode, onSyncTriggered, onProductUpdated }: ProductSyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);

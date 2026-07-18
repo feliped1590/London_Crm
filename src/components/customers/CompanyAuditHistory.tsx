@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Database, ArrowRight, ArrowLeftRight } from 'lucide-react';
+import { ERP_ENABLED } from '@/config/features';
 
 interface CompanyAuditHistoryProps {
   companyId: string;
@@ -188,7 +189,9 @@ export function CompanyAuditHistory({ companyId, isErpCustomer = false }: Compan
             <Database className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold">Histórico não disponível</h3>
             <p className="text-muted-foreground max-w-md">
-              O histórico de alterações não está disponível para clientes sincronizados do ERP.
+              {ERP_ENABLED
+                ? 'O histórico de alterações não está disponível para clientes sincronizados do ERP.'
+                : 'O histórico de alterações não está disponível para clientes de origem legada.'}
             </p>
           </div>
         </CardContent>

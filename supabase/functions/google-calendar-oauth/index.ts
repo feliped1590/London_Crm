@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { envFlagEnabled, disabledIntegrationResponse } from "../_shared/integration-gates.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +10,10 @@ Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('GOOGLE_CALENDAR_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('Google Calendar', corsHeaders);
   }
 
   try {

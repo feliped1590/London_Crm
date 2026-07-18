@@ -28,6 +28,7 @@ const routeToModuleKey: Record<string, string> = {
   '/reallocation': 'portfolio',
   '/integrations': 'integrations',
   '/import-companies': 'import_companies',
+  '/import-data': 'integrations',
   '/settings': 'settings',
 };
 

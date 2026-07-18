@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useResponsiveDensity } from '@/hooks/useResponsiveDensity';
 import { ServerPagination } from '@/components/ui/server-pagination';
+import { ERP_ENABLED } from '@/config/features';
 
 // Explicit columns used by the list (avoids `select('*')` payload).
 const ORDER_LIST_COLUMNS = `
@@ -99,8 +100,8 @@ export default function Orders() {
 
       if (filterStatus !== 'all') query = query.eq('status', filterStatus as any);
       if (filterCarrier !== 'all') query = query.eq('carrier_id', filterCarrier);
-      if (filterErpStatus === 'synced') query = query.not('erp_order_id', 'is', null);
-      if (filterErpStatus === 'not_synced') query = query.is('erp_order_id', null);
+      if (ERP_ENABLED && filterErpStatus === 'synced') query = query.not('erp_order_id', 'is', null);
+      if (ERP_ENABLED && filterErpStatus === 'not_synced') query = query.is('erp_order_id', null);
 
       if (debouncedSearch) {
         const term = debouncedSearch.trim();
@@ -317,16 +318,18 @@ export default function Orders() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Status ERP" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos (ERP)</SelectItem>
-                  <SelectItem value="synced">Sincronizados</SelectItem>
-                  <SelectItem value="not_synced">Não enviados</SelectItem>
-                </SelectContent>
-              </Select>
+              {ERP_ENABLED && (
+                <Select value={filterErpStatus} onValueChange={setFilterErpStatus}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Status ERP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos (ERP)</SelectItem>
+                    <SelectItem value="synced">Sincronizados</SelectItem>
+                    <SelectItem value="not_synced">Não enviados</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         </CardContent>
@@ -350,8 +353,8 @@ export default function Orders() {
                      <TableHead>Empresa</TableHead>
                      <TableHead className="hidden 2xl:table-cell">Logística</TableHead>
                      <TableHead>Status</TableHead>
-                     <TableHead className="hidden xl:table-cell">Pedido ERP</TableHead>
-                     <TableHead>Sinc. ERP</TableHead>
+                     {ERP_ENABLED && <TableHead className="hidden xl:table-cell">Pedido ERP</TableHead>}
+                     {ERP_ENABLED && <TableHead>Sinc. ERP</TableHead>}
                     <TableHead className="hidden lg:table-cell">Entrega Prevista</TableHead>
                     <TableHead className="hidden md:table-cell">Valor Total</TableHead>
                     <TableHead className="hidden 2xl:table-cell">Data Criação</TableHead>
@@ -449,21 +452,25 @@ export default function Orders() {
                               {orderStatusConfig[order.status].label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-sm hidden xl:table-cell">
-                            {(order as any).erp_order_id ? (
-                              <span className="font-medium">{(order as any).erp_order_id}</span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <OrderSyncBadge
-                              orderId={order.id}
-                              erpOrderId={(order as any).erp_order_id}
-                              erpSyncedAt={(order as any).erp_synced_at}
-                              updatedAt={(order as any).updated_at}
-                            />
-                          </TableCell>
+                          {ERP_ENABLED && (
+                            <TableCell className="font-mono text-sm hidden xl:table-cell">
+                              {(order as any).erp_order_id ? (
+                                <span className="font-medium">{(order as any).erp_order_id}</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                          )}
+                          {ERP_ENABLED && (
+                            <TableCell>
+                              <OrderSyncBadge
+                                orderId={order.id}
+                                erpOrderId={(order as any).erp_order_id}
+                                erpSyncedAt={(order as any).erp_synced_at}
+                                updatedAt={(order as any).updated_at}
+                              />
+                            </TableCell>
+                          )}
                          <TableCell className="hidden lg:table-cell">
                            {order.delivery_date && (
                              <div className="flex items-center gap-2">
@@ -476,16 +483,18 @@ export default function Orders() {
                          <TableCell className="text-muted-foreground hidden 2xl:table-cell">{formatDate(order.created_at)}</TableCell>
                           <TableCell className="text-right sticky-col-end">
                             <div className="flex items-center justify-end gap-1">
-                              <OrderSyncButton
-                                orderId={order.id}
-                                orderNumber={order.number}
-                                erpOrderId={(order as any).erp_order_id}
-                                onSyncTriggered={() => {
-                                  queryClient.invalidateQueries({ queryKey: ['orders'] });
-                                  queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
-                                  queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
-                                }}
-                              />
+                              {ERP_ENABLED && (
+                                <OrderSyncButton
+                                  orderId={order.id}
+                                  orderNumber={order.number}
+                                  erpOrderId={(order as any).erp_order_id}
+                                  onSyncTriggered={() => {
+                                    queryClient.invalidateQueries({ queryKey: ['orders'] });
+                                    queryClient.invalidateQueries({ queryKey: ['order_sync_status', order.id] });
+                                    queryClient.invalidateQueries({ queryKey: ['order_sync_status_btn', order.id] });
+                                  }}
+                                />
+                              )}
                              {canEditOrder(order) && (
                                <Button 
                                  variant="ghost" 

@@ -60,7 +60,7 @@ import { useActiveTenantId } from '@/hooks/useActiveTenantId';
 import { runGovernancePreflight, useGovernanceFlags, type PreflightResult } from '@/hooks/useCommercialGovernance';
 import { useFormDraft } from '@/workspace/useFormDraft';
 import { DraftRestoreDialog } from '@/workspace/DraftRestoreDialog';
-import { ERP_SYNC_PAUSED } from '@/config/features';
+import { ERP_ENABLED, ERP_SYNC_PAUSED } from '@/config/features';
 
 
 
@@ -564,6 +564,8 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       if (skipAutoSync) {
         toast.success('Pedido criado — aguardando aprovação de governança');
+      } else if (!ERP_ENABLED) {
+        toast.success('Pedido criado');
       } else if (ERP_SYNC_PAUSED) {
         toast.success('Pedido criado — sincronização ERP pausada');
       } else {
@@ -691,7 +693,7 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       queryClient.invalidateQueries({ queryKey: ['order_audit_log'] });
 
       // Auto re-sync em TODA atualização (igual produtos) — salvo skipAutoSync
-      if (order && !opts.skipAutoSync && !ERP_SYNC_PAUSED) {
+      if (order && !opts.skipAutoSync && ERP_ENABLED && !ERP_SYNC_PAUSED) {
         try {
           const { data: existing } = await supabase
             .from('order_sync_queue')
@@ -728,7 +730,11 @@ export function OrderDialog({ open, onOpenChange, order, onSuccess, preSelectedC
       setOriginalItems([...items]);
 
       if (!opts.silent) {
-        toast.success(ERP_SYNC_PAUSED ? 'Pedido salvo — sincronização ERP pausada' : 'Pedido salvo — enviando ao ERP em segundo plano');
+        if (!ERP_ENABLED) {
+          toast.success('Pedido salvo');
+        } else {
+          toast.success(ERP_SYNC_PAUSED ? 'Pedido salvo — sincronização ERP pausada' : 'Pedido salvo — enviando ao ERP em segundo plano');
+        }
       }
       if (!opts.keepOpen) {
         orderDraft.clear();

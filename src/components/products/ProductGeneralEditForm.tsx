@@ -36,6 +36,7 @@ import { ConfirmStructuralChangeDialog, type StructuralFieldChange } from '@/com
 import { ProductVersionsTab } from '@/components/products/ProductVersionsTab';
 import { type FichaTecnicaData } from '@/components/products/FichaTecnicaSection';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ERP_ENABLED } from '@/config/features';
 
 interface ProductGeneralEditFormProps {
   productId: string;
@@ -351,19 +352,21 @@ export function ProductGeneralEditForm({
     if (!formData.name) { toast.error('Descrição é obrigatória'); return; }
     if (!formData.sku) { toast.error('SKU não foi gerado. Preencha os campos de classificação.'); return; }
 
-    const erpRequiredErrors: string[] = [];
-    if (!formData.grupo_id) erpRequiredErrors.push('Grupo');
-    if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
-    if (!formData.family_id) erpRequiredErrors.push('Família');
-    if (!formData.class_id) erpRequiredErrors.push('Classe');
-    if (!formData.tipo_id) erpRequiredErrors.push('Tipo de item');
-    if (!formData.tipo_ficha) erpRequiredErrors.push('Tipo de ficha');
-    if (!formData.unit_measure?.trim()) erpRequiredErrors.push('Unidade de medida');
-    const ncmDigits = (formData.ncm_code ?? '').replace(/\D/g, '');
-    if (!/^\d{8}$/.test(ncmDigits)) erpRequiredErrors.push('NCM (8 dígitos)');
-    if (erpRequiredErrors.length > 0) {
-      toast.error(`Campos obrigatórios para sincronização ERP:\n• ${erpRequiredErrors.join('\n• ')}`, { duration: 7000 });
-      return;
+    if (ERP_ENABLED) {
+      const erpRequiredErrors: string[] = [];
+      if (!formData.grupo_id) erpRequiredErrors.push('Grupo');
+      if (!formData.subgrupo_id) erpRequiredErrors.push('Subgrupo');
+      if (!formData.family_id) erpRequiredErrors.push('Família');
+      if (!formData.class_id) erpRequiredErrors.push('Classe');
+      if (!formData.tipo_id) erpRequiredErrors.push('Tipo de item');
+      if (!formData.tipo_ficha) erpRequiredErrors.push('Tipo de ficha');
+      if (!formData.unit_measure?.trim()) erpRequiredErrors.push('Unidade de medida');
+      const ncmDigits = (formData.ncm_code ?? '').replace(/\D/g, '');
+      if (!/^\d{8}$/.test(ncmDigits)) erpRequiredErrors.push('NCM (8 dígitos)');
+      if (erpRequiredErrors.length > 0) {
+        toast.error(`Campos obrigatórios para sincronização ERP:\n• ${erpRequiredErrors.join('\n• ')}`, { duration: 7000 });
+        return;
+      }
     }
 
     const profile = getGroupProfile(formData.grupo_id);
@@ -383,6 +386,12 @@ export function ProductGeneralEditForm({
 
     submitData.erp_grupo = grupos.items.find((g) => g.id === submitData.grupo_id)?.label?.trim() || '';
     submitData.erp_subgrupo = subgrupos.items.find((s) => s.id === submitData.subgrupo_id)?.label?.trim() || '';
+
+    if (!ERP_ENABLED) {
+      // Mantém edição de produto livre quando integração externa está desativada.
+      executeSave(submitData);
+      return;
+    }
 
     if (hasAutoDimensions(profile)) {
       try {
@@ -477,8 +486,8 @@ export function ProductGeneralEditForm({
           </div>
 
           {/* Descrição + Código ERP */}
-          <div className="col-span-2 grid grid-cols-4 gap-4">
-            <div className="col-span-3">
+          <div className={`col-span-2 grid gap-4 ${ERP_ENABLED ? 'grid-cols-4' : 'grid-cols-1'}`}>
+            <div className={ERP_ENABLED ? 'col-span-3' : 'col-span-1'}>
               <div className="flex items-center justify-between h-7">
                 <Label htmlFor="pgef-name">Descrição *</Label>
                 {isAdmin && (
@@ -506,29 +515,31 @@ export function ProductGeneralEditForm({
                 {unlockDescription ? 'Edição liberada.' : 'Gerada automaticamente. Admins podem desbloquear.'}
               </p>
             </div>
-            <div className="col-span-1">
-              <div className="flex items-center justify-between h-7">
-                <Label htmlFor="pgef-erp_code">Código ERP</Label>
-                {isAdmin && !!(product as any)?.erp_product_code && (
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
-                    onClick={() => {
-                      if (unlockErpCode) { setUnlockErpCode(false); return; }
-                      const ok = window.confirm('Alterar o Código ERP pode quebrar o vínculo. Deseja continuar?');
-                      if (ok) setUnlockErpCode(true);
-                    }}>
-                    {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
-                  </Button>
-                )}
+            {ERP_ENABLED && (
+              <div className="col-span-1">
+                <div className="flex items-center justify-between h-7">
+                  <Label htmlFor="pgef-erp_code">Código ERP</Label>
+                  {isAdmin && !!(product as any)?.erp_product_code && (
+                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        if (unlockErpCode) { setUnlockErpCode(false); return; }
+                        const ok = window.confirm('Alterar o Código ERP pode quebrar o vínculo. Deseja continuar?');
+                        if (ok) setUnlockErpCode(true);
+                      }}>
+                      {unlockErpCode ? 'Cancelar edição' : 'Editar (admin)'}
+                    </Button>
+                  )}
+                </div>
+                <Input id="pgef-erp_code" value={formData.erp_product_code || ''}
+                  onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
+                  placeholder="Opcional"
+                  readOnly={!!(product as any)?.erp_product_code && !unlockErpCode}
+                  className={(product as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''} />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(product as any)?.erp_product_code && !unlockErpCode ? 'Vinculado ao ERP — bloqueado.' : unlockErpCode ? 'Edição liberada.' : 'Deixe em branco para o ERP gerar.'}
+                </p>
               </div>
-              <Input id="pgef-erp_code" value={formData.erp_product_code || ''}
-                onChange={(e) => setFormData({ ...formData, erp_product_code: e.target.value })}
-                placeholder="Opcional"
-                readOnly={!!(product as any)?.erp_product_code && !unlockErpCode}
-                className={(product as any)?.erp_product_code && !unlockErpCode ? 'bg-muted cursor-not-allowed' : ''} />
-              <p className="text-xs text-muted-foreground mt-1">
-                {(product as any)?.erp_product_code && !unlockErpCode ? 'Vinculado ao ERP — bloqueado.' : unlockErpCode ? 'Edição liberada.' : 'Deixe em branco para o ERP gerar.'}
-              </p>
-            </div>
+            )}
           </div>
 
           {/* Tipo */}

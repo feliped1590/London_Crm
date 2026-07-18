@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { envFlagEnabled, disabledIntegrationResponse } from "../_shared/integration-gates.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -35,6 +36,10 @@ function replaceVariables(text: string, contact: any, company: any): string {
 serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled("EMAIL_INTEGRATION_ENABLED", false)) {
+    return disabledIntegrationResponse("Email/Resend", corsHeaders);
   }
 
   try {

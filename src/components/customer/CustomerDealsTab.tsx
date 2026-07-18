@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, TrendingUp, Database } from 'lucide-react';
 import { DealStageBadges } from '@/components/DealStageBadges';
+import { ERP_ENABLED } from '@/config/features';
 
 interface CustomerDealsTabProps {
   customerId: string;
@@ -23,7 +24,9 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDe
             <CardTitle>Negócios</CardTitle>
             <CardDescription>
               {isErpCustomer
-                ? 'Para criar negócios com este cliente, primeiro importe-o para o CRM'
+                ? ERP_ENABLED
+                  ? 'Para criar negócios com este cliente, primeiro importe-o para o CRM'
+                  : 'Para criar negócios com este cliente, primeiro converta-o para cliente CRM'
                 : 'Oportunidades e negociações com este cliente'}
             </CardDescription>
           </div>
@@ -41,7 +44,9 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDe
             <Database className="h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-semibold">Negócios não disponíveis</h3>
             <p className="text-muted-foreground max-w-md">
-              Este cliente é sincronizado do ERP. Para criar negócios, primeiro importe-o para o CRM na tela de Integrações.
+              {ERP_ENABLED
+                ? 'Este cliente é sincronizado do ERP. Para criar negócios, primeiro importe-o para o CRM na tela de Integrações.'
+                : 'Este cliente é de origem legada. Para criar negócios, primeiro converta-o para cliente CRM.'}
             </p>
           </div>
         ) : deals.length === 0 ? (

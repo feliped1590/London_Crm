@@ -24,6 +24,7 @@ import { useErpCities, matchMappedCity } from '@/hooks/useErpCities';
 import { CityStateSelect } from '@/components/customer/CityStateSelect';
 import { useFormDraft } from '@/workspace/useFormDraft';
 import { DraftRestoreDialog } from '@/workspace/DraftRestoreDialog';
+import { ERP_ENABLED } from '@/config/features';
 
 
 
@@ -288,8 +289,12 @@ export default function CustomerNew() {
         const duplicate = await checkDuplicateDocument(documentClean, customerType);
         if (duplicate.exists) {
           const docType = customerType === 'PJ' ? 'CNPJ' : 'CPF';
+          const sourceLabel =
+            !ERP_ENABLED && duplicate.source === 'ERP'
+              ? 'base legada'
+              : duplicate.source;
           throw new Error(
-            `${docType} já cadastrado! Cliente "${duplicate.name}" encontrado no ${duplicate.source}. ` +
+            `${docType} já cadastrado! Cliente "${duplicate.name}" encontrado no ${sourceLabel}. ` +
             `Acesse o cliente existente ou use outro ${docType}.`
           );
         }
@@ -542,7 +547,7 @@ export default function CustomerNew() {
       // Auto-lookup when CNPJ is complete (14 digits) and valid
       if (cnpjClean.length === 14 && isValidCNPJ(cnpjClean)) {
         lookupCnpj(cnpjClean);           // BrasilAPI lookup
-        checkIniflexCustomer(cnpjClean); // Iniflex ERP lookup (parallel)
+        if (ERP_ENABLED) checkIniflexCustomer(cnpjClean); // Iniflex lookup (parallel)
       }
     }
   };
@@ -693,7 +698,7 @@ export default function CustomerNew() {
                   )}
 
                   {/* Iniflex ERP Lookup Feedback */}
-                  {isCheckingIniflex && (
+                  {ERP_ENABLED && isCheckingIniflex && (
                     <Alert className="col-span-2 border-blue-500/50 bg-blue-500/10">
                       <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                       <AlertTitle className="text-blue-700">Verificando ERP</AlertTitle>
@@ -703,7 +708,7 @@ export default function CustomerNew() {
                     </Alert>
                   )}
 
-                  {iniflexCustomer?.found && (
+                  {ERP_ENABLED && iniflexCustomer?.found && (
                     <Alert className="col-span-2 border-orange-500/50 bg-orange-500/10">
                       <AlertTriangle className="h-4 w-4 text-orange-600" />
                       <AlertTitle className="text-orange-700">Cliente encontrado no ERP</AlertTitle>
@@ -722,7 +727,7 @@ export default function CustomerNew() {
                     </Alert>
                   )}
 
-                  {iniflexCustomer !== null && !iniflexCustomer.found && (
+                  {ERP_ENABLED && iniflexCustomer !== null && !iniflexCustomer.found && (
                     <Alert className="col-span-2 border-gray-500/50 bg-gray-500/10">
                       <CheckCircle className="h-4 w-4 text-gray-600" />
                       <AlertTitle className="text-gray-700">Cliente novo</AlertTitle>

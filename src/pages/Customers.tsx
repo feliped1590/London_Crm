@@ -28,7 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { formatCNPJ, formatCPF } from '@/lib/cpfCnpjMask';
 import { PermissionAction } from '@/lib/permissions/permissionEngine';
 import { getRecentInteractionLabel, useRecentInteractions } from '@/hooks/useRecentInteractions';
-import { WHATSAPP_ENABLED } from '@/config/features';
+import { ERP_ENABLED, WHATSAPP_ENABLED } from '@/config/features';
 import {
   Pagination,
   PaginationContent,
@@ -657,8 +657,8 @@ export default function Customers() {
                       </SortableHeader>
                       <SortableHeader field="owner">Vendedor Comercial</SortableHeader>
                       <TableHead>IPI</TableHead>
-                      <TableHead>Cód. ERP</TableHead>
-                      <TableHead>ERP</TableHead>
+                      {ERP_ENABLED && <TableHead>Cód. ERP</TableHead>}
+                      {ERP_ENABLED && <TableHead>ERP</TableHead>}
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -713,19 +713,23 @@ export default function Customers() {
                             <Badge variant="secondary" className="bg-muted text-muted-foreground">Não</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {(customer as any).erp_code
-                            ? <span className="font-medium">{(customer as any).erp_code}</span>
-                            : <span className="text-muted-foreground">—</span>}
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
-                            <CompanySyncBadge companyId={customer.id} erpCode={(customer as any).erp_code} />
-                            {(isAdmin || isDeveloper || isVendedor) && (
-                              <CompanySyncButton companyId={customer.id} erpCode={(customer as any).erp_code} />
-                            )}
-                          </div>
-                        </TableCell>
+                        {ERP_ENABLED && (
+                          <TableCell className="font-mono text-xs">
+                            {(customer as any).erp_code
+                              ? <span className="font-medium">{(customer as any).erp_code}</span>
+                              : <span className="text-muted-foreground">—</span>}
+                          </TableCell>
+                        )}
+                        {ERP_ENABLED && (
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
+                              <CompanySyncBadge companyId={customer.id} erpCode={(customer as any).erp_code} />
+                              {(isAdmin || isDeveloper || isVendedor) && (
+                                <CompanySyncButton companyId={customer.id} erpCode={(customer as any).erp_code} />
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
                         <TableCell className="text-right">
                           <TooltipProvider>
                             <div className="flex items-center justify-end gap-1">

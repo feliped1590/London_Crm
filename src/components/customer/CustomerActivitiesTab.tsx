@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react';
 import { QuickNotes } from '@/components/notes/QuickNotes';
 import { usePortfolioProtection } from '@/hooks/usePortfolioProtection';
 import { PortfolioProtectionModal } from '@/components/customers/PortfolioProtectionModal';
+import { ERP_ENABLED } from '@/config/features';
 
 interface CustomerActivitiesTabProps {
   customerId: string;
@@ -24,7 +25,9 @@ export function CustomerActivitiesTab({ customerId, isErpCustomer }: CustomerAct
           <CardTitle>Notas</CardTitle>
           <CardDescription>
             {isErpCustomer
-              ? 'Notas não disponíveis para clientes do ERP'
+              ? ERP_ENABLED
+                ? 'Notas não disponíveis para clientes do ERP'
+                : 'Notas não disponíveis para clientes de origem legada'
               : isBlocked
                 ? 'Este cliente pertence a outro vendedor. Notas bloqueadas.'
                 : 'Anotações e observações sobre este cliente'}
@@ -36,7 +39,9 @@ export function CustomerActivitiesTab({ customerId, isErpCustomer }: CustomerAct
               <FileText className="h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold">Notas não disponíveis</h3>
               <p className="text-muted-foreground max-w-md">
-                As notas não estão disponíveis para clientes sincronizados do ERP.
+                {ERP_ENABLED
+                  ? 'As notas não estão disponíveis para clientes sincronizados do ERP.'
+                  : 'As notas não estão disponíveis para clientes de origem legada.'}
               </p>
             </div>
           ) : isBlocked ? (

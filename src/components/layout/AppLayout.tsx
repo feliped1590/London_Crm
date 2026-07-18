@@ -15,6 +15,7 @@ import { useSessionGuard } from '@/hooks/useSessionGuard';
 import { useLoginTaskAlert } from '@/hooks/useLoginTaskAlert';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { TaskAlertModal } from '@/components/tasks/TaskAlertModal';
+import { AI_ASSISTANT_ENABLED } from '@/config/features';
 
 export function AppLayout() {
   useSessionGuard();
@@ -46,9 +47,7 @@ export function AppLayout() {
           {effectiveEntity?.logo_url ? (
             <img src={effectiveEntity.logo_url} alt={effectiveEntity.name} className="h-6 max-w-[100px] object-contain" />
           ) : (
-            <span className="font-display text-base font-semibold">
-              <span className="text-gradient-brand">Qualyvac</span>
-            </span>
+            <img src="/london-logo.png" alt="London" className="h-7 max-w-[100px] object-contain" />
           )}
           <div className="ml-auto flex items-center gap-1">
             <NotificationBell />
@@ -91,7 +90,7 @@ export function AppLayout() {
 
       {alertData && <TaskAlertModal open={showModal} onClose={closeModal} data={alertData} />}
       <NotificationToast />
-      {isDeveloper && <AIChatWidget />}
+      {isDeveloper && AI_ASSISTANT_ENABLED && <AIChatWidget />}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Info } from 'lucide-react';
 import { useErpCities, normalizeCityName } from '@/hooks/useErpCities';
+import { ERP_ENABLED } from '@/config/features';
 
 const BR_UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
@@ -94,8 +95,9 @@ export function CityStateSelect({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Nenhuma cidade mapeada no ERP. Cadastre em Configurações → ERP →
-              Cidades para liberar a sincronização.
+              {ERP_ENABLED
+                ? 'Nenhuma cidade mapeada no ERP. Cadastre em Configurações → ERP → Cidades para liberar a sincronização.'
+                : 'Nenhuma cidade cadastrada para este ambiente. Cadastre uma cidade para continuar.'}
             </AlertDescription>
           </Alert>
         </div>
@@ -147,8 +149,9 @@ export function CityStateSelect({
             </Select>
             <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
               <AlertTriangle className="h-3 w-3" />
-              Nenhuma cidade mapeada no ERP para {ufKey}. Solicite ao
-              administrador o cadastro da cidade antes de prosseguir.
+              {ERP_ENABLED
+                ? `Nenhuma cidade mapeada no ERP para ${ufKey}. Solicite ao administrador o cadastro da cidade antes de prosseguir.`
+                : `Nenhuma cidade cadastrada para ${ufKey}. Solicite ao administrador o cadastro da cidade antes de prosseguir.`}
             </p>
           </>
         ) : (
@@ -179,8 +182,9 @@ export function CityStateSelect({
         {!currentCityIsMapped && city && cityList.length > 0 && (
           <p className="mt-1 flex items-center gap-1 text-xs text-amber-600">
             <AlertTriangle className="h-3 w-3" />
-            Cidade atual não está mapeada no ERP. Selecione uma da lista para
-            permitir a sincronização.
+            {ERP_ENABLED
+              ? 'Cidade atual não está mapeada no ERP. Selecione uma da lista para permitir a sincronização.'
+              : 'Cidade atual não está cadastrada na lista disponível. Selecione uma opção válida.'}
           </p>
         )}
       </div>

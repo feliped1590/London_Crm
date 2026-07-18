@@ -29,6 +29,7 @@ const loaders: Record<string, Loader> = {
   '/settings': () => import('@/pages/Settings'),
   '/integrations': () => import('@/pages/Integrations'),
   '/import-companies': () => import('@/pages/ImportCompanies'),
+  '/import-data': () => import('@/pages/ImportData'),
 };
 
 const prefetched = new Set<string>();

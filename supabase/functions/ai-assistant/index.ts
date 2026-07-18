@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { envFlagEnabled, disabledIntegrationResponse } from "../_shared/integration-gates.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -605,6 +606,10 @@ interface AIMessage {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled("AI_ASSISTANT_ENABLED", false)) {
+    return disabledIntegrationResponse("AI Assistant", corsHeaders);
   }
 
   try {

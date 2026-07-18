@@ -12,6 +12,7 @@ import {
   isProductUpdate,
   getProductGrupoComando,
 } from '../_shared/projedata/index.ts';
+import { envFlagEnabled, disabledIntegrationResponse } from '../_shared/integration-gates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,6 +22,10 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('ERP_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('ERP', corsHeaders);
   }
 
   try {

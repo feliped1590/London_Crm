@@ -1,4 +1,4 @@
-project_id = "lusyhkizwoihixcvcgap"
+project_id = "rdotdjyabyrykqvykmuf"
 
 [functions.zapi-webhook]
 verify_jwt = false
@@ -22,18 +22,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.process-scheduled-emails]
-verify_jwt = false
-
-[functions.iniflex-sync-contact]
-verify_jwt = false
-
-[functions.iniflex-sync-company]
-verify_jwt = false
-
-[functions.iniflex-list-correntistas]
-verify_jwt = false
-
-[functions.iniflex-import-correntista]
 verify_jwt = false
 
 [functions.generate-proposal-pdf]
@@ -67,24 +55,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.lookup-cnpj]
-verify_jwt = false
-
-[functions.iniflex-customer-lookup]
-verify_jwt = false
-
-[functions.iniflex-sandbox-test]
-verify_jwt = false
-
-[functions.sync-iniflex-clients]
-verify_jwt = false
-
-[functions.sync-iniflex-products]
-verify_jwt = false
-
-[functions.sync-iniflex-orders]
-verify_jwt = false
-
-[functions.ai-copilot]
 verify_jwt = false
 
 [functions.validate-ncm-semantic]

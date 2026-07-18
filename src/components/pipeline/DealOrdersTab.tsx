@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Loader2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { orderStatusConfig, type OrderStatus } from '@/types/products';
+import { ERP_ENABLED } from '@/config/features';
 
 interface DealOrdersTabProps {
   dealId: string;
@@ -59,7 +60,7 @@ export function DealOrdersTab({ dealId }: DealOrdersTabProps) {
                 <div className="text-xs text-muted-foreground">
                   Criado em {formatDate(o.created_at)}
                   {o.delivery_date && ` · Entrega ${formatDate(o.delivery_date)}`}
-                  {o.erp_order_id && ` · ERP ${o.erp_order_id}`}
+                  {ERP_ENABLED && o.erp_order_id && ` · ERP ${o.erp_order_id}`}
                 </div>
               </div>
             </div>

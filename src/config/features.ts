@@ -13,7 +13,25 @@ export const WHATSAPP_ENABLED = false;
  * é investigada. Quando true, botões e disparos automáticos de sincronização
  * ficam bloqueados no frontend.
  */
-export const ERP_SYNC_PAUSED = false;
+export const ERP_SYNC_PAUSED = true;
+
+/**
+ * ERP_ENABLED: liga/desliga a superfície de ERP no frontend.
+ * Quando false, a UI de configuração/monitoramento de ERP fica oculta.
+ */
+export const ERP_ENABLED = false;
+
+/**
+ * GOOGLE_CALENDAR_ENABLED: liga/desliga a integração com Google Calendar.
+ * Quando false, a aba de Google Calendar não aparece no frontend.
+ */
+export const GOOGLE_CALENDAR_ENABLED = false;
+
+/**
+ * AI_ASSISTANT_ENABLED: liga/desliga o widget de IA no frontend.
+ * Mantido em false para o go-live London.
+ */
+export const AI_ASSISTANT_ENABLED = false;
 
 /**
  * WORKSPACE_TABS_ENABLED: ativa a barra de abas de trabalho (Workspace) que

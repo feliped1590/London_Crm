@@ -37,6 +37,7 @@ import { toast } from 'sonner';
 import { useRecentInteractions } from '@/hooks/useRecentInteractions';
 import { useFormDraft } from '@/workspace/useFormDraft';
 import { DraftRestoreDialog } from '@/workspace/DraftRestoreDialog';
+import { ERP_ENABLED } from '@/config/features';
 
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
@@ -336,7 +337,7 @@ export default function CustomerDetail() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold text-foreground">{displayName}</h1>
-                {isErpCustomer ? (
+                {ERP_ENABLED && isErpCustomer ? (
                   <Badge variant="secondary" className="gap-1"><Database className="h-3 w-3" />ERP</Badge>
                 ) : (
                   <Badge variant="outline" className="gap-1"><Building2 className="h-3 w-3" />CRM</Badge>
@@ -354,7 +355,7 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isErpCustomer && (isAdmin || isDeveloper || isVendedor) && (
+          {ERP_ENABLED && !isErpCustomer && (isAdmin || isDeveloper || isVendedor) && (
             <div className="flex items-center gap-1">
               <CompanySyncBadge companyId={id!} erpCode={customer.erp_code} />
               <CompanySyncButton
@@ -404,7 +405,7 @@ export default function CustomerDetail() {
       </div>
 
       {/* ERP Read-only Notice */}
-      {isErpCustomer && (
+      {ERP_ENABLED && isErpCustomer && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-warning/30 bg-warning/10">
           <AlertCircle className="h-5 w-5 text-warning" />
           <div>

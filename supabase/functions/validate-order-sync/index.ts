@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadOrderForValidation } from '../_shared/projedata/order-loader.ts';
 import { validateOrderForSync } from '../_shared/projedata/order-validator.ts';
 import { resolveOrderErpConfig, isOrderErpConfigError } from '../_shared/erp/order-endpoint-resolver.ts';
+import { envFlagEnabled, disabledIntegrationResponse } from '../_shared/integration-gates.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,10 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (!envFlagEnabled('ERP_INTEGRATION_ENABLED', false)) {
+    return disabledIntegrationResponse('ERP', corsHeaders);
   }
 
   const supabase = createClient(

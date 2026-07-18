@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useEffect, useState } from 'react';
 import { SyncValidationModal, type SyncValidationError } from '@/components/sync/SyncValidationModal';
 import { useOrderSyncEntry } from '@/components/sync/SyncBatchProviders';
-import { ERP_SYNC_PAUSED } from '@/config/features';
+import { ERP_ENABLED, ERP_SYNC_PAUSED } from '@/config/features';
 
 // Realtime channel per row — só é usado quando o componente NÃO está dentro de
 // <OrderSyncProvider>. Dentro de listas (Orders.tsx), o provider abre 1 canal
@@ -89,6 +89,7 @@ const syncStatusConfig: Record<string, { label: string; icon: React.ElementType;
 };
 
 export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: OrderSyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const { entry: batchEntry, isInBatch } = useOrderSyncEntry(orderId);
   useOrderSyncRealtime(orderId, !isInBatch);
   const { data: individualEntry } = useQuery({
@@ -181,6 +182,7 @@ export function OrderSyncBadge({ orderId, erpOrderId, erpSyncedAt, updatedAt }: 
 }
 
 export function OrderSyncButton({ orderId, orderNumber, erpOrderId, onSyncTriggered }: OrderSyncStatusProps) {
+  if (!ERP_ENABLED) return null;
   const [isSyncing, setIsSyncing] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationErrors, setValidationErrors] = useState<SyncValidationError[]>([]);
