@@ -11515,6 +11515,14 @@ export type Database = {
         }[]
       }
       each: { Args: { hs: unknown }; Returns: Record<string, unknown>[] }
+      ensure_user_tenant_membership: {
+        Args: {
+          p_auth_user_id: string
+          p_tenant_id: string
+          p_legal_entity_id?: string | null
+        }
+        Returns: undefined
+      }
       enqueue_all_product_attributes: {
         Args: { p_product_id: string }
         Returns: number

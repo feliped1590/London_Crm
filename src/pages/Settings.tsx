@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -119,6 +119,32 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
     enabled: !!userProfile?.id,
   });
 
+  const ensureUserTenantAccess = async (opts?: { tenantId?: string; legalEntityId?: string }) => {
+    let tenantId = opts?.tenantId ?? userLinks[0]?.tenant_id ?? accessibleEntities[0]?.tenant_id;
+    const legalEntityId =
+      opts?.legalEntityId ?? userLinks[0]?.legal_entity_id ?? accessibleEntities[0]?.id ?? null;
+
+    if (!tenantId) {
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '')
+        .maybeSingle();
+      tenantId = adminProfile?.active_tenant_id ?? undefined;
+    }
+
+    if (!tenantId) {
+      throw new Error('Não foi possível determinar o tenant para liberar o acesso');
+    }
+
+    const { error } = await supabase.rpc('ensure_user_tenant_membership', {
+      p_auth_user_id: editingUser.userId,
+      p_tenant_id: tenantId,
+      p_legal_entity_id: legalEntityId,
+    });
+    if (error) throw error;
+  };
+
   const addLinkMutation = useMutation({
     mutationFn: async (entityId: string) => {
       if (!userProfile) throw new Error('Profile not found');
@@ -135,6 +161,12 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
         tenant_id: entity.tenant_id,
       });
       if (error) throw error;
+
+      // Cinto de segurança: trigger do banco também faz isso; RPC cobre ambientes sem migration ainda.
+      await ensureUserTenantAccess({
+        tenantId: entity.tenant_id,
+        legalEntityId: entityId,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user_legal_entities_edit'] });
@@ -242,6 +274,27 @@ function EditUserForm({ editingUser, editUserFormData, setEditUserFormData, onSu
           <p className="text-xs text-muted-foreground">
             Sem vínculos = acesso a todos os CNPJs. Vincule para restringir.
           </p>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full sm:w-auto"
+            onClick={async () => {
+              try {
+                await ensureUserTenantAccess(
+                  userLinks[0]
+                    ? { tenantId: userLinks[0].tenant_id, legalEntityId: userLinks[0].legal_entity_id }
+                    : undefined,
+                );
+                toast.success('Acesso ao tenant sincronizado. Peça para a usuária sair e entrar novamente.');
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : 'Erro ao sincronizar acesso');
+              }
+            }}
+          >
+            Liberar / sincronizar acesso
+          </Button>
           
           {userLinks.length > 0 && (
             <div className="flex flex-wrap gap-2">

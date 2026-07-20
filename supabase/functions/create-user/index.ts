@@ -179,6 +179,63 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Garante user_tenants + active_tenant_id. Sem isso o usuário cai em "Acesso bloqueado"
+    // mesmo após vincular CNPJ (RLS de legal_entities depende de user_tenants).
+    if (newUser.user) {
+      let tenantId: string | null = null;
+
+      const { data: adminProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('active_tenant_id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      tenantId = adminProfile?.active_tenant_id ?? null;
+
+      if (!tenantId) {
+        const { data: adminTenant } = await supabaseAdmin
+          .from('user_tenants')
+          .select('tenant_id')
+          .eq('user_id', currentUser.id)
+          .limit(1)
+          .maybeSingle();
+        tenantId = adminTenant?.tenant_id ?? null;
+      }
+
+      if (!tenantId) {
+        const { data: anyTenant } = await supabaseAdmin
+          .from('tenants')
+          .select('id')
+          .eq('active', true)
+          .limit(1)
+          .maybeSingle();
+        tenantId = anyTenant?.id ?? null;
+      }
+
+      if (tenantId) {
+        const { error: utError } = await supabaseAdmin.from('user_tenants').upsert(
+          {
+            user_id: newUser.user.id,
+            tenant_id: tenantId,
+            role: 'member',
+          },
+          { onConflict: 'user_id,tenant_id' },
+        );
+        if (utError) {
+          console.error('Error inserting user_tenants for new user:', utError);
+        } else {
+          const { error: profileTenantError } = await supabaseAdmin
+            .from('profiles')
+            .update({ active_tenant_id: tenantId })
+            .eq('user_id', newUser.user.id);
+          if (profileTenantError) {
+            console.error('Error setting active_tenant_id for new user:', profileTenantError);
+          }
+        }
+      } else {
+        console.error('Could not resolve tenant_id for new user', newUser.user.id);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 

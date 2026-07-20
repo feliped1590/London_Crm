@@ -36,6 +36,9 @@ verify_jwt = false
 [functions.update-user]
 verify_jwt = false
 
+[functions.ensure-user-tenant]
+verify_jwt = false
+
 [functions.process-task-reminders]
 verify_jwt = false
 
