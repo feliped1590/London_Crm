@@ -335,8 +335,17 @@ export function usePipelineData(selectedPipelineId: string | null) {
       if (error) throw error;
       return created;
     },
-    onSuccess: () => {
-      toast.success('Negócio criado com sucesso!');
+    onSuccess: (created) => {
+      toast.success('Processo criado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customer'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-summary'] });
+      if (created?.company_id) {
+        queryClient.invalidateQueries({ queryKey: ['customer', created.company_id] });
+        queryClient.invalidateQueries({ queryKey: ['customer-deals', created.company_id] });
+      }
     },
     onError: (error: any) => {
       const message = error?.message || '';
@@ -420,6 +429,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
       updateItemInList(queryClient, ['deals'], id, data, 'deal');
       queryClient.invalidateQueries({ queryKey: ['deal_stage_history'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['customer'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-summary'] });
       toast.success('Negócio atualizado!');
     },
     onError: (error: any) => {
@@ -442,6 +455,10 @@ export function usePipelineData(selectedPipelineId: string | null) {
     },
     onSuccess: (_, dealId) => {
       removeItemFromList(queryClient, ['deals'], dealId, 'deal');
+      queryClient.invalidateQueries({ queryKey: ['customer'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-timeline'] });
+      queryClient.invalidateQueries({ queryKey: ['customer-workspace-summary'] });
       toast.success('Negócio excluído com sucesso!');
     },
     onError: (error: any) => {
@@ -718,7 +735,11 @@ export function usePipelineData(selectedPipelineId: string | null) {
     };
 
     try {
-      const pendingItems = await getPendingChecklistItems(dealId, deal.stage, effectivePipelineId);
+      const pendingItems = await getPendingChecklistItems(
+        dealId,
+        [deal.stage, resolveDealStageId(deal)].filter(Boolean) as string[],
+        effectivePipelineId,
+      );
 
       if (pendingItems.length > 0) {
         callbacks.setChecklistModalData({

@@ -99,14 +99,14 @@ export function useCustomerDetail(id: string | undefined) {
   });
 
   // Fetch customer with dual-source fallback (CRM → ERP)
-  const { data: customer, isLoading } = useQuery({
+  const { data: customerRow, isLoading: customerLoading } = useQuery({
     queryKey: ['customer', id],
     queryFn: async (): Promise<UnifiedCustomer | null> => {
       if (!id) return null;
 
       const { data: crmData } = await supabase
         .from('companies')
-        .select(`*, contacts(*), deals(id, name, stage, value, expected_close_date, owner_id)`)
+        .select(`*, contacts(*), deals(id, name, stage, value, expected_close_date, owner_id, pipeline_id, pipeline_stage_id)`)
         .eq('id', id)
         .maybeSingle();
 
@@ -163,6 +163,30 @@ export function useCustomerDetail(id: string | undefined) {
     },
     enabled: !!id,
   });
+
+  const { data: customerDeals = [], isLoading: dealsLoading } = useQuery({
+    queryKey: ['customer-deals', id],
+    enabled: Boolean(id) && customerRow?.source === 'crm',
+    staleTime: 0,
+    refetchOnMount: 'always',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deals')
+        .select('id, name, stage, value, expected_close_date, owner_id, pipeline_id, pipeline_stage_id')
+        .eq('company_id', id!)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const customer = React.useMemo((): UnifiedCustomer | null => {
+    if (!customerRow) return null;
+    if (customerRow.source !== 'crm') return customerRow;
+    return { ...customerRow, deals: customerDeals };
+  }, [customerRow, customerDeals]);
+
+  const isLoading = customerLoading || (customerRow?.source === 'crm' && dealsLoading);
 
   const { data: sameGroupCompanies = [], isLoading: sameGroupCompaniesLoading } = useQuery({
     queryKey: ['customer-same-group', id, customer?.economic_group_id, customer?.tenant_id, customer?.cnpj_root],

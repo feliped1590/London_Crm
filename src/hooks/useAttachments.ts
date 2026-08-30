@@ -52,6 +52,8 @@ export function useUploadAttachment() {
     },
     onSuccess: (_row, vars) => {
       qc.invalidateQueries({ queryKey: ['attachments', vars.entityType, vars.entityId] });
+      qc.invalidateQueries({ queryKey: ['customer-workspace-timeline'] });
+      qc.invalidateQueries({ queryKey: ['customer-workspace-summary'] });
     },
   });
 }
@@ -62,6 +64,8 @@ export function useDeleteAttachment() {
     mutationFn: (att: AttachmentRow) => deleteAttachment(att),
     onSuccess: (_v, att) => {
       qc.invalidateQueries({ queryKey: ['attachments', att.entity_type, att.entity_id] });
+      qc.invalidateQueries({ queryKey: ['customer-workspace-timeline'] });
+      qc.invalidateQueries({ queryKey: ['customer-workspace-summary'] });
     },
   });
 }

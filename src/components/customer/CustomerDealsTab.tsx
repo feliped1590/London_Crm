@@ -21,19 +21,19 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDe
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Negócios</CardTitle>
+            <CardTitle>Processos</CardTitle>
             <CardDescription>
               {isErpCustomer
                 ? ERP_ENABLED
-                  ? 'Para criar negócios com este cliente, primeiro importe-o para o CRM'
-                  : 'Para criar negócios com este cliente, primeiro converta-o para cliente CRM'
-                : 'Oportunidades e negociações com este cliente'}
+                  ? 'Para criar processos com este cliente, primeiro importe-o para o CRM'
+                  : 'Para criar processos com este cliente, primeiro converta-o para cliente CRM'
+                : 'Processos, serviços e atendimentos deste cliente'}
             </CardDescription>
           </div>
           {!isErpCustomer && canManageDeals && (
             <Button size="sm" className="gap-2" onClick={() => navigate(`/pipeline?newDeal=${customerId}`)}>
               <Plus className="h-4 w-4" />
-              Novo Negócio
+              Novo processo
             </Button>
           )}
         </div>
@@ -52,16 +52,15 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDe
         ) : deals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <TrendingUp className="h-12 w-12 text-muted-foreground/50" />
-            <h3 className="mt-4 text-lg font-semibold">Nenhum negócio</h3>
-            <p className="text-muted-foreground">Crie o primeiro negócio com este cliente.</p>
+            <h3 className="mt-4 text-lg font-semibold">Nenhum processo</h3>
+            <p className="text-muted-foreground">Crie o primeiro processo com este cliente.</p>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Negócio</TableHead>
+                <TableHead>Processo</TableHead>
                 <TableHead>Etapa</TableHead>
-                <TableHead>Valor</TableHead>
                 <TableHead>Previsão</TableHead>
               </TableRow>
             </TableHeader>
@@ -70,11 +69,6 @@ export function CustomerDealsTab({ customerId, deals, isErpCustomer, canManageDe
                 <TableRow key={deal.id} className="cursor-pointer" onClick={() => navigate(`/pipeline?deal=${deal.id}`)}>
                   <TableCell className="font-medium">{deal.name}</TableCell>
                   <TableCell><DealStageBadges deals={[deal]} /></TableCell>
-                  <TableCell>
-                    {deal.value
-                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.value)
-                      : '-'}
-                  </TableCell>
                   <TableCell>
                     {deal.expected_close_date
                       ? new Date(deal.expected_close_date).toLocaleDateString('pt-BR')

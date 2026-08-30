@@ -1485,6 +1485,66 @@ export type Database = {
         }
         Relationships: []
       }
+      client_contracts: {
+        Row: {
+          company_id: string
+          contract_number: string | null
+          created_at: string
+          created_by: string
+          customer_contact_id: string | null
+          ends_on: string | null
+          id: string
+          legal_entity_id: string | null
+          next_renewal_on: string | null
+          notes: string | null
+          renewal_interval_months: number | null
+          responsible_user_id: string | null
+          starts_on: string | null
+          status: Database["public"]["Enums"]["client_contract_status"]
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contract_number?: string | null
+          created_at?: string
+          created_by: string
+          customer_contact_id?: string | null
+          ends_on?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          next_renewal_on?: string | null
+          notes?: string | null
+          renewal_interval_months?: number | null
+          responsible_user_id?: string | null
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["client_contract_status"]
+          tenant_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string
+          customer_contact_id?: string | null
+          ends_on?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          next_renewal_on?: string | null
+          notes?: string | null
+          renewal_interval_months?: number | null
+          responsible_user_id?: string | null
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["client_contract_status"]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       companies: {
         Row: {
           active: boolean | null
@@ -3166,7 +3226,86 @@ export type Database = {
           },
         ]
       }
-      deal_audit_log: {
+      customer_documents: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          customer_contact_id: string | null
+          deal_id: string | null
+          document_type_id: string
+          due_date: string | null
+          expires_at: string | null
+          id: string
+          legal_entity_id: string | null
+          next_due_date: string | null
+          notes: string | null
+          received_at: string | null
+          renewal_interval_months: number | null
+          requested_at: string | null
+          responsible_user_id: string | null
+          reviewed_at: string | null
+          service_engagement_id: string | null
+          status: Database["public"]["Enums"]["customer_document_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          customer_contact_id?: string | null
+          deal_id?: string | null
+          document_type_id: string
+          due_date?: string | null
+          expires_at?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          next_due_date?: string | null
+          notes?: string | null
+          received_at?: string | null
+          renewal_interval_months?: number | null
+          requested_at?: string | null
+          responsible_user_id?: string | null
+          reviewed_at?: string | null
+          service_engagement_id?: string | null
+          status?: Database["public"]["Enums"]["customer_document_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          customer_contact_id?: string | null
+          deal_id?: string | null
+          document_type_id?: string
+          due_date?: string | null
+          expires_at?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          next_due_date?: string | null
+          notes?: string | null
+          received_at?: string | null
+          renewal_interval_months?: number | null
+          requested_at?: string | null
+          responsible_user_id?: string | null
+          reviewed_at?: string | null
+          service_engagement_id?: string | null
+          status?: Database["public"]["Enums"]["customer_document_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_documents_document_type_id_fkey"
+            columns: ["document_type_id"]
+            isOneToOne: false
+            referencedRelation: "document_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
         Row: {
           changed_at: string
           changed_by: string | null
@@ -3248,6 +3387,58 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      deal_followups: {
+        Row: {
+          channel: string
+          company_id: string
+          created_at: string
+          created_by: string
+          deal_id: string | null
+          deleted_at: string | null
+          description: string | null
+          followup_group_id: string
+          followup_subgroup_id: string
+          id: string
+          interaction_at: string
+          legal_entity_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          deal_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          description?: string | null
+          followup_group_id: string
+          followup_subgroup_id: string
+          id?: string
+          interaction_at?: string
+          legal_entity_id?: string | null
+          tenant_id?: string
+        }
+        Update: {
+          channel?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          deal_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
+          description?: string | null
+          followup_group_id?: string
+          followup_subgroup_id?: string
+          id?: string
+          interaction_at?: string
+          legal_entity_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
       }
       deal_participants: {
         Row: {
@@ -3680,6 +3871,48 @@ export type Database = {
           is_shared?: boolean | null
           name?: string
           subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      document_types: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_validity_days: number | null
+          default_warning_days: number
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          requires_approval: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_validity_days?: number | null
+          default_warning_days?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          requires_approval?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_validity_days?: number | null
+          default_warning_days?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          requires_approval?: boolean
+          tenant_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -4123,6 +4356,84 @@ export type Database = {
           stage?: string
           tenant_id?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      followup_groups: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      followup_subgroups: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          group_id: string
+          id: string
+          is_active: boolean
+          name: string
+          requires_description: boolean
+          sort_order: number
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          group_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          requires_description?: boolean
+          sort_order?: number
+          tenant_id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          group_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          requires_description?: boolean
+          sort_order?: number
+          tenant_id?: string
         }
         Relationships: []
       }
@@ -9809,6 +10120,69 @@ export type Database = {
         }
         Relationships: []
       }
+      service_engagements: {
+        Row: {
+          company_id: string
+          completed_on: string | null
+          contract_id: string | null
+          created_at: string
+          created_by: string
+          customer_contact_id: string | null
+          deal_id: string | null
+          due_on: string | null
+          id: string
+          legal_entity_id: string | null
+          notes: string | null
+          responsible_user_id: string | null
+          service_type: string
+          starts_on: string | null
+          status: Database["public"]["Enums"]["service_engagement_status"]
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          completed_on?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by: string
+          customer_contact_id?: string | null
+          deal_id?: string | null
+          due_on?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          notes?: string | null
+          responsible_user_id?: string | null
+          service_type?: string
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["service_engagement_status"]
+          tenant_id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          completed_on?: string | null
+          contract_id?: string | null
+          created_at?: string
+          created_by?: string
+          customer_contact_id?: string | null
+          deal_id?: string | null
+          due_on?: string | null
+          id?: string
+          legal_entity_id?: string | null
+          notes?: string | null
+          responsible_user_id?: string | null
+          service_type?: string
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["service_engagement_status"]
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sales_reps: {
         Row: {
           active: boolean | null
@@ -10329,6 +10703,12 @@ export type Database = {
           tenant_id: string
           title: string
           updated_at: string
+          waiting_on: Database["public"]["Enums"]["task_waiting_on"]
+          task_kind: Database["public"]["Enums"]["task_kind"]
+          service_engagement_id: string | null
+          customer_document_id: string | null
+          source_type: string | null
+          source_id: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -10350,6 +10730,12 @@ export type Database = {
           tenant_id?: string
           title: string
           updated_at?: string
+          waiting_on?: Database["public"]["Enums"]["task_waiting_on"]
+          task_kind?: Database["public"]["Enums"]["task_kind"]
+          service_engagement_id?: string | null
+          customer_document_id?: string | null
+          source_type?: string | null
+          source_id?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -10371,6 +10757,12 @@ export type Database = {
           tenant_id?: string
           title?: string
           updated_at?: string
+          waiting_on?: Database["public"]["Enums"]["task_waiting_on"]
+          task_kind?: Database["public"]["Enums"]["task_kind"]
+          service_engagement_id?: string | null
+          customer_document_id?: string | null
+          source_type?: string | null
+          source_id?: string | null
         }
         Relationships: [
           {
@@ -11765,6 +12157,29 @@ export type Database = {
           states: string[]
         }[]
       }
+      get_customer_workspace_summary: {
+        Args: { p_company_id: string }
+        Returns: Json
+      }
+      get_customer_workspace_timeline: {
+        Args: {
+          p_company_id: string
+          p_filter?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          actor_user_id: string | null
+          event_description: string | null
+          event_id: string
+          event_legal_entity_id: string | null
+          event_source: string
+          event_title: string
+          event_type: string
+          occurred_at: string
+          source_id: string
+        }[]
+      }
       get_customer_last_relevant_interactions: {
         Args: { p_company_ids?: string[] }
         Returns: {
@@ -12342,12 +12757,28 @@ export type Database = {
         | "60"
         | "70"
         | "90"
+      client_contract_status:
+        | "draft"
+        | "active"
+        | "pending_renewal"
+        | "expired"
+        | "cancelled"
       company_product_relationship_type:
         | "INTEREST"
         | "HOMOLOGATED"
         | "RECURRENT"
         | "STRATEGIC"
         | "BLACKLIST"
+      customer_document_status:
+        | "not_requested"
+        | "requested"
+        | "waiting_customer"
+        | "received"
+        | "in_review"
+        | "approved"
+        | "rejected"
+        | "expired"
+        | "waived"
       custom_field_entity: "company" | "contact" | "deal"
       custom_field_type:
         | "text"
@@ -12409,6 +12840,12 @@ export type Database = {
         | "lucro_presumido"
         | "lucro_real"
         | "mei"
+      service_engagement_status:
+        | "planned"
+        | "active"
+        | "paused"
+        | "completed"
+        | "cancelled"
       split_payment_status:
         | "estimado"
         | "retido"
@@ -12416,8 +12853,18 @@ export type Database = {
         | "ajustado"
         | "estornado"
       stock_movement_type: "entrada" | "saida" | "ajuste"
+      task_kind:
+        | "follow_up"
+        | "documentation"
+        | "meeting"
+        | "visit"
+        | "training"
+        | "renewal"
+        | "internal"
+        | "other"
       task_priority: "baixa" | "media" | "alta" | "urgente"
       task_status: "pendente" | "em_andamento" | "concluida" | "cancelada"
+      task_waiting_on: "internal" | "customer" | "third_party"
       tipo_beneficio_fiscal:
         | "isencao"
         | "reducao_base"

@@ -25,22 +25,11 @@ import type { SameGroupCompany, UnifiedCustomer } from '@/hooks/useCustomerDetai
 import type { Json } from '@/integrations/supabase/types';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { formatCNPJ, cleanDocument } from '@/lib/cpfCnpjMask';
-import { formatCurrency } from '@/lib/formatters';
 import { resolveUserForSalesRep } from '@/lib/ownership';
 import { CityStateSelect } from '@/components/customer/CityStateSelect';
 import { ERP_ENABLED } from '@/config/features';
 
 const employeeCounts = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
-const STAGE_LABELS: Record<string, string> = {
-  prospeccao: 'Prospecção',
-  qualificacao: 'Qualificação',
-  proposta: 'Proposta',
-  negociacao: 'Negociação',
-  fechado_ganho: 'Fechado ganho',
-  fechado_perdido: 'Fechado perdido',
-};
-
-const STAGE_ORDER = ['prospeccao', 'qualificacao', 'proposta', 'negociacao', 'fechado_ganho', 'fechado_perdido'];
 
 interface CustomerOverviewTabProps {
   customer: UnifiedCustomer;
@@ -146,16 +135,7 @@ export function CustomerOverviewTab({
   const totalGroupDeals = groupDealMetrics?.total_deals ?? 0;
   const hasGroupOpportunityInsight = currentCompanyDealsCount === 0 && totalGroupDeals > 0;
   const pipelineBreakdown = useMemo(
-    () =>
-      Object.entries(groupDealMetrics?.counts_by_stage || {}).sort(([stageA], [stageB]) => {
-        const indexA = STAGE_ORDER.indexOf(stageA);
-        const indexB = STAGE_ORDER.indexOf(stageB);
-        const normalizedA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
-        const normalizedB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
-
-        if (normalizedA !== normalizedB) return normalizedA - normalizedB;
-        return stageA.localeCompare(stageB);
-      }),
+    () => Object.entries(groupDealMetrics?.counts_by_stage || {}).sort(([a], [b]) => a.localeCompare(b)),
     [groupDealMetrics],
   );
 
@@ -408,23 +388,19 @@ export function CustomerOverviewTab({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Users className="h-5 w-5" />
-              Resumo comercial do grupo
+              Resumo do grupo
             </CardTitle>
             <CardDescription>
-              Todos os negócios do grupo econômico identificado pela mesma raiz do CNPJ.
+              Processos das empresas do mesmo grupo econômico (mesma raiz de CNPJ).
               {!sameGroupCompaniesLoading && ` Baseado em ${groupCompanyCount} ${groupCompanyCount === 1 ? 'empresa do grupo' : 'empresas do grupo'}.`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {groupDealMetricsLoading ? (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-lg border bg-card p-4">
                   <Skeleton className="h-4 w-28" />
                   <Skeleton className="mt-3 h-8 w-20" />
-                </div>
-                <div className="rounded-lg border bg-card p-4">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="mt-3 h-8 w-32" />
                 </div>
                 <div className="rounded-lg border bg-card p-4">
                   <Skeleton className="h-4 w-16" />
@@ -442,38 +418,31 @@ export function CustomerOverviewTab({
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                     <p>
                       <span className="font-medium">Oportunidade no grupo:</span>{' '}
-                      Esta empresa ainda não possui negócios, mas o grupo já possui {totalGroupDeals} — oportunidade de expansão.
+                      Esta empresa ainda não possui processos, mas o grupo já possui {totalGroupDeals} — vale conferir se há demanda relacionada.
                     </p>
                   </div>
                 )}
 
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg border bg-card p-4">
-                    <p className="text-sm text-muted-foreground">Negócios do grupo</p>
+                    <p className="text-sm text-muted-foreground">Processos do grupo</p>
                     <p className="mt-2 text-2xl font-semibold text-foreground">
                       {groupDealMetrics?.total_deals ?? 0}
                     </p>
                   </div>
 
                   <div className="rounded-lg border bg-card p-4">
-                    <p className="text-sm text-muted-foreground">Valor total</p>
-                    <p className="mt-2 text-2xl font-semibold text-foreground">
-                      {formatCurrency(groupDealMetrics?.total_value ?? 0)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-lg border bg-card p-4">
-                    <p className="text-sm text-muted-foreground">Pipeline</p>
+                    <p className="text-sm text-muted-foreground">Por etapa</p>
 
                     {pipelineBreakdown.length === 0 ? (
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Nenhum negócio encontrado para este grupo.
+                        Nenhum processo encontrado para este grupo.
                       </p>
                     ) : (
                       <div className="mt-3 space-y-2">
                         {pipelineBreakdown.map(([stage, count]) => (
                           <div key={stage} className="flex items-center justify-between gap-3 text-sm">
-                            <span className="text-foreground">{STAGE_LABELS[stage] || stage}</span>
+                            <span className="text-foreground">{stage}</span>
                             <Badge variant="secondary">{count}</Badge>
                           </div>
                         ))}

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { startOfDay, endOfDay, subDays, format } from 'date-fns';
+import { isOpenStage, isWonStage } from '@/lib/stageStatus';
 
 export interface TodayTask {
   id: string;
@@ -79,23 +80,31 @@ export function useTodayData() {
       const { data: deals, error } = await supabase
         .from('deals')
         .select(`
-          id, name, value, stage, updated_at,
+          id, name, value, stage, updated_at, pipeline_stage_id,
+          pipeline_stages(stage_status),
           company:companies(id, name),
           contact:contacts(id, first_name, last_name, mobile)
         `)
         .eq('owner_id', user?.id)
-        .not('stage', 'in', '("fechado_ganho","fechado_perdido")')
         .lt('updated_at', fiveDaysAgo.toISOString())
         .order('updated_at', { ascending: true })
-        .limit(10);
+        .limit(30);
 
       if (error) throw error;
 
-      return (deals || []).map(deal => ({
-        ...deal,
-        days_stagnant: Math.floor((today.getTime() - new Date(deal.updated_at).getTime()) / (1000 * 60 * 60 * 24)),
-        last_activity_at: deal.updated_at,
-      })) as StagnantDeal[];
+      return (deals || [])
+        .filter((deal) => {
+          const stageStatus = Array.isArray(deal.pipeline_stages)
+            ? deal.pipeline_stages[0]?.stage_status
+            : deal.pipeline_stages?.stage_status;
+          return isOpenStage(stageStatus, deal.stage);
+        })
+        .slice(0, 10)
+        .map((deal) => ({
+          ...deal,
+          days_stagnant: Math.floor((today.getTime() - new Date(deal.updated_at).getTime()) / (1000 * 60 * 60 * 24)),
+          last_activity_at: deal.updated_at,
+        })) as StagnantDeal[];
     },
     enabled: !!user?.id,
   });
@@ -114,14 +123,12 @@ export function useTodayData() {
       ] = await Promise.all([
         supabase
           .from('deals')
-          .select('value')
-          .eq('owner_id', user?.id)
-          .not('stage', 'in', '("fechado_ganho","fechado_perdido")'),
+          .select('value, stage, pipeline_stages(stage_status)')
+          .eq('owner_id', user?.id),
         supabase
           .from('deals')
-          .select('value')
+          .select('value, stage, closed_at, pipeline_stages(stage_status)')
           .eq('owner_id', user?.id)
-          .eq('stage', 'fechado_ganho')
           .gte('closed_at', startOfMonth.toISOString()),
         supabase
           .from('tasks')
@@ -138,8 +145,18 @@ export function useTodayData() {
           .maybeSingle(),
       ]);
 
-      const openDeals = openDealsResult.data || [];
-      const wonDeals = wonDealsResult.data || [];
+      const openDeals = (openDealsResult.data || []).filter((d) => {
+        const stageStatus = Array.isArray(d.pipeline_stages)
+          ? d.pipeline_stages[0]?.stage_status
+          : d.pipeline_stages?.stage_status;
+        return isOpenStage(stageStatus, d.stage);
+      });
+      const wonDeals = (wonDealsResult.data || []).filter((d) => {
+        const stageStatus = Array.isArray(d.pipeline_stages)
+          ? d.pipeline_stages[0]?.stage_status
+          : d.pipeline_stages?.stage_status;
+        return isWonStage(stageStatus, d.stage);
+      });
       const overdueCount = overdueTasksResult.count || 0;
       const goals = goalsResult.data;
 

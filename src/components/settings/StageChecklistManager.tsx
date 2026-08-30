@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -11,26 +11,14 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Pencil, Trash2, GripVertical, CheckSquare, AlertCircle } from 'lucide-react';
-import { useStageChecklistItems, useChecklistMutations, type ChecklistItem } from '@/hooks/useStageChecklists';
+import {
+  useStageChecklistItems,
+  useChecklistMutations,
+  usePipelineStages,
+  stageIdentity,
+  type ChecklistItem,
+} from '@/hooks/useStageChecklists';
 import { usePipelines } from '@/hooks/usePipelines';
-import { cn } from '@/lib/utils';
-const defaultStageLabels: Record<string, string> = {
-  prospeccao: 'Prospecção',
-  qualificacao: 'Qualificação',
-  proposta: 'Proposta',
-  negociacao: 'Negociação',
-  fechado_ganho: 'Fechado (Ganho)',
-  fechado_perdido: 'Fechado (Perdido)',
-};
-
-const defaultStageColors: Record<string, string> = {
-  prospeccao: 'bg-slate-500',
-  qualificacao: 'bg-blue-500',
-  proposta: 'bg-yellow-500',
-  negociacao: 'bg-orange-500',
-  fechado_ganho: 'bg-green-500',
-  fechado_perdido: 'bg-red-500',
-};
 
 const validationTypes = [
   { value: 'manual', label: 'Manual' },
@@ -39,16 +27,23 @@ const validationTypes = [
   { value: 'auto_activity', label: 'Auto (Atividade registrada)' },
 ];
 
+function itemMatchesStage(item: ChecklistItem, stage: { id: string; stage: string | null; name: string }) {
+  const keys = [stage.id, stage.stage, stage.name].filter(Boolean);
+  return keys.includes(item.stage);
+}
+
 export function StageChecklistManager() {
   const { pipelines, defaultPipeline } = usePipelines();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
-  const { data: checklistItems, isLoading } = useStageChecklistItems(selectedPipelineId || defaultPipeline?.id);
+  const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
+  const { data: pipelineStages = [], isLoading: loadingStages } = usePipelineStages(currentPipelineId);
+  const { data: checklistItems, isLoading } = useStageChecklistItems(currentPipelineId);
   const { createItem, updateItem, deleteItem } = useChecklistMutations();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
   const [formData, setFormData] = useState({
-    stage: 'prospeccao' as string,
+    stage: '',
     title: '',
     description: '',
     is_required: true,
@@ -56,11 +51,17 @@ export function StageChecklistManager() {
     sort_order: 0,
   });
 
-  const currentPipelineId = selectedPipelineId || defaultPipeline?.id || null;
+  const defaultStageKey = pipelineStages[0] ? stageIdentity(pipelineStages[0]) : '';
+
+  useEffect(() => {
+    if (!formData.stage && defaultStageKey) {
+      setFormData((prev) => ({ ...prev, stage: defaultStageKey }));
+    }
+  }, [defaultStageKey, formData.stage]);
 
   const resetForm = () => {
     setFormData({
-      stage: 'prospeccao',
+      stage: defaultStageKey,
       title: '',
       description: '',
       is_required: true,
@@ -86,7 +87,8 @@ export function StageChecklistManager() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!formData.stage) return;
+
     const data = {
       stage: formData.stage,
       pipeline_id: currentPipelineId,
@@ -105,14 +107,13 @@ export function StageChecklistManager() {
     }
   };
 
-  // Group items by stage
-  const itemsByStage = checklistItems?.reduce((acc, item) => {
-    if (!acc[item.stage]) acc[item.stage] = [];
-    acc[item.stage].push(item);
-    return acc;
-  }, {} as Record<string, ChecklistItem[]>) || {};
-
-  const stages: string[] = ['prospeccao', 'qualificacao', 'proposta', 'negociacao'];
+  const itemsByStage = useMemo(() => {
+    const map = new Map<string, ChecklistItem[]>();
+    for (const stage of pipelineStages) {
+      map.set(stage.id, (checklistItems || []).filter((item) => itemMatchesStage(item, stage)));
+    }
+    return map;
+  }, [checklistItems, pipelineStages]);
 
   return (
     <div className="space-y-6">
@@ -120,15 +121,15 @@ export function StageChecklistManager() {
         <div>
           <h3 className="text-lg font-semibold">Checklists por Etapa</h3>
           <p className="text-sm text-muted-foreground">
-            Configure itens obrigatórios para avançar negócios entre etapas
+            Os itens seguem as etapas cadastradas no funil selecionado
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Select 
-            value={selectedPipelineId || defaultPipeline?.id || ''} 
+          <Select
+            value={currentPipelineId || ''}
             onValueChange={(value) => setSelectedPipelineId(value || null)}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[220px]">
               <SelectValue placeholder="Selecione o funil" />
             </SelectTrigger>
             <SelectContent>
@@ -142,7 +143,7 @@ export function StageChecklistManager() {
           </Select>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2" disabled={!pipelineStages.length}>
                 <Plus className="h-4 w-4" />
                 Novo Item
               </Button>
@@ -154,17 +155,17 @@ export function StageChecklistManager() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label>Etapa</Label>
-                  <Select 
-                    value={formData.stage} 
+                  <Select
+                    value={formData.stage}
                     onValueChange={(value) => setFormData({ ...formData, stage: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecione a etapa" />
                     </SelectTrigger>
                     <SelectContent>
-                      {stages.map((stage) => (
-                        <SelectItem key={stage} value={stage}>
-                          {defaultStageLabels[stage] || stage}
+                      {pipelineStages.map((stage) => (
+                        <SelectItem key={stage.id} value={stageIdentity(stage)}>
+                          {stage.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -190,8 +191,8 @@ export function StageChecklistManager() {
                 </div>
                 <div className="space-y-2">
                   <Label>Tipo de Validação</Label>
-                  <Select 
-                    value={formData.validation_type} 
+                  <Select
+                    value={formData.validation_type}
                     onValueChange={(value) => setFormData({ ...formData, validation_type: value })}
                   >
                     <SelectTrigger>
@@ -241,18 +242,25 @@ export function StageChecklistManager() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading || loadingStages ? (
         <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+      ) : pipelineStages.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">
+          Este funil ainda não possui etapas cadastradas. Cadastre-as em Funis & Etapas.
+        </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {stages.map((stage) => {
-            const items = itemsByStage[stage] || [];
+          {pipelineStages.map((stage) => {
+            const items = itemsByStage.get(stage.id) || [];
             return (
-              <Card key={stage}>
+              <Card key={stage.id}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-3 h-3 rounded-full', defaultStageColors[stage] || 'bg-slate-500')} />
-                    <CardTitle className="text-base">{defaultStageLabels[stage] || stage}</CardTitle>
+                    <div
+                      className="h-3 w-3 rounded-full shrink-0"
+                      style={{ backgroundColor: stage.color || '#64748b' }}
+                    />
+                    <CardTitle className="text-base">{stage.name}</CardTitle>
                     <Badge variant="secondary" className="ml-auto">
                       {items.length} {items.length === 1 ? 'item' : 'itens'}
                     </Badge>
@@ -294,7 +302,7 @@ export function StageChecklistManager() {
                             )}
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-xs">
-                                {validationTypes.find(t => t.value === item.validation_type)?.label || 'Manual'}
+                                {validationTypes.find((t) => t.value === item.validation_type)?.label || 'Manual'}
                               </Badge>
                             </div>
                           </div>

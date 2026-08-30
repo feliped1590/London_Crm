@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,17 @@ import {
   ArrowLeft, Building2, User, Save, Pencil, Wand2,
   TrendingUp, Clock, FileText, Users, Database,
   AlertCircle, CheckCircle, CalendarCheck, ShieldCheck, Package, ArrowLeftRight, X, Paperclip, FileSignature,
+  MessageSquare, PanelRightClose, PanelRightOpen, ChevronLeft, ChevronRight,
 } from 'lucide-react';
+import { FollowupsTab } from '@/components/followups/FollowupsTab';
+import { CustomerTimeline360Panel } from '@/components/customer/CustomerTimeline360Panel';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
+import {
+  CustomerWorkspaceOverview,
+  CustomerTasksTab,
+  CustomerDocumentsTab,
+  CustomerContractsTab,
+} from '@/modules/customer-workspace';
 import { useModulePermissions } from '@/hooks/useModulePermissions';
 import { useSalesRepAccess } from '@/hooks/useSalesRepAccess';
 import { useEffectiveCustomerAccess } from '@/hooks/useEffectiveCustomerAccess';
@@ -58,7 +68,53 @@ export default function CustomerDetail() {
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
   const [showReviewAlert, setShowReviewAlert] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'dados');
+  const openTaskId = searchParams.get('task');
+  const [isTimelineOpen, setIsTimelineOpen] = useState(true);
+  const [isTimelineSheetOpen, setIsTimelineSheetOpen] = useState(false);
+  const tabsScrollerRef = useRef<HTMLDivElement>(null);
+  const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
+  const [canScrollTabsRight, setCanScrollTabsRight] = useState(false);
   const queryClient = useQueryClient();
+
+  const updateTabsScrollState = () => {
+    const element = tabsScrollerRef.current;
+    if (!element) return;
+    setCanScrollTabsLeft(element.scrollLeft > 2);
+    setCanScrollTabsRight(element.scrollLeft + element.clientWidth < element.scrollWidth - 2);
+  };
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const element = tabsScrollerRef.current;
+    if (!element) return;
+    element.scrollBy({ left: direction * Math.max(240, element.clientWidth * 0.7), behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    const element = tabsScrollerRef.current;
+    if (!element) return;
+    updateTabsScrollState();
+    const observer = new ResizeObserver(updateTabsScrollState);
+    observer.observe(element);
+    element.addEventListener('scroll', updateTabsScrollState, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener('scroll', updateTabsScrollState);
+    };
+  }, [isTimelineOpen]);
+
+  useEffect(() => {
+    const element = tabsScrollerRef.current;
+    const active = element?.querySelector<HTMLElement>('[role="tab"][data-state="active"]');
+    if (element && active) {
+      const left = active.offsetLeft;
+      const right = left + active.offsetWidth;
+      if (left < element.scrollLeft) element.scrollTo({ left, behavior: 'smooth' });
+      else if (right > element.scrollLeft + element.clientWidth) element.scrollTo({ left: right - element.clientWidth, behavior: 'smooth' });
+    }
+    window.setTimeout(updateTabsScrollState, 250);
+  }, [activeTab, isTimelineOpen]);
   const { recordInteraction: recordCustomerInteraction } = useRecentInteractions('company');
 
   useEffect(() => {
@@ -342,6 +398,7 @@ export default function CustomerDetail() {
                 ) : (
                   <Badge variant="outline" className="gap-1"><Building2 className="h-3 w-3" />CRM</Badge>
                 )}
+                <Badge variant="outline" className="gap-1">Workspace 360°</Badge>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {customer.cnpj && <span>{formatCNPJ(customer.cnpj)}</span>}
@@ -355,6 +412,23 @@ export default function CustomerDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={isTimelineOpen ? 'secondary' : 'outline'}
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              if (window.matchMedia('(min-width: 1024px)').matches) setIsTimelineOpen((open) => !open);
+              else setIsTimelineSheetOpen(true);
+            }}
+            aria-expanded={isTimelineOpen || isTimelineSheetOpen}
+            aria-controls="customer-timeline-360"
+            aria-label="Abrir Timeline 360°"
+            title="Timeline 360°"
+          >
+            {isTimelineOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+            <span className="hidden xl:inline">Timeline 360°</span>
+          </Button>
           {ERP_ENABLED && !isErpCustomer && (isAdmin || isDeveloper || isVendedor) && (
             <div className="flex items-center gap-1">
               <CompanySyncBadge companyId={id!} erpCode={customer.erp_code} />
@@ -460,28 +534,48 @@ export default function CustomerDetail() {
         </div>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="dados" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-10">
-          <TabsTrigger value="dados">Dados</TabsTrigger>
+      <div className={cn('grid items-start gap-4', isTimelineOpen && 'lg:grid-cols-[minmax(0,1fr)_minmax(360px,34%)]')}>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0 space-y-4">
+        <div className="flex min-w-0 items-stretch border-b bg-muted/60">
+        {canScrollTabsLeft && <Button type="button" variant="ghost" size="icon" className="h-10 w-9 shrink-0 rounded-none border-r bg-background/80" aria-label="Ver menus anteriores" title="Ver menus anteriores" onClick={() => scrollTabs(-1)}><ChevronLeft className="h-4 w-4" /></Button>}
+        <div ref={tabsScrollerRef} className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <TabsList className="h-10 w-max min-w-full justify-start rounded-none bg-muted/60 p-1 [&>button]:shrink-0">
+          <TabsTrigger value="dados">Cadastro</TabsTrigger>
           <TabsTrigger value="contatos" className="flex items-center gap-2">
             <Users className="h-4 w-4" />Contatos
             {contacts.length > 0 && <Badge variant="secondary" className="h-5 min-w-5">{contacts.length}</Badge>}
           </TabsTrigger>
+          <TabsTrigger value="visao-360">Visão 360</TabsTrigger>
+          <TabsTrigger value="tarefas" className="flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4" />Tarefas e agenda
+          </TabsTrigger>
           <TabsTrigger value="negocios" className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />Negócios
+            <TrendingUp className="h-4 w-4" />Processos
             {deals.length > 0 && <Badge variant="secondary" className="h-5 min-w-5">{deals.length}</Badge>}
           </TabsTrigger>
-          <TabsTrigger value="itens" className="flex items-center gap-2">
-            <Package className="h-4 w-4" />Itens vinculados
+          <TabsTrigger value="documentos" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />Documentos
           </TabsTrigger>
-          <TabsTrigger value="pedidos" className="flex items-center gap-2"><Package className="h-4 w-4" />Pedidos</TabsTrigger>
+          {ERP_ENABLED && (
+            <TabsTrigger value="itens" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />Itens vinculados
+            </TabsTrigger>
+          )}
+          {ERP_ENABLED && (
+            <TabsTrigger value="pedidos" className="flex items-center gap-2"><Package className="h-4 w-4" />Pedidos</TabsTrigger>
+          )}
           <TabsTrigger value="credito" className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" />Crédito</TabsTrigger>
           <TabsTrigger value="anexos" className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Anexos</TabsTrigger>
           <TabsTrigger value="contratos" className="flex items-center gap-2"><FileSignature className="h-4 w-4" />Contratos</TabsTrigger>
+          <TabsTrigger value="followups" className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />Interações
+          </TabsTrigger>
           <TabsTrigger value="historico" className="flex items-center gap-2"><Clock className="h-4 w-4" />Histórico</TabsTrigger>
           <TabsTrigger value="notas" className="flex items-center gap-2"><FileText className="h-4 w-4" />Notas</TabsTrigger>
         </TabsList>
+        </div>
+        {canScrollTabsRight && <Button type="button" variant="ghost" size="icon" className="h-10 w-9 shrink-0 rounded-none border-l bg-background/80" aria-label="Ver próximos menus" title="Ver próximos menus" onClick={() => scrollTabs(1)}><ChevronRight className="h-4 w-4" /></Button>}
+        </div>
 
         <TabsContent value="dados">
           <CustomerOverviewTab
@@ -514,17 +608,33 @@ export default function CustomerDetail() {
           />
         </TabsContent>
 
+        <TabsContent value="visao-360">
+          <CustomerWorkspaceOverview companyId={id!} onOpenTab={setActiveTab} />
+        </TabsContent>
+
+        <TabsContent value="tarefas">
+          <CustomerTasksTab companyId={id!} canEdit={canEdit} openTaskId={openTaskId} />
+        </TabsContent>
+
         <TabsContent value="negocios">
           <CustomerDealsTab customerId={id!} deals={deals} isErpCustomer={isErpCustomer} canManageDeals={effectiveAccess.canManageDeals} />
         </TabsContent>
 
+        <TabsContent value="documentos">
+          <CustomerDocumentsTab companyId={id!} canEdit={canEdit} />
+        </TabsContent>
+
+        {ERP_ENABLED && (
         <TabsContent value="itens">
           <CustomerProductsTab companyId={id!} canEdit={!isErpCustomer && canEdit} />
         </TabsContent>
+        )}
 
+        {ERP_ENABLED && (
         <TabsContent value="pedidos">
           <CustomerOrdersTab companyId={id!} source={customer?.source || 'crm'} cnpj={customer?.cnpj || null} canManageOrders={effectiveAccess.canManageOrders} />
         </TabsContent>
+        )}
 
         <TabsContent value="credito">
           <CreditAnalysisTab companyId={id!} companyName={customer?.fantasia || customer?.name || 'Cliente'} cnpj={customer?.cnpj || null} />
@@ -535,7 +645,11 @@ export default function CustomerDetail() {
         </TabsContent>
 
         <TabsContent value="contratos">
-          <AttachmentManager module="contratos" entityType="contract" entityId={id!} title="Contratos vinculados" />
+          <CustomerContractsTab companyId={id!} canEdit={canEdit} />
+        </TabsContent>
+
+        <TabsContent value="followups">
+          <FollowupsTab companyId={id!} allowDealPicker />
         </TabsContent>
 
         <TabsContent value="historico">
@@ -546,6 +660,20 @@ export default function CustomerDetail() {
           <CustomerActivitiesTab customerId={id!} isErpCustomer={isErpCustomer} />
         </TabsContent>
       </Tabs>
+
+      {isTimelineOpen && (
+        <div id="customer-timeline-360" className="hidden min-w-0 lg:block">
+          <CustomerTimeline360Panel customerId={id!} onOpenSource={setActiveTab} />
+        </div>
+      )}
+      </div>
+
+      <Sheet open={isTimelineSheetOpen} onOpenChange={setIsTimelineSheetOpen}>
+        <SheetContent side="right" className="w-[min(94vw,420px)] p-0 lg:hidden [&>aside>header]:pr-12 [&>button]:right-3 [&>button]:top-3 [&>button]:z-10 [&>button]:rounded-md [&>button]:bg-background [&>button]:p-2">
+          <SheetTitle className="sr-only">Timeline 360° do cliente</SheetTitle>
+          <CustomerTimeline360Panel customerId={id!} className="h-full min-h-0 border-0" onOpenSource={(tab) => { setActiveTab(tab); setIsTimelineSheetOpen(false); }} />
+        </SheetContent>
+      </Sheet>
 
       {/* Transfer Request Modal */}
       {isOtherSellerCustomer && customerSalesRepId && ownerSalesRep && (

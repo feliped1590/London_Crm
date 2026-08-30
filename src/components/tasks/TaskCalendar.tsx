@@ -27,6 +27,7 @@ type Task = Tables<'tasks'> & {
 interface TaskCalendarProps {
   onCreateTask?: (date: Date) => void;
   onEditTask?: (task: Task) => void;
+  companyId?: string;
 }
 
 const FILTERS_STORAGE_KEY = 'task-calendar-filters';
@@ -56,7 +57,7 @@ const loadPersistedFilters = () => {
   };
 };
 
-export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarProps) {
+export default function TaskCalendar({ onCreateTask, onEditTask, companyId }: TaskCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -74,7 +75,10 @@ export default function TaskCalendar({ onCreateTask, onEditTask }: TaskCalendarP
     }
   }, [filters]);
 
-  const { tasks, isLoading, rescheduleTask, sellers, isAdmin } = useTaskCalendar(currentDate, filters);
+  const { tasks, isLoading, rescheduleTask, sellers, isAdmin } = useTaskCalendar(currentDate, {
+    ...filters,
+    companyId: companyId || filters.companyId,
+  });
 
   // Fetch filter options
   const { data: companies } = useQuery({

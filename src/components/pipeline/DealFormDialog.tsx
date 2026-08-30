@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign, ShoppingCart, Receipt } from 'lucide-react';
+import { Plus, Mail, FileText, History, MessageCircle, Users, StickyNote, Zap, Trash2, ExternalLink, Phone, AtSign, ShoppingCart, Receipt, MessageSquare, CheckSquare } from 'lucide-react';
+import { FollowupsTab } from '@/components/followups/FollowupsTab';
+import { DealChecklistPanel, DealChecklistSummary } from '@/components/pipeline/DealChecklistPanel';
 import { useNavigate } from 'react-router-dom';
 import { CustomFieldsRenderer } from '@/components/CustomFieldsRenderer';
 import { ProposalsList } from '@/components/proposals/ProposalsList';
@@ -314,8 +316,16 @@ export function DealFormDialog({
 
         {editingDeal ? (
           <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
-            <TabsList className={`grid w-full ${WHATSAPP_ENABLED ? 'grid-cols-8' : 'grid-cols-7'}`}>
+            <TabsList className={`grid w-full ${WHATSAPP_ENABLED ? 'grid-cols-10' : 'grid-cols-9'}`}>
               <TabsTrigger value="dados">Dados</TabsTrigger>
+              <TabsTrigger value="checklist" className="flex items-center gap-2">
+                <CheckSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Checklist</span>
+              </TabsTrigger>
+              <TabsTrigger value="followups" className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span className="hidden sm:inline">Follow-ups</span>
+              </TabsTrigger>
               <TabsTrigger value="notas" className="flex items-center gap-2">
                 <StickyNote className="h-4 w-4" />
                 <span className="hidden sm:inline">Notas</span>
@@ -351,6 +361,14 @@ export function DealFormDialog({
             <TabsContent value="dados" className="flex-1 overflow-auto mt-4">
               <form onSubmit={onSubmit} className="space-y-4">
                 {renderFormFields(true)}
+                <DealChecklistSummary
+                  dealId={editingDeal.id}
+                  pipelineId={(editingDeal as any).pipeline_id || stageRows[0]?.pipeline_id}
+                  currentStage={editingDeal.stage}
+                  currentStageId={(editingDeal as any).pipeline_stage_id}
+                  stageRows={stageRows}
+                  canEdit={canEditDeal}
+                />
                 {/* Quick Actions */}
                 <div className="pt-4 border-t">
                   <Label className="flex items-center gap-2 mb-3">
@@ -368,7 +386,7 @@ export function DealFormDialog({
                   />
                 </div>
 
-                <div className="flex justify-between gap-2 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-4">
                   <div className="flex gap-2">
                     {(editingDeal as any).contacts?.email && (
                       <Button
@@ -381,6 +399,8 @@ export function DealFormDialog({
                         Enviar Email
                       </Button>
                     )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {canDeleteDeal(editingDeal) && (
                       <Button
                         type="button"
@@ -392,8 +412,6 @@ export function DealFormDialog({
                         Excluir
                       </Button>
                     )}
-                  </div>
-                  <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={onReset}>
                       Cancelar
                     </Button>
@@ -403,6 +421,21 @@ export function DealFormDialog({
                   </div>
                 </div>
               </form>
+            </TabsContent>
+
+            <TabsContent value="checklist" className="flex-1 overflow-auto mt-4">
+              <DealChecklistPanel
+                dealId={editingDeal.id}
+                pipelineId={(editingDeal as any).pipeline_id || stageRows[0]?.pipeline_id}
+                currentStage={editingDeal.stage}
+                currentStageId={(editingDeal as any).pipeline_stage_id}
+                stageRows={stageRows}
+                canEdit={canEditDeal}
+              />
+            </TabsContent>
+
+            <TabsContent value="followups" className="flex-1 overflow-auto mt-4">
+              <FollowupsTab dealId={editingDeal.id} companyId={editingDeal.company_id || undefined} />
             </TabsContent>
 
             <TabsContent value="notas" className="flex-1 overflow-auto mt-4">

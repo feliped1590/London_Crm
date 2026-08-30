@@ -41,10 +41,10 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 export default function Pipeline() {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { can } = useModulePermissions();
+  const { can, isAdmin: isPrivilegedUser } = useModulePermissions();
   const canCreatePipeline = can('pipeline', PermissionAction.Create);
   const canEditPipeline = can('pipeline', PermissionAction.Edit);
-  const canDeletePipeline = can('pipeline', PermissionAction.Delete);
+  const canDeletePipeline = can('pipeline', PermissionAction.Delete) || isPrivilegedUser;
 
   // Pipeline selection
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);

@@ -18,6 +18,8 @@ export type AttachmentEntityType =
   | 'proposal'
   | 'product'
   | 'contract'
+  | 'customer_document'
+  | 'service_engagement'
   | 'user'
   | 'misc';
 

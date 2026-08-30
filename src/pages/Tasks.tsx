@@ -23,13 +23,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ServerPagination } from '@/components/ui/server-pagination';
 import { format } from 'date-fns';
-
-// Normaliza data civil (YYYY-MM-DD) para meio-dia UTC, evitando shift de fuso na coluna timestamptz
-const toCivilDateUTC = (dateStr: string | null | undefined): string | null => {
-  if (!dateStr) return null;
-  const dateOnly = dateStr.split('T')[0];
-  return `${dateOnly}T12:00:00Z`;
-};
+import { toCivilDateUTC } from '@/lib/civilDate';
 
 const TASK_LIST_COLUMNS = `
   id, title, description, status, priority, due_date, due_time, completed_at,

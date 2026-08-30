@@ -25,6 +25,26 @@ export type ChecklistCompletion = {
   notes: string | null;
 };
 
+export function stageIdentity(stage: { id: string; stage: string | null }): string {
+  return stage.stage || stage.id;
+}
+
+export function usePipelineStages(pipelineId?: string | null) {
+  return useQuery({
+    queryKey: ['pipeline_stages', pipelineId],
+    enabled: !!pipelineId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipeline_stages')
+        .select('id, name, stage, color, sort_order, pipeline_id, stage_status')
+        .eq('pipeline_id', pipelineId!)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 export function useStageChecklistItems(pipelineId?: string | null) {
   return useQuery({
     queryKey: ['stage_checklist_items', pipelineId],
@@ -174,13 +194,18 @@ export function useChecklistMutations() {
  * @param fromStage - The stage the deal is LEAVING (current stage)
  * @param pipelineId - Optional pipeline ID for pipeline-specific checklists
  */
-export async function getPendingChecklistItems(dealId: string, fromStage: string, pipelineId?: string | null): Promise<ChecklistItem[]> {
-  // Get required checklist items for the stage the deal is LEAVING
-  // These items must be completed before the deal can move to a new stage
+export async function getPendingChecklistItems(
+  dealId: string,
+  fromStage: string | string[],
+  pipelineId?: string | null,
+): Promise<ChecklistItem[]> {
+  const stageKeys = (Array.isArray(fromStage) ? fromStage : [fromStage]).filter(Boolean);
+  if (stageKeys.length === 0) return [];
+
   let query = supabase
     .from('stage_checklist_items')
     .select('*')
-    .eq('stage', fromStage) // Check the FROM stage (current stage being exited)
+    .in('stage', stageKeys)
     .eq('is_required', true)
     .order('sort_order');
 
