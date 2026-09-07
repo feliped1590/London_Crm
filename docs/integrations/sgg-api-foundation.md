@@ -12,6 +12,7 @@ Configurar no Supabase Edge Functions:
 
 - `SGG_API_KEY`: chave alfanumérica de 32 caracteres criada no painel SGG.
 - `SGG_API_BASE_URL`: opcional; padrão `https://app.sgg.net.br/api/v3/`.
+- `SGG_SYNC_CRON_SECRET`: segredo interno para o agendador chamar funções SGG.
 
 A chave nunca deve usar prefixo `VITE_`, ser enviada ao frontend, persistida em
 tabelas, incluída em logs ou versionada no Git.
@@ -20,7 +21,8 @@ tabelas, incluída em logs ou versionada no Git.
 
 A função `sgg-connection-test` aceita apenas `POST` autenticado por uma sessão
 Supabase e exige papel `admin` ou `desenvolvedor`. Ela realiza somente uma
-consulta `GET /empresa/` e retorna um diagnóstico sanitizado.
+consulta `GET /empresa/` e retorna um diagnóstico sanitizado. Jobs internos
+podem usar o header `x-sgg-sync-secret`, cujo valor nunca deve ir ao frontend.
 
 ## Particularidade da API
 
@@ -38,4 +40,3 @@ JSON (por exemplo, query string oficial ou método alternativo suportado).
 4. Fazer piloto somente leitura para uma empresa.
 5. Detectar admissão, demissão, transferência e mudança de função.
 6. Vincular eventos às regras de solicitação documental no CRM.
-
