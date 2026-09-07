@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.sgg-connection-test]
 verify_jwt = false
+
+[functions.sgg-pilot-read]
+verify_jwt = false
