@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.sgg-inventory-read]
 verify_jwt = false
+
+[functions.sgg-sync-preview]
+verify_jwt = false
