@@ -93,29 +93,51 @@ export async function sggGet<T = unknown>(
       offset += chunk.byteLength;
     }
 
-    const raw = new TextDecoder().decode(joined);
-    const headerEnd = raw.indexOf('\r\n\r\n');
+    let headerEnd = -1;
+    for (let index = 0; index <= joined.byteLength - 4; index += 1) {
+      if (joined[index] === 13 && joined[index + 1] === 10 && joined[index + 2] === 13 && joined[index + 3] === 10) {
+        headerEnd = index;
+        break;
+      }
+    }
     if (headerEnd < 0) throw new Error('Resposta HTTP inválida da SGG.');
-    const headers = raw.slice(0, headerEnd);
+    const headers = new TextDecoder().decode(joined.subarray(0, headerEnd));
     const status = Number(headers.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i)?.[1] || 0);
-    let responseBody = raw.slice(headerEnd + 4);
+    let responseBodyBytes = joined.subarray(headerEnd + 4);
 
     if (/transfer-encoding:\s*chunked/i.test(headers)) {
-      let decoded = '';
+      const decodedChunks: Uint8Array[] = [];
       let cursor = 0;
-      while (cursor < responseBody.length) {
-        const lineEnd = responseBody.indexOf('\r\n', cursor);
+      while (cursor < responseBodyBytes.byteLength) {
+        let lineEnd = -1;
+        for (let index = cursor; index < responseBodyBytes.byteLength - 1; index += 1) {
+          if (responseBodyBytes[index] === 13 && responseBodyBytes[index + 1] === 10) {
+            lineEnd = index;
+            break;
+          }
+        }
         if (lineEnd < 0) break;
-        const chunkSize = Number.parseInt(responseBody.slice(cursor, lineEnd).split(';')[0], 16);
+        const sizeLine = new TextDecoder().decode(responseBodyBytes.subarray(cursor, lineEnd));
+        const chunkSize = Number.parseInt(sizeLine.split(';')[0], 16);
         if (!Number.isFinite(chunkSize) || chunkSize === 0) break;
         const start = lineEnd + 2;
-        decoded += responseBody.slice(start, start + chunkSize);
+        decodedChunks.push(responseBodyBytes.slice(start, start + chunkSize));
         cursor = start + chunkSize + 2;
       }
-      responseBody = decoded;
+      const decodedLength = decodedChunks.reduce((total, chunk) => total + chunk.byteLength, 0);
+      const decoded = new Uint8Array(decodedLength);
+      let decodedOffset = 0;
+      for (const chunk of decodedChunks) {
+        decoded.set(chunk, decodedOffset);
+        decodedOffset += chunk.byteLength;
+      }
+      responseBodyBytes = decoded;
+    } else {
+      const declaredLength = Number(headers.match(/content-length:\s*(\d+)/i)?.[1]);
+      if (Number.isFinite(declaredLength)) responseBodyBytes = responseBodyBytes.subarray(0, declaredLength);
     }
 
-    const payload = JSON.parse(responseBody) as T & SggApiErrorPayload;
+    const payload = JSON.parse(new TextDecoder().decode(responseBodyBytes)) as T & SggApiErrorPayload;
     return { status, payload };
   } finally {
     connection.close();

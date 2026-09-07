@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.sgg-pilot-read]
 verify_jwt = false
+
+[functions.sgg-inventory-read]
+verify_jwt = false
